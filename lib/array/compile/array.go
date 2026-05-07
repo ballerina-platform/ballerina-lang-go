@@ -51,14 +51,6 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	lengthRef, _ := space.GetSymbol("length")
 	ctx.SetSymbolType(lengthRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
 
-	querySortSignature := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.LIST, semtypes.LIST, semtypes.LIST},
-		ReturnType: semtypes.NIL,
-	}
-	querySortSymbol := model.NewFunctionSymbol("querySort", querySortSignature, true)
-	space.AddSymbol("querySort", querySortSymbol)
-	querySortRef, _ := space.GetSymbol("querySort")
-	ctx.SetSymbolType(querySortRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &querySortSignature))
 	return model.NewExportedSymbolSpace(space, nil)
 }
 

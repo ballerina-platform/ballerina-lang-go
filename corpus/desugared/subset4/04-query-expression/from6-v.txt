@@ -31,6 +31,8 @@
         (variable $desugar$2 (expr
           (mapping-constructor-expr))))
       (var-def
+        (variable p))
+      (var-def
         (variable $desugar$3 (expr
           (numeric-literal 0))))
       (while
@@ -38,11 +40,11 @@
           (simple-var-ref $desugar$3)
           (simple-var-ref $desugar$1))
         (block-stmt
-          (var-def
-            (variable p (expr
-              (index-based-access
-                (simple-var-ref $desugar$0)
-                (simple-var-ref $desugar$3)))))
+          (assignment
+            (simple-var-ref p)
+            (index-based-access
+              (simple-var-ref $desugar$0)
+              (simple-var-ref $desugar$3)))
           (var-def
             (variable $desugar$4 (expr
               (list-constructor-expr

@@ -29,76 +29,76 @@ main() -> nil{
     %10 = ConstantLoad 0
     %11 = newArray list[%10]{}
     $desugar$2 = %11;
-    %13 = ConstantLoad 0
-    $desugar$3 = %13;
-    %15 = nextLimit() -> bb2;
+    %14 = ConstantLoad 0
+    $desugar$3 = %14;
+    %16 = nextLimit() -> bb2;
   }
   bb2 {
-    $desugar$4 = %15;
-    %18 = $desugar$4;
-    %19 = ConstantLoad 0
-    %20 = %19;
-    %17 = < %18 %20;
-    %17 ? bb3 : bb4;
+    $desugar$4 = %16;
+    %19 = $desugar$4;
+    %20 = ConstantLoad 0
+    %21 = %20;
+    %18 = < %19 %21;
+    %18 ? bb3 : bb4;
   }
   bb3 {
-    %21 = ConstantLoad limit cannot be negative
-    %22 = newError error(%21)
-    panic %22;
+    %22 = ConstantLoad limit cannot be negative
+    %23 = newError error(%22)
+    panic %23;
   }
   bb4 {
-    %23 = ConstantLoad 0
-    $desugar$5 = %23;
+    %24 = ConstantLoad 0
+    $desugar$5 = %24;
     GOTO bb5;
   }
   bb5 {
-    %26 = $desugar$3;
-    %27 = $desugar$1;
-    %25 = < %26 %27;
-    %25 ? bb6 : bb7;
+    %27 = $desugar$3;
+    %28 = $desugar$1;
+    %26 = < %27 %28;
+    %26 ? bb6 : bb7;
   }
   bb6 {
-    PushScopeFrame 19
+    PushScopeFrame 18
     %0 = (1, $desugar$0)[(1, $desugar$3)];
-    x = %0;
-    %3 = (1, $desugar$5);
-    %4 = (1, $desugar$4);
-    %2 = >= %3 %4;
-    %2 ? bb8 : bb9;
+    (1, x) = %0;
+    %2 = (1, $desugar$5);
+    %3 = (1, $desugar$4);
+    %1 = >= %2 %3;
+    %1 ? bb8 : bb9;
   }
   bb7 {
     ys = $desugar$2;
-    %29 = println(ys) -> bb11;
+    %30 = println(ys) -> bb11;
   }
   bb8 {
-    %6 = (1, $desugar$3);
-    %7 = ConstantLoad 1
-    %8 = %7;
-    %5 = + %6 %8;
-    (1, $desugar$3) = %5;
+    %5 = (1, $desugar$3);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$3) = %4;
     PopScopeFrame
     GOTO bb5;
   }
   bb9 {
-    %10 = (1, $desugar$5);
-    %11 = ConstantLoad 1
-    %12 = %11;
-    %9 = + %10 %12;
-    (1, $desugar$5) = %9;
-    %13 = x;
-    %14 = push((1, $desugar$2),%13) -> bb10;
+    %9 = (1, $desugar$5);
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %8 = + %9 %11;
+    (1, $desugar$5) = %8;
+    %12 = (1, x);
+    %13 = push((1, $desugar$2),%12) -> bb10;
   }
   bb10 {
-    %16 = (1, $desugar$3);
-    %17 = ConstantLoad 1
-    %18 = %17;
-    %15 = + %16 %18;
-    (1, $desugar$3) = %15;
+    %15 = (1, $desugar$3);
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %14 = + %15 %17;
+    (1, $desugar$3) = %14;
     PopScopeFrame
     GOTO bb5;
   }
   bb11 {
-    %30 = println(calls) -> bb12;
+    %31 = println(calls) -> bb12;
   }
   bb12 {
     return;

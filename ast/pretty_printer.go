@@ -777,10 +777,10 @@ func (p *PrettyPrinter) printOrderByClause(node *BLangOrderByClause) {
 func (p *PrettyPrinter) printOrderKey(node *BLangOrderKey) {
 	p.startNode()
 	p.printString("order-key")
-	if node.IsAscending {
-		p.printString("ascending")
-	} else {
+	if node.IsDescending {
 		p.printString("descending")
+	} else {
+		p.printString("ascending")
 	}
 	p.indentLevel++
 	if node.Expression != nil {

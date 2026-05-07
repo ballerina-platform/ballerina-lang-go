@@ -25,6 +25,8 @@
         (variable $desugar$2 (expr
           (list-constructor-expr))))
       (var-def
+        (variable y))
+      (var-def
         (variable $desugar$3 (expr
           (numeric-literal 0))))
       (var-def
@@ -46,11 +48,11 @@
           (simple-var-ref $desugar$3)
           (simple-var-ref $desugar$1))
         (block-stmt
-          (var-def
-            (variable y (expr
-              (index-based-access
-                (simple-var-ref $desugar$0)
-                (simple-var-ref $desugar$3)))))
+          (assignment
+            (simple-var-ref y)
+            (index-based-access
+              (simple-var-ref $desugar$0)
+              (simple-var-ref $desugar$3)))
           (if
             (binary-expr >=
               (simple-var-ref $desugar$5)
@@ -90,6 +92,8 @@
         (variable $desugar$8 (expr
           (list-constructor-expr))))
       (var-def
+        (variable x))
+      (var-def
         (variable $desugar$9 (expr
           (numeric-literal 0))))
       (var-def
@@ -111,11 +115,11 @@
           (simple-var-ref $desugar$9)
           (simple-var-ref $desugar$7))
         (block-stmt
-          (var-def
-            (variable x (expr
-              (index-based-access
-                (simple-var-ref $desugar$6)
-                (simple-var-ref $desugar$9)))))
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$6)
+              (simple-var-ref $desugar$9)))
           (if
             (binary-expr >=
               (simple-var-ref $desugar$11)

@@ -42,6 +42,8 @@
         (variable $desugar$3 (expr
           (mapping-constructor-expr))))
       (var-def
+        (variable y))
+      (var-def
         (variable $desugar$4 (expr
           (numeric-literal 0))))
       (while
@@ -49,11 +51,11 @@
           (simple-var-ref $desugar$4)
           (simple-var-ref $desugar$1))
         (block-stmt
-          (var-def
-            (variable y (expr
-              (index-based-access
-                (simple-var-ref $desugar$0)
-                (simple-var-ref $desugar$4)))))
+          (assignment
+            (simple-var-ref y)
+            (index-based-access
+              (simple-var-ref $desugar$0)
+              (simple-var-ref $desugar$4)))
           (var-def
             (variable $desugar$5 (expr
               (list-constructor-expr
@@ -116,6 +118,8 @@
         (variable $desugar$10 (expr
           (list-constructor-expr))))
       (var-def
+        (variable x))
+      (var-def
         (variable $desugar$11 (expr
           (numeric-literal 0))))
       (while
@@ -123,13 +127,13 @@
           (simple-var-ref $desugar$11)
           (simple-var-ref $desugar$9))
         (block-stmt
-          (var-def
-            (variable x (expr
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$7)
               (index-based-access
-                (simple-var-ref $desugar$7)
-                (index-based-access
-                  (simple-var-ref $desugar$8)
-                  (simple-var-ref $desugar$11))))))
+                (simple-var-ref $desugar$8)
+                (simple-var-ref $desugar$11))))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$10)
@@ -155,6 +159,8 @@
         (variable $desugar$14 (expr
           (list-constructor-expr))))
       (var-def
+        (variable y))
+      (var-def
         (variable $desugar$15 (expr
           (numeric-literal 0))))
       (while
@@ -162,11 +168,11 @@
           (simple-var-ref $desugar$15)
           (simple-var-ref $desugar$13))
         (block-stmt
-          (var-def
-            (variable y (expr
-              (index-based-access
-                (simple-var-ref $desugar$12)
-                (simple-var-ref $desugar$15)))))
+          (assignment
+            (simple-var-ref y)
+            (index-based-access
+              (simple-var-ref $desugar$12)
+              (simple-var-ref $desugar$15)))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$14)
@@ -191,6 +197,8 @@
         (variable $desugar$19 (expr
           (mapping-constructor-expr))))
       (var-def
+        (variable x))
+      (var-def
         (variable $desugar$20 (expr
           (numeric-literal 0))))
       (while
@@ -198,11 +206,11 @@
           (simple-var-ref $desugar$20)
           (simple-var-ref $desugar$17))
         (block-stmt
-          (var-def
-            (variable x (expr
-              (index-based-access
-                (simple-var-ref $desugar$16)
-                (simple-var-ref $desugar$20)))))
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$16)
+              (simple-var-ref $desugar$20)))
           (var-def
             (variable $desugar$21 (expr
               (list-constructor-expr

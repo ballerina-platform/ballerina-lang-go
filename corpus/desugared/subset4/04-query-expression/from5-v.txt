@@ -35,6 +35,8 @@
         (variable $desugar$3 (expr
           (list-constructor-expr))))
       (var-def
+        (variable x))
+      (var-def
         (variable $desugar$4 (expr
           (numeric-literal 0))))
       (while
@@ -42,13 +44,13 @@
           (simple-var-ref $desugar$4)
           (simple-var-ref $desugar$2))
         (block-stmt
-          (var-def
-            (variable x (expr
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$0)
               (index-based-access
-                (simple-var-ref $desugar$0)
-                (index-based-access
-                  (simple-var-ref $desugar$1)
-                  (simple-var-ref $desugar$4))))))
+                (simple-var-ref $desugar$1)
+                (simple-var-ref $desugar$4))))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$3)

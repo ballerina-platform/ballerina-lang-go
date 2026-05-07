@@ -64,8 +64,8 @@ type (
 	}
 	BLangOrderKey struct {
 		bLangNodeBase
-		Expression  BLangExpression
-		IsAscending bool
+		Expression   BLangExpression
+		IsDescending bool
 	}
 	BLangSelectClause struct {
 		bLangNodeBase

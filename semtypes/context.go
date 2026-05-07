@@ -33,6 +33,7 @@ type context struct {
 	_jsonMemo           SemType
 	_anydataMemo        SemType
 	_cloneableMemo      SemType
+	_orderedMemo        SemType
 	_isolatedObjectMemo SemType
 	_serviceObjectMemo  SemType
 	_isolatedTopMemo    SemType
@@ -95,6 +96,14 @@ func (c *context) cloneableMemo() SemType {
 
 func (c *context) setCloneableMemo(t SemType) {
 	c._cloneableMemo = t
+}
+
+func (c *context) orderedMemo() SemType {
+	return c._orderedMemo
+}
+
+func (c *context) setOrderedMemo(t SemType) {
+	c._orderedMemo = t
 }
 
 func (c *context) isolatedObjectMemo() SemType {

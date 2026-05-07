@@ -20,5 +20,6 @@ import (
 	_ "ballerina-lang-go/lib/array/runtime"
 	_ "ballerina-lang-go/lib/int/runtime"
 	_ "ballerina-lang-go/lib/io/runtime"
+	_ "ballerina-lang-go/lib/langinternal/runtime"
 	_ "ballerina-lang-go/lib/map/runtime"
 )

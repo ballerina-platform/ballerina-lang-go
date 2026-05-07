@@ -664,8 +664,8 @@ func newOrderByClause(keys ...ast.BLangOrderKey) *ast.BLangOrderByClause {
 
 func newOrderKey(expr ast.BLangExpression, isAscending bool) ast.BLangOrderKey {
 	orderKey := ast.BLangOrderKey{
-		Expression:  expr,
-		IsAscending: isAscending,
+		Expression:   expr,
+		IsDescending: !isAscending,
 	}
 	orderKey.SetPosition(queryTestPos)
 	return orderKey

@@ -23,24 +23,27 @@
         (variable $desugar$2 (expr
           (list-constructor-expr))))
       (var-def
+        (variable x))
+      (var-def
         (variable $desugar$3 (expr
           (numeric-literal 0))))
+      (var-def
+        (variable y))
       (while
         (binary-expr <
           (simple-var-ref $desugar$3)
           (simple-var-ref $desugar$1))
         (block-stmt
-          (var-def
-            (variable x (expr
-              (index-based-access
-                (simple-var-ref $desugar$0)
-                (simple-var-ref $desugar$3)))))
-          (var-def
-            (variable y (type
-              (value-type int)) (expr
-              (binary-expr *
-                (simple-var-ref x)
-                (literal 10)))))
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$0)
+              (simple-var-ref $desugar$3)))
+          (assignment
+            (simple-var-ref y)
+            (binary-expr *
+              (simple-var-ref x)
+              (literal 10)))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$2)

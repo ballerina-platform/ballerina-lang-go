@@ -3693,9 +3693,9 @@ func (n *NodeBuilder) TransformOrderKey(orderKeyNode *tree.OrderKeyNode) BLangNo
 	orderKey.pos = getPosition(n.de(), orderKeyNode)
 	orderKey.Expression = n.createExpression(orderKeyNode.Expression())
 	if dir := orderKeyNode.OrderDirection(); dir != nil && dir.Kind() == common.DESCENDING_KEYWORD {
-		orderKey.IsAscending = false
+		orderKey.IsDescending = true
 	} else {
-		orderKey.IsAscending = true
+		orderKey.IsDescending = false
 	}
 	return orderKey
 }

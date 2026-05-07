@@ -56,252 +56,252 @@ main() -> nil{
     %50 = newArray list[%49]{}
     $desugar$1 = %50;
     $desugar$2 = people;
-    %53 = length($desugar$2) -> bb1;
+    %54 = length($desugar$2) -> bb1;
   }
   bb1 {
-    $desugar$3 = %53;
-    %55 = ConstantLoad 0
-    $desugar$4 = %55;
+    $desugar$3 = %54;
+    %56 = ConstantLoad 0
+    $desugar$4 = %56;
     GOTO bb2;
   }
   bb2 {
-    %58 = $desugar$4;
-    %59 = $desugar$3;
-    %57 = < %58 %59;
-    %57 ? bb3 : bb4;
+    %59 = $desugar$4;
+    %60 = $desugar$3;
+    %58 = < %59 %60;
+    %58 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 9
+    PushScopeFrame 8
     %0 = (1, $desugar$2)[(1, $desugar$4)];
-    person = %0;
-    %2 = ConstantLoad 1
-    %3 = newArray list[%2]{person}
-    %4 = push((1, $desugar$1),%3) -> bb5;
+    (1, person) = %0;
+    %1 = ConstantLoad 1
+    %2 = newArray list[%1]{(1, person)}
+    %3 = push((1, $desugar$1),%2) -> bb5;
   }
   bb4 {
-    %60 = ConstantLoad 0
-    %61 = newArray list[%60]{}
-    $desugar$5 = %61;
-    %63 = length($desugar$1) -> bb6;
+    %62 = ConstantLoad 0
+    %63 = newArray list[%62]{}
+    $desugar$5 = %63;
+    %65 = length($desugar$1) -> bb6;
   }
   bb5 {
-    %6 = (1, $desugar$4);
-    %7 = ConstantLoad 1
-    %8 = %7;
-    %5 = + %6 %8;
-    (1, $desugar$4) = %5;
+    %5 = (1, $desugar$4);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$4) = %4;
     PopScopeFrame
     GOTO bb2;
   }
   bb6 {
-    $desugar$6 = %63;
-    %65 = ConstantLoad 0
-    $desugar$7 = %65;
+    $desugar$6 = %65;
+    %67 = ConstantLoad 0
+    $desugar$7 = %67;
     GOTO bb7;
   }
   bb7 {
-    %68 = $desugar$7;
-    %69 = $desugar$6;
-    %67 = < %68 %69;
-    %67 ? bb8 : bb9;
+    %70 = $desugar$7;
+    %71 = $desugar$6;
+    %69 = < %70 %71;
+    %69 ? bb8 : bb9;
   }
   bb8 {
-    PushScopeFrame 22
+    PushScopeFrame 21
     %0 = (1, $desugar$1)[(1, $desugar$7)];
     $desugar$8 = %0;
     %3 = ConstantLoad 0
     %2 = $desugar$8[%3];
-    person = %2;
-    %6 = ConstantLoad deptId
-    %5 = person[%6];
-    $desugar$9 = %5;
+    (1, person) = %2;
+    %5 = ConstantLoad deptId
+    %4 = (1, person)[%5];
+    $desugar$9 = %4;
     $desugar$10 = (1, departments);
-    %9 = keys($desugar$10) -> bb10;
+    %8 = keys($desugar$10) -> bb10;
   }
   bb9 {
-    %70 = ConstantLoad 0
-    %71 = newArray list[%70]{}
-    $desugar$14 = %71;
-    %73 = length($desugar$5) -> bb18;
+    %73 = ConstantLoad 0
+    %74 = newArray list[%73]{}
+    $desugar$14 = %74;
+    %76 = length($desugar$5) -> bb18;
   }
   bb10 {
-    $desugar$11 = %9;
-    %11 = length($desugar$11) -> bb11;
+    $desugar$11 = %8;
+    %10 = length($desugar$11) -> bb11;
   }
   bb11 {
-    $desugar$12 = %11;
-    %13 = ConstantLoad 0
-    $desugar$13 = %13;
+    $desugar$12 = %10;
+    %12 = ConstantLoad 0
+    $desugar$13 = %12;
     GOTO bb12;
   }
   bb12 {
-    %16 = $desugar$13;
-    %17 = $desugar$12;
-    %15 = < %16 %17;
-    %15 ? bb13 : bb14;
+    %15 = $desugar$13;
+    %16 = $desugar$12;
+    %14 = < %15 %16;
+    %14 ? bb13 : bb14;
   }
   bb13 {
-    PushScopeFrame 15
+    PushScopeFrame 14
     %1 = (1, $desugar$11)[(1, $desugar$13)];
     %0 = (1, $desugar$10)[%1];
-    dept = %0;
-    %4 = (1, $desugar$9);
-    %6 = ConstantLoad id
-    %5 = dept[%6];
-    %7 = %5;
-    %3 = == %4 %7;
-    %3 ? bb15 : bb17;
+    (2, dept) = %0;
+    %3 = (1, $desugar$9);
+    %5 = ConstantLoad id
+    %4 = (2, dept)[%5];
+    %6 = %4;
+    %2 = == %3 %6;
+    %2 ? bb15 : bb17;
   }
   bb14 {
-    %19 = (1, $desugar$7);
-    %20 = ConstantLoad 1
-    %21 = %20;
-    %18 = + %19 %21;
-    (1, $desugar$7) = %18;
+    %18 = (1, $desugar$7);
+    %19 = ConstantLoad 1
+    %20 = %19;
+    %17 = + %18 %20;
+    (1, $desugar$7) = %17;
     PopScopeFrame
     GOTO bb7;
   }
   bb15 {
-    %8 = ConstantLoad 2
-    %9 = newArray list[%8]{(1, person), dept}
-    %10 = push((2, $desugar$5),%9) -> bb16;
+    %7 = ConstantLoad 2
+    %8 = newArray list[%7]{(2, person), (2, dept)}
+    %9 = push((2, $desugar$5),%8) -> bb16;
   }
   bb16 {
     GOTO bb17;
   }
   bb17 {
-    %12 = (1, $desugar$13);
-    %13 = ConstantLoad 1
-    %14 = %13;
-    %11 = + %12 %14;
-    (1, $desugar$13) = %11;
+    %11 = (1, $desugar$13);
+    %12 = ConstantLoad 1
+    %13 = %12;
+    %10 = + %11 %13;
+    (1, $desugar$13) = %10;
     PopScopeFrame
     GOTO bb12;
   }
   bb18 {
-    $desugar$15 = %73;
-    %75 = ConstantLoad 0
-    $desugar$16 = %75;
+    $desugar$15 = %76;
+    %78 = ConstantLoad 0
+    $desugar$16 = %78;
     GOTO bb19;
   }
   bb19 {
-    %78 = $desugar$16;
-    %79 = $desugar$15;
-    %77 = < %78 %79;
-    %77 ? bb20 : bb21;
+    %81 = $desugar$16;
+    %82 = $desugar$15;
+    %80 = < %81 %82;
+    %80 ? bb20 : bb21;
   }
   bb20 {
-    PushScopeFrame 23
+    PushScopeFrame 21
     %0 = (1, $desugar$5)[(1, $desugar$16)];
     $desugar$17 = %0;
     %3 = ConstantLoad 0
     %2 = $desugar$17[%3];
-    person = %2;
-    %6 = ConstantLoad 1
-    %5 = $desugar$17[%6];
-    dept = %5;
-    %9 = ConstantLoad locationId
-    %8 = dept[%9];
-    $desugar$18 = %8;
+    (1, person) = %2;
+    %5 = ConstantLoad 1
+    %4 = $desugar$17[%5];
+    (1, dept) = %4;
+    %7 = ConstantLoad locationId
+    %6 = (1, dept)[%7];
+    $desugar$18 = %6;
     $desugar$19 = (1, locations);
-    %12 = length($desugar$19) -> bb22;
+    %10 = length($desugar$19) -> bb22;
   }
   bb21 {
-    %80 = length($desugar$14) -> bb29;
+    %83 = length($desugar$14) -> bb29;
   }
   bb22 {
-    $desugar$20 = %12;
-    %14 = ConstantLoad 0
-    $desugar$21 = %14;
+    $desugar$20 = %10;
+    %12 = ConstantLoad 0
+    $desugar$21 = %12;
     GOTO bb23;
   }
   bb23 {
-    %17 = $desugar$21;
-    %18 = $desugar$20;
-    %16 = < %17 %18;
-    %16 ? bb24 : bb25;
+    %15 = $desugar$21;
+    %16 = $desugar$20;
+    %14 = < %15 %16;
+    %14 ? bb24 : bb25;
   }
   bb24 {
-    PushScopeFrame 14
+    PushScopeFrame 13
     %0 = (1, $desugar$19)[(1, $desugar$21)];
-    loc = %0;
-    %3 = (1, $desugar$18);
-    %5 = ConstantLoad id
-    %4 = loc[%5];
-    %6 = %4;
-    %2 = == %3 %6;
-    %2 ? bb26 : bb28;
+    (2, loc) = %0;
+    %2 = (1, $desugar$18);
+    %4 = ConstantLoad id
+    %3 = (2, loc)[%4];
+    %5 = %3;
+    %1 = == %2 %5;
+    %1 ? bb26 : bb28;
   }
   bb25 {
-    %20 = (1, $desugar$16);
-    %21 = ConstantLoad 1
-    %22 = %21;
-    %19 = + %20 %22;
-    (1, $desugar$16) = %19;
+    %18 = (1, $desugar$16);
+    %19 = ConstantLoad 1
+    %20 = %19;
+    %17 = + %18 %20;
+    (1, $desugar$16) = %17;
     PopScopeFrame
     GOTO bb19;
   }
   bb26 {
-    %7 = ConstantLoad 3
-    %8 = newArray list[%7]{(1, person), (1, dept), loc}
-    %9 = push((2, $desugar$14),%8) -> bb27;
+    %6 = ConstantLoad 3
+    %7 = newArray list[%6]{(2, person), (2, dept), (2, loc)}
+    %8 = push((2, $desugar$14),%7) -> bb27;
   }
   bb27 {
     GOTO bb28;
   }
   bb28 {
-    %11 = (1, $desugar$21);
-    %12 = ConstantLoad 1
-    %13 = %12;
-    %10 = + %11 %13;
-    (1, $desugar$21) = %10;
+    %10 = (1, $desugar$21);
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %9 = + %10 %12;
+    (1, $desugar$21) = %9;
     PopScopeFrame
     GOTO bb23;
   }
   bb29 {
-    $desugar$22 = %80;
-    %82 = ConstantLoad 0
-    $desugar$23 = %82;
+    $desugar$22 = %83;
+    %85 = ConstantLoad 0
+    $desugar$23 = %85;
     GOTO bb30;
   }
   bb30 {
-    %85 = $desugar$23;
-    %86 = $desugar$22;
-    %84 = < %85 %86;
-    %84 ? bb31 : bb32;
+    %88 = $desugar$23;
+    %89 = $desugar$22;
+    %87 = < %88 %89;
+    %87 ? bb31 : bb32;
   }
   bb31 {
-    PushScopeFrame 23
+    PushScopeFrame 20
     %0 = (1, $desugar$14)[(1, $desugar$23)];
     $desugar$24 = %0;
     %3 = ConstantLoad 0
     %2 = $desugar$24[%3];
-    person = %2;
-    %6 = ConstantLoad 1
-    %5 = $desugar$24[%6];
-    dept = %5;
-    %9 = ConstantLoad 2
-    %8 = $desugar$24[%9];
-    loc = %8;
+    (1, person) = %2;
+    %5 = ConstantLoad 1
+    %4 = $desugar$24[%5];
+    (1, dept) = %4;
+    %7 = ConstantLoad 2
+    %6 = $desugar$24[%7];
+    (1, loc) = %6;
+    %11 = ConstantLoad name
+    %10 = (1, person)[%11];
+    %12 = ConstantLoad :
+    %9 = + %10 %12;
     %14 = ConstantLoad name
-    %13 = person[%14];
-    %15 = ConstantLoad :
-    %12 = + %13 %15;
-    %17 = ConstantLoad name
-    %16 = loc[%17];
-    %11 = + %12 %16;
-    %18 = push((1, $desugar$0),%11) -> bb33;
+    %13 = (1, loc)[%14];
+    %8 = + %9 %13;
+    %15 = push((1, $desugar$0),%8) -> bb33;
   }
   bb32 {
     joined = $desugar$0;
-    %88 = println(joined) -> bb34;
+    %91 = println(joined) -> bb34;
   }
   bb33 {
-    %20 = (1, $desugar$23);
-    %21 = ConstantLoad 1
-    %22 = %21;
-    %19 = + %20 %22;
-    (1, $desugar$23) = %19;
+    %17 = (1, $desugar$23);
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %16 = + %17 %19;
+    (1, $desugar$23) = %16;
     PopScopeFrame
     GOTO bb30;
   }

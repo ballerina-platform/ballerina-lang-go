@@ -675,20 +675,23 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 	return validateResolvedType(a, expr, expectedType)
 }
 
+type queryExprAnalysisClauses struct {
+	fromClause       *ast.BLangFromClause
+	selectClause     *ast.BLangSelectClause
+	onConflictClause *ast.BLangOnConflictClause
+	lastClauseIndex  int
+}
+
 func queryExprClausesForAnalysis[A analyzer](
 	a A,
 	queryExpr *ast.BLangQueryExpr,
-) (*ast.BLangFromClause, *ast.BLangSelectClause, *ast.BLangOnConflictClause, int, bool) {
+) (queryExprAnalysisClauses, bool) {
 	if len(queryExpr.QueryClauseList) < 2 {
 		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
-		return nil, nil, nil, 0, false
+		return queryExprAnalysisClauses{}, false
 	}
 
-	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
-	if !ok {
-		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
-		return nil, nil, nil, 0, false
-	}
+	fromClause := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
 	lastClauseIndex := len(queryExpr.QueryClauseList) - 1
 	var onConflictClause *ast.BLangOnConflictClause
 	if clause, isOnConflict := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
@@ -697,35 +700,41 @@ func queryExprClausesForAnalysis[A analyzer](
 	}
 	if lastClauseIndex < 1 {
 		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
-		return nil, nil, nil, 0, false
+		return queryExprAnalysisClauses{}, false
 	}
 
 	selectClause, ok := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
 	if !ok {
 		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
-		return nil, nil, nil, 0, false
+		return queryExprAnalysisClauses{}, false
 	}
-	return fromClause, selectClause, onConflictClause, lastClauseIndex, true
+	return queryExprAnalysisClauses{
+		fromClause:       fromClause,
+		selectClause:     selectClause,
+		onConflictClause: onConflictClause,
+		lastClauseIndex:  lastClauseIndex,
+	}, true
 }
 
 func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
 	// Query clause ordering and shape are validated during type resolution.
-	fromClause, selectClause, onConflictClause, lastClauseIndex, ok := queryExprClausesForAnalysis(a, queryExpr)
+	clauses, ok := queryExprClausesForAnalysis(a, queryExpr)
 	if !ok {
 		return false
 	}
-	if !analyzeActionOrExpression(a, fromClause.Collection, nil) {
+	if !analyzeActionOrExpression(a, clauses.fromClause.Collection, nil) {
 		return false
 	}
+	orderedTy := semtypes.CreateOrdered(a.tyCtx())
 
-	for i := 1; i < lastClauseIndex; i++ {
+	for i := 1; i < clauses.lastClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangJoinClause:
 			if !analyzeActionOrExpression(a, clause.Collection, nil) {
 				return false
 			}
 			if clause.OnClause == nil {
-				a.semanticErr("join clause requires an on clause", clause.GetPosition())
+				a.internalErr("join clause shape should have been validated during type resolution", clause.GetPosition())
 				return false
 			}
 			if !analyzeActionOrExpression(a, clause.OnClause.LhsExpr, nil) {
@@ -754,7 +763,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		case *ast.BLangOrderByClause:
 			for j := range clause.OrderByKeyList {
 				orderKey := &clause.OrderByKeyList[j]
-				if !analyzeActionOrExpression(a, orderKey.Expression, nil) {
+				if !analyzeActionOrExpression(a, orderKey.Expression, orderedTy) {
 					return false
 				}
 			}
@@ -766,16 +775,16 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
 	}
 
-	if !analyzeActionOrExpression(a, selectClause.Expression, selectExpectedTy) {
+	if !analyzeActionOrExpression(a, clauses.selectClause.Expression, selectExpectedTy) {
 		return false
 	}
 
-	if onConflictClause != nil {
+	if clauses.onConflictClause != nil {
 		if queryExpr.QueryConstructType != model.TypeKind_MAP {
-			a.semanticErr("on conflict clause is supported only for map query construct type", onConflictClause.GetPosition())
+			a.semanticErr("on conflict clause is supported only for map query construct type", clauses.onConflictClause.GetPosition())
 			return false
 		}
-		if !analyzeActionOrExpression(a, onConflictClause.Expression, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+		if !analyzeActionOrExpression(a, clauses.onConflictClause.Expression, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
 			return false
 		}
 	}

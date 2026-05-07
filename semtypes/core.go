@@ -918,6 +918,20 @@ func CreateCloneable(context Context) SemType {
 	return ad
 }
 
+func CreateOrdered(context Context) SemType {
+	memo := context.orderedMemo()
+	env := context.Env()
+
+	if memo != nil {
+		return memo
+	}
+	listDef := &ListDefinition{}
+	ordered := Union(NIL, Union(BOOLEAN, Union(INT, Union(FLOAT, Union(DECIMAL, Union(STRING, listDef.GetSemType(env)))))))
+	listDef.DefineListTypeWrappedWithEnvSemType(env, ordered)
+	context.setOrderedMemo(ordered)
+	return ordered
+}
+
 func createIsolatedObject(context Context) SemType {
 	memo := context.isolatedObjectMemo()
 	if memo != nil {

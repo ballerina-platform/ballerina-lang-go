@@ -1627,12 +1627,8 @@ func resolveNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral, expectedT
 
 // updateSymbolType updates the symbol's type if the node has an associated symbol.
 func updateSymbolType(t typeResolver, node ast.BLangNode, ty semtypes.SemType) {
-	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
-		symbol := nodeWithSymbol.Symbol()
-		if symbol == (model.SymbolRef{}) {
-			return
-		}
-		t.setSymbolType(symbol, ty)
+	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok && ast.SymbolIsSet(nodeWithSymbol) {
+		t.setSymbolType(nodeWithSymbol.Symbol(), ty)
 	}
 }
 
@@ -2510,6 +2506,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 			}
 		case *ast.BLangOrderByClause:
 			clause.SetDeterminedType(semtypes.NEVER)
+			orderedTy := semtypes.CreateOrdered(t.typeContext())
 			for j := range clause.OrderByKeyList {
 				orderKey := &clause.OrderByKeyList[j]
 				orderKey.SetDeterminedType(semtypes.NEVER)
@@ -2517,7 +2514,8 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				if !ok {
 					return nil, false
 				}
-				if !isQueryOrderableType(t, keyTy, 0) {
+				if !semtypes.IsSubtype(t.typeContext(), keyTy, orderedTy) ||
+					!semtypes.Comparable(t.typeContext(), keyTy, keyTy) {
 					t.semanticError("order by key expression must have an ordered type", orderKey.GetPosition())
 					return nil, false
 				}
@@ -2528,47 +2526,6 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 		}
 	}
 	return currentChain, true
-}
-
-var queryOrderablePrimitiveTypes = []semtypes.SemType{
-	semtypes.BOOLEAN,
-	semtypes.INT,
-	semtypes.FLOAT,
-	semtypes.DECIMAL,
-	semtypes.STRING,
-}
-
-func isQueryOrderableType(t typeResolver, ty semtypes.SemType, depth int) bool {
-	if depth > 8 {
-		return false
-	}
-
-	ctx := t.typeContext()
-	if semtypes.ContainsBasicType(ty, semtypes.NIL) {
-		nonNilTy := semtypes.Diff(ty, semtypes.NIL)
-		if semtypes.IsEmpty(ctx, nonNilTy) {
-			return true
-		}
-		return isQueryOrderableType(t, nonNilTy, depth+1)
-	}
-
-	for _, primitiveTy := range queryOrderablePrimitiveTypes {
-		if semtypes.IsSubtype(ctx, ty, primitiveTy) {
-			return true
-		}
-	}
-
-	if !semtypes.IsSubtypeSimple(ty, semtypes.LIST) {
-		return false
-	}
-
-	memberTypes := semtypes.ListAllMemberTypesInner(ctx, ty)
-	for _, memberTy := range memberTypes.SemTypes {
-		if !isQueryOrderableType(t, memberTy, depth+1) {
-			return false
-		}
-	}
-	return true
 }
 
 func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {
