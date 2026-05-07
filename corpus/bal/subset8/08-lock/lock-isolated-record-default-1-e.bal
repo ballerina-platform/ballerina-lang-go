@@ -14,21 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
+isolated int seed = 0;
 
-isolated int counter = 0;
-
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
+type Rec record {|
+    int value = seed; // @error
+|};
 
 public function main() {
-    inc();
-    inc();
-    inc();
-    lock {
-        io:println(counter); // @output 3
-    }
+    Rec _ = {};
 }

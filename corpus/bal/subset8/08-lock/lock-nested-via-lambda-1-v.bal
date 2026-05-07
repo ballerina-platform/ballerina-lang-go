@@ -13,22 +13,23 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/io;
 
-isolated int counter = 0;
-
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
+isolated int a = 0;
 
 public function main() {
-    inc();
-    inc();
-    inc();
     lock {
-        io:println(counter); // @output 3
+        a = a + 1;
+        // The inner lock is lexically inside the outer lock but in a
+        // separate closure (the lambda body), so it must not be
+        // reported as a nested lock.
+        var _ = function () {
+            lock {
+                a = a + 1;
+            }
+        };
+    }
+    lock {
+        io:println(a); // @output 1
     }
 }

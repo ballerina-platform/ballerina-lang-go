@@ -199,6 +199,9 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return fa
 	case *ast.BLangIdentifier:
 		return nil
+	case *ast.BLangSimpleVarRef:
+		checkIsolatedModuleVarOutsideLock(fa, n)
+		return visitInner(fa, n)
 	default:
 		// Delegate loop creation and common nodes to visitInner
 		return visitInner(fa, node)
@@ -343,6 +346,7 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage, importedSymbols map[s
 	}
 	sa.importedSymbols = importedSymbols
 	sa.moduleVarMetaMap = sa.buildModuleVarMetadata()
+	sa.validateModuleLevelIsolatedDecls(pkg)
 	ast.Walk(sa, pkg)
 	sa.pkg = nil
 	sa.importedPkgs = nil
@@ -372,8 +376,9 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangConstant:
 		return createConstantAnalyzer(sa, n)
 	case *ast.BLangSimpleVariable:
-		// Module-level variables don't need constant-expression validation.
-		// Type checking is handled by the type resolver.
+		return sa
+	case *ast.BLangSimpleVarRef:
+		checkIsolatedModuleVarOutsideLock(sa, n)
 		return nil
 	case *ast.BLangReturn:
 		// Error: return only valid in functions
@@ -508,6 +513,16 @@ func buildFunctionLocals(parent analyzer, fn *ast.BLangFunction) *localScope {
 	return scope
 }
 
+// validateIsolatedDefaultParams runs the isolated-closure analysis on
+// each non-`<>` default parameter expression of an isolated function.
+// Default expressions are themselves closures invoked at call time, so
+// for an isolated function they must independently satisfy the
+// isolated-closure rules. The function-body's normal walker handles the
+// non-isolated case implicitly: default expressions are walked through
+// the function-analyzer, and `enclosingLockAnalyzer` stops at that
+// boundary, so any isolated module variable reference is reported by
+// `checkIsolatedModuleVarOutsideLock` exactly as it would be for any
+// other unprotected read.
 func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction) {
 	fa := enclosingFunctionAnalyzer(a)
 	for i := range function.RequiredParams {
@@ -697,12 +712,29 @@ func (la *lockAnalyzer) internalErr(m string, l diagnostics.Location) {
 	la.parent.ctx().InternalError(m, l)
 }
 
-// enclosingLockAnalyzer walks the analyzer parent chain looking for an
-// enclosing lockAnalyzer. Used to detect nested lock statements.
+// enclosingLockAnalyzer walks the analyzer parent chain looking for a
+// lockAnalyzer that is in the same closure as `a`. The search stops at
+// the nearest functionAnalyzer because a function/lambda body is a
+// fresh closure: locks visible above it belong to the surrounding
+// closure and may not be held when this closure runs (a lambda value
+// can escape its defining lock and be invoked later, and a default
+// parameter expression is itself a closure invoked at each call).
+//
+// Two callers depend on this scoping:
+//
+//   - the nested-lock check in visitInner (a `lock` inside another
+//     `lock` is rejected, but a `lock` inside a lambda inside a `lock`
+//     is fine because the lambda is a separate closure);
+//   - checkIsolatedModuleVarOutsideLock (an isolated module variable
+//     read inside a lambda inside a `lock` is still "outside a lock"
+//     because the surrounding lock does not protect the lambda body).
 func enclosingLockAnalyzer(a analyzer) *lockAnalyzer {
 	for cur := a; cur != nil; cur = cur.parentAnalyzer() {
 		if lock, ok := cur.(*lockAnalyzer); ok {
 			return lock
+		}
+		if _, isFn := cur.(*functionAnalyzer); isFn {
+			return nil
 		}
 	}
 	return nil
@@ -1167,7 +1199,20 @@ func validateStreamCloseMethod[A analyzer](a A, impl ast.BLangExpression, comple
 
 func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
 	fa := initializeFunctionAnalyzer(a, expr.Function)
-	ast.Walk(fa, expr.Function)
+	fn := expr.Function
+	// Walk params + body directly rather than the BLangFunction node
+	// itself; otherwise the walker's first visit on BLangFunction would
+	// re-enter visitInner's BLangFunction case and re-initialize the
+	// analyzer, double-firing all per-init checks.
+	for i := range fn.RequiredParams {
+		ast.Walk(fa, &fn.RequiredParams[i])
+	}
+	if fn.RestParam != nil {
+		ast.Walk(fa, fn.RestParam.(ast.BLangNode))
+	}
+	if fn.Body != nil {
+		ast.Walk(fa, fn.GetBody().(ast.BLangNode))
+	}
 	return true
 }
 
@@ -1602,6 +1647,12 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 
 func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangLambdaFunction:
+		// Lambdas are analyzed exactly once via analyzeLambdaFunction
+		// (called from analyzeActionOrExpression). Stop the walker here
+		// to avoid re-initializing/re-walking the same lambda body.
+		_ = n
+		return nil
 	case *ast.BLangFunction:
 		if _, isDep := a.ctx().GetSymbol(n.Symbol()).(model.DependentlyTypedFunctionSymbol); isDep {
 			initializeFunctionAnalyzer(a, n)
@@ -1704,6 +1755,10 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			if field.Expr != nil {
 				expectedType := a.ctx().SymbolType(field.Symbol())
 				analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
+				// Drive the visitor through the initializer so per-node
+				// semantic checks (e.g. isolated-module-var refs) fire
+				// uniformly with every other walked initializer.
+				ast.Walk(a, field.Expr.(ast.BLangNode))
 			}
 		}
 		if n.InitFunction != nil {

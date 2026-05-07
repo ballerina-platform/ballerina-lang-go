@@ -18,17 +18,7 @@ import ballerina/io;
 
 isolated int counter = 0;
 
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
-
 public function main() {
-    inc();
-    inc();
-    inc();
-    lock {
-        io:println(counter); // @output 3
-    }
+    io:println(counter); // @error
+    counter = counter + 1; // @error LHS // @error RHS
 }

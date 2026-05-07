@@ -27,9 +27,15 @@ main() -> nil{
     %6 = bumpBy(%5) -> bb2;
   }
   bb2 {
-    %7 = println(counter) -> bb3;
+    lock-start "$anon/.:counter" GOTO bb3;
   }
   bb3 {
+    %7 = println(counter) -> bb4;
+  }
+  bb4 {
+    lock-end "$anon/.:counter" GOTO bb5;
+  }
+  bb5 {
     return;
   }
 }

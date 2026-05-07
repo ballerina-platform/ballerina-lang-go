@@ -27,9 +27,15 @@ main() -> nil{
     %3 = inc() -> bb3;
   }
   bb3 {
-    %4 = println(counter) -> bb4;
+    lock-start "$anon/.:counter" GOTO bb4;
   }
   bb4 {
+    %4 = println(counter) -> bb5;
+  }
+  bb5 {
+    lock-end "$anon/.:counter" GOTO bb6;
+  }
+  bb6 {
     return;
   }
 }
