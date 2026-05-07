@@ -1,0 +1,27 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+counter  int;
+xs  [int...];
+main() -> nil{
+  bb0 {
+    lock-start "$anon/.:counter" GOTO bb1;
+  }
+  bb1 {
+    %1 = println(counter) -> bb2;
+  }
+  bb2 {
+    lock-end "$anon/.:counter" GOTO bb3;
+  }
+  bb3 {
+    lock-start "$anon/.:xs" GOTO bb4;
+  }
+  bb4 {
+    %2 = println(xs) -> bb5;
+  }
+  bb5 {
+    lock-end "$anon/.:xs" GOTO bb6;
+  }
+  bb6 {
+    return;
+  }
+}

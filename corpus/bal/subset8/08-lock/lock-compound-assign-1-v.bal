@@ -27,5 +27,7 @@ function bumpBy(int amount) {
 public function main() {
     bumpBy(3);
     bumpBy(4);
-    io:println(counter); // @output 7
+    lock {
+        io:println(counter); // @output 7
+    }
 }

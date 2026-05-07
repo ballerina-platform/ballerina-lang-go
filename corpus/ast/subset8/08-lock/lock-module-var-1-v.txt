@@ -23,6 +23,8 @@
         (invocation inc ()))
       (expression-stmt
         (invocation inc ()))
-      (expression-stmt
-        (invocation io println (
-          (simple-var-ref counter)))))))
+      (lock
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref counter)))))))))

@@ -14,21 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
-isolated int counter = 0;
-
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
+isolated int a = 0;
+int b = a; // @error
+int c = a + 1; // @error
 
 public function main() {
-    inc();
-    inc();
-    inc();
-    lock {
-        io:println(counter); // @output 3
-    }
 }

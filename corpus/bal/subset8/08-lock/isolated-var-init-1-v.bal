@@ -17,18 +17,13 @@
 import ballerina/io;
 
 isolated int counter = 0;
-
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
+isolated int[] xs = [1, 2, 3];
 
 public function main() {
-    inc();
-    inc();
-    inc();
     lock {
-        io:println(counter); // @output 3
+        io:println(counter); // @output 0
+    }
+    lock {
+        io:println(xs); // @output [1,2,3]
     }
 }

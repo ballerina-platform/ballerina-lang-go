@@ -416,6 +416,52 @@ func isIsolatedExpression(a analyzer, expr ast.BLangExpression) bool {
 	return false
 }
 
+func checkIsolatedModuleVarOutsideLock(a analyzer, ref *ast.BLangSimpleVarRef) {
+	unnarrowed := a.ctx().UnnarrowedSymbol(ref.Symbol())
+	sym, ok := a.ctx().GetSymbol(unnarrowed).(*model.ValueSymbol)
+	if !ok || !sym.IsIsolated() {
+		return
+	}
+	if enclosingLockAnalyzer(a) == nil {
+		a.semanticErr(
+			"access of an isolated variable must be inside a lock statement",
+			ref.GetPosition(),
+		)
+	}
+}
+
+// validateModuleLevelIsolatedDecls enforces that the initializer of
+// every module-level `isolated` declaration is itself an isolated
+// expression.
+func (sa *SemanticAnalyzer) validateModuleLevelIsolatedDecls(pkg *ast.BLangPackage) {
+	check := func(expr ast.BLangExpression, sym model.SymbolRef) {
+		vs, ok := sa.ctx().GetSymbol(sym).(*model.ValueSymbol)
+		if !ok || !vs.IsIsolated() {
+			return
+		}
+		if !isIsolatedExpression(sa, expr) {
+			sa.semanticErr(
+				"initializer of an isolated variable must be an isolated expression",
+				expr.GetPosition(),
+			)
+		}
+	}
+	for i := range pkg.GlobalVars {
+		v := &pkg.GlobalVars[i]
+		if v.Expr == nil {
+			continue
+		}
+		check(v.Expr.(ast.BLangExpression), v.Symbol())
+	}
+	for i := range pkg.Constants {
+		c := &pkg.Constants[i]
+		if c.Expr == nil {
+			continue
+		}
+		check(c.Expr.(ast.BLangExpression), c.Symbol())
+	}
+}
+
 // validateIsolatedFunction validates the body of an isolated function under
 // the rules described on isIsolatedFunctionInner, using the enclosing
 // function-analyzer's locals scope (seeded with parameters) so that inner

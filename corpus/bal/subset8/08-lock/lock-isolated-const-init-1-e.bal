@@ -16,19 +16,14 @@
 
 import ballerina/io;
 
-isolated int counter = 0;
-
-function inc() {
-    lock {
-        counter = counter + 1;
-    }
-}
+isolated int seed = 7;
 
 public function main() {
-    inc();
-    inc();
-    inc();
+    int result = 0;
     lock {
-        io:println(counter); // @output 3
+        var f = function(int n = seed) returns int { // @error
+            return n;
+        };
     }
+    io:println(result); // @output 7
 }
