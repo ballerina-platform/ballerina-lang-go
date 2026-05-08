@@ -29,7 +29,7 @@ public function main() {
     io:println(0xff.toHexString());    // @output ff
     io:println((-0xaa).toHexString()); // @output -aa
 
-    io:println(9223372036854775807.toHexString());        // @output  7fffffffffffffff
+    io:println(9223372036854775807.toHexString());        // @output 7fffffffffffffff
     io:println((-9223372036854775807 - 1).toHexString()); // @output -8000000000000000
 }
 

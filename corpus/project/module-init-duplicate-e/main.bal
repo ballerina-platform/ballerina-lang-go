@@ -18,7 +18,7 @@ import ballerina/io;
 
 int x = 0;
 
-function init() {
+function init() { // @error
     x = 1;
 }
 

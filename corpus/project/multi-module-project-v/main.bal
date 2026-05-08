@@ -19,6 +19,6 @@ import multimoduleproject.services;
 import testorg/multimoduleproject.storage;
 
 public function main() {
-    services:runServices();
-    storage:initDatabase();
+    services:runServices(); // @output DB initialized
+    storage:initDatabase(); // @output DB initialized
 }

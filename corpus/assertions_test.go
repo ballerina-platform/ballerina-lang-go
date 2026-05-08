@@ -185,8 +185,14 @@ func assertPanicAnnotations(t *testing.T, anns annotations, stdout, stderr strin
 	if !ok {
 		return
 	}
-	if strings.TrimRight(stdout, "\n") != "" {
-		t.Errorf("expected empty stdout for -p test, got:\n%s", stdout)
+	outputs, ok := singleOutputFile(t, anns)
+	if !ok {
+		return
+	}
+	expectedStdout := buildExpectedStdout(outputs)
+	if stdout != expectedStdout {
+		t.Errorf("@output annotation mismatch for -p test\n%s",
+			test_util.FormatExpectedGot(expectedStdout, stdout))
 	}
 
 	for _, frame := range parseStackFrames(stderr) {

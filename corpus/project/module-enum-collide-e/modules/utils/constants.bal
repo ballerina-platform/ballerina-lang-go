@@ -14,4 +14,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public const string RED = "RED";
+public const string RED = "RED"; // @error

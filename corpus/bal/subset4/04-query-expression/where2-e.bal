@@ -17,7 +17,7 @@
 public function main() {
     int[] xs = [1, 2, 3];
     int[] out = from var x in xs
-        where y > 1
+        where y > 1 // @error
         let int y = x * 2
-        select y; // @error
+        select y;
 }

@@ -14,4 +14,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public string RED;
+public string RED; // @error

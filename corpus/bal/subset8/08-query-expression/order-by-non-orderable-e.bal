@@ -17,6 +17,6 @@
 public function main() {
     map<int>[] rows = [{"a": 1}, {"b": 2}];
     map<int>[] out = from var row in rows
-        order by row ascending
-        select row; // @error
+        order by row ascending // @error
+        select row;
 }
