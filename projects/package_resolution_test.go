@@ -50,29 +50,40 @@ func TestModuleResolver_ExternalPackage(t *testing.T) {
 	assert.NotNil(resolution.ModuleDependencyGraph())
 }
 
-// TestPackageResolution_WithCache tests package resolution with external package cache.
-func TestPackageResolution_WithCache(t *testing.T) {
+// TestPackageResolution_PackageNotFound verifies that resolving a package
+// which does not exist in any configured repository returns an unresolved
+// response without surfacing an error. With Offline=true and no remote
+// source wired in, the resolver simply runs out of repositories to ask.
+func TestPackageResolution_PackageNotFound(t *testing.T) {
 	require := test_util.NewRequire(t)
 	assert := test_util.New(t)
 
 	cachePath, err := filepath.Abs("testdata/repo/bala")
 	require.NoError(err)
 
-	repo := projects.NewFileSystemRepository(os.DirFS(cachePath), ".")
+	cache := projects.NewFileSystemRepository(os.DirFS(cachePath), ".")
+	remote := projects.NewRemoteRepository(cache)
+	env := projects.NewProjectEnvironmentBuilder(os.DirFS(cachePath)).
+		WithRepositories([]projects.Repository{remote}).
+		WithBuildOptions(projects.NewBuildOptionsBuilder().WithOffline(true).Build()).
+		Build()
 
-	// Load mock package from repository (auto-caches via InitPackage)
-	pkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
+	version, err := projects.NewPackageVersionFromString("1.0.0")
 	require.NoError(err)
-	require.NotNil(pkg)
 
-	// Verify package is auto-cached in environment
-	cache := pkg.Project().Environment().PackageCache()
-	assert.Equal(1, cache.Size())
-
-	// Verify package is cached and can be retrieved
-	cachedPkg := cache.Get("mockorg", "mockpkg", "1.0.0")
-	require.NotNil(cachedPkg)
-	assert.Equal(projects.ProjectKindBala, cachedPkg.Project().Kind())
+	resp := env.PackageResolver().ResolvePackages(context.Background(),
+		[]projects.ResolutionRequest{
+			projects.NewResolutionRequest(projects.NewPackageDescriptor(
+				projects.NewPackageOrg("missingorg"),
+				projects.NewPackageName("missingpkg"),
+				version,
+			)),
+		},
+		env.ResolutionOptions(),
+	)
+	require.Len(resp, 1)
+	assert.False(resp[0].IsResolved(),
+		"expected unresolved response for cache-miss + offline through RemoteRepository")
 }
 
 // TestBalaProject_ModuleStructure tests that bala project modules are correctly loaded.
@@ -146,7 +157,7 @@ func TestRepository_Integration(t *testing.T) {
 	repo := projects.NewFileSystemRepository(os.DirFS(cachePath), ".")
 
 	// Test GetPackageVersions
-	versions, err := repo.GetPackageVersions(context.Background(), "mockorg", "mockpkg")
+	versions, err := repo.GetPackageVersions(context.Background(), "mockorg", "mockpkg", projects.ResolutionOptions{})
 	require.NoError(err)
 	hasVersion := false
 	for _, v := range versions {
@@ -156,12 +167,6 @@ func TestRepository_Integration(t *testing.T) {
 		}
 	}
 	assert.True(hasVersion, "expected versions to contain 1.0.0")
-
-	// Test GetLatestVersion
-	latest, found, err := repo.GetLatestVersion(context.Background(), "mockorg", "mockpkg")
-	require.NoError(err)
-	assert.True(found)
-	assert.Equal("1.0.0", latest.String())
 
 	// Test Exists
 	exists, err := repo.Exists(context.Background(), "mockorg", "mockpkg", "1.0.0")
@@ -174,7 +179,7 @@ func TestRepository_Integration(t *testing.T) {
 	assert.False(exists)
 
 	// Test GetPackage
-	loadedPkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
+	loadedPkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0", projects.ResolutionOptions{})
 	require.NoError(err)
 	require.NotNil(loadedPkg)
 	assert.Equal(projects.ProjectKindBala, loadedPkg.Project().Kind())
@@ -242,6 +247,50 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	}
 
 	assert.Equal(0, diagnosticResult.DiagnosticCount(), "expected no compilation errors")
+}
+
+// TestPackageResolution_PicksLatestVersion verifies that when a project
+// imports an external package by org+name (no version pin) and the cache
+// holds multiple versions on disk, the resolver picks the latest version.
+//
+// Fixture: project-with-multi-version-dep imports mockorg/versionedpkg.
+// testdata/repo/bala/mockorg/versionedpkg has both 1.0.0 and 2.0.0 — only
+// 2.0.0 should be loaded into the resolver's cache.
+func TestPackageResolution_PicksLatestVersion(t *testing.T) {
+	require := test_util.NewRequire(t)
+	assert := test_util.New(t)
+
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
+
+	projectPath := filepath.Join("testdata", "project-with-multi-version-dep")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	result, err := loadProject(absPath, projects.ProjectLoadConfig{
+		Repositories: []projects.Repository{
+			projects.NewFileSystemRepository(os.DirFS(testRepoPath), "."),
+		},
+	})
+	require.NoError(err)
+
+	pkg := result.Project().CurrentPackage()
+	require.NotNil(pkg)
+
+	// Trigger resolution.
+	_ = pkg.Compilation()
+
+	resolved := pkg.Resolution().ResolvedDependencies()["mockorg/versionedpkg"]
+	require.NotNil(resolved, "expected mockorg/versionedpkg to be resolved")
+	assert.Equal("2.0.0", resolved.Version().String(),
+		"resolver should pick the latest version when no version is pinned")
+
+	cache := result.Project().Environment().PackageCache()
+	require.NotNil(cache.Get("mockorg", "versionedpkg", "2.0.0"),
+		"latest (2.0.0) should be in the cache")
+	if cache.Get("mockorg", "versionedpkg", "1.0.0") != nil {
+		t.Error("older versions should not be loaded when the latest satisfies the import")
+	}
 }
 
 // TestPackageResolution_TransitiveDependency tests package resolution with transitive dependencies.

@@ -50,6 +50,13 @@ func (b *ProjectEnvironmentBuilder) Build() *Environment {
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), b.buildOptions.Stats())
 	projEnv := NewEnvironment(b.fsys, env)
 
+	// ResolutionOptions are a runtime-facing subset of BuildOptions; derive
+	// them so callers configure a single source of truth (BuildOptions) and
+	// the resolver still gets the offline/sticky flags it consults.
+	projEnv.resolutionOptions = ResolutionOptions{}.
+		WithOffline(b.buildOptions.Offline()).
+		WithSticky(b.buildOptions.Sticky())
+
 	// Bind and add repositories
 	for _, repo := range b.repositories {
 		if repo != nil {
