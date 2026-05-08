@@ -782,7 +782,7 @@ func newListLiteral(values ...ast.BLangExpression) *ast.BLangListConstructorExpr
 
 func newEmptyMappingLiteral() *ast.BLangMappingConstructorExpr {
 	mapExpr := &ast.BLangMappingConstructorExpr{
-		Fields: []ast.MappingField{},
+		Fields: []ast.BLangMappingField{},
 	}
 	mapExpr.SetPosition(queryTestPos)
 	return mapExpr

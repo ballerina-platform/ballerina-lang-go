@@ -71,7 +71,9 @@ const (
 )
 
 type BLangNode interface {
-	Node
+	GetKind() NodeKind
+	GetPosition() diagnostics.Location
+	GetDeterminedType() semtypes.SemType
 	SetDeterminedType(ty semtypes.SemType)
 	SetPosition(pos diagnostics.Location)
 }
@@ -192,7 +194,7 @@ type (
 		InitFunction     *BLangFunction
 		StartFunction    *BLangFunction
 		StopFunction     *BLangFunction
-		TopLevelNodes    []TopLevelNode
+		TopLevelNodes    []BLangTopLevelNode
 		TestablePkgs     []*BLangTestablePackage
 		ClassDefinitions []BLangClassDefinition
 		CompletedPhases  common.UnorderedSet[CompilerPhase]
@@ -269,7 +271,7 @@ type (
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       SimpleVariableNode
 		returnTypeDescriptor            TypeDescriptor
-		Body                            FunctionBodyNode
+		Body                            BLangFunctionBody
 		flags                           model.Flag
 	}
 
@@ -462,7 +464,7 @@ var (
 	_ MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
 	_ ExprFunctionBodyNode                        = &BLangExprFunctionBody{}
 	_ FunctionNode                                = &BLangFunction{}
-	_ FunctionBodyNode                            = &BLangExternFunctionBody{}
+	_ BLangFunctionBody                           = &BLangExternFunctionBody{}
 )
 
 var (
@@ -797,12 +799,12 @@ func (b *BLangClassDefinition) SetCycleDepth(depth int) {
 	b.CycleDepth = depth
 }
 
-func (b *BLangCompilationUnit) AddTopLevelNode(node TopLevelNode) {
+func (b *BLangCompilationUnit) AddTopLevelNode(node BLangTopLevelNode) {
 	// migrated from BLangCompilationUnit.java:48:5
 	b.TopLevelNodes = append(b.TopLevelNodes, node)
 }
 
-func (b *BLangCompilationUnit) GetTopLevelNodes() []TopLevelNode {
+func (b *BLangCompilationUnit) GetTopLevelNodes() []BLangTopLevelNode {
 	// migrated from BLangCompilationUnit.java:53:5
 	return b.TopLevelNodes
 }
@@ -1215,11 +1217,11 @@ func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor TypeDesc
 	b.returnTypeDescriptor = typeDescriptor.(BType)
 }
 
-func (b *bLangInvokableNodeBase) GetBody() FunctionBodyNode {
+func (b *bLangInvokableNodeBase) GetBody() BLangFunctionBody {
 	return b.Body
 }
 
-func (b *bLangInvokableNodeBase) SetBody(body FunctionBodyNode) {
+func (b *bLangInvokableNodeBase) SetBody(body BLangFunctionBody) {
 	b.Body = body
 }
 
@@ -1565,7 +1567,7 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	b.Functions = []BLangFunction{}
 	b.TypeDefinitions = []BLangTypeDefinition{}
 	b.Annotations = []BLangAnnotation{}
-	b.TopLevelNodes = []TopLevelNode{}
+	b.TopLevelNodes = []BLangTopLevelNode{}
 	b.TestablePkgs = []*BLangTestablePackage{}
 	b.ClassDefinitions = []BLangClassDefinition{}
 	b.CompletedPhases = common.UnorderedSet[CompilerPhase]{}

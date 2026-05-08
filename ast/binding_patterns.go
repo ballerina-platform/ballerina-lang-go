@@ -303,12 +303,12 @@ func (b *BLangNamedArgBindingPattern) SetIdentifier(variableName *BLangIdentifie
 	b.ArgName = variableName
 }
 
-func (b *BLangNamedArgBindingPattern) GetBindingPattern() BindingPatternNode {
+func (b *BLangNamedArgBindingPattern) GetBindingPattern() BLangBindingPattern {
 	// migrated from BLangNamedArgBindingPattern.java:50:5
 	return b.BindingPattern
 }
 
-func (b *BLangNamedArgBindingPattern) SetBindingPattern(bindingPattern BindingPatternNode) {
+func (b *BLangNamedArgBindingPattern) SetBindingPattern(bindingPattern BLangBindingPattern) {
 	// migrated from BLangNamedArgBindingPattern.java:55:5
 	b.BindingPattern = bindingPattern
 }

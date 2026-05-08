@@ -248,8 +248,8 @@ func (p *PrettyPrinter) printCompoundAssignment(t *BLangCompoundAssignment) {
 	p.printString("compound-assignment")
 	p.printOperatorKind(t.OpKind)
 	p.indentLevel++
-	p.PrintInner(t.VarRef.(BLangNode))
-	p.PrintInner(t.Expr.(BLangNode))
+	p.PrintInner(t.VarRef)
+	p.PrintInner(t.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -283,7 +283,7 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.printBLangNodeBase(&node.bLangNodeBase)
 	p.indentLevel++
 	for _, topLevelNode := range node.TopLevelNodes {
-		p.PrintInner(topLevelNode.(BLangNode))
+		p.PrintInner(topLevelNode)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -476,8 +476,8 @@ func (p *PrettyPrinter) printBinaryExpr(node *BLangBinaryExpr) {
 	p.printString("binary-expr")
 	p.printOperatorKind(node.OpKind)
 	p.indentLevel++
-	p.PrintInner(node.LhsExpr.(BLangNode))
-	p.PrintInner(node.RhsExpr.(BLangNode))
+	p.PrintInner(node.LhsExpr)
+	p.PrintInner(node.RhsExpr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -497,7 +497,7 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	if node.Expr != nil {
 		p.printString("expr:")
 		p.indentLevel++
-		p.PrintInner(node.Expr.(BLangNode))
+		p.PrintInner(node.Expr)
 		p.indentLevel--
 	}
 
@@ -506,7 +506,7 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgExprs {
-			p.PrintInner(arg.(BLangNode))
+			p.PrintInner(arg)
 		}
 		p.indentLevel--
 	}
@@ -523,7 +523,7 @@ func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallA
 	if node.Expr != nil {
 		p.printString("expr:")
 		p.indentLevel++
-		p.PrintInner(node.Expr.(BLangNode))
+		p.PrintInner(node.Expr)
 		p.indentLevel--
 	}
 
@@ -531,7 +531,7 @@ func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallA
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgExprs {
-			p.PrintInner(arg.(BLangNode))
+			p.PrintInner(arg)
 		}
 		p.indentLevel--
 	}
@@ -545,7 +545,7 @@ func (p *PrettyPrinter) printNamedArgsExpression(node *BLangNamedArgsExpression)
 	p.printString("named-arg")
 	p.printString(node.Name.Value)
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -555,7 +555,7 @@ func (p *PrettyPrinter) printExpressionStmt(node *BLangExpressionStmt) {
 	p.startNode()
 	p.printString("expression-stmt")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -565,7 +565,7 @@ func (p *PrettyPrinter) printReturn(node *BLangReturn) {
 	p.printString("return")
 	if node.Expr != nil {
 		p.indentLevel++
-		p.PrintInner(node.Expr.(BLangNode))
+		p.PrintInner(node.Expr)
 		p.indentLevel--
 	}
 	p.endNode()
@@ -575,7 +575,7 @@ func (p *PrettyPrinter) printPanic(node *BLangPanic) {
 	p.startNode()
 	p.printString("panic")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -585,7 +585,7 @@ func (p *PrettyPrinter) printBlockStmt(node *BLangBlockStmt) {
 	p.printString("block-stmt")
 	p.indentLevel++
 	for _, stmt := range node.Stmts {
-		p.PrintInner(stmt.(BLangNode))
+		p.PrintInner(stmt)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -595,11 +595,11 @@ func (p *PrettyPrinter) printIf(node *BLangIf) {
 	p.startNode()
 	p.printString("if")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.PrintInner(&node.Body)
 	p.printString("(")
 	if node.ElseStmt != nil {
-		p.PrintInner(node.ElseStmt.(BLangNode))
+		p.PrintInner(node.ElseStmt)
 	}
 	p.printSticky(")")
 	p.indentLevel--
@@ -629,14 +629,14 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	if node.TypeNode() != nil {
 		p.printString("(type")
 		p.indentLevel++
-		p.PrintInner(node.TypeNode().(BLangNode))
+		p.PrintInner(node.TypeNode())
 		p.indentLevel--
 		p.printSticky(")")
 	}
 	if node.Expr != nil {
 		p.printString("(expr")
 		p.indentLevel++
-		p.PrintInner(node.Expr.(BLangNode))
+		p.PrintInner(node.Expr)
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -648,7 +648,7 @@ func (p *PrettyPrinter) printBlockFunctionBody(node *BLangBlockFunctionBody) {
 	p.printString("block-function-body")
 	p.indentLevel++
 	for _, stmt := range node.Stmts {
-		p.PrintInner(stmt.(BLangNode))
+		p.PrintInner(stmt)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -682,7 +682,7 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printString("(")
 	if node.GetReturnTypeDescriptor() != nil {
 		p.indentLevel++
-		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
+		p.PrintInner(node.GetReturnTypeDescriptor())
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -690,7 +690,7 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	// Print function body if present
 	if node.Body != nil {
 		p.indentLevel++
-		p.PrintInner(node.Body.(BLangNode))
+		p.PrintInner(node.Body)
 		p.indentLevel--
 	}
 
@@ -703,7 +703,7 @@ func (p *PrettyPrinter) printUnaryExpr(node *BLangUnaryExpr) {
 	p.printString("unary-expr")
 	p.printOperatorKind(node.Operator)
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -729,7 +729,7 @@ func (p *PrettyPrinter) printGroupExpr(node *BLangGroupExpr) {
 	p.startNode()
 	p.printString("group-expr")
 	p.indentLevel++
-	p.PrintInner(node.Expression.(BLangNode))
+	p.PrintInner(node.Expression)
 	p.indentLevel--
 	p.endNode()
 }
@@ -738,9 +738,9 @@ func (p *PrettyPrinter) printTypeConversionExpr(node *BLangTypeConversionExpr) {
 	p.startNode()
 	p.printString("type-conversion-expr")
 	p.indentLevel++
-	p.PrintInner(node.Expression.(BLangNode))
+	p.PrintInner(node.Expression)
 	if node.TypeDescriptor != nil {
-		p.PrintInner(node.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.TypeDescriptor)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -754,9 +754,9 @@ func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
 		p.printString("type-test-expr is")
 	}
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	if node.Type.TypeDescriptor != nil {
-		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.Type.TypeDescriptor)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -909,7 +909,7 @@ func (p *PrettyPrinter) printWhile(node *BLangWhile) {
 	p.startNode()
 	p.printString("while")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.PrintInner(&node.Body)
 	// OnFailClause handling can be added if needed in the future
 	p.indentLevel--
@@ -933,7 +933,7 @@ func (p *PrettyPrinter) printForeach(node *BLangForeach) {
 		p.PrintInner(node.VariableDef)
 	}
 	if node.Collection != nil {
-		p.PrintInner(node.Collection.(BLangNode))
+		p.PrintInner(node.Collection)
 	}
 	p.PrintInner(&node.Body)
 	p.indentLevel--
@@ -945,7 +945,7 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	p.startNode()
 	p.printString("array-type")
 	p.indentLevel++
-	p.PrintInner(node.Elemtype.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.Elemtype.TypeDescriptor)
 	if node.Dimensions > 0 {
 		p.printString(fmt.Sprintf("dimensions: %d", node.Dimensions))
 	}
@@ -954,7 +954,7 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 		for _, size := range node.Sizes {
 			p.printSticky("[")
 			if size != nil {
-				p.PrintInner(size.(BLangNode))
+				p.PrintInner(size)
 			}
 			p.printSticky("]")
 		}
@@ -983,14 +983,14 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printString("(")
 	if node.TypeNode() != nil {
 		p.indentLevel++
-		p.PrintInner(node.TypeNode().(BLangNode))
+		p.PrintInner(node.TypeNode())
 		p.indentLevel--
 	}
 	p.printSticky(")")
 	p.printString("(")
 	if node.Expr != nil {
 		p.indentLevel++
-		p.PrintInner(node.Expr.(BLangNode))
+		p.PrintInner(node.Expr)
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -1016,8 +1016,8 @@ func (p *PrettyPrinter) printAssignment(node *BLangAssignment) {
 	p.startNode()
 	p.printString("assignment")
 	p.indentLevel++
-	p.PrintInner(node.VarRef.(BLangNode))
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.VarRef)
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1027,8 +1027,8 @@ func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
 	p.startNode()
 	p.printString("index-based-access")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
-	p.PrintInner(node.IndexExpr.(BLangNode))
+	p.PrintInner(node.Expr)
+	p.PrintInner(node.IndexExpr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1039,7 +1039,7 @@ func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr)
 	p.printString("list-constructor-expr")
 	p.indentLevel++
 	for _, expr := range node.Exprs {
-		p.PrintInner(expr.(BLangNode))
+		p.PrintInner(expr)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1064,10 +1064,10 @@ func (p *PrettyPrinter) printMappingKeyValueField(kv *BLangMappingKeyValueField)
 	p.printString("key-value")
 	p.indentLevel++
 	if kv.Key != nil && kv.Key.Expr != nil {
-		p.PrintInner(kv.Key.Expr.(BLangNode))
+		p.PrintInner(kv.Key.Expr)
 	}
 	if kv.ValueExpr != nil {
-		p.PrintInner(kv.ValueExpr.(BLangNode))
+		p.PrintInner(kv.ValueExpr)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1086,7 +1086,7 @@ func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
 	p.printString("finite-type")
 	p.indentLevel++
 	for _, value := range node.ValueSpace {
-		p.PrintInner(value.(BLangNode))
+		p.PrintInner(value)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1097,8 +1097,8 @@ func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
 	p.startNode()
 	p.printString("union-type")
 	p.indentLevel++
-	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
-	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.lhs.TypeDescriptor)
+	p.PrintInner(node.rhs.TypeDescriptor)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1108,8 +1108,8 @@ func (p *PrettyPrinter) printIntersectionTypeNode(node *BLangIntersectionTypeNod
 	p.startNode()
 	p.printString("intersection-type")
 	p.indentLevel++
-	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
-	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.lhs.TypeDescriptor)
+	p.PrintInner(node.rhs.TypeDescriptor)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1230,7 +1230,7 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 	p.printString("error-type")
 	if !node.IsTop() {
 		p.indentLevel++
-		p.PrintInner(node.DetailType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.DetailType.TypeDescriptor)
 		p.indentLevel--
 	}
 	p.endNode()
@@ -1312,7 +1312,7 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 	if node.ReturnType != nil {
 		p.printString("(return-type")
 		p.indentLevel++
-		p.PrintInner(node.ReturnType.(BLangNode))
+		p.PrintInner(node.ReturnType)
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -1447,10 +1447,10 @@ func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
 	p.printString("stream-type")
 	p.indentLevel++
 	if node.ValueType.TypeDescriptor != nil {
-		p.PrintInner(node.ValueType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.ValueType.TypeDescriptor)
 	}
 	if node.CompletionType.TypeDescriptor != nil {
-		p.PrintInner(node.CompletionType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.CompletionType.TypeDescriptor)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1461,10 +1461,10 @@ func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
 	p.printString("constrained-type")
 	p.indentLevel++
 	if node.Type.TypeDescriptor != nil {
-		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.Type.TypeDescriptor)
 	}
 	if node.Constraint.TypeDescriptor != nil {
-		p.PrintInner(node.Constraint.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.Constraint.TypeDescriptor)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1479,7 +1479,7 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 	}
 	if node.GetTypeData().TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.PrintInner(node.GetTypeData().TypeDescriptor)
 		p.indentLevel--
 	}
 	p.endNode()
@@ -1491,12 +1491,12 @@ func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
 	p.printString("tuple-type")
 	p.indentLevel++
 	for _, member := range node.Members {
-		p.PrintInner(member.TypeDesc.(BLangNode))
+		p.PrintInner(member.TypeDesc)
 	}
 	if node.Rest != nil {
 		p.printString("(rest")
 		p.indentLevel++
-		p.PrintInner(node.Rest.(BLangNode))
+		p.PrintInner(node.Rest)
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -1519,9 +1519,9 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 			p.printString("optional")
 		}
 		p.indentLevel++
-		p.PrintInner(field.Type.(BLangNode))
+		p.PrintInner(field.Type)
 		if field.DefaultExpr != nil {
-			p.PrintInner(field.DefaultExpr.(BLangNode))
+			p.PrintInner(field.DefaultExpr)
 		}
 		p.indentLevel--
 		p.endNode()
@@ -1530,7 +1530,7 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 		p.startNode()
 		p.printString("rest")
 		p.indentLevel++
-		p.PrintInner(node.RestType.(BLangNode))
+		p.PrintInner(node.RestType)
 		p.indentLevel--
 		p.endNode()
 	}
@@ -1551,7 +1551,7 @@ func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
 		p.printString("service")
 	}
 	p.indentLevel++
-	members := slices.SortedFunc(node.Members(), func(a, b ObjectMember) int {
+	members := slices.SortedFunc(node.Members(), func(a, b BLangObjectMember) int {
 		return cmp.Compare(a.Name(), b.Name())
 	})
 	for _, member := range members {
@@ -1569,7 +1569,7 @@ func (p *PrettyPrinter) printObjectField(node *BObjectField) {
 		p.printString("public")
 	}
 	p.indentLevel++
-	p.PrintInner(node.Ty.(BLangNode))
+	p.PrintInner(node.Ty)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1591,7 +1591,7 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 				p.printString(param.Name.Value)
 			}
 			p.indentLevel++
-			p.PrintInner(param.TypeDesc.(BLangNode))
+			p.PrintInner(param.TypeDesc)
 			p.indentLevel--
 			p.endNode()
 		}
@@ -1601,7 +1601,7 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 	p.printString("(")
 	if node.ReturnTypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.PrintInner(node.ReturnTypeDescriptor)
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -1614,7 +1614,7 @@ func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
 	p.printString("field-based-access")
 	p.printString(node.Field.Value)
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1632,7 +1632,7 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 	if len(node.PositionalArgs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.PositionalArgs {
-			p.PrintInner(arg.(BLangNode))
+			p.PrintInner(arg)
 		}
 		p.indentLevel--
 	}
@@ -1645,7 +1645,7 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 			p.printString("named-arg")
 			p.printString(namedArg.Name.Value)
 			p.indentLevel++
-			p.PrintInner(namedArg.Expr.(BLangNode))
+			p.PrintInner(namedArg.Expr)
 			p.indentLevel--
 			p.endNode()
 		}
@@ -1660,7 +1660,7 @@ func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
 	p.startNode()
 	p.printString("checked-expr")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1670,7 +1670,7 @@ func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
 	p.startNode()
 	p.printString("check-panicked-expr")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1679,7 +1679,7 @@ func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
 	p.startNode()
 	p.printString("trap-expr")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }
@@ -1694,7 +1694,7 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	p.indentLevel++
 	// Print fields
 	for _, field := range node.Fields {
-		p.PrintInner(field.(BLangNode))
+		p.PrintInner(field)
 	}
 	// Print init function
 	if node.InitFunction != nil {
@@ -1728,7 +1728,7 @@ func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
 	if len(node.ArgsExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgsExprs {
-			p.PrintInner(arg.(BLangNode))
+			p.PrintInner(arg)
 		}
 		p.indentLevel--
 	}
@@ -1746,7 +1746,7 @@ func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
 		for i := range node.RequiredParams {
 			param := &node.RequiredParams[i]
 			if param.TypeDesc != nil {
-				p.PrintInner(param.TypeDesc.(BLangNode))
+				p.PrintInner(param.TypeDesc)
 			}
 		}
 		p.indentLevel--
@@ -1760,7 +1760,7 @@ func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
 	p.printString("(")
 	if node.ReturnTypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.PrintInner(node.ReturnTypeDescriptor)
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -1785,7 +1785,7 @@ func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
 		p.PrintInner(node.Name)
 	}
 	if node.TypeDesc != nil {
-		p.PrintInner(node.TypeDesc.(BLangNode))
+		p.PrintInner(node.TypeDesc)
 	}
 	p.endNode()
 }
@@ -1807,7 +1807,7 @@ func (p *PrettyPrinter) printMatchStatement(node *BLangMatchStatement) {
 	p.startNode()
 	p.printString("match")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	for i := range node.MatchClauses {
 		clause := &node.MatchClauses[i]
 		p.printMatchClause(clause)
@@ -1822,14 +1822,14 @@ func (p *PrettyPrinter) printMatchClause(node *BLangMatchClause) {
 	p.indentLevel++
 	// Print patterns
 	for _, pattern := range node.Patterns {
-		p.PrintInner(pattern.(BLangNode))
+		p.PrintInner(pattern)
 	}
 	// Print guard if present
 	if node.Guard != nil {
 		p.startNode()
 		p.printString("match-guard")
 		p.indentLevel++
-		p.PrintInner(node.Guard.(BLangNode))
+		p.PrintInner(node.Guard)
 		p.indentLevel--
 		p.endNode()
 	}
@@ -1842,7 +1842,7 @@ func (p *PrettyPrinter) printConstPattern(node *BLangConstPattern) {
 	p.startNode()
 	p.printString("const-pattern")
 	p.indentLevel++
-	p.PrintInner(node.Expr.(BLangNode))
+	p.PrintInner(node.Expr)
 	p.indentLevel--
 	p.endNode()
 }

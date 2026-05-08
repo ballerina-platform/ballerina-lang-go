@@ -421,14 +421,16 @@ type (
 var (
 	_ BinaryExpressionNode                                   = &BLangBinaryExpr{}
 	_ QueryExpressionNode                                    = &BLangQueryExpr{}
-	_ CollectContextInvocationNode                           = &BLangCollectContextInvocation{}
+	_ UnaryExpressionNode                                    = &BLangCheckedExpr{}
+	_ UnaryExpressionNode                                    = &BLangCheckPanickedExpr{}
+	_ BLangExpression                                        = &BLangCollectContextInvocation{}
 	_ SimpleVariableReferenceNode                            = &BLangSimpleVarRef{}
 	_ SimpleVariableReferenceNode                            = &BLangLocalVarRef{}
 	_ LiteralNode                                            = &BLangConstRef{}
 	_ LiteralNode                                            = &BLangLiteral{}
 	_ BLangExpression                                        = &BLangLiteral{}
 	_ MappingVarNameFieldNode                                = &BLangConstRef{}
-	_ DynamicArgNode                                         = &BLangDynamicArgExpr{}
+	_ BLangExpression                                        = &BLangDynamicArgExpr{}
 	_ ElvisExpressionNode                                    = &BLangElvisExpr{}
 	_ MarkdownDocumentationTextAttributeNode                 = &BLangMarkdownDocumentationLine{}
 	_ MarkdownDocumentationParameterAttributeNode            = &BLangMarkdownParameterDocumentation{}
@@ -667,15 +669,15 @@ func (b *BLangQueryExpr) GetKind() NodeKind {
 	return NodeKind_QUERY_EXPR
 }
 
-func (b *BLangQueryExpr) GetQueryClauses() []Node {
-	result := make([]Node, len(b.QueryClauseList))
+func (b *BLangQueryExpr) GetQueryClauses() []BLangNode {
+	result := make([]BLangNode, len(b.QueryClauseList))
 	for i := range b.QueryClauseList {
 		result[i] = b.QueryClauseList[i]
 	}
 	return result
 }
 
-func (b *BLangQueryExpr) AddQueryClause(queryClause Node) {
+func (b *BLangQueryExpr) AddQueryClause(queryClause BLangNode) {
 	if node, ok := queryClause.(BLangNode); ok {
 		b.QueryClauseList = append(b.QueryClauseList, node)
 		return
@@ -874,11 +876,11 @@ func (b *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumentat
 	return strings.ReplaceAll(strings.Join(b.ReturnParameterDocumentationLines, "\n"), "\r", "")
 }
 
-func (b *BLangMarkdownReturnParameterDocumentation) GetReturnType() ValueType {
+func (b *BLangMarkdownReturnParameterDocumentation) GetReturnType() Type {
 	return b.ReturnType
 }
 
-func (b *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty ValueType) {
+func (b *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty Type) {
 	if bt, ok := ty.(BType); ok {
 		b.ReturnType = bt
 	} else {
@@ -1022,7 +1024,7 @@ func (b *BLangNumericLiteral) GetKind() NodeKind {
 	return NodeKind_NUMERIC_LITERAL
 }
 
-func (b *BLangUnaryExpr) GetExpression() BLangExpression {
+func (b *BLangUnaryExpr) GetExpression() BLangActionOrExpression {
 	return b.Expr
 }
 
@@ -1125,7 +1127,7 @@ func (b *BLangMappingConstructorExpr) GetKind() NodeKind {
 	return NodeKind_RECORD_LITERAL_EXPR
 }
 
-func (b *BLangMappingConstructorExpr) GetFields() []MappingField {
+func (b *BLangMappingConstructorExpr) GetFields() []BLangMappingField {
 	return b.Fields
 }
 

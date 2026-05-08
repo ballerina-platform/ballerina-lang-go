@@ -123,7 +123,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangCompilationUnit:
 		for _, topLevelNode := range node.TopLevelNodes {
-			Walk(v, topLevelNode.(BLangNode))
+			Walk(v, topLevelNode)
 		}
 
 	case *BLangImportPackage:
@@ -145,7 +145,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangService:
 		for _, expr := range node.AttachedExprs {
-			Walk(v, expr.(BLangNode))
+			Walk(v, expr)
 		}
 		if node.ServiceClass != nil {
 			Walk(v, node.ServiceClass)
@@ -174,7 +174,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, method)
 		}
 		for _, field := range node.Fields {
-			Walk(v, field.(BLangNode))
+			Walk(v, field)
 		}
 		WalkTypeData(v, &node.typeData)
 
@@ -188,7 +188,7 @@ func Walk(v Visitor, node BLangNode) {
 		walkTypeDescriptor(v, node.typeDescriptor)
 
 	case *BLangAnnotationAttachment:
-		Walk(v, node.Expr.(BLangNode))
+		Walk(v, node.Expr)
 		if node.AnnotationName != nil {
 			Walk(v, node.AnnotationName)
 		}
@@ -211,10 +211,10 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Name)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		if tn := node.TypeNode(); tn != nil {
-			Walk(v, tn.(BLangNode))
+			Walk(v, tn)
 		}
 
 	case *BLangSimpleVariable:
@@ -222,14 +222,14 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Name)
 		}
 		if tn := node.TypeNode(); tn != nil {
-			Walk(v, tn.(BLangNode))
+			Walk(v, tn)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangXMLNS:
-		Walk(v, node.namespaceURI.(BLangNode))
+		Walk(v, node.namespaceURI)
 		if node.prefix != nil {
 			Walk(v, node.prefix)
 		}
@@ -241,23 +241,23 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, &node.RequiredParams[i])
 		}
 		if node.RestParam != nil {
-			Walk(v, node.RestParam.(BLangNode))
+			Walk(v, node.RestParam)
 		}
 		if node.returnTypeDescriptor != nil {
 			walkTypeDescriptor(v, node.returnTypeDescriptor)
 		}
 		if node.Body != nil {
-			Walk(v, node.Body.(BLangNode))
+			Walk(v, node.Body)
 		}
 
 	case *BLangBlockFunctionBody:
 		for _, stmt := range node.Stmts {
-			Walk(v, stmt.(BLangNode))
+			Walk(v, stmt)
 		}
 
 	case *BLangExprFunctionBody:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangExternFunctionBody:
@@ -266,49 +266,49 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 4: Statements
 	case *BLangBlockStmt:
 		for _, stmt := range node.Stmts {
-			Walk(v, stmt.(BLangNode))
+			Walk(v, stmt)
 		}
 
 	case *BLangAssignment:
 		if node.VarRef != nil {
-			Walk(v, node.VarRef.(BLangNode))
+			Walk(v, node.VarRef)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangCompoundAssignment:
 		if node.VarRef != nil {
-			Walk(v, node.VarRef.(BLangNode))
+			Walk(v, node.VarRef)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangExpressionStmt:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangIf:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		Walk(v, &node.Body)
 		if node.ElseStmt != nil {
-			Walk(v, node.ElseStmt.(BLangNode))
+			Walk(v, node.ElseStmt)
 		}
 
 	case *BLangWhile:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
 	case *BLangForeach:
 		if node.Collection != nil {
-			Walk(v, node.Collection.(BLangNode))
+			Walk(v, node.Collection)
 		}
 		if node.VariableDef != nil {
 			Walk(v, node.VariableDef)
@@ -327,7 +327,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangMatchStatement:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		for i := range node.MatchClauses {
 			Walk(v, &node.MatchClauses[i])
@@ -335,10 +335,10 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangMatchClause:
 		for _, pattern := range node.Patterns {
-			Walk(v, pattern.(BLangNode))
+			Walk(v, pattern)
 		}
 		if node.Guard != nil {
-			Walk(v, node.Guard.(BLangNode))
+			Walk(v, node.Guard)
 		}
 		Walk(v, &node.Body)
 
@@ -347,12 +347,12 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangReturn:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangPanic:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangBreak:
@@ -364,10 +364,10 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 5: Expressions - Basic
 	case *BLangBinaryExpr:
 		if node.LhsExpr != nil {
-			Walk(v, node.LhsExpr.(BLangNode))
+			Walk(v, node.LhsExpr)
 		}
 		if node.RhsExpr != nil {
-			Walk(v, node.RhsExpr.(BLangNode))
+			Walk(v, node.RhsExpr)
 		}
 
 	case *BLangQueryExpr:
@@ -377,70 +377,70 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangUnaryExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangElvisExpr:
 		if node.LhsExpr != nil {
-			Walk(v, node.LhsExpr.(BLangNode))
+			Walk(v, node.LhsExpr)
 		}
 		if node.RhsExpr != nil {
-			Walk(v, node.RhsExpr.(BLangNode))
+			Walk(v, node.RhsExpr)
 		}
 
 	case *BLangDynamicArgExpr:
 		if node.Condition != nil {
-			Walk(v, node.Condition.(BLangNode))
+			Walk(v, node.Condition)
 		}
 		if node.ConditionalArgument != nil {
-			Walk(v, node.ConditionalArgument.(BLangNode))
+			Walk(v, node.ConditionalArgument)
 		}
 
 	case *BLangCheckedExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangCheckPanickedExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangTrapExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangGroupExpr:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 
 	case *BLangIndexBasedAccess:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		if node.IndexExpr != nil {
-			Walk(v, node.IndexExpr.(BLangNode))
+			Walk(v, node.IndexExpr)
 		}
 
 	case *BLangFieldBaseAccess:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangListConstructorExpr:
 		for _, expr := range node.Exprs {
-			Walk(v, expr.(BLangNode))
+			Walk(v, expr)
 		}
 	case *BLangMappingConstructorExpr:
 		for _, f := range node.Fields {
 			if kv, ok := f.(*BLangMappingKeyValueField); ok {
 				if kv.Key != nil && kv.Key.Expr != nil {
-					Walk(v, kv.Key.Expr.(BLangNode))
+					Walk(v, kv.Key.Expr)
 				}
 				if kv.ValueExpr != nil {
-					Walk(v, kv.ValueExpr.(BLangNode))
+					Walk(v, kv.ValueExpr)
 				}
 			}
 		}
@@ -449,7 +449,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.ErrorTypeRef)
 		}
 		for _, arg := range node.PositionalArgs {
-			Walk(v, arg.(BLangNode))
+			Walk(v, arg)
 		}
 		for i := range node.NamedArgs {
 			Walk(v, &node.NamedArgs[i])
@@ -463,10 +463,10 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Name)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		for _, arg := range node.ArgExprs {
-			Walk(v, arg.(BLangNode))
+			Walk(v, arg)
 		}
 	case *BLangLambdaFunction:
 		if node.Function != nil {
@@ -483,7 +483,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangAnnotAccessExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		if node.PkgAlias != nil {
 			Walk(v, node.PkgAlias)
@@ -500,15 +500,15 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangTypeConversionExpr:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 		if node.TypeDescriptor != nil {
-			Walk(v, node.TypeDescriptor.(BLangNode))
+			Walk(v, node.TypeDescriptor)
 		}
 
 	case *BLangTypeTestExpr:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		WalkTypeData(v, &node.Type)
 
@@ -592,7 +592,7 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.Elemtype)
 		for i := range node.Sizes {
 			if node.Sizes[i] != nil {
-				Walk(v, node.Sizes[i].(BLangNode))
+				Walk(v, node.Sizes[i])
 			}
 		}
 
@@ -608,7 +608,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangFiniteTypeNode:
 		for i := range node.ValueSpace {
-			Walk(v, node.ValueSpace[i].(BLangNode))
+			Walk(v, node.ValueSpace[i])
 		}
 
 	case *BLangUnionTypeNode:
@@ -630,24 +630,24 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.CompletionType)
 	case *BLangTupleTypeNode:
 		for i := range node.Members {
-			Walk(v, node.Members[i].TypeDesc.(BLangNode))
+			Walk(v, node.Members[i].TypeDesc)
 		}
 		if node.Rest != nil {
-			Walk(v, node.Rest.(BLangNode))
+			Walk(v, node.Rest)
 		}
 
 	case *BLangRecordType:
 		for _, inclusion := range node.TypeInclusions {
-			Walk(v, inclusion.(BLangNode))
+			Walk(v, inclusion)
 		}
 		for _, field := range node.fields {
-			Walk(v, field.Type.(BLangNode))
+			Walk(v, field.Type)
 			if field.DefaultExpr != nil {
-				Walk(v, field.DefaultExpr.(BLangNode))
+				Walk(v, field.DefaultExpr)
 			}
 		}
 		if node.RestType != nil {
-			Walk(v, node.RestType.(BLangNode))
+			Walk(v, node.RestType)
 		}
 
 	case *BLangObjectType:
@@ -656,14 +656,14 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BObjectField:
-		Walk(v, node.Ty.(BLangNode))
+		Walk(v, node.Ty)
 
 	case *BMethodDecl:
 		for _, param := range node.RequiredParams {
-			Walk(v, param.TypeDesc.(BLangNode))
+			Walk(v, param.TypeDesc)
 		}
 		if node.ReturnTypeDescriptor != nil {
-			Walk(v, node.ReturnTypeDescriptor.(BLangNode))
+			Walk(v, node.ReturnTypeDescriptor)
 		}
 
 	case *BLangFunctionType:
@@ -674,7 +674,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.RestParam)
 		}
 		if node.ReturnTypeDescriptor != nil {
-			Walk(v, node.ReturnTypeDescriptor.(BLangNode))
+			Walk(v, node.ReturnTypeDescriptor)
 		}
 
 	case *BLangFunctionTypeParam:
@@ -682,10 +682,10 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Name)
 		}
 		if node.TypeDesc != nil {
-			Walk(v, node.TypeDesc.(BLangNode))
+			Walk(v, node.TypeDesc)
 		}
 		if node.InitExpr != nil {
-			Walk(v, node.InitExpr.(BLangNode))
+			Walk(v, node.InitExpr)
 		}
 
 	// Section 9: Binding Patterns
@@ -743,7 +743,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.ArgName)
 		}
 		if node.BindingPattern != nil {
-			Walk(v, node.BindingPattern.(BLangNode))
+			Walk(v, node.BindingPattern)
 		}
 
 	case *BLangRestBindingPattern:
@@ -754,7 +754,7 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 10: Clauses
 	case *BLangFromClause:
 		if node.Collection != nil {
-			Walk(v, node.Collection.(BLangNode))
+			Walk(v, node.Collection)
 		}
 		if node.VariableDefinitionNode != nil {
 			Walk(v, node.VariableDefinitionNode)
@@ -776,7 +776,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangSelectClause:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 
 	case *BLangLetClause:
@@ -786,7 +786,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangWhereClause:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 
 	case *BLangOnClause:
@@ -799,7 +799,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangLimitClause:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 
 	case *BLangOrderByClause:
@@ -832,7 +832,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangCollectClause:
 		if node.Expression != nil {
-			Walk(v, node.Expression.(BLangNode))
+			Walk(v, node.Expression)
 		}
 
 	// Section 11: Documentation
@@ -878,7 +878,7 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 12: Pattern Matching
 	case *BLangConstPattern:
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 
 	case *BLangWildCardMatchPattern:
@@ -893,14 +893,14 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangNamedArgsExpression:
 		Walk(v, &node.Name)
-		Walk(v, node.Expr.(BLangNode))
+		Walk(v, node.Expr)
 
 	case *BLangNewExpression:
 		if node.UserDefinedType != nil {
 			Walk(v, node.UserDefinedType)
 		}
 		for _, arg := range node.ArgsExprs {
-			Walk(v, arg.(BLangNode))
+			Walk(v, arg)
 		}
 
 	case *BLangRemoteMethodCallAction:
@@ -908,10 +908,10 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Name)
 		}
 		if node.Expr != nil {
-			Walk(v, node.Expr.(BLangNode))
+			Walk(v, node.Expr)
 		}
 		for _, arg := range node.ArgExprs {
-			Walk(v, arg.(BLangNode))
+			Walk(v, arg)
 		}
 
 	default:

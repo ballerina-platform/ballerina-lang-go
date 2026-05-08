@@ -211,7 +211,7 @@ func (a *uninitVarAnalyzer) analyzeBlock(bb *basicBlock, state *varInitState) *v
 }
 
 // analyzeNode processes a single node in the CFG
-func (a *uninitVarAnalyzer) analyzeNode(node ast.Node, state *varInitState) {
+func (a *uninitVarAnalyzer) analyzeNode(node ast.BLangNode, state *varInitState) {
 	switch n := node.(type) {
 	case *ast.BLangSimpleVariableDef:
 		symRef := n.Var.Symbol()
@@ -266,7 +266,7 @@ func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangActionOrExpression, st
 }
 
 // checkVariableReference checks if a variable is initialized before use
-func (a *uninitVarAnalyzer) checkVariableReference(symRef model.SymbolRef, node ast.Node, state *varInitState) {
+func (a *uninitVarAnalyzer) checkVariableReference(symRef model.SymbolRef, node ast.BLangNode, state *varInitState) {
 	if !state.isTracked(symRef) {
 		return
 	}

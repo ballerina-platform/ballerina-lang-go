@@ -98,14 +98,14 @@ type (
 var (
 	_ FromClauseNode    = &BLangFromClause{}
 	_ JoinClauseNode    = &BLangJoinClause{}
-	_ Node              = &BLangLetClause{}
+	_ BLangNode         = &BLangLetClause{}
 	_ OnClauseNode      = &BLangOnClause{}
-	_ Node              = &BLangWhereClause{}
-	_ Node              = &BLangLimitClause{}
-	_ Node              = &BLangOrderByClause{}
-	_ Node              = &BLangOrderKey{}
+	_ BLangNode         = &BLangWhereClause{}
+	_ BLangNode         = &BLangLimitClause{}
+	_ BLangNode         = &BLangOrderByClause{}
+	_ BLangNode         = &BLangOrderKey{}
 	_ SelectClauseNode  = &BLangSelectClause{}
-	_ Node              = &BLangOnConflictClause{}
+	_ BLangNode         = &BLangOnConflictClause{}
 	_ CollectClauseNode = &BLangCollectClause{}
 	_ DoClauseNode      = &BLangDoClause{}
 	_ OnFailClauseNode  = &BLangOnFailClause{}

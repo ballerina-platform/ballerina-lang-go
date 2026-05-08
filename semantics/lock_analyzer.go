@@ -220,10 +220,13 @@ func (v *lockBodyVisitor) Visit(n ast.BLangNode) ast.Visitor {
 	case *ast.BLangSimpleVariableDef:
 		v.locals[node.Var.Symbol()] = struct{}{}
 	case *ast.BLangAssignment:
-		v.checkAssignment(node.VarRef, node.Expr.(ast.BLangExpression), node.GetPosition())
+		v.checkAssignment(node.VarRef, node.Expr, node.GetPosition())
+		ast.Walk(v, node.Expr)
+		return nil
 	case *ast.BLangCompoundAssignment:
-		v.checkAssignment(node.VarRef.(ast.BLangExpression), node.ModifiedExpr, node.GetPosition())
-		return v
+		v.checkAssignment(node.VarRef, node.Expr, node.GetPosition())
+		ast.Walk(v, node.Expr)
+		return nil
 	case *ast.BLangReturn:
 		if node.Expr != nil && !isIsolatedExpression(v.a, node.Expr.(ast.BLangExpression)) {
 			v.a.semanticErr("access of mutable variable", node.Expr.(ast.BLangNode).GetPosition())
@@ -242,7 +245,7 @@ func (v *lockBodyVisitor) Visit(n ast.BLangNode) ast.Visitor {
 }
 
 // checkAssignment validates transfer in for assignment.
-func (v *lockBodyVisitor) checkAssignment(lhs, rhs ast.BLangExpression, pos diagnostics.Location) {
+func (v *lockBodyVisitor) checkAssignment(lhs ast.BLangExpression, rhs ast.BLangActionOrExpression, pos diagnostics.Location) {
 	// If the LHS targets the restricted variable, no check.
 	if v.assignsRestricted(lhs) {
 		return
@@ -372,7 +375,7 @@ func (sa *SemanticAnalyzer) buildModuleVarMetadata() map[model.SymbolRef]varDecl
 //     expressions are isolated iff every immediate value child is itself an
 //     isolated expression.
 //  3. All other expressions are not isolated.
-func isIsolatedExpression(a analyzer, expr ast.BLangExpression) bool {
+func isIsolatedExpression(a analyzer, expr ast.BLangActionOrExpression) bool {
 	if expr == nil {
 		a.ctx().InternalError("nil expression in isolation check", diagnostics.Location{})
 		return false

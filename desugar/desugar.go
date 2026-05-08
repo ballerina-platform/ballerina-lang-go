@@ -28,8 +28,8 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type desugaredNode[E ast.Node] struct {
-	initStmts       []ast.StatementNode
+type desugaredNode[E ast.BLangNode] struct {
+	initStmts       []ast.BLangStatement
 	replacementNode E
 }
 

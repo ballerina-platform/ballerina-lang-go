@@ -1363,7 +1363,7 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 			continue
 		}
 		transformedNode := n.TransformSyntaxNode(memberNode)
-		node := transformedNode.(TopLevelNode)
+		node := transformedNode.(BLangTopLevelNode)
 		compilationUnit.AddTopLevelNode(node)
 	}
 
@@ -1491,7 +1491,7 @@ func (n *NodeBuilder) populateFunctionNode(name BLangIdentifier, qualifierList t
 		blFunction.Body = nil
 		blFunction.SetInterface()
 	} else {
-		body := n.TransformSyntaxNode(funcBody).(FunctionBodyNode)
+		body := n.TransformSyntaxNode(funcBody).(BLangFunctionBody)
 		blFunction.Body = body
 		if body.GetKind() == NodeKind_EXTERN_FUNCTION_BODY {
 			blFunction.SetNative()
@@ -2056,7 +2056,7 @@ func (n *NodeBuilder) TransformMethodCallExpression(methodCallBLangExpression *t
 
 func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorBLangExpression *tree.MappingConstructorExpressionNode) BLangNode {
 	mappingConstructor := &BLangMappingConstructorExpr{
-		Fields: make([]MappingField, 0),
+		Fields: make([]BLangMappingField, 0),
 	}
 	fields := mappingConstructorBLangExpression.FieldNodes()
 	for i := 0; i < fields.Size(); i += 2 {
@@ -2375,7 +2375,7 @@ func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNo
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
-	objectType := &BLangObjectType{members: make(map[string]ObjectMember)}
+	objectType := &BLangObjectType{members: make(map[string]BLangObjectMember)}
 
 	// Process object type qualifiers (client/service/isolated)
 	qualifiers := objectTypeDescriptorNode.ObjectTypeQualifiers()
@@ -3204,7 +3204,7 @@ func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprN
 	ident := createIdentifier(diagnostics.NewBuiltinLocation(), &name, &name)
 	bLFunction.Name = ident
 	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
-	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(FunctionBodyNode)
+	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(BLangFunctionBody)
 	bLFunction.Body = body
 	bLFunction.pos = getPosition(n.de(), anonFuncExprNode)
 	bLFunction.SetAnonymous()

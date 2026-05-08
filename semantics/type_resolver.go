@@ -4706,7 +4706,7 @@ func resolveIncludedRecordSlot(t typeResolver, chain *binding, s *mappingSlot, l
 	}
 	mc := &ast.BLangMappingConstructorExpr{}
 	mc.SetPosition(loc)
-	fields := make([]ast.MappingField, 0, len(s.fields))
+	fields := make([]ast.BLangMappingField, 0, len(s.fields))
 	effect := defaultExpressionEffect(chain)
 	for _, f := range s.fields {
 		fieldTy := mat.FieldInnerVal(f.name)
@@ -5559,7 +5559,7 @@ func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMa
 	return acceptedTy, chain, true
 }
 
-func resolveObjectMemberType(t typeResolver, m ast.ObjectMember, depth int) (semtypes.SemType, bool) {
+func resolveObjectMemberType(t typeResolver, m ast.BLangObjectMember, depth int) (semtypes.SemType, bool) {
 	switch m := m.(type) {
 	case *ast.BObjectField:
 		valueTy, ok := resolveBType(t, m.Ty, depth+1)

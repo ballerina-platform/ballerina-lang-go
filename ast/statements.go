@@ -204,7 +204,7 @@ func (b *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
 	// migrated from BLangAssignment.java:69:5
 }
 
-func (b *BLangAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
+func (b *BLangAssignment) SetVariable(variableReferenceNode BLangExpression) {
 	// migrated from BLangAssignment.java:74:5
 	b.VarRef = variableReferenceNode
 }
@@ -214,12 +214,12 @@ func (b *BLangBlockStmt) GetKind() NodeKind {
 	return NodeKind_BLOCK
 }
 
-func (b *BLangBlockStmt) GetStatements() []StatementNode {
+func (b *BLangBlockStmt) GetStatements() []BLangStatement {
 	// migrated from BLangBlockStmt.java:88:5
 	return b.Stmts
 }
 
-func (b *BLangBlockStmt) AddStatement(statement StatementNode) {
+func (b *BLangBlockStmt) AddStatement(statement BLangStatement) {
 	// migrated from BLangBlockStmt.java:93:5
 	b.Stmts = append(b.Stmts, statement)
 }
@@ -256,7 +256,7 @@ func (b *BLangCompoundAssignment) SetActionOrExpression(actionOrExpression BLang
 	b.Expr = actionOrExpression
 }
 
-func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
+func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode BLangExpression) {
 	b.VarRef = variableReferenceNode
 }
 
@@ -330,7 +330,7 @@ func (b *BLangIf) GetBody() BlockStatementNode {
 	return &b.Body
 }
 
-func (b *BLangIf) GetElseStatement() StatementNode {
+func (b *BLangIf) GetElseStatement() BLangStatement {
 	// migrated from BLangIf.java:57:5
 	return b.ElseStmt
 }
@@ -349,7 +349,7 @@ func (b *BLangIf) SetBody(body BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (b *BLangIf) SetElseStatement(elseStatement StatementNode) {
+func (b *BLangIf) SetElseStatement(elseStatement BLangStatement) {
 	// migrated from BLangIf.java:72:5
 	b.ElseStmt = elseStatement
 }

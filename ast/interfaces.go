@@ -21,7 +21,6 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 // Field represents an annotated type member with a name and type.
@@ -38,8 +37,7 @@ type Type interface {
 	GetTypeData() TypeData
 }
 
-// ValueType is a historical alias for Type.
-type ValueType = Type
+// Type is a historical alias for Type.
 
 // TypeData pairs the AST type descriptor with the resolved semantic type.
 type TypeData struct {
@@ -52,29 +50,23 @@ type TypeData struct {
 
 // Core node interfaces.
 
-type Node interface {
-	GetKind() NodeKind
-	GetPosition() diagnostics.Location
-	GetDeterminedType() semtypes.SemType
-}
-
 type NodeWithSymbol interface {
-	Node
+	BLangNode
 	Symbol() model.SymbolRef
 }
 
-type TopLevelNode = Node
+type BLangTopLevelNode = BLangNode
 
 type CompilationUnitNode interface {
-	Node
-	AddTopLevelNode(node TopLevelNode)
-	GetTopLevelNodes() []TopLevelNode
+	BLangNode
+	AddTopLevelNode(node BLangTopLevelNode)
+	GetTopLevelNodes() []BLangTopLevelNode
 	SetName(name string)
 	GetName() string
 }
 
 type PackageNode interface {
-	Node
+	BLangNode
 	GetCompilationUnits() []CompilationUnitNode
 	AddCompilationUnit(compUnit CompilationUnitNode)
 	GetImports() []ImportPackageNode
@@ -96,8 +88,8 @@ type PackageNode interface {
 }
 
 type ImportPackageNode interface {
-	Node
-	TopLevelNode
+	BLangNode
+	BLangTopLevelNode
 	GetOrgName() *BLangIdentifier
 	GetPackageName() []*BLangIdentifier
 	SetPackageName([]*BLangIdentifier)
@@ -108,7 +100,7 @@ type ImportPackageNode interface {
 }
 
 type XMLNSDeclarationNode interface {
-	TopLevelNode
+	BLangTopLevelNode
 	GetNamespaceURI() BLangExpression
 	SetNamespaceURI(namespaceURI BLangExpression)
 	GetPrefix() *BLangIdentifier
@@ -118,22 +110,21 @@ type XMLNSDeclarationNode interface {
 type AnnotationNode interface {
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+	BLangTopLevelNode
 	GetName() *BLangIdentifier
 	SetName(name *BLangIdentifier)
 	GetTypeDescriptor() TypeDescriptor
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
-type FunctionBodyNode = Node
+type BLangFunctionBody = BLangNode
 
 type ExprFunctionBodyNode interface {
-	FunctionBodyNode
+	BLangFunctionBody
 	GetExpr() BLangExpression
 }
 
 // BLangFunctionBody keeps Phase-1 name for the function-body polymorphism.
-type BLangFunctionBody = FunctionBodyNode
 
 // Variable/constant interfaces.
 
@@ -141,7 +132,8 @@ type VariableNode interface {
 	NodeWithSymbol
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+
+	BLangTopLevelNode
 	GetInitialExpression() BLangActionOrExpression
 	GetIsDeclaredWithVar() bool
 	SetIsDeclaredWithVar(isDeclaredWithVar bool)
@@ -151,7 +143,7 @@ type SimpleVariableNode interface {
 	VariableNode
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+	BLangTopLevelNode
 	GetName() *BLangIdentifier
 	SetName(name *BLangIdentifier)
 }
@@ -171,8 +163,8 @@ type InvokableNode interface {
 	AddParameter(param SimpleVariableNode)
 	GetReturnTypeDescriptor() TypeDescriptor
 	SetReturnTypeDescriptor(typeDescriptor TypeDescriptor)
-	GetBody() FunctionBodyNode
-	SetBody(body FunctionBodyNode)
+	GetBody() BLangFunctionBody
+	SetBody(body BLangFunctionBody)
 	HasBody() bool
 	GetRestParam() SimpleVariableNode
 	SetRestParameter(restParam SimpleVariableNode)
@@ -181,7 +173,7 @@ type InvokableNode interface {
 type FunctionNode interface {
 	InvokableNode
 	AnnotatableNode
-	TopLevelNode
+	BLangTopLevelNode
 }
 
 // Class / service.
@@ -189,7 +181,7 @@ type FunctionNode interface {
 type ClassDefinition interface {
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+	BLangTopLevelNode
 	OrderedNode
 	GetName() *BLangIdentifier
 	GetMethods() iter.Seq2[string, FunctionNode]
@@ -200,7 +192,7 @@ type ClassDefinition interface {
 type ServiceNode interface {
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+	BLangTopLevelNode
 	GetName() *BLangIdentifier
 	SetName(name *BLangIdentifier)
 	IsAnonymousService() bool
@@ -215,7 +207,7 @@ type ServiceNode interface {
 type TypeDefinition interface {
 	AnnotatableNode
 	DocumentableNode
-	TopLevelNode
+	BLangTopLevelNode
 	OrderedNode
 	NodeWithSymbol
 	GetName() *BLangIdentifier
@@ -232,7 +224,7 @@ type TypeDefinition interface {
 type BTypeDefn = TypeDefinition
 
 type TypeDescriptor interface {
-	Node
+	BLangNode
 	IsGrouped() bool
 }
 
@@ -257,7 +249,7 @@ type RecordTypeNode interface {
 }
 
 type FunctionTypeParam interface {
-	Node
+	BLangNode
 	GetName() *string
 	GetTypeDesc() Type
 }
@@ -276,7 +268,7 @@ type TupleTypeNode interface {
 }
 
 type MemberTypeDesc interface {
-	Node
+	BLangNode
 	AnnotatableNode
 	GetTypeDesc() TypeDescriptor
 }
@@ -287,7 +279,7 @@ type FiniteTypeNode interface {
 	AddValue(value BLangExpression)
 }
 
-type ObjectMember interface {
+type BLangObjectMember interface {
 	MemberKind() ObjectMemberKind
 	Name() string
 	IsPublic() bool
@@ -295,12 +287,11 @@ type ObjectMember interface {
 
 // BLangObjectMember is the Phase-1 polymorphic alias — (*BObjectField |
 // *BMethodDecl).
-type BLangObjectMember = ObjectMember
 
 type ObjectType interface {
 	ReferenceTypeNode
-	Members() iter.Seq[ObjectMember]
-	Member(name string) (ObjectMember, bool)
+	Members() iter.Seq[BLangObjectMember]
+	Member(name string) (BLangObjectMember, bool)
 }
 
 type UnionTypeNode interface {
@@ -316,7 +307,7 @@ type IntersectionTypeNode interface {
 }
 
 type ErrorTypeNode interface {
-	Node
+	BLangNode
 	GetDetailType() TypeData
 }
 
@@ -334,8 +325,6 @@ type UserDefinedTypeNode interface {
 
 // Expression interfaces.
 
-type VariableReferenceNode = BLangExpression
-
 type BinaryExpressionNode interface {
 	GetLeftExpression() BLangExpression
 	GetRightExpression() BLangExpression
@@ -343,18 +332,18 @@ type BinaryExpressionNode interface {
 }
 
 type UnaryExpressionNode interface {
-	GetExpression() BLangExpression
+	GetExpression() BLangActionOrExpression
 	GetOperatorKind() model.OperatorKind
 }
 
 type IndexBasedAccessNode interface {
-	VariableReferenceNode
+	BLangExpression
 	GetExpression() BLangExpression
 	GetIndex() BLangExpression
 }
 
 type FieldBasedAccessNode interface {
-	VariableReferenceNode
+	BLangExpression
 	GetExpression() BLangExpression
 	GetFieldName() *BLangIdentifier
 }
@@ -370,17 +359,13 @@ type TypeTestExpressionNode interface {
 	GetType() TypeData
 }
 
-type CollectContextInvocationNode = BLangExpression
-
-type ActionNode = Node
-
 type CommitExpressionNode interface {
 	BLangExpression
-	ActionNode
+	BLangAction
 }
 
 type SimpleVariableReferenceNode interface {
-	VariableReferenceNode
+	BLangExpression
 	GetPackageAlias() *BLangIdentifier
 	GetVariableName() *BLangIdentifier
 }
@@ -400,26 +385,26 @@ type ElvisExpressionNode interface {
 	GetRightExpression() BLangExpression
 }
 
-type MappingField interface {
-	Node
+type BLangMappingField interface {
+	BLangNode
 	IsKeyValueField() bool
 }
 
 // BLangMappingField is Phase-1 polymorphic alias.
-type BLangMappingField = MappingField
 
 type MappingVarNameFieldNode interface {
-	MappingField
+	BLangMappingField
 	SimpleVariableReferenceNode
 }
 
 type MappingConstructor interface {
 	BLangExpression
-	GetFields() []MappingField
+
+	GetFields() []BLangMappingField
 }
 
 type MappingKeyValueFieldNode interface {
-	MappingField
+	BLangMappingField
 	GetKey() BLangExpression
 	GetValue() BLangExpression
 }
@@ -444,8 +429,8 @@ type MarkdownDocumentationReturnParameterAttributeNode interface {
 	GetReturnParameterDocumentationLines() []string
 	AddReturnParameterDocumentationLine(text string)
 	GetReturnParameterDocumentation() string
-	GetReturnType() ValueType
-	SetReturnType(typ ValueType)
+	GetReturnType() Type
+	SetReturnType(typ Type)
 }
 
 type MarkDownDocumentationDeprecationAttributeNode interface {
@@ -462,28 +447,26 @@ type MarkDownDocumentationDeprecatedParametersAttributeNode interface {
 }
 
 type WorkerReceiveNode interface {
-	BLangExpression
-	ActionNode
+	BLangActionOrExpression
 	GetWorkerName() *BLangIdentifier
 	SetWorkerName(identifierNode *BLangIdentifier)
 }
 
-// WorkerSendExpressionNode currently has no concrete implementations; it
+// BLangWorkerSendExpression currently has no concrete implementations; it
 // exists as a placeholder for BLangWorkerReceive.Send until worker-send
 // expressions are modeled.
-type WorkerSendExpressionNode interface {
-	BLangExpression
-	ActionNode
+
+type BLangWorkerSendExpression interface {
+	BLangActionOrExpression
 	GetExpression() BLangExpression
 	GetWorkerName() *BLangIdentifier
 	SetWorkerName(identifierNode *BLangIdentifier)
 }
 
 // BLangWorkerSendExpression is the Phase-1 alias.
-type BLangWorkerSendExpression = WorkerSendExpressionNode
 
 type MarkdownDocumentationReferenceAttributeNode interface {
-	Node
+	BLangNode
 	GetType() DocumentationReferenceType
 }
 
@@ -494,7 +477,7 @@ type LambdaFunctionNode interface {
 }
 
 type InvocationNode interface {
-	VariableReferenceNode
+	BLangExpression
 	GetPackageAlias() IdentifierNode
 	GetName() IdentifierNode
 	GetArgumentExpressions() []BLangExpression
@@ -536,27 +519,23 @@ type TypeConversionNode interface {
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
-type DynamicArgNode = BLangExpression
-
 // Statement interfaces.
 
-type StatementNode = Node
+type BLangStatement = BLangNode
 
 // BLangStatement promoted from alias to ast-owned name.
-type BLangStatement = StatementNode
 
 // BLangTopLevelNode is the ast-owned top-level polymorphism name.
-type BLangTopLevelNode = TopLevelNode
 
-type ContinueNode = StatementNode
+type ContinueNode = BLangStatement
 
 type AssignmentNode interface {
-	StatementNode
+	BLangStatement
 	GetVariable() BLangExpression
 	GetExpression() BLangActionOrExpression
 	IsDeclaredWithVar() bool
 	SetDeclaredWithVar(IsDeclaredWithVar bool)
-	SetVariable(variableReferenceNode VariableReferenceNode)
+	SetVariable(variableReferenceNode BLangExpression)
 }
 
 type CompoundAssignmentNode interface {
@@ -565,14 +544,14 @@ type CompoundAssignmentNode interface {
 }
 
 type BlockNode interface {
-	Node
-	GetStatements() []StatementNode
-	AddStatement(statement StatementNode)
+	BLangNode
+	GetStatements() []BLangStatement
+	AddStatement(statement BLangStatement)
 }
 
 type BlockStatementNode interface {
 	BlockNode
-	StatementNode
+	BLangStatement
 }
 
 type ExpressionStatementNode interface {
@@ -580,17 +559,17 @@ type ExpressionStatementNode interface {
 }
 
 type IfNode interface {
-	StatementNode
+	BLangStatement
 	GetCondition() BLangExpression
 	SetCondition(condition BLangExpression)
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
-	GetElseStatement() StatementNode
-	SetElseStatement(elseStatement StatementNode)
+	GetElseStatement() BLangStatement
+	SetElseStatement(elseStatement BLangStatement)
 }
 
 type VariableDefinitionNode interface {
-	StatementNode
+	BLangStatement
 	GetVariable() VariableNode
 	SetVariable(variable VariableNode)
 	GetIsInFork() bool
@@ -598,12 +577,12 @@ type VariableDefinitionNode interface {
 }
 
 type ReturnNode interface {
-	StatementNode
+	BLangStatement
 	GetExpression() BLangActionOrExpression
 }
 
 type PanicNode interface {
-	StatementNode
+	BLangStatement
 	GetExpression() BLangExpression
 }
 
@@ -613,7 +592,7 @@ type TrapNode interface {
 }
 
 type DoNode interface {
-	StatementNode
+	BLangStatement
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetOnFailClause() OnFailClauseNode
@@ -621,7 +600,7 @@ type DoNode interface {
 }
 
 type WhileNode interface {
-	StatementNode
+	BLangStatement
 	GetCondition() BLangExpression
 	SetCondition(condition BLangExpression)
 	GetBody() BlockStatementNode
@@ -631,7 +610,7 @@ type WhileNode interface {
 }
 
 type ForeachNode interface {
-	StatementNode
+	BLangStatement
 	GetVariableDefinitionNode() VariableDefinitionNode
 	SetVariableDefinitionNode(node VariableDefinitionNode)
 	GetCollection() BLangActionOrExpression
@@ -644,21 +623,20 @@ type ForeachNode interface {
 
 // Binding pattern interfaces.
 
-type BindingPatternNode = Node
+type BLangBindingPattern = BLangNode
 
 // BLangBindingPattern is the ast-owned name.
-type BLangBindingPattern = BindingPatternNode
 
-type WildCardBindingPatternNode = Node
+type WildCardBindingPatternNode = BLangNode
 
 type CaptureBindingPatternNode interface {
-	Node
+	BLangNode
 	GetIdentifier() *BLangIdentifier
 	SetIdentifier(identifier *BLangIdentifier)
 }
 
 type SimpleBindingPatternNode interface {
-	Node
+	BLangNode
 	GetCaptureBindingPattern() CaptureBindingPatternNode
 	SetCaptureBindingPattern(captureBindingPatternNode CaptureBindingPatternNode)
 	GetWildCardBindingPattern() WildCardBindingPatternNode
@@ -666,13 +644,13 @@ type SimpleBindingPatternNode interface {
 }
 
 type ErrorMessageBindingPatternNode interface {
-	Node
+	BLangNode
 	GetSimpleBindingPattern() SimpleBindingPatternNode
 	SetSimpleBindingPattern(simpleBindingPatternNode SimpleBindingPatternNode)
 }
 
 type ErrorBindingPatternNode interface {
-	Node
+	BLangNode
 	GetErrorTypeReference() UserDefinedTypeNode
 	SetErrorTypeReference(userDefinedTypeNode UserDefinedTypeNode)
 	GetErrorMessageBindingPatternNode() ErrorMessageBindingPatternNode
@@ -684,7 +662,7 @@ type ErrorBindingPatternNode interface {
 }
 
 type ErrorCauseBindingPatternNode interface {
-	Node
+	BLangNode
 	GetSimpleBindingPattern() SimpleBindingPatternNode
 	SetSimpleBindingPattern(simpleBindingPatternNode SimpleBindingPatternNode)
 	GetErrorBindingPatternNode() ErrorBindingPatternNode
@@ -692,7 +670,7 @@ type ErrorCauseBindingPatternNode interface {
 }
 
 type ErrorFieldBindingPatternsNode interface {
-	Node
+	BLangNode
 	GetNamedArgMatchPatterns() []NamedArgBindingPatternNode
 	AddNamedArgBindingPattern(namedArgBindingPatternNode NamedArgBindingPatternNode)
 	GetRestBindingPattern() RestBindingPatternNode
@@ -700,15 +678,15 @@ type ErrorFieldBindingPatternsNode interface {
 }
 
 type NamedArgBindingPatternNode interface {
-	Node
+	BLangNode
 	GetIdentifier() *BLangIdentifier
 	SetIdentifier(identifier *BLangIdentifier)
-	GetBindingPattern() BindingPatternNode
-	SetBindingPattern(bindingPattern BindingPatternNode)
+	GetBindingPattern() BLangBindingPattern
+	SetBindingPattern(bindingPattern BLangBindingPattern)
 }
 
 type RestBindingPatternNode interface {
-	Node
+	BLangNode
 	GetIdentifier() *BLangIdentifier
 	SetIdentifier(identifier *BLangIdentifier)
 }
@@ -716,33 +694,28 @@ type RestBindingPatternNode interface {
 // Match pattern interfaces.
 
 type MatchStatement interface {
-	StatementNode
-	GetExpression() BLangExpression
+	BLangStatement
+	GetExpression() BLangActionOrExpression
 	GetClauses() []MatchClause
 }
 
 type MatchClause interface {
-	Node
-	GetMatchGuard() MatchGuard
+	BLangNode
+	GetMatchGuard() BLangMatchGuard
 	GetBlockStatementNode() BlockStatementNode
-	GetMatchPatterns() []MatchPatternNode
-	GetAcceptedType() semtypes.SemType
-}
-
-type MatchPatternNode interface {
-	Node
+	GetMatchPatterns() []BLangMatchPattern
 	GetAcceptedType() semtypes.SemType
 }
 
 type ConstPatternNode interface {
-	MatchPatternNode
+	BLangMatchPattern
 	GetExpression() BLangExpression
 }
 
 // Clause interfaces.
 
 type InputClauseNode interface {
-	Node
+	BLangNode
 	GetCollection() BLangExpression
 	SetCollection(collection BLangExpression)
 	GetVariableDefinitionNode() VariableDefinitionNode
@@ -761,7 +734,7 @@ type JoinClauseNode interface {
 }
 
 type OnClauseNode interface {
-	Node
+	BLangNode
 	GetOnExpression() BLangExpression
 	SetOnExpression(expression BLangExpression)
 	GetEqualsExpression() BLangExpression
@@ -769,31 +742,32 @@ type OnClauseNode interface {
 }
 
 type SelectClauseNode interface {
-	Node
+	BLangNode
 	GetExpression() BLangExpression
 	SetExpression(expression BLangExpression)
 }
 
 type QueryExpressionNode interface {
 	BLangExpression
-	GetQueryClauses() []Node
-	AddQueryClause(queryClause Node)
+
+	GetQueryClauses() []BLangNode
+	AddQueryClause(queryClause BLangNode)
 }
 
 type CollectClauseNode interface {
-	Node
+	BLangNode
 	GetExpression() BLangExpression
 	SetExpression(expression BLangExpression)
 }
 
 type DoClauseNode interface {
-	Node
+	BLangNode
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 }
 
 type OnFailClauseNode interface {
-	Node
+	BLangNode
 	SetDeclaredWithVar()
 	IsDeclaredWithVar() bool
 	GetVariableDefinitionNode() VariableDefinitionNode
@@ -805,13 +779,13 @@ type OnFailClauseNode interface {
 // Documentation interfaces.
 
 type DocumentableNode interface {
-	Node
+	BLangNode
 	GetMarkdownDocumentationAttachment() MarkdownDocumentationNode
 	SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode)
 }
 
 type MarkdownDocumentationNode interface {
-	Node
+	BLangNode
 	GetDocumentationLines() []MarkdownDocumentationTextAttributeNode
 	AddDocumentationLine(documentationText MarkdownDocumentationTextAttributeNode)
 	GetParameters() []MarkdownDocumentationParameterAttributeNode
@@ -849,19 +823,17 @@ type AnnotationAttachmentNode interface {
 }
 
 type AnnotatableNode interface {
-	Node
+	BLangNode
 	IsPublic() bool
 	GetAnnotationAttachments() []AnnotationAttachmentNode
 	AddAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 }
 
 type OrderedNode interface {
-	Node
+	BLangNode
 	GetPrecedence() int
 	SetPrecedence(precedence int)
 }
-
-type MatchGuard = BLangActionOrExpression
 
 type AttachPoint struct {
 	Point  Point

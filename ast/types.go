@@ -145,7 +145,7 @@ type (
 		Inclusions           []model.SymbolRef      // This needs to be symbol because it could be a class definition as well
 		InclusionPositions   []diagnostics.Location // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions []*BLangUserDefinedType
-		members              map[string]ObjectMember
+		members              map[string]BLangObjectMember
 		Definition           semtypes.Definition
 		Isolated             bool
 		NetworkQuals         ObjectNetworkQuals
@@ -247,8 +247,8 @@ var (
 	_ MemberTypeDesc           = &BLangMemberTypeDesc{}
 	_ RecordTypeNode           = &BLangRecordType{}
 	_ ObjectType               = &BLangObjectType{}
-	_ ObjectMember             = &BMethodDecl{}
-	_ ObjectMember             = &BObjectField{}
+	_ BLangObjectMember        = &BMethodDecl{}
+	_ BLangObjectMember        = &BObjectField{}
 	_ BLangNode                = &BObjectField{}
 	_ BLangNode                = &BMethodDecl{}
 	_ FunctionTypeNode         = &BLangFunctionType{}
@@ -442,8 +442,8 @@ func (b *BLangObjectType) GetKind() NodeKind {
 	return NodeKind_OBJECT_TYPE
 }
 
-func (b *BLangObjectType) Members() iter.Seq[ObjectMember] {
-	return func(yield func(ObjectMember) bool) {
+func (b *BLangObjectType) Members() iter.Seq[BLangObjectMember] {
+	return func(yield func(BLangObjectMember) bool) {
 		for _, member := range b.members {
 			if !yield(member) {
 				return
@@ -452,7 +452,7 @@ func (b *BLangObjectType) Members() iter.Seq[ObjectMember] {
 	}
 }
 
-func (b *BLangObjectType) Member(name string) (ObjectMember, bool) {
+func (b *BLangObjectType) Member(name string) (BLangObjectMember, bool) {
 	member, ok := b.members[name]
 	return member, ok
 }
@@ -566,6 +566,10 @@ func (b *BTypeBasic) SetTypeData(ty TypeData) {
 }
 
 func (b *BTypeBasic) GetDeterminedType() semtypes.SemType {
+	panic("not implemented")
+}
+
+func (b *BTypeBasic) SetDeterminedType(_ semtypes.SemType) {
 	panic("not implemented")
 }
 
@@ -820,7 +824,7 @@ func (b *BLangRecordType) GetFields() iter.Seq2[string, Field] {
 }
 
 // AddMember insert a new member. If there was already a member by the same name return true
-func (b *BLangObjectType) AddMember(member ObjectMember) bool {
+func (b *BLangObjectType) AddMember(member BLangObjectMember) bool {
 	name := member.Name()
 	if _, hadValue := b.members[name]; hadValue {
 		return true

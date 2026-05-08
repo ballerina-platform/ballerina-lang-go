@@ -21,7 +21,8 @@ import (
 )
 
 type BLangMatchPattern interface {
-	MatchPatternNode
+	BLangNode
+	GetAcceptedType() semtypes.SemType
 	SetAcceptedType(semtypes.SemType)
 }
 
@@ -86,7 +87,7 @@ func (b *BLangMatchClause) GetKind() NodeKind {
 	return NodeKind_MATCH_CLAUSE
 }
 
-func (b *BLangMatchClause) GetMatchGuard() MatchGuard {
+func (b *BLangMatchClause) GetMatchGuard() BLangMatchGuard {
 	return b.Guard
 }
 
@@ -94,8 +95,8 @@ func (b *BLangMatchClause) GetBlockStatementNode() BlockStatementNode {
 	return &b.Body
 }
 
-func (b *BLangMatchClause) GetMatchPatterns() []MatchPatternNode {
-	result := make([]MatchPatternNode, len(b.Patterns))
+func (b *BLangMatchClause) GetMatchPatterns() []BLangMatchPattern {
+	result := make([]BLangMatchPattern, len(b.Patterns))
 	for i, p := range b.Patterns {
 		result[i] = p
 	}
@@ -103,7 +104,7 @@ func (b *BLangMatchClause) GetMatchPatterns() []MatchPatternNode {
 }
 
 func (b *BLangMatchClause) SetMatchClause(node BLangMatchGuard) {
-	b.Guard = node.(BLangExpression)
+	b.Guard = node
 }
 
 func (b *BLangMatchClause) SetBlockStatementNode(node BLangBlockStmt) {

@@ -39,7 +39,7 @@ type basicBlock struct {
 	children []int
 	// Nodes inside this block. Almost always these are statements but ternary expression will have expressions
 	// as children.
-	nodes []ast.Node
+	nodes []ast.BLangNode
 }
 
 type bbRef int
@@ -278,7 +278,7 @@ func (analyzer *functionControlFlowAnalyzer) createNewBB() bbRef {
 }
 
 // addNode adds a node to a basic block
-func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node ast.Node) {
+func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node ast.BLangNode) {
 	analyzer.bbs[bb].nodes = append(analyzer.bbs[bb].nodes, node)
 }
 

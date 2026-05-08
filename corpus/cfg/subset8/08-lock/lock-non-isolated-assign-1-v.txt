@@ -1,0 +1,24 @@
+(bump
+  (bb0 () ()
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+    (assignment
+      (simple-var-ref arr)
+      (list-constructor-expr
+        (literal 1)
+        (literal 2)
+        (literal 3)))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref arr))))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation bump ()))
+  )
+)

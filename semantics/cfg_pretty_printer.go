@@ -170,7 +170,7 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock, indent int) {
 	p.buffer.WriteString(")\n")
 }
 
-func (p *CFGPrettyPrinter) printNodes(nodes []ast.Node, prefix string) {
+func (p *CFGPrettyPrinter) printNodes(nodes []ast.BLangNode, prefix string) {
 	for _, node := range nodes {
 		if blangNode, ok := node.(ast.BLangNode); ok {
 			printer := &ast.PrettyPrinter{}
