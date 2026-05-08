@@ -1,0 +1,44 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation fromFloat (
+              (literal 0)))
+            (literal 0/1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation fromFloat (
+              (literal 0)))
+            (literal 0/1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation fromFloat (
+              (literal 1)))
+            (literal 1/1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation fromFloat (
+              (literal 1)))
+            (literal 1/1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation fromFloat (
+              (literal 9.007199254740992e+15)))
+            (literal 9007199254740992/1)))))))
+  (function fromFloat (
+    (variable f (type
+      (value-type float)))) (
+    (value-type decimal))
+    (block-function-body
+      (return
+        (type-conversion-expr
+          (simple-var-ref f)
+          (value-type decimal))))))

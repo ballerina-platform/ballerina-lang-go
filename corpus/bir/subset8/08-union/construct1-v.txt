@@ -1,0 +1,24 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad 17
+    %3 = newMap {| x: int, never... |}{%1=%2}
+    x = %3;
+    %5 = x is {| x: int, never... |}
+    %5 ? bb1 : bb3;
+  }
+  bb1 {
+    %7 = ConstantLoad x
+    %6 = x[%7];
+    %8 = %6;
+    %9 = println(%8) -> bb2;
+  }
+  bb2 {
+    GOTO bb3;
+  }
+  bb3 {
+    return;
+  }
+}

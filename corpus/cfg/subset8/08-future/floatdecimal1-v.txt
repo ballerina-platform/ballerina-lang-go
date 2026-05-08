@@ -1,0 +1,39 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (type-conversion-expr
+            (literal 0)
+            (value-type decimal))
+          (literal 0/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (type-conversion-expr
+            (literal 0)
+            (value-type decimal))
+          (literal 0/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (type-conversion-expr
+            (literal 1)
+            (value-type decimal))
+          (literal 1/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (type-conversion-expr
+            (literal 1)
+            (value-type decimal))
+          (literal 1/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (type-conversion-expr
+            (literal 9.007199254740992e+15)
+            (value-type decimal))
+          (literal 9007199254740992/1)))))
+  )
+)

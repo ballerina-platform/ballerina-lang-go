@@ -1,0 +1,130 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 2
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 2
+    %4 = newArray list[%3]{%1, %2}
+    %5 = foo(%4) -> bb1;
+  }
+  bb1 {
+    %6 = ConstantLoad 2
+    %7 = ConstantLoad 3
+    %8 = ConstantLoad 2
+    %9 = newArray list[%8]{%6, %7}
+    %10 = foo(%9) -> bb2;
+  }
+  bb2 {
+    %11 = ConstantLoad 2
+    %12 = ConstantLoad 3
+    %13 = ConstantLoad 2
+    %14 = newArray [int...][%13]{%11, %12}
+    %15 = foo1(%14) -> bb3;
+  }
+  bb3 {
+    %16 = ConstantLoad 2
+    %17 = ConstantLoad 3
+    %18 = ConstantLoad 2
+    %19 = newArray [2, 3, never...][%18]{%16, %17}
+    %20 = foo2(%19) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+foo(any) -> nil{
+  bb0 {
+    %2 = a is [2, 3, never...]
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %3 = ConstantLoad unexpected
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    GOTO bb3;
+  }
+  bb3 {
+    %5 = a is [int, int, never...]
+    %5 ? bb4 : bb6;
+  }
+  bb4 {
+    %6 = ConstantLoad unexpected
+    %7 = println(%6) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    %8 = a is [int...]
+    %8 ? bb7 : bb9;
+  }
+  bb7 {
+    %9 = ConstantLoad unexpected
+    %10 = println(%9) -> bb8;
+  }
+  bb8 {
+    GOTO bb11;
+  }
+  bb9 {
+    %11 = ConstantLoad a is any
+    %12 = println(%11) -> bb10;
+  }
+  bb10 {
+    GOTO bb11;
+  }
+  bb11 {
+    return;
+  }
+}
+foo1([int...]) -> nil{
+  bb0 {
+    %2 = a is [2, 3, never...]
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %3 = ConstantLoad unexpected
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    GOTO bb3;
+  }
+  bb3 {
+    %5 = a is [int, int, never...]
+    %5 ? bb4 : bb6;
+  }
+  bb4 {
+    %6 = ConstantLoad unexpected
+    %7 = println(%6) -> bb5;
+  }
+  bb5 {
+    GOTO bb8;
+  }
+  bb6 {
+    %8 = ConstantLoad a is int[]
+    %9 = println(%8) -> bb7;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    return;
+  }
+}
+foo2([2, 3, never...]) -> nil{
+  bb0 {
+    %2 = a is [2, 3, never...]
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %3 = ConstantLoad a is [2,3]
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    GOTO bb3;
+  }
+  bb3 {
+    return;
+  }
+}

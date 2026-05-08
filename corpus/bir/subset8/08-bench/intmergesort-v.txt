@@ -1,0 +1,400 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1000000
+    len = %1;
+    %3 = ConstantLoad 16807
+    a = %3;
+    %5 = ConstantLoad 2147483647
+    m = %5;
+    %7 = ConstantLoad 17
+    x = %7;
+    %9 = ConstantLoad 0
+    %10 = newArray [int...][%9]{}
+    v = %10;
+    %12 = len;
+    %13 = println(%12) -> bb1;
+  }
+  bb1 {
+    %14 = ConstantLoad 0
+    i = %14;
+    $desugar$0 = len;
+    GOTO bb2;
+  }
+  bb2 {
+    %18 = i;
+    %19 = $desugar$0;
+    %17 = < %18 %19;
+    %17 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 12
+    %0 = (1, x);
+    %1 = push((1, v),%0) -> bb5;
+  }
+  bb4 {
+    %20 = sort(v) -> bb6;
+  }
+  bb5 {
+    %4 = (1, x);
+    %5 = (1, a);
+    %3 = * %4 %5;
+    %6 = %3;
+    %7 = (1, m);
+    %2 = % %6 %7;
+    (1, x) = %2;
+    %9 = (1, i);
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %8 = + %9 %11;
+    (1, i) = %8;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb6 {
+    s = %20;
+    %23 = length(s) -> bb7;
+  }
+  bb7 {
+    %24 = %23;
+    %25 = len;
+    %22 = == %24 %25;
+    %26 = %22;
+    %27 = println(%26) -> bb8;
+  }
+  bb8 {
+    %28 = ConstantLoad 0
+    i = %28;
+    %31 = len;
+    %32 = ConstantLoad 1
+    %33 = %32;
+    %30 = - %31 %33;
+    $desugar$1 = %30;
+    GOTO bb9;
+  }
+  bb9 {
+    %36 = i;
+    %37 = $desugar$1;
+    %35 = < %36 %37;
+    %35 ? bb10 : bb11;
+  }
+  bb10 {
+    PushScopeFrame 16
+    %1 = (1, s)[(1, i)];
+    %2 = %1;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    %3 = (1, s)[%4];
+    %8 = %3;
+    %0 = > %2 %8;
+    %0 ? bb12 : bb14;
+  }
+  bb11 {
+    %39 = checksum(v) -> bb15;
+  }
+  bb12 {
+    %9 = ConstantLoad false
+    %10 = %9;
+    %11 = println(%10) -> bb13;
+  }
+  bb13 {
+    GOTO bb14;
+  }
+  bb14 {
+    %13 = (1, i);
+    %14 = ConstantLoad 1
+    %15 = %14;
+    %12 = + %13 %15;
+    (1, i) = %12;
+    PopScopeFrame
+    GOTO bb9;
+  }
+  bb15 {
+    %40 = %39;
+    %41 = checksum(s) -> bb16;
+  }
+  bb16 {
+    %42 = %41;
+    %38 = == %40 %42;
+    %43 = %38;
+    %44 = println(%43) -> bb17;
+  }
+  bb17 {
+    return;
+  }
+}
+checksum([int...]) -> int{
+  bb0 {
+    %2 = ConstantLoad 0
+    c = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(v) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, c);
+    %2 = (1, v)[(1, i)];
+    %3 = %2;
+    %0 = unknown %1 %3;
+    (1, c) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = c;
+    return;
+  }
+}
+sort([int...]) -> [int...]{
+  bb0 {
+    %3 = length(v) -> bb1;
+  }
+  bb1 {
+    %4 = %3;
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %2 = <= %4 %6;
+    %2 ? bb2 : bb3;
+  }
+  bb2 {
+    %0 = v;
+    return;
+  }
+  bb3 {
+    %8 = length(v) -> bb4;
+  }
+  bb4 {
+    %9 = %8;
+    %10 = ConstantLoad 2
+    %11 = %10;
+    %7 = / %9 %11;
+    mid = %7;
+    %13 = ConstantLoad 0
+    %14 = newArray [int...][%13]{}
+    list1 = %14;
+    %16 = ConstantLoad 0
+    i = %16;
+    $desugar$0 = mid;
+    GOTO bb5;
+  }
+  bb5 {
+    %20 = i;
+    %21 = $desugar$0;
+    %19 = < %20 %21;
+    %19 ? bb6 : bb7;
+  }
+  bb6 {
+    PushScopeFrame 7
+    %0 = (1, v)[(1, i)];
+    %1 = %0;
+    %2 = push((1, list1),%1) -> bb8;
+  }
+  bb7 {
+    %22 = ConstantLoad 0
+    %23 = newArray [int...][%22]{}
+    list2 = %23;
+    i = mid;
+    %26 = length(v) -> bb9;
+  }
+  bb8 {
+    %4 = (1, i);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, i) = %3;
+    PopScopeFrame
+    GOTO bb5;
+  }
+  bb9 {
+    $desugar$1 = %26;
+    GOTO bb10;
+  }
+  bb10 {
+    %29 = i;
+    %30 = $desugar$1;
+    %28 = < %29 %30;
+    %28 ? bb11 : bb12;
+  }
+  bb11 {
+    PushScopeFrame 7
+    %0 = (1, v)[(1, i)];
+    %1 = %0;
+    %2 = push((1, list2),%1) -> bb13;
+  }
+  bb12 {
+    %31 = sort(list1) -> bb14;
+  }
+  bb13 {
+    %4 = (1, i);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, i) = %3;
+    PopScopeFrame
+    GOTO bb10;
+  }
+  bb14 {
+    %32 = sort(list2) -> bb15;
+  }
+  bb15 {
+    %33 = merge(%31,%32) -> bb16;
+  }
+  bb16 {
+    %0 = %33;
+    return;
+  }
+}
+merge([int...],[int...]) -> [int...]{
+  bb0 {
+    %3 = ConstantLoad 0
+    %4 = newArray [int...][%3]{}
+    result = %4;
+    %6 = ConstantLoad 0
+    i1 = %6;
+    %8 = ConstantLoad 0
+    i2 = %8;
+    %10 = length(v1) -> bb1;
+  }
+  bb1 {
+    len1 = %10;
+    %12 = length(v2) -> bb2;
+  }
+  bb2 {
+    len2 = %12;
+    GOTO bb3;
+  }
+  bb3 {
+    %14 = ConstantLoad true
+    %14 ? bb4 : bb5;
+  }
+  bb4 {
+    PushScopeFrame 25
+    %1 = (1, i1);
+    %2 = (1, len1);
+    %0 = < %1 %2;
+    %0 ? bb6 : bb14;
+  }
+  bb5 {
+    GOTO bb15;
+  }
+  bb6 {
+    %4 = (1, i2);
+    %5 = (1, len2);
+    %3 = < %4 %5;
+    %3 ? bb7 : bb13;
+  }
+  bb7 {
+    %7 = (1, v1)[(1, i1)];
+    %8 = %7;
+    %9 = (1, v2)[(1, i2)];
+    %10 = %9;
+    %6 = <= %8 %10;
+    %6 ? bb8 : bb10;
+  }
+  bb8 {
+    %11 = (1, v1)[(1, i1)];
+    %12 = %11;
+    %13 = push((1, result),%12) -> bb9;
+  }
+  bb9 {
+    %15 = (1, i1);
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %14 = + %15 %17;
+    (1, i1) = %14;
+    GOTO bb12;
+  }
+  bb10 {
+    %18 = (1, v2)[(1, i2)];
+    %19 = %18;
+    %20 = push((1, result),%19) -> bb11;
+  }
+  bb11 {
+    %22 = (1, i2);
+    %23 = ConstantLoad 1
+    %24 = %23;
+    %21 = + %22 %24;
+    (1, i2) = %21;
+    GOTO bb12;
+  }
+  bb12 {
+    PopScopeFrame
+    GOTO bb3;
+  }
+  bb13 {
+    GOTO bb14;
+  }
+  bb14 {
+    PopScopeFrame
+    GOTO bb5;
+  }
+  bb15 {
+    %16 = i1;
+    %17 = len1;
+    %15 = < %16 %17;
+    %15 ? bb16 : bb17;
+  }
+  bb16 {
+    PushScopeFrame 7
+    %0 = (1, v1)[(1, i1)];
+    %1 = %0;
+    %2 = push((1, result),%1) -> bb18;
+  }
+  bb17 {
+    GOTO bb19;
+  }
+  bb18 {
+    %4 = (1, i1);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, i1) = %3;
+    PopScopeFrame
+    GOTO bb15;
+  }
+  bb19 {
+    %19 = i2;
+    %20 = len2;
+    %18 = < %19 %20;
+    %18 ? bb20 : bb21;
+  }
+  bb20 {
+    PushScopeFrame 7
+    %0 = (1, v2)[(1, i2)];
+    %1 = %0;
+    %2 = push((1, result),%1) -> bb22;
+  }
+  bb21 {
+    %0 = result;
+    return;
+  }
+  bb22 {
+    %4 = (1, i2);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, i2) = %3;
+    PopScopeFrame
+    GOTO bb19;
+  }
+}

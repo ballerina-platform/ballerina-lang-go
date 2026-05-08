@@ -1,0 +1,364 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable len (type
+          (value-type int)) (expr
+          (literal 1000000))))
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (literal 16807))))
+      (var-def
+        (variable m (type
+          (value-type int)) (expr
+          (literal 2147483647))))
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (literal 17))))
+      (var-def
+        (variable v (type
+          (array-type
+            (value-type any) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref len))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref len))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref v)
+              (simple-var-ref x))))
+          (assignment
+            (simple-var-ref x)
+            (binary-expr %
+              (binary-expr *
+                (simple-var-ref x)
+                (simple-var-ref a))
+              (simple-var-ref m)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (var-def
+        (variable s (type
+          (array-type
+            (value-type any) dimensions: 1 ([]))) (expr
+          (invocation sort (
+            (simple-var-ref v))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation lang.array length (
+              (simple-var-ref s)))
+            (simple-var-ref len)))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$1 (expr
+          (binary-expr -
+            (simple-var-ref len)
+            (literal 1)))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$1))
+        (block-stmt
+          (if
+            (binary-expr >
+              (type-conversion-expr
+                (index-based-access
+                  (simple-var-ref s)
+                  (simple-var-ref i))
+                (value-type int))
+              (type-conversion-expr
+                (index-based-access
+                  (simple-var-ref s)
+                  (binary-expr +
+                    (simple-var-ref i)
+                    (literal 1)))
+                (value-type int)))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (literal false))))) ())
+          (block-stmt)
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation checksum (
+              (simple-var-ref v)))
+            (invocation checksum (
+              (simple-var-ref s)))))))))
+  (function checksum (
+    (variable v (type
+      (array-type
+        (value-type any) dimensions: 1 ([]))))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable c (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref v))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (assignment
+            (simple-var-ref c)
+            (binary-expr ^
+              (simple-var-ref c)
+              (type-conversion-expr
+                (index-based-access
+                  (simple-var-ref v)
+                  (simple-var-ref i))
+                (value-type int))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref c))))
+  (function sort (
+    (variable v (type
+      (array-type
+        (value-type any) dimensions: 1 ([]))))) (
+    (array-type
+      (value-type any) dimensions: 1 ([])))
+    (block-function-body
+      (if
+        (binary-expr <=
+          (invocation lang.array length (
+            (simple-var-ref v)))
+          (literal 1))
+        (block-stmt
+          (return
+            (simple-var-ref v))) ())
+      (block-stmt
+        (var-def
+          (variable mid (type
+            (value-type int)) (expr
+            (binary-expr /
+              (invocation lang.array length (
+                (simple-var-ref v)))
+              (literal 2)))))
+        (var-def
+          (variable list1 (type
+            (array-type
+              (value-type any) dimensions: 1 ([]))) (expr
+            (list-constructor-expr))))
+        (var-def
+          (variable i (type
+            (value-type int)) (expr
+            (literal 0))))
+        (var-def
+          (variable $desugar$0 (expr
+            (simple-var-ref mid))))
+        (while
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref $desugar$0))
+          (block-stmt
+            (expression-stmt
+              (invocation lang.array push (
+                (simple-var-ref list1)
+                (type-conversion-expr
+                  (index-based-access
+                    (simple-var-ref v)
+                    (simple-var-ref i))
+                  (value-type int)))))
+            (assignment
+              (simple-var-ref i)
+              (binary-expr +
+                (simple-var-ref i)
+                (numeric-literal 1)))))
+        (var-def
+          (variable list2 (type
+            (array-type
+              (value-type any) dimensions: 1 ([]))) (expr
+            (list-constructor-expr))))
+        (var-def
+          (variable i (type
+            (value-type int)) (expr
+            (simple-var-ref mid))))
+        (var-def
+          (variable $desugar$1 (expr
+            (invocation lang.array length (
+              (simple-var-ref v))))))
+        (while
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref $desugar$1))
+          (block-stmt
+            (expression-stmt
+              (invocation lang.array push (
+                (simple-var-ref list2)
+                (type-conversion-expr
+                  (index-based-access
+                    (simple-var-ref v)
+                    (simple-var-ref i))
+                  (value-type int)))))
+            (assignment
+              (simple-var-ref i)
+              (binary-expr +
+                (simple-var-ref i)
+                (numeric-literal 1)))))
+        (return
+          (invocation merge (
+            (invocation sort (
+              (simple-var-ref list1)))
+            (invocation sort (
+              (simple-var-ref list2)))))))))
+  (function merge (
+    (variable v1 (type
+      (array-type
+        (value-type any) dimensions: 1 ([]))))
+    (variable v2 (type
+      (array-type
+        (value-type any) dimensions: 1 ([]))))) (
+    (array-type
+      (value-type any) dimensions: 1 ([])))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (array-type
+            (value-type any) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (var-def
+        (variable i1 (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable i2 (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable len1 (type
+          (value-type int)) (expr
+          (invocation lang.array length (
+            (simple-var-ref v1))))))
+      (var-def
+        (variable len2 (type
+          (value-type int)) (expr
+          (invocation lang.array length (
+            (simple-var-ref v2))))))
+      (while
+        (literal true)
+        (block-stmt
+          (if
+            (binary-expr <
+              (simple-var-ref i1)
+              (simple-var-ref len1))
+            (block-stmt
+              (if
+                (binary-expr <
+                  (simple-var-ref i2)
+                  (simple-var-ref len2))
+                (block-stmt
+                  (if
+                    (binary-expr <=
+                      (type-conversion-expr
+                        (index-based-access
+                          (simple-var-ref v1)
+                          (simple-var-ref i1))
+                        (value-type int))
+                      (type-conversion-expr
+                        (index-based-access
+                          (simple-var-ref v2)
+                          (simple-var-ref i2))
+                        (value-type int)))
+                    (block-stmt
+                      (expression-stmt
+                        (invocation lang.array push (
+                          (simple-var-ref result)
+                          (index-based-access
+                            (simple-var-ref v1)
+                            (simple-var-ref i1)))))
+                      (assignment
+                        (simple-var-ref i1)
+                        (binary-expr +
+                          (simple-var-ref i1)
+                          (literal 1)))) (
+                    (block-stmt
+                      (expression-stmt
+                        (invocation lang.array push (
+                          (simple-var-ref result)
+                          (index-based-access
+                            (simple-var-ref v2)
+                            (simple-var-ref i2)))))
+                      (assignment
+                        (simple-var-ref i2)
+                        (binary-expr +
+                          (simple-var-ref i2)
+                          (literal 1))))))
+                  (continue)) ())
+              (block-stmt)) ())
+          (block-stmt
+            (break))))
+      (while
+        (binary-expr <
+          (simple-var-ref i1)
+          (simple-var-ref len1))
+        (block-stmt
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref result)
+              (index-based-access
+                (simple-var-ref v1)
+                (simple-var-ref i1)))))
+          (assignment
+            (simple-var-ref i1)
+            (binary-expr +
+              (simple-var-ref i1)
+              (literal 1)))))
+      (while
+        (binary-expr <
+          (simple-var-ref i2)
+          (simple-var-ref len2))
+        (block-stmt
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref result)
+              (index-based-access
+                (simple-var-ref v2)
+                (simple-var-ref i2)))))
+          (assignment
+            (simple-var-ref i2)
+            (binary-expr +
+              (simple-var-ref i2)
+              (literal 1)))))
+      (return
+        (simple-var-ref result)))))

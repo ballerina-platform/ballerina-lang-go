@@ -1,0 +1,33 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type decimal)) (expr
+        (literal 5/1))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (literal 1/1)
+          (literal 2/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (literal 2/1)
+          (literal 3/2)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (literal 3/2)
+          (literal 3/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (literal 3/2)
+          (literal 3/1)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref x)
+          (literal 3/1)))))
+  )
+)

@@ -1,0 +1,61 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition T11
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (value-type int))))
+  (type-definition T12
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (value-type string))))
+  (type-definition T13
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition T14
+    (union-type
+      (user-defined-type T11)
+      (user-defined-type T12)))
+  (type-definition T22
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string))
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (value-type string))))
+  (type-definition T21
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string))
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (value-type int))))
+  (type-definition T23
+    (tuple-type
+      (union-type
+        (value-type int)
+        (value-type string)) (rest
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition T24
+    (union-type
+      (user-defined-type T11)
+      (user-defined-type T12)))
+  (type-definition T25
+    (tuple-type (rest
+        (union-type
+          (value-type int)
+          (value-type string))))))

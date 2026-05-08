@@ -1,0 +1,27 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable p (type
+        (user-defined-type Point)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 44))
+          (key-value
+            (simple-var-ref y)
+            (literal 88))
+          (key-value
+            (simple-var-ref z)
+            (literal 48))))))
+    (var-def
+      (variable z (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (field-based-access z
+          (simple-var-ref p)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref z))))
+  )
+)

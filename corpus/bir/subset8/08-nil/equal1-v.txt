@@ -1,0 +1,125 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %2 = makeNil() -> bb1;
+  }
+  bb1 {
+    %3 = %2;
+    %4 = ConstantLoad <nil>
+    %5 = %4;
+    %1 = == %3 %5;
+    %1 ? bb2 : bb4;
+  }
+  bb2 {
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = println(%7) -> bb3;
+  }
+  bb3 {
+    GOTO bb4;
+  }
+  bb4 {
+    %10 = ConstantLoad <nil>
+    %11 = %10;
+    %12 = makeNil() -> bb5;
+  }
+  bb5 {
+    %13 = %12;
+    %9 = == %11 %13;
+    %9 ? bb6 : bb8;
+  }
+  bb6 {
+    %14 = ConstantLoad 2
+    %15 = %14;
+    %16 = println(%15) -> bb7;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    %18 = ConstantLoad <nil>
+    %19 = %18;
+    %20 = ConstantLoad <nil>
+    %21 = %20;
+    %17 = == %19 %21;
+    %17 ? bb9 : bb11;
+  }
+  bb9 {
+    %22 = ConstantLoad 3
+    %23 = %22;
+    %24 = println(%23) -> bb10;
+  }
+  bb10 {
+    GOTO bb11;
+  }
+  bb11 {
+    %26 = makeNil() -> bb12;
+  }
+  bb12 {
+    %27 = %26;
+    %28 = ConstantLoad <nil>
+    %29 = %28;
+    %25 = != %27 %29;
+    %25 ? bb13 : bb14;
+  }
+  bb13 {
+    GOTO bb16;
+  }
+  bb14 {
+    %30 = ConstantLoad 4
+    %31 = %30;
+    %32 = println(%31) -> bb15;
+  }
+  bb15 {
+    GOTO bb16;
+  }
+  bb16 {
+    %34 = ConstantLoad <nil>
+    %35 = %34;
+    %36 = makeNil() -> bb17;
+  }
+  bb17 {
+    %37 = %36;
+    %33 = != %35 %37;
+    %33 ? bb18 : bb19;
+  }
+  bb18 {
+    GOTO bb21;
+  }
+  bb19 {
+    %38 = ConstantLoad 5
+    %39 = %38;
+    %40 = println(%39) -> bb20;
+  }
+  bb20 {
+    GOTO bb21;
+  }
+  bb21 {
+    %42 = ConstantLoad <nil>
+    %43 = %42;
+    %44 = ConstantLoad <nil>
+    %45 = %44;
+    %41 = != %43 %45;
+    b = %41;
+    b ? bb22 : bb24;
+  }
+  bb22 {
+    %47 = ConstantLoad 6
+    %48 = %47;
+    %49 = println(%48) -> bb23;
+  }
+  bb23 {
+    GOTO bb24;
+  }
+  bb24 {
+    return;
+  }
+}
+makeNil() -> nil{
+  bb0 {
+    %1 = ConstantLoad <nil>
+    %0 = %1;
+    return;
+  }
+}

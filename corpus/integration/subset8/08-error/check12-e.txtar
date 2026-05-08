@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: print
+  --> check12-e.bal:25:5
+   |
+25 |     io:print("unreachable"); // @error
+   |     ^^^^^^^^^^^^^^^^^^^^^^^

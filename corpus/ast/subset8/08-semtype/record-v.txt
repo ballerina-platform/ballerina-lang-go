@@ -1,0 +1,19 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition T1
+    (record-type
+      (field X
+        (finite-type
+          (literal 65)))))
+  (type-definition T2
+    (record-type
+      (field X
+        (user-defined-type int Signed8))))
+  (type-definition T3
+    (union-type
+      (user-defined-type T4)
+      (user-defined-type T2)))
+  (type-definition T4
+    (record-type
+      (field a
+        (user-defined-type int Signed8)))))

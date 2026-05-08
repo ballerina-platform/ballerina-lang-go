@@ -1,0 +1,33 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 17
+    %2 = ConstantLoad 1
+    %3 = newArray [int...][%2]{%1}
+    %4 = ConstantLoad 1
+    %5 = newArray [[int...]...][%4]{%3}
+    v = %5;
+    %9 = ConstantLoad 0
+    %11 = ConstantLoad 0
+    %10 = v[%11];
+    %8 = %10[%9];
+    %12 = %8;
+    %13 = ConstantLoad 3
+    %14 = %13;
+    %7 = + %12 %14;
+    %16 = ConstantLoad 0
+    %15 = v[%16];
+    %17 = ConstantLoad 0
+    %15[%17] = %7;
+    %19 = ConstantLoad 0
+    %21 = ConstantLoad 0
+    %20 = v[%21];
+    %18 = %20[%19];
+    %22 = %18;
+    %23 = println(%22) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}

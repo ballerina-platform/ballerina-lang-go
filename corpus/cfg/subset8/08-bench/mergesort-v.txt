@@ -1,0 +1,341 @@
+(checksum
+  (bb0 () (bb1)
+    (var-def
+      (variable c (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref v))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (assignment
+      (simple-var-ref c)
+      (binary-expr ^
+        (simple-var-ref c)
+        (type-conversion-expr
+          (index-based-access
+            (simple-var-ref v)
+            (simple-var-ref i))
+          (value-type int))))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref c))
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable len (type
+        (value-type int)) (expr
+        (literal 1000000))))
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (literal 16807))))
+    (var-def
+      (variable m (type
+        (value-type int)) (expr
+        (literal 2147483647))))
+    (var-def
+      (variable x (type
+        (value-type int)) (expr
+        (literal 17))))
+    (var-def
+      (variable v (type
+        (array-type
+          (value-type any) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref len))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (simple-var-ref len))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (simple-var-ref x))))
+    (assignment
+      (simple-var-ref x)
+      (binary-expr %
+        (binary-expr *
+          (simple-var-ref x)
+          (simple-var-ref a))
+        (simple-var-ref m)))
+  )
+  (bb3 (bb1) (bb4)
+    (var-def
+      (variable s (type
+        (array-type
+          (value-type any) dimensions: 1 ([]))) (expr
+        (invocation sort (
+          (simple-var-ref v))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (invocation lang.array length (
+            (simple-var-ref s)))
+          (simple-var-ref len)))))
+  )
+  (bb4 (bb3 bb8) (bb5 bb6)
+    (binary-expr ..<
+      (literal 0)
+      (binary-expr -
+        (simple-var-ref len)
+        (literal 1)))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb5 (bb4) (bb7 bb8)
+    (binary-expr >
+      (type-conversion-expr
+        (index-based-access
+          (simple-var-ref s)
+          (simple-var-ref i))
+        (value-type int))
+      (type-conversion-expr
+        (index-based-access
+          (simple-var-ref s)
+          (binary-expr +
+            (simple-var-ref i)
+            (literal 1)))
+        (value-type int)))
+  )
+  (bb6 (bb4) ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (invocation checksum (
+            (simple-var-ref v)))
+          (invocation checksum (
+            (simple-var-ref s)))))))
+  )
+  (bb7 (bb5) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (literal false))))
+  )
+  (bb8 (bb7 bb5) (bb4))
+)
+(merge
+  (bb0 () (bb1)
+    (var-def
+      (variable result (type
+        (array-type
+          (value-type any) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+    (var-def
+      (variable i1 (type
+        (value-type int)) (expr
+        (literal 0))))
+    (var-def
+      (variable i2 (type
+        (value-type int)) (expr
+        (literal 0))))
+    (var-def
+      (variable len1 (type
+        (value-type int)) (expr
+        (invocation lang.array length (
+          (simple-var-ref v1))))))
+    (var-def
+      (variable len2 (type
+        (value-type int)) (expr
+        (invocation lang.array length (
+          (simple-var-ref v2))))))
+  )
+  (bb1 (bb0 bb7) (bb2)
+    (literal true)
+  )
+  (bb2 (bb1) (bb4 bb10)
+    (binary-expr <
+      (simple-var-ref i1)
+      (simple-var-ref len1))
+  )
+  (bb3 (bb10) (bb11))
+  (bb4 (bb2) (bb5 bb9)
+    (binary-expr <
+      (simple-var-ref i2)
+      (simple-var-ref len2))
+  )
+  (bb5 (bb4) (bb6 bb8)
+    (binary-expr <=
+      (type-conversion-expr
+        (index-based-access
+          (simple-var-ref v1)
+          (simple-var-ref i1))
+        (value-type int))
+      (type-conversion-expr
+        (index-based-access
+          (simple-var-ref v2)
+          (simple-var-ref i2))
+        (value-type int)))
+  )
+  (bb6 (bb5) (bb7)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref result)
+        (index-based-access
+          (simple-var-ref v1)
+          (simple-var-ref i1)))))
+    (assignment
+      (simple-var-ref i1)
+      (binary-expr +
+        (simple-var-ref i1)
+        (literal 1)))
+  )
+  (bb7 (bb6 bb8) (bb1)
+    (continue)
+  )
+  (bb8 (bb5) (bb7)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref result)
+        (index-based-access
+          (simple-var-ref v2)
+          (simple-var-ref i2)))))
+    (assignment
+      (simple-var-ref i2)
+      (binary-expr +
+        (simple-var-ref i2)
+        (literal 1)))
+  )
+  (bb9 (bb4) (bb10))
+  (bb10 (bb9 bb2) (bb3)
+    (break)
+  )
+  (bb11 (bb3 bb12) (bb12 bb13)
+    (binary-expr <
+      (simple-var-ref i1)
+      (simple-var-ref len1))
+  )
+  (bb12 (bb11) (bb11)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref result)
+        (index-based-access
+          (simple-var-ref v1)
+          (simple-var-ref i1)))))
+    (assignment
+      (simple-var-ref i1)
+      (binary-expr +
+        (simple-var-ref i1)
+        (literal 1)))
+  )
+  (bb13 (bb11) (bb14))
+  (bb14 (bb13 bb15) (bb15 bb16)
+    (binary-expr <
+      (simple-var-ref i2)
+      (simple-var-ref len2))
+  )
+  (bb15 (bb14) (bb14)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref result)
+        (index-based-access
+          (simple-var-ref v2)
+          (simple-var-ref i2)))))
+    (assignment
+      (simple-var-ref i2)
+      (binary-expr +
+        (simple-var-ref i2)
+        (literal 1)))
+  )
+  (bb16 (bb14) ()
+    (return
+      (simple-var-ref result))
+  )
+)
+(sort
+  (bb0 () (bb1 bb2)
+    (binary-expr <=
+      (invocation lang.array length (
+        (simple-var-ref v)))
+      (literal 1))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref v))
+  )
+  (bb2 (bb0) (bb3)
+    (var-def
+      (variable mid (type
+        (value-type int)) (expr
+        (binary-expr /
+          (invocation lang.array length (
+            (simple-var-ref v)))
+          (literal 2)))))
+    (var-def
+      (variable list1 (type
+        (array-type
+          (value-type any) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (binary-expr ..<
+      (literal 0)
+      (simple-var-ref mid))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb4 (bb3) (bb3)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref list1)
+        (type-conversion-expr
+          (index-based-access
+            (simple-var-ref v)
+            (simple-var-ref i))
+          (value-type int)))))
+  )
+  (bb5 (bb3) (bb6)
+    (var-def
+      (variable list2 (type
+        (array-type
+          (value-type any) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+  )
+  (bb6 (bb5 bb7) (bb7 bb8)
+    (binary-expr ..<
+      (simple-var-ref mid)
+      (invocation lang.array length (
+        (simple-var-ref v))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb7 (bb6) (bb6)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref list2)
+        (type-conversion-expr
+          (index-based-access
+            (simple-var-ref v)
+            (simple-var-ref i))
+          (value-type int)))))
+  )
+  (bb8 (bb6) ()
+    (return
+      (invocation merge (
+        (invocation sort (
+          (simple-var-ref list1)))
+        (invocation sort (
+          (simple-var-ref list2))))))
+  )
+)

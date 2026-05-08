@@ -1,0 +1,50 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition R1
+    (record-type
+      (field l1
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition T1
+    (union-type
+      (value-type int)
+      (user-defined-type R1)))
+  (type-definition R2
+    (record-type
+      (field l1
+        (union-type
+          (value-type int)
+          (value-type float)))))
+  (type-definition T2
+    (union-type
+      (value-type int)
+      (user-defined-type R2)))
+  (type-definition R1R2
+    (record-type
+      (field l1
+        (value-type int))))
+  (type-definition T3
+    (union-type
+      (value-type int)
+      (user-defined-type R1R2)))
+  (type-definition I1
+    (intersection-type
+      (user-defined-type T1)
+      (user-defined-type T2)))
+  (type-definition T1_bar
+    (union-type
+      (user-defined-type R1)
+      (value-type int)))
+  (type-definition T2_bar
+    (union-type
+      (user-defined-type R2)
+      (value-type int)))
+  (type-definition T3_bar
+    (union-type
+      (user-defined-type R1R2)
+      (value-type int)))
+  (type-definition I1_bar
+    (intersection-type
+      (user-defined-type T1_bar)
+      (user-defined-type T2_bar))))
