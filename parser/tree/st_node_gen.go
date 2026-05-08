@@ -6071,7 +6071,7 @@ type STXMLStartTagNode struct {
 
 	Attributes STNode
 
-	GetToken STNode
+	GtToken STNode
 }
 
 var _ STNode = &STXMLStartTagNode{}
@@ -6097,7 +6097,7 @@ func (n *STXMLStartTagNode) ChildInBucket(bucket int) STNode {
 		return n.Attributes
 
 	case 3:
-		return n.GetToken
+		return n.GtToken
 
 	default:
 		panic("invalid bucket index")
@@ -6113,7 +6113,7 @@ func (n *STXMLStartTagNode) ChildBuckets() []STNode {
 
 		n.Attributes,
 
-		n.GetToken,
+		n.GtToken,
 	}
 }
 
@@ -6139,7 +6139,7 @@ type STXMLEndTagNode struct {
 
 	Name STNode
 
-	GetToken STNode
+	GtToken STNode
 }
 
 var _ STNode = &STXMLEndTagNode{}
@@ -6165,7 +6165,7 @@ func (n *STXMLEndTagNode) ChildInBucket(bucket int) STNode {
 		return n.Name
 
 	case 3:
-		return n.GetToken
+		return n.GtToken
 
 	default:
 		panic("invalid bucket index")
@@ -6181,7 +6181,7 @@ func (n *STXMLEndTagNode) ChildBuckets() []STNode {
 
 		n.Name,
 
-		n.GetToken,
+		n.GtToken,
 	}
 }
 
@@ -6319,7 +6319,7 @@ type STXMLEmptyElementNode struct {
 
 	SlashToken STNode
 
-	GetToken STNode
+	GtToken STNode
 }
 
 var _ STNode = &STXMLEmptyElementNode{}
@@ -6348,7 +6348,7 @@ func (n *STXMLEmptyElementNode) ChildInBucket(bucket int) STNode {
 		return n.SlashToken
 
 	case 4:
-		return n.GetToken
+		return n.GtToken
 
 	default:
 		panic("invalid bucket index")
@@ -6366,7 +6366,7 @@ func (n *STXMLEmptyElementNode) ChildBuckets() []STNode {
 
 		n.SlashToken,
 
-		n.GetToken,
+		n.GtToken,
 	}
 }
 
