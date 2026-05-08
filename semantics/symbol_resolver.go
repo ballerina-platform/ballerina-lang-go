@@ -257,6 +257,9 @@ func (ms *moduleSymbolResolver) allocateFunctionSymbol(fn *ast.BLangFunction, na
 		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
 	}
 	if ms.isDependentlyTyped(fn) {
+		if fn.RestParam != nil {
+			ms.ctx.Unimplemented("rest parameters are not supported on dependently-typed functions", fn.GetPosition())
+		}
 		return model.NewDependentlyTypedFunctionSymbol(name, paramNames, len(fn.RequiredParams), fn.FuncSymbolFlags(), isPublic)
 	}
 	return model.NewFunctionSymbol(name, model.FunctionSignature{}, isPublic)

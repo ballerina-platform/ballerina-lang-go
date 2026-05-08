@@ -3593,7 +3593,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 	}
 }
 
-func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location, callExpectedType semtypes.SemType) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
+func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location, C semtypes.SemType) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
 	paramNames := sym.ParamNames()
 	nRequired := len(paramNames)
 	reorderdArgs := make([]ast.BLangExpression, nRequired)
@@ -3648,16 +3648,21 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				return nil, nil, chain, false
 			}
 			if dp.Kind == model.DefaultableParamKindInferredTypedesc {
-				if callExpectedType == nil {
+				if C == nil {
 					t.semanticError(fmt.Sprintf("cannot infer typedesc argument for parameter '%s': no contextually expected type", paramNames[i]), loc)
 					return nil, nil, chain, false
 				}
-				// The resolved typedesc<T> propagates via the monomorphized signature's
-				// ParamTypes[i]; desugar extracts T back when it synthesizes the arg.
-				tys = append(tys, semtypes.TypedescContaining(t.typeEnv(), callExpectedType))
-				continue
+				ctx := t.typeContext()
+				T := semtypes.TypedescConstraint(ctx, paramTypes[i])
+				S := semtypes.Intersect(T, C)
+				if semtypes.IsEmpty(ctx, S) {
+					t.semanticError(fmt.Sprintf("cannot infer maximal type such that it is a subtype of both %s and %s", semtypes.ToString(ctx, T), semtypes.ToString(ctx, C)), loc)
+					return nil, nil, chain, false
+				}
+				tys = append(tys, semtypes.TypedescContaining(t.typeEnv(), S))
+			} else {
+				tys = append(tys, paramTypes[i])
 			}
-			tys = append(tys, paramTypes[i])
 			continue
 		}
 		var paramExpectedTy semtypes.SemType
