@@ -57,7 +57,7 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 1: Compile .bal to BIR.
 	var stdoutBuf, stderrBuf bytes.Buffer
-	birPkg, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
+	birPkg, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
 	if birPkg == nil || compileErr != nil {
 		t.Fatalf("compilation failed for %s: %v", testPair.InputPath, compileErr)
 	}

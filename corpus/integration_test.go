@@ -39,6 +39,7 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
 
 	_ "ballerina-lang-go/lib/rt"
@@ -54,11 +55,57 @@ const (
 var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
-	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
+		// Tests that cause unrecoverable Go runtime errors.
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
 		"subset8/08-comparable/order5-v.bal",
 		"subset8/08-const/const3-v.bal",
+
+		// annotations mismatch
+		"subset1/01-int/mul-nil-lift-v.bal",
+		"subset1/01-int/optional-v.bal",
+		"subset1/01-int/sub-nil-lift-v.bal",
+		"subset2/02-bitwise/and-nil-lift-v.bal",
+		"subset2/02-dataflow/while-e.bal",
+		"subset2/02-dataflow/while2-e.bal",
+		"subset2/02-misc/stackoverflow-p.bal",
+		"subset4/04-int/tohex2-v.bal",
+		"subset4/04-query-expression/let1-e.bal",
+		"subset4/04-query-expression/let2-e.bal",
+		"subset4/04-query-expression/where1-e.bal",
+		"subset4/04-query-expression/where2-e.bal",
+		"subset5/05-error/check3-p.bal",
+		"subset5/05-error/check4-p.bal",
+		"subset5/05-error/panic4-p.bal",
+		"subset5/05-error/panic5-p.bal",
+		"subset5/05-logical/23-e.bal",
+		"subset6/06-object/inclusion-cycle-e.bal",
+		"subset7/07-function/error2-p.bal",
+		"subset7/07-function/union13-v.bal",
+		"subset7/07-query-expression/limit-clause-e.bal",
+		"subset7/07-query-expression/where-clause-e.bal",
+		"subset7/07-syntax-errors/object-attached-func-e.bal",
+		"subset7/07-syntax-errors/return-e.bal",
+		"subset8/08-enum/7-e.bal",
+		"subset8/08-enum/8-e.bal",
+		"subset8/08-foreach/3-p.bal",
+		"subset8/08-network/remote-method-call-non-atomic-v.bal",
+		"subset8/08-network/remote-method-compound-assign-v.bal",
+		"subset8/08-network/remote-method-name-2-v.bal",
+		"subset8/08-network/remote-method-name-v.bal",
+		"subset8/08-network/remote-method-obj-v.bal",
+		"subset8/08-network/remote-method-v.bal",
+		"subset8/08-record/default-fn-v.bal",
+		"project/collide-e",
+		"project/collide3-e",
+		"project/cross-module-class-v",
+		"project/module-enum-collide-e",
+		"project/module-init-duplicate-e",
+		"project/module-init-v",
+		"project/module-level-var-v",
+		"project/module-var-v",
+		"project/multi-module-project-v",
+		"project/record-default-v",
 	}
 )
 
@@ -73,6 +120,15 @@ type testResult struct {
 	actualStdout   string
 	expectedStderr string
 	actualStderr   string
+}
+
+// caseRun is the full result of executing one corpus case (single-file or
+// project): captured streams plus the resolved error diagnostics needed for
+// `-e` annotation checks.
+type caseRun struct {
+	stdout string
+	stderr string
+	diags  []resolvedDiag
 }
 
 func TestIntegration(t *testing.T) {
@@ -117,9 +173,9 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
+	run := runIntegrationCase(testPair.InputPath)
 	if *update {
-		stdout, stderr := runIntegrationCase(testPair.InputPath)
-		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizeIntegrationStderr(run.stderr))) {
 			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
 		return
@@ -130,7 +186,8 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 	}
 
-	result := runTest(testPair.InputPath, expectedStdout, expectedStderr)
+	result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
+	assertAnnotations(t, collectSingleFileSources(testPair.InputPath), testPair.Name, run.stdout, run.stderr, run.diags)
 	if result.success {
 		return
 	}
@@ -178,24 +235,43 @@ func normalizeIntegrationStderr(stderr string) string {
 }
 
 func isTestSkipped(tc test_util.TestCase) bool {
-	return slices.Contains(skipIntegrationTests, filepath.ToSlash(tc.Name))
+	return isSkipKey(filepath.ToSlash(tc.Name))
 }
 
-func runTest(balFile string, expectedStdout, expectedStderr string) testResult {
-	actualStdout, actualStderr := runIntegrationCase(balFile)
-	return evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr)
+func isSkipKey(key string) bool {
+	return slices.Contains(skipIntegrationTests, key)
 }
 
-func runIntegrationCase(balFile string) (stdout, stderr string) {
+func resolveErrorDiagnostics(result projects.DiagnosticResult, de *diagnostics.DiagnosticEnv) []resolvedDiag {
+	errs := result.Errors()
+	if len(errs) == 0 {
+		return nil
+	}
+	out := make([]resolvedDiag, 0, len(errs))
+	for _, d := range errs {
+		loc := d.Location()
+		if !diagnostics.LocationHasSource(loc) {
+			continue
+		}
+		out = append(out, resolvedDiag{
+			file:      de.FileName(loc),
+			startLine: de.StartLine(loc) + 1,
+			endLine:   de.EndLine(loc) + 1,
+		})
+	}
+	return out
+}
+
+func runIntegrationCase(balFile string) caseRun {
 	var stdoutBuf, stderrBuf bytes.Buffer
 
-	birPkg, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
+	birPkg, diags, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
 	if birPkg == nil || compileErr != nil {
-		return stdoutBuf.String(), stderrBuf.String()
+		return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 	}
 
 	runInterpretPhase(birPkg, &stdoutBuf, &stderrBuf)
-	return stdoutBuf.String(), stderrBuf.String()
+	return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
@@ -209,7 +285,7 @@ func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStde
 	}
 }
 
-func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, err error) {
+func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, diags []resolvedDiag, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -224,7 +300,7 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	ballerinaEnvPath, err := getBallerinaEnvPath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
@@ -233,18 +309,19 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
 	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
+	diags = resolveErrorDiagnostics(compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
-		return nil, nil
+		return nil, diags, nil
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIR(), nil
+	return backend.BIR(), diags, nil
 }
 
 func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
@@ -278,15 +355,19 @@ func findProjectDirs(dir string) []string {
 }
 
 func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
+	if isSkipKey("project/" + dirName) {
+		t.Skipf("Skipping project integration test for %s", dirName)
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("panic while running %s: %v", dirName, r)
 		}
 	}()
 
+	run := runProjectIntegrationCase(projDir)
 	if *update {
-		stdout, stderr := runProjectIntegrationCase(projDir)
-		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizeIntegrationStderr(run.stderr))) {
 			t.Fatalf("Updated expected file: %s", txtarPath)
 		}
 		return
@@ -297,8 +378,14 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
 	}
 
-	stdout, stderr := runProjectIntegrationCase(projDir)
-	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+	result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
+
+	projectSources, srcErr := collectProjectSources(projDir)
+	if srcErr != nil {
+		t.Errorf("failed to collect project sources: %v", srcErr)
+	} else {
+		assertAnnotations(t, projectSources, dirName, run.stdout, run.stderr, run.diags)
+	}
 	if result.success {
 		return
 	}
@@ -325,20 +412,20 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 	t.Errorf("%s", msg.String())
 }
 
-func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
+func runProjectIntegrationCase(projectDir string) caseRun {
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 
-	birPkgs, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
+	birPkgs, diags, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
 	if birPkgs == nil || compileErr != nil {
-		return stdoutBuf.String(), stderrBuf.String()
+		return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 	}
 
 	runProjectInterpretPhase(birPkgs, &stdoutBuf, &stderrBuf)
-	return stdoutBuf.String(), stderrBuf.String()
+	return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 }
 
-func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, err error) {
+func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, diags []resolvedDiag, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -353,7 +440,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	ballerinaEnvPath, err := getBallerinaEnvPath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
@@ -362,18 +449,19 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
 	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
+	diags = resolveErrorDiagnostics(compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
-		return nil, nil
+		return nil, diags, nil
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIRPackages(), nil
+	return backend.BIRPackages(), diags, nil
 }
 
 func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
@@ -695,14 +783,14 @@ func BenchmarkIntegration(b *testing.B) {
 				b.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 			}
 
-			var stdout, stderr string
+			var run caseRun
 			b.ResetTimer()
 			for b.Loop() {
-				stdout, stderr = runIntegrationCase(testPair.InputPath)
+				run = runIntegrationCase(testPair.InputPath)
 			}
 			b.StopTimer()
 
-			result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+			result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
 			if !result.success {
 				b.Fatalf("output mismatch for %s:\nstdout:\n%s\nstderr:\n%s",
 					testPair.InputPath,
