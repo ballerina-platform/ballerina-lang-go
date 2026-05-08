@@ -20,7 +20,6 @@ import (
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/values"
 	"fmt"
-	"math"
 	"sort"
 )
 
@@ -100,10 +99,10 @@ func initInternalModule(rt *runtime.Runtime) {
 			rightKeys := keyRows[rightRow]
 			for keyIndex := 0; keyIndex < keyCount; keyIndex++ {
 				cmp := compareQuerySortValues(leftKeys.Get(keyIndex), rightKeys.Get(keyIndex), directionFlags[keyIndex])
-				switch {
-				case cmp < 0:
+				switch cmp {
+				case values.CmpLT:
 					return true
-				case cmp > 0:
+				case values.CmpGT:
 					return false
 				}
 			}
@@ -129,79 +128,8 @@ func reorderListInPlace(list *values.List, order []int) {
 	}
 }
 
-func compareQuerySortValues(left values.BalValue, right values.BalValue, isAscending bool) int {
-	if left == nil {
-		if right == nil {
-			return 0
-		}
-		return 1
-	}
-	if right == nil {
-		return -1
-	}
-
-	if leftList, ok := left.(*values.List); ok {
-		if rightList, ok := right.(*values.List); ok {
-			return compareQuerySortLists(leftList, rightList, isAscending)
-		}
-	}
-
-	if leftFloat, ok := left.(float64); ok {
-		if rightFloat, ok := right.(float64); ok {
-			leftIsNaN := math.IsNaN(leftFloat)
-			rightIsNaN := math.IsNaN(rightFloat)
-			switch {
-			case leftIsNaN && rightIsNaN:
-				return 0
-			case leftIsNaN:
-				return 1
-			case rightIsNaN:
-				return -1
-			}
-		}
-	}
-
-	switch values.Compare(left, right) {
-	case values.CmpLT:
-		if isAscending {
-			return -1
-		}
-		return 1
-	case values.CmpGT:
-		if isAscending {
-			return 1
-		}
-		return -1
-	default:
-		return 0
-	}
-}
-
-func compareQuerySortLists(left *values.List, right *values.List, isAscending bool) int {
-	minLength := left.Len()
-	if right.Len() < minLength {
-		minLength = right.Len()
-	}
-	for i := range minLength {
-		cmp := compareQuerySortValues(left.Get(i), right.Get(i), isAscending)
-		if cmp != 0 {
-			return cmp
-		}
-	}
-	switch {
-	case left.Len() == right.Len():
-		return 0
-	case isAscending:
-		if left.Len() < right.Len() {
-			return -1
-		}
-		return 1
-	default:
-		if left.Len() > right.Len() {
-			return -1
-		}
-		return 1
-	}
+func compareQuerySortValues(left values.BalValue, right values.BalValue, isAscending bool) values.CompareResult {
+	return values.CompareK(left, right, isAscending)
 }
 
 func init() {
