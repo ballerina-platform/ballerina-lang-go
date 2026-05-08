@@ -53,6 +53,22 @@ func (nq *NetworkQualifier) field() Field {
 	}
 }
 
+func IsIsolatedObject(ctx Context, ty SemType) bool {
+	objectTy := convertObjectToMappingTy(ctx, ty)
+	if objectTy == nil {
+		return false
+	}
+	qualifiersMap := mappingMemberTypeInner(ctx, objectTy, StringConst("$qualifiers"))
+	if qualifiersMap == nil {
+		return false
+	}
+	isolatedTy := mappingMemberTypeInner(ctx, qualifiersMap, StringConst("isolated"))
+	if isolatedTy == nil {
+		return false
+	}
+	return IsSubtype(ctx, isolatedTy, BooleanConst(true))
+}
+
 func IsNetworkInteractionObject(ctx Context, ty SemType) bool {
 	return IsClientObject(ctx, ty) || IsServiceObject(ctx, ty)
 }

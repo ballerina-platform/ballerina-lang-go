@@ -13,6 +13,8 @@
 coverage.*
 *.coverprofile
 profile.cov
+.cover/
+.artifacts/
 
 # Dependency directories
 # vendor/

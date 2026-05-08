@@ -1,0 +1,68 @@
+(Bar
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access y
+          (simple-var-ref self))
+        (simple-var-ref y))
+    )
+  )
+  ($remote$getY
+    (bb0 () ()
+      (return
+        (field-based-access y
+          (simple-var-ref self)))
+    )
+  )
+)
+(Foo
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (simple-var-ref x))
+    )
+  )
+  (getX
+    (bb0 () ()
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
+  )
+)
+(callMethod
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (new (
+          (literal 10))))))
+    (return
+      (invocation getX expr:
+        (simple-var-ref f) ()))
+  )
+)
+(callRemoteMethod
+  (bb0 () ()
+    (var-def
+      (variable b (type
+        (user-defined-type Bar)) (expr
+        (new (
+          (literal 20))))))
+    (return
+      (remote-method-call getY expr:
+        (simple-var-ref b) ()))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation callMethod ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation callRemoteMethod ()))))
+  )
+)

@@ -16,6 +16,6 @@
 
 const foo = 23; // @error
 
-function foo() returns int {
+function foo() returns int { // @error
     return 5;
 }
