@@ -35,9 +35,7 @@ type RemoteRepository struct {
 }
 
 // NewRemoteRepository wires a FileSystemRepository to act as the on-disk
-// cache for this repository. cache must be non-nil; passing nil is a
-// programming error and panics so the misuse fails fast at construction
-// instead of crashing on the first lookup.
+// cache for this repository. cache must be non-nil.
 func NewRemoteRepository(cache *FileSystemRepository) *RemoteRepository {
 	if cache == nil {
 		panic("projects: NewRemoteRepository requires a non-nil FileSystemRepository cache")

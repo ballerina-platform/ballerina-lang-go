@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: redeclared symbol 'foo'
    |
 17 | const foo = 23; // @error
    |       ^^^
+
+error[SEMANTIC_ERROR]: redeclared symbol 'foo'
+  --> 2-e.bal:19:10
+   |
+19 | function foo() returns int { // @error
+   |          ^^^

@@ -57,11 +57,17 @@ type (
 		nextDefaultSymbolName() string
 	}
 
+	prevPos struct {
+		pos      diagnostics.Location
+		reported bool
+	}
+
 	moduleSymbolResolver struct {
 		ctx            *context.CompilerContext
 		scope          *model.ModuleScope
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]model.TypeDefinition
+		prevPos        map[string]prevPos
 		defaultCounter int
 	}
 
@@ -91,6 +97,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		scope:     scope,
 		pkgID:     pkgID,
 		typeDefns: make(map[model.SymbolRef]model.TypeDefinition),
+		prevPos:   make(map[string]prevPos),
 	}
 }
 
@@ -185,10 +192,17 @@ func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]model.TypeDefi
 
 func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model.Symbol, pos diagnostics.Location) bool {
 	if _, _, exists := resolver.GetSymbol(name); exists {
-		semanticError(resolver, "redeclared symbol '"+name+"'", pos)
+		msg := "redeclared symbol '" + name + "'"
+		if prev, ok := resolver.prevPos[name]; ok && !prev.reported {
+			semanticError(resolver, msg, prev.pos)
+			prev.reported = true
+			resolver.prevPos[name] = prev
+		}
+		semanticError(resolver, msg, pos)
 		return false
 	}
 	resolver.AddSymbol(name, symbol)
+	resolver.prevPos[name] = prevPos{pos: pos}
 	return true
 }
 

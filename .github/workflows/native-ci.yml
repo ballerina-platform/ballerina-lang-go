@@ -13,24 +13,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
-      - name: Run tests with coverage
+      - name: Install Hyperfine
         run: |
-          mkdir -p .cover/cli_executable
-          BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
-            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
-          go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+
+      - name: Run all modules (tests + coverage)
+        run: python3 .github/scripts/run_native_tests.py --with-coverage
+
+      - name: Collect coverage files
+        id: coverage
+        run: |
+          mapfile -t files < <(find .artifacts/coverage -name '*.out' -type f | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No coverage profiles generated" >&2
+            exit 1
+          fi
+          (IFS=,; echo "files=${files[*]}" >> "$GITHUB_OUTPUT")
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,coverage-cli-executable.out
+          files: ${{ steps.coverage.outputs.files }}
+          flags: native
           fail_ci_if_error: true
 
       - name: Check gofmt
@@ -48,11 +62,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
-      - name: Run tests
-        run: go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+      - name: Install Hyperfine
+        shell: pwsh
+        run: |
+          choco install hyperfine -y
+
+      - name: Run all modules
+        shell: pwsh
+        run: py -3 .github/scripts/run_native_tests.py

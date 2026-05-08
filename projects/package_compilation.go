@@ -88,16 +88,62 @@ func (c *PackageCompilation) compileModulesInternal() {
 			}
 		}
 
-		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
+		// Build descriptor -> moduleContext lookup so we can propagate errors
+		// from a dependency to its dependents and skip downstream stages.
+		descToModule := make(map[ModuleDescriptor]*moduleContext, len(c.packageResolution.topologicallySortedModuleList))
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
-			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
-			if moduleCtx.getCompilationState() == moduleCompilationStateLoadedFromSources {
-				resolveTypesAndSymbols(moduleCtx)
+			descToModule[moduleCtx.getDescriptor()] = moduleCtx
+		}
+		erroredModules := make(map[ModuleID]struct{})
+		moduleDepGraph := c.packageResolution.ModuleDependencyGraph()
+		dependencyErrored := func(m *moduleContext) bool {
+			for _, dep := range moduleDepGraph.DirectDependencies(m.getDescriptor()) {
+				depCtx, ok := descToModule[dep]
+				if !ok {
+					continue
+				}
+				if _, errored := erroredModules[depCtx.getModuleID()]; errored {
+					return true
+				}
 			}
-			// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
+			return false
 		}
 
-		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
+		// Phase 1: Parse, AST, symbol resolution, top-level type resolution.
+		// Sequential because symbol/type resolution of a module needs its dependencies
+		// to have published their public symbol spaces. We still run Phase 1 for every
+		// module (even after some errored) so we collect all top-level diagnostics in
+		// one shot, but a dependent of an errored module is skipped to avoid cascading
+		// noise (its imports would not resolve).
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
+			if moduleCtx.getCompilationState() != moduleCompilationStateLoadedFromSources {
+				// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
+				continue
+			}
+			if dependencyErrored(moduleCtx) {
+				erroredModules[moduleCtx.getModuleID()] = struct{}{}
+				continue
+			}
+			resolveTypesAndSymbols(moduleCtx)
+			if moduleCtx.compilerCtx.HasErrors() {
+				erroredModules[moduleCtx.getModuleID()] = struct{}{}
+			}
+		}
+
+		// If any module failed top-level resolution, stop the compilation pipeline
+		// here. Subsequent stages (local node resolution, semantic analysis, CFG,
+		// desugar, BIR) operate on assumptions that top-level types are fully
+		// resolved across the whole package; running them now produces noisy
+		// cascading diagnostics or panics on nil types.
+		if len(erroredModules) > 0 {
+			c.collectModuleDiagnostics(&allDiagnostics)
+			c.diagnosticResult = NewDiagnosticResult(allDiagnostics)
+			return
+		}
+
+		// Phase 2: local node resolution, semantic analysis, CFG, desugar, BIR
+		// (parallel - no cross-module dependencies).
 		// Each goroutine has panic recovery to convert panics to diagnostics.
 		var wg sync.WaitGroup
 		var panicsMu sync.Mutex
@@ -129,25 +175,30 @@ func (c *PackageCompilation) compileModulesInternal() {
 		}
 
 		// Collect diagnostics from all modules
-		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
-			for _, diag := range moduleCtx.getDiagnostics() {
-				severity := diag.DiagnosticInfo().Severity()
-				if c.getPackageContext().getProject().Kind() == ProjectKindBala {
-					if severity != diagnostics.Error && severity != diagnostics.Fatal {
-						continue
-					}
-				}
-				// TODO(P6): Determine isWorkspaceDep from dependency graph root comparison
-				isWorkspaceDep := false
-				allDiagnostics = append(allDiagnostics,
-					newPackageDiagnostic(diag, moduleCtx.getDescriptor(), moduleCtx.getProject(), isWorkspaceDep))
-			}
-		}
+		c.collectModuleDiagnostics(&allDiagnostics)
 	}
 
 	// TODO(P6): Run plugin code analysis (runPluginCodeAnalysis)
 
 	c.diagnosticResult = NewDiagnosticResult(allDiagnostics)
+}
+
+// collectModuleDiagnostics appends per-module compilation diagnostics to dst,
+// applying severity filtering for bala projects.
+func (c *PackageCompilation) collectModuleDiagnostics(dst *[]diagnostics.Diagnostic) {
+	isBala := c.getPackageContext().getProject().Kind() == ProjectKindBala
+	for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+		for _, diag := range moduleCtx.getDiagnostics() {
+			severity := diag.DiagnosticInfo().Severity()
+			if isBala && severity != diagnostics.Error && severity != diagnostics.Fatal {
+				continue
+			}
+			// TODO(P6): Determine isWorkspaceDep from dependency graph root comparison
+			isWorkspaceDep := false
+			*dst = append(*dst,
+				newPackageDiagnostic(diag, moduleCtx.getDescriptor(), moduleCtx.getProject(), isWorkspaceDep))
+		}
+	}
 }
 
 // Resolution returns the package resolution.

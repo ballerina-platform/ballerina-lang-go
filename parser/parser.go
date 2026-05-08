@@ -4793,8 +4793,7 @@ func (b *BallerinaParser) getExpectedNodeKind(lookahead int) common.SyntaxKind {
 		case common.COLON_TOKEN:
 			nextToken = b.peekN(lookahead + 1)
 			switch nextToken.Kind() {
-			case common.ASTERISK_TOKEN,
-				common.GT_TOKEN:
+			case common.ASTERISK_TOKEN, common.GT_TOKEN:
 				return common.XML_STEP_EXPRESSION
 			case common.IDENTIFIER_TOKEN:
 				nextToken = b.peekN(lookahead + 1)
@@ -8438,11 +8437,11 @@ func (b *BallerinaParser) parseTemplateContentAsXML() tree.STNode {
 		}
 		nextToken = b.peek()
 	}
-	// charReader := text.CharReaderFromText(xmlStringBuilder.String())
-	// tokenReader := nil
-	// xmlParser := nil
-	// return this.xmlParser.parse()
-	panic("xml parser not implemented")
+	charReader := text.CharReaderFromText(xmlStringBuilder.String())
+	xl := newXMLLexer(charReader)
+	tr := CreateTokenReader(xl)
+	xp := newXMLParser(tr, expressions)
+	return xp.Parse()
 }
 
 func (b *BallerinaParser) parseRegExpTemplateExpression() tree.STNode {
@@ -10240,10 +10239,10 @@ func (b *BallerinaParser) parseEnumDeclaration(metadata tree.STNode, qualifier t
 	closeBraceToken := b.parseCloseBrace()
 	semicolon := b.parseOptionalSemicolon()
 	b.endContext()
-	openBraceToken = b.cloneWithDiagnosticIfListEmpty(enumMemberList, openBraceToken,
-		&common.ERROR_MISSING_ENUM_MEMBER)
-	return tree.CreateEnumDeclarationNode(metadata, qualifier, enumKeywordToken, identifier,
+	enumDecl := tree.CreateEnumDeclarationNode(metadata, qualifier, enumKeywordToken, identifier,
 		openBraceToken, enumMemberList, closeBraceToken, semicolon)
+	return b.cloneWithDiagnosticIfListEmpty(enumMemberList, enumDecl,
+		&common.ERROR_MISSING_ENUM_MEMBER)
 }
 
 func (b *BallerinaParser) parseEnumKeyword() tree.STNode {

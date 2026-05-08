@@ -237,15 +237,19 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	compilerCtx.EndStage()
 
 	compilerCtx.StartStage(context.StageSymbolResolution)
+	exported := semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
+	compilerCtx.EndStage()
+
+	if compilerCtx.HasErrors() {
+		// Do not publish a half-built symbol space; dependents would otherwise
+		// see symbols with unresolved types and panic during type resolution.
+		return
+	}
+
 	publicSymbols[semantics.PackageIdentifier{
 		OrgName:    moduleCtx.moduleDescriptor.Org().value,
 		ModuleName: moduleCtx.moduleID.moduleName,
-	}] = semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
-	compilerCtx.EndStage()
-
-	if compilerCtx.HasDiagnostics() {
-		return
-	}
+	}] = exported
 
 	// Add type resolution step (this only resolve types of top level nodes)
 	compilerCtx.StartStage(context.StageTopLevelTypeResolution)

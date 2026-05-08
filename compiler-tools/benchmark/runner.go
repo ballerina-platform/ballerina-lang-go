@@ -21,15 +21,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	baseInterpreter = "bal-base"
-	headInterpreter = "bal-base"
-)
+const builtInterpreter = "bal"
 
 type (
 	benchmark struct {
@@ -71,23 +69,14 @@ func (b *benchmark) run() error {
 	}
 	defer b.removeWorktree(headWorktree)
 
+	interpreterBin := builtInterpreterBinaryName()
 	fmt.Printf("Building interpreter for %s...\n", b.baseRef)
-	if err := b.buildInterpreter(baseWorktree, b.baseRef, baseInterpreter); err != nil {
+	if err := b.buildInterpreter(baseWorktree, b.baseRef, interpreterBin); err != nil {
 		return err
 	}
 	fmt.Printf("Building interpreter for %s...\n", b.headRef)
-	if err := b.buildInterpreter(headWorktree, b.headRef, headInterpreter); err != nil {
+	if err := b.buildInterpreter(headWorktree, b.headRef, interpreterBin); err != nil {
 		return err
-	}
-
-	if b.config.exportPath == "" {
-		for _, path := range target.paths {
-			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
-			if _, err := b.runHyperfine(cmds, ""); err != nil {
-				return err
-			}
-		}
-		return nil
 	}
 
 	exportDir, err := os.MkdirTemp("", "bal-bench-exports-*")
@@ -96,39 +85,32 @@ func (b *benchmark) run() error {
 	}
 	defer func() { _ = os.RemoveAll(exportDir) }()
 
-	var results []runResult
+	results := make([]runResult, 0, len(target.paths))
 	for _, path := range target.paths {
-		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
+		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode, interpreterBin)
 		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
 		export, err := b.runHyperfine(cmds, exportPath)
 		if err != nil {
 			return err
 		}
-		if export != nil {
-			label := target.label
-			if target.mode == multipleFilesMode {
-				label = path
-				for strings.HasPrefix(label, "../") {
-					label = strings.TrimPrefix(label, "../")
-				}
-			}
-			results = append(results, runResult{
-				label:  label,
-				export: *export,
-			})
-		}
+		results = append(results, runResult{
+			label:  benchmarkResultLabel(target, path),
+			export: *export,
+		})
 	}
 
-	report := report{
+	rep := report{
 		BaseRef:   b.baseRef,
 		HeadRef:   b.headRef,
 		Generated: time.Now(),
 		results:   results,
 	}
-	if err := report.export(b.config.exportPath); err != nil {
-		return err
+	if b.config.exportPath != "" {
+		if err := rep.export(b.config.exportPath); err != nil {
+			return err
+		}
+		fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	}
-	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	return nil
 }
 
@@ -154,42 +136,35 @@ func (b *benchmark) buildInterpreter(worktreePath, ref, output string) error {
 }
 
 func (b *benchmark) hyperfineFlags() []string {
-	var args []string
+	args := []string{"--show-output"}
 	if b.warmup > 0 {
 		args = append(args, "--warmup", strconv.Itoa(b.warmup))
 	}
-	if b.runs > 0 {
-		args = append(args, "--runs", strconv.Itoa(b.runs))
-	}
+	args = append(args, "--runs", strconv.Itoa(b.runs))
 	return args
 }
 
 func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchExport, error) {
 	args := b.hyperfineFlags()
-	if b.config.exportPath != "" {
-		args = append(args, "--export-json", jsonExportPath)
-	}
+	args = append(args, "--export-json", jsonExportPath)
 	args = append(args, cmds...)
 	if err := runCmd(".", "hyperfine", args...); err != nil {
 		return nil, fmt.Errorf("failed to run hyperfine: %w", err)
 	}
-	if b.config.exportPath != "" {
-		return parseHyperfineExport(jsonExportPath)
-	}
-	return nil, nil
+	return parseHyperfineExport(jsonExportPath)
 }
 
 func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode targetMode) []string {
-	command := fmt.Sprintf("%s run %s", shellQuote(interpreter), shellQuote(target))
+	command := formatBenchmarkCommand(interpreter, target)
 	if mode == multipleFilesMode {
 		ref = fmt.Sprintf("%s (%s)", ref, getRelativeLabel(root, target))
 	}
 	return []string{"--command-name", ref, command}
 }
 
-func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode) []string {
-	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, baseInterpreter), root, target, mode)
-	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, headInterpreter), root, target, mode)
+func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode, interpreterBin string) []string {
+	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, interpreterBin), root, target, mode)
+	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, interpreterBin), root, target, mode)
 	return append(baseCmd, headCmd...)
 }
 
@@ -213,8 +188,41 @@ func sanitize(ref string) string {
 	}, ref)
 }
 
-func shellQuote(s string) string {
+func shellQuoteForOS(goos, s string) string {
+	if goos == "windows" {
+		return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+	}
 	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
+}
+
+func formatBenchmarkCommand(interpreter, target string) string {
+	return formatBenchmarkCommandForOS(runtime.GOOS, interpreter, target)
+}
+
+func formatBenchmarkCommandForOS(goos, interpreter, target string) string {
+	cmd := fmt.Sprintf("%s run %s", shellQuoteForOS(goos, interpreter), shellQuoteForOS(goos, target))
+	if goos == "windows" {
+		return `"` + cmd + `"`
+	}
+	return cmd
+}
+
+func builtInterpreterBinaryName() string {
+	if runtime.GOOS == "windows" {
+		return builtInterpreter + ".exe"
+	}
+	return builtInterpreter
+}
+
+func benchmarkResultLabel(target *benchmarkTarget, path string) string {
+	if target.mode != multipleFilesMode {
+		return target.label
+	}
+	label := path
+	for strings.HasPrefix(label, "../") {
+		label = strings.TrimPrefix(label, "../")
+	}
+	return label
 }
 
 func runCmd(dir, name string, args ...string) error {

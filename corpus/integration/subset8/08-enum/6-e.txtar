@@ -1,0 +1,19 @@
+-- stdout --
+-- stderr --
+error[SYNTAX_ERROR]: missing equal token
+  --> 6-e.bal:21:1
+   |
+21 |     123, // @error
+   |
+
+error[SYNTAX_ERROR]: missing identifier
+  --> 6-e.bal:21:1
+   |
+21 |     123, // @error
+   |
+
+error[SYNTAX_ERROR]: missing identifier
+  --> 6-e.bal:22:1
+   |
+22 |     , // @error
+   |
