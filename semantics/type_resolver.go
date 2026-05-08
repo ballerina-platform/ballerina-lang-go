@@ -2429,21 +2429,21 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 			varDef.Var.SetDeterminedType(semtypes.NEVER)
 			updateSymbolType(t, varDef.Var, variableTy)
 
-			if clause.OnClause == nil || clause.OnClause.LhsExpr == nil || clause.OnClause.RhsExpr == nil {
+			if clause.OnClause.OnExpr == nil || clause.OnClause.EqualsExpr == nil {
 				t.semanticError("join clause requires an on clause", clause.GetPosition())
 				return nil, false
 			}
 			clause.OnClause.SetDeterminedType(semtypes.NEVER)
-			lhsTy, _, ok := resolveActionOrExpression(t, currentChain, clause.OnClause.LhsExpr, nil)
+			lhsTy, _, ok := resolveActionOrExpression(t, currentChain, clause.OnClause.OnExpr, nil)
 			if !ok {
 				return nil, false
 			}
-			rhsTy, _, ok := resolveActionOrExpression(t, currentChain, clause.OnClause.RhsExpr, nil)
+			rhsTy, _, ok := resolveActionOrExpression(t, currentChain, clause.OnClause.EqualsExpr, nil)
 			if !ok {
 				return nil, false
 			}
 			if !semtypes.IsSubtype(t.typeContext(), lhsTy, rhsTy) {
-				t.semanticError(formatIncompatibleTypeMessage(t.typeContext(), rhsTy, lhsTy), clause.OnClause.RhsExpr.GetPosition())
+				t.semanticError(formatIncompatibleTypeMessage(t.typeContext(), rhsTy, lhsTy), clause.OnClause.EqualsExpr.GetPosition())
 				return nil, false
 			}
 		case *ast.BLangLetClause:

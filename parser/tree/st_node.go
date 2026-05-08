@@ -3098,16 +3098,16 @@ func CreateJoinClauseNode(outerKeyword STNode, joinKeyword STNode, typedBindingP
 }
 
 // From STNodeFactory.java:1524-1535
-func CreateOnClauseNode(onKeyword STNode, lhsExpression STNode, equalsKeyword STNode, rhsExpression STNode) STNode {
+func CreateOnClauseNode(onKeyword STNode, onExpression STNode, equalsKeyword STNode, equalsExpression STNode) STNode {
 	return createNodeAndAddChildren(&STOnClauseNode{
 		STClauseNode: &STNodeBase{
 			kind: common.ON_CLAUSE,
 		},
-		OnKeyword:     onKeyword,
-		LhsExpression: lhsExpression,
-		EqualsKeyword: equalsKeyword,
-		RhsExpression: rhsExpression,
-	}, onKeyword, lhsExpression, equalsKeyword, rhsExpression)
+		OnKeyword:        onKeyword,
+		OnExpression:     onExpression,
+		EqualsKeyword:    equalsKeyword,
+		EqualsExpression: equalsExpression,
+	}, onKeyword, onExpression, equalsKeyword, equalsExpression)
 }
 
 // From STNodeFactory.java:1537-1544

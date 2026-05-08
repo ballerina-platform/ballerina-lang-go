@@ -38,7 +38,7 @@ type (
 	}
 	BLangJoinClause struct {
 		BLangInputClause
-		OnClause        *BLangOnClause
+		OnClause        BLangOnClause
 		IsOuterJoinFlag bool
 	}
 	BLangLetClause struct {
@@ -47,8 +47,8 @@ type (
 	}
 	BLangOnClause struct {
 		bLangNodeBase
-		LhsExpr BLangExpression
-		RhsExpr BLangExpression
+		OnExpr     BLangExpression
+		EqualsExpr BLangExpression
 	}
 	BLangWhereClause struct {
 		bLangNodeBase
@@ -160,7 +160,10 @@ func (b *BLangJoinClause) IsDeclaredWithVar() bool {
 }
 
 func (b *BLangJoinClause) GetOnClause() model.OnClauseNode {
-	return b.OnClause
+	if b.OnClause.OnExpr == nil && b.OnClause.EqualsExpr == nil {
+		return nil
+	}
+	return &b.OnClause
 }
 
 func (b *BLangJoinClause) IsOuterJoin() bool {
@@ -171,25 +174,25 @@ func (b *BLangOnClause) GetKind() model.NodeKind {
 	return model.NodeKind_ON
 }
 
-func (b *BLangOnClause) GetLeftExpression() model.ExpressionNode {
-	return b.LhsExpr
+func (b *BLangOnClause) GetOnExpression() model.ExpressionNode {
+	return b.OnExpr
 }
 
-func (b *BLangOnClause) SetLeftExpression(expression model.ExpressionNode) {
+func (b *BLangOnClause) SetOnExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
-		b.LhsExpr = exp
+		b.OnExpr = exp
 		return
 	}
 	panic("expression is not a BLangExpression")
 }
 
-func (b *BLangOnClause) GetRightExpression() model.ExpressionNode {
-	return b.RhsExpr
+func (b *BLangOnClause) GetEqualsExpression() model.ExpressionNode {
+	return b.EqualsExpr
 }
 
-func (b *BLangOnClause) SetRightExpression(expression model.ExpressionNode) {
+func (b *BLangOnClause) SetEqualsExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
-		b.RhsExpr = exp
+		b.EqualsExpr = exp
 		return
 	}
 	panic("expression is not a BLangExpression")

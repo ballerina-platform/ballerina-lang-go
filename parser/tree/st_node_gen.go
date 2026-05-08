@@ -7869,11 +7869,11 @@ type STOnClauseNode struct {
 
 	OnKeyword STNode
 
-	LhsExpression STNode
+	OnExpression STNode
 
 	EqualsKeyword STNode
 
-	RhsExpression STNode
+	EqualsExpression STNode
 }
 
 var _ STNode = &STOnClauseNode{}
@@ -7893,13 +7893,13 @@ func (n *STOnClauseNode) ChildInBucket(bucket int) STNode {
 		return n.OnKeyword
 
 	case 1:
-		return n.LhsExpression
+		return n.OnExpression
 
 	case 2:
 		return n.EqualsKeyword
 
 	case 3:
-		return n.RhsExpression
+		return n.EqualsExpression
 
 	default:
 		panic("invalid bucket index")
@@ -7911,11 +7911,11 @@ func (n *STOnClauseNode) ChildBuckets() []STNode {
 
 		n.OnKeyword,
 
-		n.LhsExpression,
+		n.OnExpression,
 
 		n.EqualsKeyword,
 
-		n.RhsExpression,
+		n.EqualsExpression,
 	}
 }
 

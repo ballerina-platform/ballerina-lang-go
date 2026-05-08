@@ -3004,7 +3004,7 @@ func (n *NodeBuilder) TransformJoinClause(joinClauseNode *tree.JoinClauseNode) B
 	joinClause.IsDeclaredWithVarFlag = isDeclaredWithVar(bindingPatternNode.TypeDescriptor())
 	joinClause.IsOuterJoinFlag = joinClauseNode.OuterKeyword() != nil
 	if onClauseNode := joinClauseNode.JoinOnCondition(); onClauseNode != nil {
-		joinClause.OnClause = n.TransformOnClause(onClauseNode).(*BLangOnClause)
+		joinClause.OnClause = *n.TransformOnClause(onClauseNode).(*BLangOnClause)
 	}
 	return joinClause
 }
@@ -3012,8 +3012,8 @@ func (n *NodeBuilder) TransformJoinClause(joinClauseNode *tree.JoinClauseNode) B
 func (n *NodeBuilder) TransformOnClause(onClauseNode *tree.OnClauseNode) BLangNode {
 	onClause := &BLangOnClause{}
 	onClause.pos = getPosition(n.de(), onClauseNode)
-	onClause.SetLeftExpression(n.createExpression(onClauseNode.LhsExpression()))
-	onClause.SetRightExpression(n.createExpression(onClauseNode.RhsExpression()))
+	onClause.SetOnExpression(n.createExpression(onClauseNode.OnExpression()))
+	onClause.SetEqualsExpression(n.createExpression(onClauseNode.EqualsExpression()))
 	return onClause
 }
 

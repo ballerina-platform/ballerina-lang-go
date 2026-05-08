@@ -4095,7 +4095,7 @@ func (n OnClauseNode) OnKeyword() Token {
 	return val
 }
 
-func (n OnClauseNode) LhsExpression() ExpressionNode {
+func (n OnClauseNode) OnExpression() ExpressionNode {
 	val, ok := n.ChildInBucket(1).(ExpressionNode)
 	if !ok {
 		return nil
@@ -4111,7 +4111,7 @@ func (n OnClauseNode) EqualsKeyword() Token {
 	return val
 }
 
-func (n OnClauseNode) RhsExpression() ExpressionNode {
+func (n OnClauseNode) EqualsExpression() ExpressionNode {
 	val, ok := n.ChildInBucket(3).(ExpressionNode)
 	if !ok {
 		return nil

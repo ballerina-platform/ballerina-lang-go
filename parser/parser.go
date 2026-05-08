@@ -9544,11 +9544,11 @@ func (b *BallerinaParser) parseOnClause(isRhsExpr bool) tree.STNode {
 	}
 	b.startContext(common.PARSER_RULE_CONTEXT_ON_CLAUSE)
 	onKeyword := b.parseOnKeyword()
-	lhsExpression := b.parseExpressionWithPrecedence(OPERATOR_PRECEDENCE_QUERY, isRhsExpr, false)
+	onExpression := b.parseExpressionWithPrecedence(OPERATOR_PRECEDENCE_QUERY, isRhsExpr, false)
 	equalsKeyword := b.parseEqualsKeyword()
 	b.endContext()
-	rhsExpression := b.parseExpressionWithPrecedence(OPERATOR_PRECEDENCE_QUERY, isRhsExpr, false)
-	return tree.CreateOnClauseNode(onKeyword, lhsExpression, equalsKeyword, rhsExpression)
+	equalsExpression := b.parseExpressionWithPrecedence(OPERATOR_PRECEDENCE_QUERY, isRhsExpr, false)
+	return tree.CreateOnClauseNode(onKeyword, onExpression, equalsKeyword, equalsExpression)
 }
 
 func (b *BallerinaParser) createMissingOnClauseNode() tree.STNode {
@@ -9558,9 +9558,9 @@ func (b *BallerinaParser) createMissingOnClauseNode() tree.STNode {
 		&common.ERROR_MISSING_IDENTIFIER)
 	equalsKeyword := tree.CreateMissingTokenWithDiagnostics(common.EQUALS_KEYWORD,
 		&common.ERROR_MISSING_EQUALS_KEYWORD)
-	lhsExpression := tree.CreateSimpleNameReferenceNode(identifier)
-	rhsExpression := tree.CreateSimpleNameReferenceNode(identifier)
-	return tree.CreateOnClauseNode(onKeyword, lhsExpression, equalsKeyword, rhsExpression)
+	onExpression := tree.CreateSimpleNameReferenceNode(identifier)
+	equalsExpression := tree.CreateSimpleNameReferenceNode(identifier)
+	return tree.CreateOnClauseNode(onKeyword, onExpression, equalsKeyword, equalsExpression)
 }
 
 func (b *BallerinaParser) parseStartAction(annots tree.STNode) tree.STNode {

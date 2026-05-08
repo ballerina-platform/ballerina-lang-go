@@ -733,14 +733,14 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			if !analyzeActionOrExpression(a, clause.Collection, nil) {
 				return false
 			}
-			if clause.OnClause == nil {
+			if clause.OnClause.OnExpr == nil || clause.OnClause.EqualsExpr == nil {
 				a.internalErr("join clause shape should have been validated during type resolution", clause.GetPosition())
 				return false
 			}
-			if !analyzeActionOrExpression(a, clause.OnClause.LhsExpr, nil) {
+			if !analyzeActionOrExpression(a, clause.OnClause.OnExpr, nil) {
 				return false
 			}
-			if !analyzeActionOrExpression(a, clause.OnClause.RhsExpr, nil) {
+			if !analyzeActionOrExpression(a, clause.OnClause.EqualsExpr, nil) {
 				return false
 			}
 		case *ast.BLangLetClause:

@@ -773,7 +773,7 @@ func appendQueryJoinClauseRows(
 	outerBody := []ast.BLangStatement{rowVarDef}
 	outerBody = appendQueryRowRestoreStmts(outerBody, rowRef, bindings, pos)
 
-	lhsResult := walkExpression(cx, clause.OnClause.LhsExpr)
+	lhsResult := walkExpression(cx, clause.OnClause.OnExpr)
 	outerBody = appendModelStatements(outerBody, lhsResult.initStmts)
 	lhsVarDef, lhsRef := assignToLocal(cx, lhsResult.replacementNode.(ast.BLangExpression), pos)
 	outerBody = append(outerBody, lhsVarDef)
@@ -799,7 +799,7 @@ func appendQueryJoinClauseRows(
 	joinElementAccess := queryElementAccess(joinCollRef, joinKeysRef, innerCounterRef, joinBinding.valueTy)
 	innerBody := []ast.BLangStatement{createQueryBindingAssignment(joinBinding, joinElementAccess, pos)}
 
-	rhsResult := walkExpression(cx, clause.OnClause.RhsExpr)
+	rhsResult := walkExpression(cx, clause.OnClause.EqualsExpr)
 	innerBody = appendModelStatements(innerBody, rhsResult.initStmts)
 
 	matchCond := &ast.BLangBinaryExpr{

@@ -1245,10 +1245,10 @@ type JoinClauseNode interface {
 
 type OnClauseNode interface {
 	Node
-	GetLeftExpression() ExpressionNode
-	SetLeftExpression(expression ExpressionNode)
-	GetRightExpression() ExpressionNode
-	SetRightExpression(expression ExpressionNode)
+	GetOnExpression() ExpressionNode
+	SetOnExpression(expression ExpressionNode)
+	GetEqualsExpression() ExpressionNode
+	SetEqualsExpression(expression ExpressionNode)
 }
 
 type SelectClauseNode interface {

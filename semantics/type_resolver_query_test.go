@@ -599,8 +599,10 @@ func newJoinClause(
 			VariableDefinitionNode: varDef,
 			IsDeclaredWithVarFlag:  declaredWithVar,
 		},
-		OnClause:        onClause,
 		IsOuterJoinFlag: isOuterJoin,
+	}
+	if onClause != nil {
+		joinClause.OnClause = *onClause
 	}
 	joinClause.SetPosition(queryTestPos)
 	joinClause.SetCollection(collection)
@@ -632,8 +634,8 @@ func newWhereClause(expr ast.BLangExpression) *ast.BLangWhereClause {
 
 func newOnClause(lhs ast.BLangExpression, rhs ast.BLangExpression) *ast.BLangOnClause {
 	onClause := &ast.BLangOnClause{
-		LhsExpr: lhs,
-		RhsExpr: rhs,
+		OnExpr:     lhs,
+		EqualsExpr: rhs,
 	}
 	onClause.SetPosition(queryTestPos)
 	return onClause

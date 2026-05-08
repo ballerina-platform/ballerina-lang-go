@@ -709,8 +709,8 @@ func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
 	if node.Collection != nil {
 		p.PrintInner(node.Collection)
 	}
-	if node.OnClause != nil {
-		p.PrintInner(node.OnClause)
+	if node.OnClause.OnExpr != nil || node.OnClause.EqualsExpr != nil {
+		p.PrintInner(&node.OnClause)
 	}
 	p.indentLevel--
 	p.endNode()
@@ -731,11 +731,11 @@ func (p *PrettyPrinter) printOnClause(node *BLangOnClause) {
 	p.startNode()
 	p.printString("on-clause")
 	p.indentLevel++
-	if node.LhsExpr != nil {
-		p.PrintInner(node.LhsExpr)
+	if node.OnExpr != nil {
+		p.PrintInner(node.OnExpr)
 	}
-	if node.RhsExpr != nil {
-		p.PrintInner(node.RhsExpr)
+	if node.EqualsExpr != nil {
+		p.PrintInner(node.EqualsExpr)
 	}
 	p.indentLevel--
 	p.endNode()
