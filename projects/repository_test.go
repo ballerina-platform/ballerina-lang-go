@@ -74,7 +74,7 @@ func TestRepository_GetPackageVersions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			versions, err := repo.GetPackageVersions(context.Background(), tt.org, tt.pkg)
+			versions, err := repo.GetPackageVersions(context.Background(), tt.org, tt.pkg, projects.ResolutionOptions{})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -85,43 +85,6 @@ func TestRepository_GetPackageVersions(t *testing.T) {
 			}
 			if !slices.Equal(got, tt.expected) {
 				t.Errorf("got %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestRepository_GetLatestVersion(t *testing.T) {
-	repo := newTestRepository("testdata/repo/bala")
-
-	tests := []struct {
-		name      string
-		org       string
-		pkg       string
-		expected  string
-		wantFound bool
-	}{
-		{"latest of multiple", "ballerina", "http", "2.10.1", true},
-		{"single version", "testorg", "testpkg", "1.0.1", true},
-		{"non-existent package", "ballerina", "nonexistent", "", false},
-		{"non-existent org", "nonexistent", "http", "", false},
-		{"mockorg latest", "mockorg", "mockpkg", "1.0.0", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			version, found, err := repo.GetLatestVersion(context.Background(), tt.org, tt.pkg)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if found != tt.wantFound {
-				t.Errorf("found = %v, want %v", found, tt.wantFound)
-			}
-			var got string
-			if found {
-				got = version.String()
-			}
-			if got != tt.expected {
-				t.Errorf("got %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -164,14 +127,7 @@ func TestRepository_ContextCancellation(t *testing.T) {
 	cancel() // Cancel immediately
 
 	t.Run("GetPackageVersions cancelled", func(t *testing.T) {
-		_, err := repo.GetPackageVersions(ctx, "ballerina", "http")
-		if err != context.Canceled {
-			t.Errorf("expected context.Canceled, got %v", err)
-		}
-	})
-
-	t.Run("GetLatestVersion cancelled", func(t *testing.T) {
-		_, _, err := repo.GetLatestVersion(ctx, "ballerina", "http")
+		_, err := repo.GetPackageVersions(ctx, "ballerina", "http", projects.ResolutionOptions{})
 		if err != context.Canceled {
 			t.Errorf("expected context.Canceled, got %v", err)
 		}
