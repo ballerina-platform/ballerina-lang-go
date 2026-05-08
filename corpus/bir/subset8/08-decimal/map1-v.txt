@@ -1,0 +1,35 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad x1
+    %2 = ConstantLoad 2/1
+    %3 = ConstantLoad x2
+    %4 = ConstantLoad 2589569785738035/1125899906842624
+    %5 = ConstantLoad x3
+    %6 = ConstantLoad 23000000000000000000000000000000000/1
+    %7 = newMap {| decimal... |}{%1=%2, %3=%4, %5=%6}
+    m1 = %7;
+    %9 = println(m1) -> bb1;
+  }
+  bb1 {
+    %10 = ConstantLoad x1
+    %11 = ConstantLoad 5404319552844595/4503599627370496
+    %12 = newMap {| int|decimal... |}{%10=%11}
+    m2 = %12;
+    %15 = ConstantLoad x1
+    %14 = m2[%15];
+    %16 = %14 is decimal
+    %17 = %16;
+    %18 = println(%17) -> bb2;
+  }
+  bb2 {
+    %19 = ConstantLoad 230000000000000000000000000000000000/1
+    %20 = ConstantLoad x2
+    m2[%20] = %19;
+    %21 = println(m2) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

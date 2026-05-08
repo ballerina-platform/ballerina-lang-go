@@ -1,0 +1,40 @@
+module $anon.. v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    x = %1;
+    %3 = ConstantLoad true
+    y = %3;
+    %5 = ConstantLoad 0.2
+    z = %5;
+    %9 = x is int
+    %8 = %9;
+    %9 ? bb1 : bb2;
+  }
+  bb1 {
+    %10 = y is float
+    %8 = %10;
+    GOTO bb2;
+  }
+  bb2 {
+    %7 = %8;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %11 = z is int
+    %7 = %11;
+    GOTO bb4;
+  }
+  bb4 {
+    %7 ? bb5 : bb6;
+  }
+  bb5 {
+    _ = x;
+    _ = y;
+    _ = z;
+    GOTO bb6;
+  }
+  bb6 {
+    return;
+  }
+}

@@ -1,0 +1,72 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition M1
+    (constrained-type
+      (builtin-ref-type map)
+      (value-type int)))
+  (type-definition R1
+    (record-type
+      (field a
+        (value-type int))))
+  (type-definition R2
+    (record-type
+      (field a optional
+        (value-type int))))
+  (type-definition R3
+    (record-type
+      (field a
+        (union-type
+          (value-type int)
+          (value-type null)))))
+  (type-definition R4
+    (record-type
+      (field a optional
+        (value-type int))
+      (field b
+        (value-type string))))
+  (type-definition R5
+    (record-type
+      (field a
+        (value-type int))
+      (field b
+        (value-type string))))
+  (type-definition R6
+    (record-type
+      (field a optional
+        (value-type int))
+      (field b optional
+        (value-type string))))
+  (type-definition R7
+    (record-type
+      (field a
+        (value-type int))
+      (field b optional
+        (value-type string))))
+  (type-definition R8
+    (record-type
+      (field a optional
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition R9
+    (record-type
+      (field a optional
+        (union-type
+          (value-type int)
+          (value-type string)))
+      (field b optional
+        (union-type
+          (value-type string)
+          (value-type boolean)))
+      (field c optional
+        (value-type boolean))))
+  (type-definition R10
+    (record-type
+      (field a optional
+        (union-type
+          (value-type int)
+          (value-type null)))))
+  (type-definition M2
+    (constrained-type
+      (builtin-ref-type map)
+      (builtin-ref-type never))))

@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected string, got 2
+  --> construct6-e.bal:27:12
+   |
+27 |         y: 2 // @error
+   |            ^

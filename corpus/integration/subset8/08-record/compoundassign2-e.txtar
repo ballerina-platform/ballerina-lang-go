@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected nil|int, got "s"
+  --> compoundassign2-e.bal:23:20
+   |
+23 |         m1["x"] += "s"; // @error
+   |                    ^^^

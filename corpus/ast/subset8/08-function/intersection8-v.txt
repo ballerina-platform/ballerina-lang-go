@@ -1,0 +1,144 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (union-type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 1))
+            (finite-type
+              (literal 2)))
+          (finite-type
+            (literal 3)))
+        (finite-type
+          (literal 4)))) (
+      (union-type
+        (union-type
+          (finite-type
+            (literal a))
+          (finite-type
+            (literal b)))
+        (finite-type
+          (literal c))))))
+  (type-definition F2
+    (function-type (
+      (union-type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 2))
+            (finite-type
+              (literal 3)))
+          (finite-type
+            (literal 4)))
+        (finite-type
+          (literal 5)))) (
+      (union-type
+        (union-type
+          (finite-type
+            (literal b))
+          (finite-type
+            (literal c)))
+        (finite-type
+          (literal d))))))
+  (type-definition F3
+    (function-type (
+      (union-type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 3))
+            (finite-type
+              (literal 4)))
+          (finite-type
+            (literal 5)))
+        (finite-type
+          (literal 6)))) (
+      (union-type
+        (union-type
+          (finite-type
+            (literal c))
+          (finite-type
+            (literal d)))
+        (finite-type
+          (literal e))))))
+  (type-definition F
+    (intersection-type
+      (intersection-type
+        (user-defined-type F1)
+        (user-defined-type F2))
+      (user-defined-type F3)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable r1 (type
+          (union-type
+            (finite-type
+              (literal c))
+            (finite-type
+              (literal b)))) (expr
+          (invocation f (
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r1))))
+      (var-def
+        (variable val (type
+          (union-type
+            (finite-type
+              (literal 3))
+            (finite-type
+              (literal 4)))) (expr
+          (literal 3))))
+      (var-def
+        (variable r2 (type
+          (finite-type
+            (literal c))) (expr
+          (invocation f (
+            (simple-var-ref val))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r2))))
+      (var-def
+        (variable r3 (type
+          (union-type
+            (finite-type
+              (literal c))
+            (finite-type
+              (literal d)))) (expr
+          (invocation f (
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r3))))))
+  (function foo (
+    (variable a (type
+      (union-type
+        (union-type
+          (union-type
+            (union-type
+              (union-type
+                (finite-type
+                  (literal 1))
+                (finite-type
+                  (literal 2)))
+              (finite-type
+                (literal 3)))
+            (finite-type
+              (literal 4)))
+          (finite-type
+            (literal 5)))
+        (finite-type
+          (literal 6)))))) (
+    (finite-type
+      (literal c)))
+    (block-function-body
+      (return
+        (literal c)))))

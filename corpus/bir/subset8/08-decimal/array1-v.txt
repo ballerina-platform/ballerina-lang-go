@@ -1,0 +1,55 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 2/1
+    %2 = ConstantLoad 2589569785738035/1125899906842624
+    %3 = ConstantLoad 23000000000000000000000000000000000/1
+    %4 = ConstantLoad 3
+    %5 = newArray [decimal...][%4]{%1, %2, %3}
+    arr1 = %5;
+    %7 = println(arr1) -> bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad 5404319552844595/4503599627370496
+    %9 = ConstantLoad 1
+    %10 = newArray [int|decimal...][%9]{%8}
+    arr2 = %10;
+    %13 = ConstantLoad 0
+    %12 = arr2[%13];
+    %14 = %12 is decimal
+    %15 = %14;
+    %16 = println(%15) -> bb2;
+  }
+  bb2 {
+    %17 = ConstantLoad 1/1
+    %18 = ConstantLoad 2/1
+    %19 = ConstantLoad 2
+    %20 = newArray [decimal...][%19]{%17, %18}
+    %21 = ConstantLoad 3/1
+    %22 = ConstantLoad 31/10
+    %23 = ConstantLoad 2
+    %24 = newArray [decimal...][%23]{%21, %22}
+    %25 = ConstantLoad 43300000000000000000000000000000000/1
+    %26 = ConstantLoad 1
+    %27 = newArray [decimal...][%26]{%25}
+    %28 = ConstantLoad 3
+    %29 = newArray [[decimal...]...][%28]{%20, %24, %27}
+    arr3 = %29;
+    %31 = println(arr3) -> bb3;
+  }
+  bb3 {
+    %33 = ConstantLoad 0
+    %32 = arr3[%33];
+    %34 = ConstantLoad 1100000000000/1
+    %35 = %34;
+    %36 = push(%32,%35) -> bb4;
+  }
+  bb4 {
+    %37 = println(arr3) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

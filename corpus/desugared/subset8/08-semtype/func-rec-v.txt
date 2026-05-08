@@ -1,0 +1,126 @@
+(package
+  (type-definition F
+    (union-type
+      (value-type int)
+      (function-type (
+        (value-type int)) (
+        (user-defined-type F)))))
+  (type-definition F0
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (user-defined-type F0))))
+  (type-definition G
+    (union-type
+      (value-type int)
+      (function-type (
+        (user-defined-type G)) (
+        (value-type int)))))
+  (type-definition G0
+    (function-type (
+      (user-defined-type G)) (
+      (value-type int))))
+  (type-definition G1
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition GG
+    (union-type
+      (user-defined-type G)
+      (value-type string)))
+  (type-definition GG0
+    (function-type (
+      (user-defined-type GG)) (
+      (value-type int))))
+  (type-definition H
+    (union-type
+      (value-type int)
+      (function-type (
+        (user-defined-type H)) (
+        (user-defined-type H)))))
+  (type-definition H0
+    (function-type (
+      (user-defined-type H)) (
+      (value-type int))))
+  (type-definition H1
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition H2
+    (function-type (
+      (user-defined-type H)) (
+      (user-defined-type H))))
+  (type-definition HH
+    (union-type
+      (user-defined-type H)
+      (value-type string)))
+  (type-definition HH0
+    (function-type (
+      (user-defined-type HH)) (
+      (value-type int))))
+  (type-definition I
+    (function-type (
+      (function-type-param
+      (user-defined-type I))) (
+      (value-type null))))
+  (type-definition I0
+    (function-type () (
+      (value-type null))))
+  (type-definition I1
+    (function-type (
+      (user-defined-type I)) (
+      (value-type null))))
+  (type-definition I2
+    (function-type (
+      (user-defined-type I)
+      (user-defined-type I)) (
+      (value-type null))))
+  (type-definition I3
+    (function-type (
+      (user-defined-type I)
+      (user-defined-type I)
+      (user-defined-type I)) (
+      (value-type null))))
+  (type-definition A
+    (function-type () (
+      (user-defined-type A))))
+  (type-definition X
+    (function-type () (
+      (user-defined-type X))))
+  (type-definition Y
+    (function-type () (
+      (user-defined-type A))))
+  (type-definition Aa
+    (function-type () (
+      (union-type
+        (user-defined-type A)
+        (value-type int)))))
+  (type-definition Ab
+    (union-type
+      (value-type int)
+      (user-defined-type A)))
+  (type-definition A1
+    (function-type (
+      (value-type int)) (
+      (user-defined-type A1))))
+  (type-definition Aa1
+    (function-type (
+      (value-type int)) (
+      (union-type
+        (user-defined-type A1)
+        (value-type int)))))
+  (type-definition Aax
+    (function-type (
+      (value-type int)) (
+      (user-defined-type Aax))))
+  (type-definition Aay
+    (function-type (
+      (value-type int)) (
+      (user-defined-type A1))))
+  (type-definition Ab1
+    (union-type
+      (value-type int)
+      (user-defined-type A1))))

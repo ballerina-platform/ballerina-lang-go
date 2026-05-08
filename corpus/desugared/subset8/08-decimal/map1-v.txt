@@ -1,0 +1,49 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable m1 (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type decimal))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x1)
+              (literal 2/1))
+            (key-value
+              (literal x2)
+              (literal 2589569785738035/1125899906842624))
+            (key-value
+              (literal x3)
+              (literal 23000000000000000000000000000000000/1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref m1))))
+      (var-def
+        (variable m2 (type
+          (constrained-type
+            (builtin-ref-type map)
+            (union-type
+              (value-type decimal)
+              (value-type int)))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x1)
+              (literal 5404319552844595/4503599627370496))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (index-based-access
+              (simple-var-ref m2)
+              (literal x1))
+            (value-type decimal)))))
+      (assignment
+        (index-based-access
+          (simple-var-ref m2)
+          (literal x2))
+        (literal 230000000000000000000000000000000000/1))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref m2)))))))

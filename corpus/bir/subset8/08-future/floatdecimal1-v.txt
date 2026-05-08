@@ -1,0 +1,57 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %2 = ConstantLoad 0
+    %3 = <decimal>(%2)
+    %4 = %3;
+    %5 = ConstantLoad 0/1
+    %6 = %5;
+    %1 = unknown %4 %6;
+    %7 = %1;
+    %8 = println(%7) -> bb1;
+  }
+  bb1 {
+    %10 = ConstantLoad 0
+    %11 = <decimal>(%10)
+    %12 = %11;
+    %13 = ConstantLoad 0/1
+    %14 = %13;
+    %9 = unknown %12 %14;
+    %15 = %9;
+    %16 = println(%15) -> bb2;
+  }
+  bb2 {
+    %18 = ConstantLoad 1
+    %19 = <decimal>(%18)
+    %20 = %19;
+    %21 = ConstantLoad 1/1
+    %22 = %21;
+    %17 = unknown %20 %22;
+    %23 = %17;
+    %24 = println(%23) -> bb3;
+  }
+  bb3 {
+    %26 = ConstantLoad 1
+    %27 = <decimal>(%26)
+    %28 = %27;
+    %29 = ConstantLoad 1/1
+    %30 = %29;
+    %25 = unknown %28 %30;
+    %31 = %25;
+    %32 = println(%31) -> bb4;
+  }
+  bb4 {
+    %34 = ConstantLoad 9.007199254740992e+15
+    %35 = <decimal>(%34)
+    %36 = %35;
+    %37 = ConstantLoad 9007199254740992/1
+    %38 = %37;
+    %33 = unknown %36 %38;
+    %39 = %33;
+    %40 = println(%39) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

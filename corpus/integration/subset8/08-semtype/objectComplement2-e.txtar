@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SYNTAX_ERROR]: invalid token
+  --> objectComplement2-e.bal:22:13
+   |
+22 | type E O & !O; // @error
+   |             ^

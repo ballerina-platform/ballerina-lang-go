@@ -1,0 +1,67 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition O1
+    (object-type
+      (method-decl bar public (
+        (param a
+          (union-type
+            (finite-type
+              (literal 1))
+            (finite-type
+              (literal 2))))) (
+        (value-type int)))
+      (field foo public
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition O2
+    (object-type
+      (method-decl bar public (
+        (param a
+          (union-type
+            (finite-type
+              (literal 2))
+            (finite-type
+              (literal 3))))) (
+        (value-type string)))
+      (field foo public
+        (union-type
+          (value-type int)
+          (value-type float)))))
+  (type-definition T
+    (union-type
+      (user-defined-type O1)
+      (user-defined-type O2)))
+  (type-definition O12
+    (object-type
+      (method-decl bar public (
+        (param a
+          (finite-type
+            (literal 2)))) (
+        (union-type
+          (value-type string)
+          (value-type int))))
+      (field foo public
+        (union-type
+          (union-type
+            (value-type int)
+            (value-type float))
+          (value-type string)))))
+  (type-definition ObjectTop
+    (object-type))
+  (type-definition O3
+    (object-type
+      (field o public
+        (user-defined-type O1))))
+  (type-definition O4
+    (object-type
+      (field o public
+        (user-defined-type O2))))
+  (type-definition T1
+    (union-type
+      (user-defined-type O3)
+      (user-defined-type O4)))
+  (type-definition O34
+    (object-type
+      (field o public
+        (user-defined-type O12)))))

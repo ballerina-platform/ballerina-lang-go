@@ -1,0 +1,38 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition O
+    (union-type
+      (object-type
+        (method-decl bar public (
+          (param o
+            (user-defined-type O))) (
+          (value-type null)))
+        (field foo public
+          (user-defined-type O)))
+      (value-type int)))
+  (type-definition O1
+    (object-type
+      (method-decl bar public (
+        (param o
+          (user-defined-type O))) (
+        (value-type null)))
+      (field foo public
+        (value-type int))))
+  (type-definition O2
+    (object-type
+      (method-decl bar public (
+        (param o
+          (value-type int))) (
+        (value-type null)))
+      (field foo public
+        (value-type int))))
+  (type-definition O3
+    (object-type
+      (method-decl bar public (
+        (param o
+          (union-type
+            (user-defined-type O)
+            (value-type string)))) (
+        (value-type null)))
+      (field foo public
+        (value-type int)))))

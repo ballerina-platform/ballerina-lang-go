@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected nil, got 1
+  --> compoundassign3-e.bal:26:15
+   |
+26 |     r["z"] += 1; // @error
+   |               ^

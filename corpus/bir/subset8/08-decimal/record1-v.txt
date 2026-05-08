@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad d
+    %2 = ConstantLoad 12000000000000000000000000000000000/1
+    %3 = newMap {| d: decimal, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%1=%2}
+    r1 = %3;
+    %5 = println(r1) -> bb1;
+  }
+  bb1 {
+    %6 = ConstantLoad d
+    %7 = ConstantLoad 2/1
+    %8 = ConstantLoad d1
+    %9 = ConstantLoad 34/1
+    %10 = ConstantLoad d2
+    %11 = ConstantLoad 6/5
+    %12 = newMap {| d: decimal, decimal... |}{%6=%7, %8=%9, %10=%11}
+    r2 = %12;
+    %14 = println(r2) -> bb2;
+  }
+  bb2 {
+    %15 = ConstantLoad 1200/1
+    %16 = ConstantLoad d3
+    r2[%16] = %15;
+    %17 = println(r2) -> bb3;
+  }
+  bb3 {
+    %18 = ConstantLoad d
+    %19 = ConstantLoad d1
+    %20 = ConstantLoad 23/1
+    %21 = newMap {| d1: decimal, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%19=%20}
+    %22 = newMap {| d: {| d1: decimal, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%18=%21}
+    r3 = %22;
+    %24 = println(r3) -> bb4;
+  }
+  bb4 {
+    %25 = ConstantLoad 231/10
+    %27 = ConstantLoad d
+    %26 = r3[%27];
+    %28 = ConstantLoad d1
+    %26[%28] = %25;
+    %29 = println(r3) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

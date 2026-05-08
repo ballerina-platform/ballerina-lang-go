@@ -1,0 +1,91 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition ObjectTop
+    (object-type))
+  (type-definition O0
+    (object-type
+      (field foo public
+        (value-type int))
+      (method-decl fooFn public (
+        (param a
+          (value-type int))) (
+        (value-type int)))))
+  (type-definition Ox
+    (object-type
+      (field foo public
+        (value-type int))
+      (method-decl fooFn public (
+        (param b
+          (value-type int))) (
+        (value-type int)))))
+  (type-definition O1
+    (object-type
+      (field foo public
+        (value-type int))
+      (method-decl fooFn public (
+        (param a
+          (value-type int))) (
+        (value-type int)))))
+  (type-definition O2
+    (object-type
+      (field bar public
+        (value-type string))
+      (field foo public
+        (value-type int))
+      (method-decl fooFn public (
+        (param a
+          (value-type int))) (
+        (value-type int)))))
+  (type-definition O3
+    (object-type
+      (field foo public
+        (value-type int))))
+  (type-definition R
+    (record-type))
+  (type-definition O4
+    (object-type
+      (method-decl bar public (
+        (param a
+          (value-type int))) (
+        (value-type int)))
+      (field foo public
+        (value-type byte))))
+  (type-definition O5
+    (object-type
+      (method-decl bar public (
+        (param a
+          (value-type byte))) (
+        (value-type int)))
+      (field foo public
+        (value-type int))))
+  (type-definition O6
+    (object-type
+      (method-decl bar public (
+        (param a
+          (value-type int))) (
+        (value-type int)))
+      (field foo public
+        (union-type
+          (value-type byte)
+          (value-type string)))))
+  (type-definition O7
+    (object-type
+      (field o public
+        (user-defined-type O4))))
+  (type-definition O8
+    (object-type
+      (field o public
+        (user-defined-type O5))))
+  (type-definition O9
+    (object-type
+      (field o public
+        (user-defined-type O6))))
+  (type-definition O10
+    (object-type
+      (method-decl foo public () (
+        (value-type null)))))
+  (type-definition O11
+    (object-type
+      (field foo public
+        (function-type () (
+          (value-type null)))))))

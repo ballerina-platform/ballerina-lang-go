@@ -1,0 +1,180 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Point
+    (record-type
+      (field x
+        (value-type int))
+      (field y
+        (value-type int))))
+  (type-definition ColouredPoint
+    (record-type
+      (field x
+        (value-type int))
+      (field y
+        (value-type int))
+      (field colour
+        (value-type string))))
+  (type-definition MovePointFn
+    (function-type (
+      (user-defined-type Point)
+      (value-type int)
+      (value-type int)) (
+      (user-defined-type Point))))
+  (type-definition MoveColouredPointFn
+    (function-type (
+      (user-defined-type ColouredPoint)
+      (value-type int)
+      (value-type int)) (
+      (user-defined-type ColouredPoint))))
+  (type-definition MoveFn
+    (intersection-type
+      (user-defined-type MovePointFn)
+      (user-defined-type MoveColouredPointFn)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fn (type
+          (user-defined-type MoveFn)) (expr
+          (simple-var-ref moveFn))))
+      (var-def
+        (variable cp (type
+          (user-defined-type ColouredPoint)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 10))
+            (key-value
+              (simple-var-ref y)
+              (literal 20))
+            (key-value
+              (simple-var-ref colour)
+              (literal red))))))
+      (var-def
+        (variable cp2 (type
+          (user-defined-type Point)) (expr
+          (invocation fn (
+            (simple-var-ref cp)
+            (literal 10)
+            (literal 20))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref cp2))))
+      (var-def
+        (variable p (type
+          (user-defined-type Point)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 10))
+            (key-value
+              (simple-var-ref y)
+              (literal 20))))))
+      (var-def
+        (variable p2 (type
+          (user-defined-type Point)) (expr
+          (invocation fn (
+            (simple-var-ref p)
+            (literal 10)
+            (literal 20))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref p2))))))
+  (function moveFn (
+    (variable p (type
+      (user-defined-type Point)))
+    (variable dx (type
+      (value-type int)))
+    (variable dy (type
+      (value-type int)))) (
+    (user-defined-type ColouredPoint))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref p)
+          (user-defined-type ColouredPoint))
+        (block-stmt
+          (return
+            (invocation moveColoredPoint (
+              (simple-var-ref p)
+              (simple-var-ref dx)
+              (simple-var-ref dy))))) ())
+      (block-stmt
+        (var-def
+          (variable movedPoint (type
+            (user-defined-type Point)) (expr
+            (invocation movePoint (
+              (simple-var-ref p)
+              (simple-var-ref dx)
+              (simple-var-ref dy))))))
+        (return
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (field-based-access x
+                (simple-var-ref movedPoint)))
+            (key-value
+              (simple-var-ref y)
+              (field-based-access y
+                (simple-var-ref movedPoint)))
+            (key-value
+              (simple-var-ref colour)
+              (literal white)))))))
+  (function movePoint (
+    (variable p (type
+      (user-defined-type Point)))
+    (variable dx (type
+      (value-type int)))
+    (variable dy (type
+      (value-type int)))) (
+    (user-defined-type Point))
+    (block-function-body
+      (assignment
+        (field-based-access x
+          (simple-var-ref p))
+        (binary-expr +
+          (field-based-access x
+            (simple-var-ref p))
+          (simple-var-ref dx)))
+      (assignment
+        (field-based-access y
+          (simple-var-ref p))
+        (binary-expr +
+          (field-based-access y
+            (simple-var-ref p))
+          (simple-var-ref dy)))
+      (return
+        (simple-var-ref p))))
+  (function moveColoredPoint (
+    (variable p (type
+      (user-defined-type ColouredPoint)))
+    (variable dx (type
+      (value-type int)))
+    (variable dy (type
+      (value-type int)))) (
+    (user-defined-type ColouredPoint))
+    (block-function-body
+      (if
+        (binary-expr !=
+          (field-based-access colour
+            (simple-var-ref p))
+          (literal white))
+        (block-stmt
+          (assignment
+            (field-based-access x
+              (simple-var-ref p))
+            (binary-expr +
+              (field-based-access x
+                (simple-var-ref p))
+              (simple-var-ref dx)))
+          (assignment
+            (field-based-access y
+              (simple-var-ref p))
+            (binary-expr +
+              (field-based-access y
+                (simple-var-ref p))
+              (simple-var-ref dy)))) ())
+      (block-stmt
+        (return
+          (simple-var-ref p))))))

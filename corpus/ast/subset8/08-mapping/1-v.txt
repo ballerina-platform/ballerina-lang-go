@@ -1,0 +1,236 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 1))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 1))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 1))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 1))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 2))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal 1))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 1))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 1))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 1))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 1))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 2))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal 1))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal a))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal a))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal c))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (literal a))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal a))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal a))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal b))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref a)
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref x)
+                    (literal a))
+                  (key-value
+                    (simple-var-ref y)
+                    (literal 2))))
+              (key-value
+                (simple-var-ref b)
+                (literal 2))))))))))
