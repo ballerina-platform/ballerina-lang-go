@@ -2409,9 +2409,9 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 		modifiedAttributes, attributesNode := replaceInner(n.Attributes, target, replacement)
 
-		modifiedGetToken, getTokenNode := replaceInner(n.GetToken, target, replacement)
+		modifiedGtToken, gtTokenNode := replaceInner(n.GtToken, target, replacement)
 
-		modified := modifiedLtToken || modifiedName || modifiedAttributes || modifiedGetToken
+		modified := modifiedLtToken || modifiedName || modifiedAttributes || modifiedGtToken
 		if modified {
 			return true, createNodeAndAddChildren(&STXMLStartTagNode{
 
@@ -2423,8 +2423,8 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 				Attributes: attributesNode,
 
-				GetToken: getTokenNode,
-			}, ltTokenNode, nameNode, attributesNode, getTokenNode)
+				GtToken: gtTokenNode,
+			}, ltTokenNode, nameNode, attributesNode, gtTokenNode)
 		}
 		return false, current
 
@@ -2436,9 +2436,9 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 		modifiedName, nameNode := replaceInner(n.Name, target, replacement)
 
-		modifiedGetToken, getTokenNode := replaceInner(n.GetToken, target, replacement)
+		modifiedGtToken, gtTokenNode := replaceInner(n.GtToken, target, replacement)
 
-		modified := modifiedLtToken || modifiedSlashToken || modifiedName || modifiedGetToken
+		modified := modifiedLtToken || modifiedSlashToken || modifiedName || modifiedGtToken
 		if modified {
 			return true, createNodeAndAddChildren(&STXMLEndTagNode{
 
@@ -2450,8 +2450,8 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 				Name: nameNode,
 
-				GetToken: getTokenNode,
-			}, ltTokenNode, slashTokenNode, nameNode, getTokenNode)
+				GtToken: gtTokenNode,
+			}, ltTokenNode, slashTokenNode, nameNode, gtTokenNode)
 		}
 		return false, current
 
@@ -2503,9 +2503,9 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 		modifiedSlashToken, slashTokenNode := replaceInner(n.SlashToken, target, replacement)
 
-		modifiedGetToken, getTokenNode := replaceInner(n.GetToken, target, replacement)
+		modifiedGtToken, gtTokenNode := replaceInner(n.GtToken, target, replacement)
 
-		modified := modifiedLtToken || modifiedName || modifiedAttributes || modifiedSlashToken || modifiedGetToken
+		modified := modifiedLtToken || modifiedName || modifiedAttributes || modifiedSlashToken || modifiedGtToken
 		if modified {
 			return true, createNodeAndAddChildren(&STXMLEmptyElementNode{
 
@@ -2519,8 +2519,8 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 				SlashToken: slashTokenNode,
 
-				GetToken: getTokenNode,
-			}, ltTokenNode, nameNode, attributesNode, slashTokenNode, getTokenNode)
+				GtToken: gtTokenNode,
+			}, ltTokenNode, nameNode, attributesNode, slashTokenNode, gtTokenNode)
 		}
 		return false, current
 
