@@ -10239,10 +10239,10 @@ func (b *BallerinaParser) parseEnumDeclaration(metadata tree.STNode, qualifier t
 	closeBraceToken := b.parseCloseBrace()
 	semicolon := b.parseOptionalSemicolon()
 	b.endContext()
-	openBraceToken = b.cloneWithDiagnosticIfListEmpty(enumMemberList, openBraceToken,
-		&common.ERROR_MISSING_ENUM_MEMBER)
-	return tree.CreateEnumDeclarationNode(metadata, qualifier, enumKeywordToken, identifier,
+	enumDecl := tree.CreateEnumDeclarationNode(metadata, qualifier, enumKeywordToken, identifier,
 		openBraceToken, enumMemberList, closeBraceToken, semicolon)
+	return b.cloneWithDiagnosticIfListEmpty(enumMemberList, enumDecl,
+		&common.ERROR_MISSING_ENUM_MEMBER)
 }
 
 func (b *BallerinaParser) parseEnumKeyword() tree.STNode {

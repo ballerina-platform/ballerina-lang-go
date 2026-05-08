@@ -1,0 +1,22 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+BLUE  "BLUE";
+GREEN  "green";
+RED  "RED";
+main() -> nil{
+  bb0 {
+    c = RED;
+    %2 = println(c) -> bb1;
+  }
+  bb1 {
+    %3 = println(GREEN) -> bb2;
+  }
+  bb2 {
+    %4 = println(BLUE) -> bb3;
+  }
+  bb3 {
+    x = c;
+    y = c;
+    return;
+  }
+}
