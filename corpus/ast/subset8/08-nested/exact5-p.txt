@@ -12,7 +12,7 @@
           (user-defined-type C)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref i)
+              (literal i)
               (literal 0))))))
       (var-def
         (variable m (type

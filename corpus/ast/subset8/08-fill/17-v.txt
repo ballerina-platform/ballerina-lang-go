@@ -17,7 +17,7 @@
           (list-constructor-expr
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1)))))))
       (expression-stmt
         (invocation io println (
@@ -30,7 +30,7 @@
           (list-constructor-expr
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1)))))))
       (expression-stmt
         (invocation io println (

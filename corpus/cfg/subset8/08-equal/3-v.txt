@@ -5,7 +5,7 @@
         (value-type any)) (expr
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1))))))
     (var-def
       (variable y (type
@@ -19,14 +19,14 @@
       (invocation printEq (
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1)))
         (literal 1))))
     (expression-stmt
       (invocation printEq (
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1)))
         (list-constructor-expr
           (literal 1)))))
@@ -34,11 +34,11 @@
       (invocation printEq (
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1)))
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1))))))
     (expression-stmt
       (invocation printEq (
@@ -48,11 +48,11 @@
       (invocation printEq (
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 1)))
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref v)
+            (literal v)
             (literal 2))))))
   )
 )

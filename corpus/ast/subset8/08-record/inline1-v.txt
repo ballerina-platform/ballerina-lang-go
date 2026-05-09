@@ -13,10 +13,10 @@
               (value-type string)))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref anotherVeryLongFieldName)
+              (literal anotherVeryLongFieldName)
               (literal some string))
             (key-value
-              (simple-var-ref aVeryLongFieldName)
+              (literal aVeryLongFieldName)
               (literal 0))))))
       (expression-stmt
         (invocation io println (

@@ -9,228 +9,228 @@
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 2))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 1))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 1))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 1))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 1))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 2))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal 1))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal a))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal a))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal c))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal a))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal a))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal a))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal b))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref x)
+                    (literal x)
                     (literal a))
                   (key-value
-                    (simple-var-ref y)
+                    (literal y)
                     (literal 2))))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2))))))))))

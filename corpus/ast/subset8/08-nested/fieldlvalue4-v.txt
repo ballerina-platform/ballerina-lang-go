@@ -15,7 +15,7 @@
           (user-defined-type R)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref m)
+              (literal m)
               (mapping-constructor-expr))))))
       (assignment
         (index-based-access

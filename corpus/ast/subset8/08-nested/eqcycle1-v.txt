@@ -28,7 +28,7 @@
             (user-defined-type J))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref loop)
+              (literal loop)
               (literal <nil>))))))
       (var-def
         (variable j2 (type
@@ -37,7 +37,7 @@
             (user-defined-type J))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref loop)
+              (literal loop)
               (literal <nil>))))))
       (expression-stmt
         (invocation io println (
@@ -76,7 +76,7 @@
             (user-defined-type J))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref loop)
+              (literal loop)
               (literal <nil>))))))
       (assignment
         (index-based-access
@@ -84,13 +84,13 @@
           (literal loop))
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref loop)
+            (literal loop)
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref loop)
+                (literal loop)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref loop)
+                    (literal loop)
                     (simple-var-ref j3))))))))
       (expression-stmt
         (invocation io println (

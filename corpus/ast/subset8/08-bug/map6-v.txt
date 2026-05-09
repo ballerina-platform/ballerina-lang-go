@@ -11,7 +11,7 @@
             (value-type int))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal 1))))))
       (assignment
         (index-based-access

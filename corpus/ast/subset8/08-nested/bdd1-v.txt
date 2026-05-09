@@ -62,16 +62,16 @@
       (return
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref atom)
+            (literal atom)
             (simple-var-ref atom))
           (key-value
-            (simple-var-ref left)
+            (literal left)
             (literal true))
           (key-value
-            (simple-var-ref middle)
+            (literal middle)
             (literal false))
           (key-value
-            (simple-var-ref right)
+            (literal right)
             (literal false))))))
   (function bddUnion (
     (variable b1 (type
@@ -551,16 +551,16 @@
           (return
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref atom)
+                (literal atom)
                 (simple-var-ref atom))
               (key-value
-                (simple-var-ref left)
+                (literal left)
                 (simple-var-ref left))
               (key-value
-                (simple-var-ref middle)
+                (literal middle)
                 (simple-var-ref middle))
               (key-value
-                (simple-var-ref right)
+                (literal right)
                 (simple-var-ref right))))))))
   (function atomCmp (
     (variable a1 (type

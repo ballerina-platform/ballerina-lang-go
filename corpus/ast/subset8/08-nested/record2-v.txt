@@ -14,7 +14,7 @@
           (user-defined-type T)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (list-constructor-expr
                 (literal 42)))))))
       (expression-stmt
