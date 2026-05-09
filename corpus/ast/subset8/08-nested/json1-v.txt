@@ -27,18 +27,18 @@
           (list-constructor-expr
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref name)
+                (literal name)
                 (literal James))
               (key-value
-                (simple-var-ref age)
+                (literal age)
                 (literal 100))
               (key-value
-                (simple-var-ref children)
+                (literal children)
                 (list-constructor-expr
                   (literal Jack)
                   (literal Jane)))
               (key-value
-                (simple-var-ref married)
+                (literal married)
                 (literal true)))))))
       (expression-stmt
         (invocation io println (

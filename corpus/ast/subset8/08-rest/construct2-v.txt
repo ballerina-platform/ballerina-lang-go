@@ -23,10 +23,10 @@
               (literal a)
               (literal 4))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (literal 2))
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal 1))))))
       (expression-stmt
         (invocation io println (

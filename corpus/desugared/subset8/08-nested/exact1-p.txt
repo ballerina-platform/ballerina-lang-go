@@ -17,10 +17,10 @@
           (user-defined-type R)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (list-constructor-expr))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (list-constructor-expr))))))
       (var-def
         (variable k (type

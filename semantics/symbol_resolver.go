@@ -617,19 +617,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 }
 
 func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMappingConstructorExpr) ast.Visitor {
-	blockResolver := newBlockSymbolResolverWithBlockScope(resolver, n)
-	for _, field := range n.Fields {
-		if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
-			if !kv.Key.ComputedKey {
-				if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
-					name := varRef.VariableName.Value
-					symbol := model.NewValueSymbol(name, false, false, false)
-					addSymbolAndSetOnNode(blockResolver, name, &symbol, varRef)
-				}
-			}
-		}
-	}
-	return blockResolver
+	return newBlockSymbolResolverWithBlockScope(resolver, n)
 }
 
 // since we don't have type information we can't determine if this is an actual method call or need to be converted

@@ -1787,6 +1787,27 @@ func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.Exp
 	return &bLExpressionStmt
 }
 
+// createSpecificFieldNameLiteral builds a string-literal expression for a
+// non-computed mapping-constructor key. The field name is a static identifier
+// or string literal, not a runtime expression, so it must not be represented
+// as a var-ref.
+func (n *NodeBuilder) createSpecificFieldNameLiteral(fieldName tree.Node) BLangExpression {
+	if basicLit, ok := fieldName.(*tree.BasicLiteralNode); ok {
+		return n.createSimpleLiteral(basicLit).(BLangExpression)
+	}
+	nameRef := n.createBLangNameReference(fieldName)
+	name := nameRef[1].GetValue()
+	pos := getPosition(n.de(), fieldName)
+	lit := &BLangLiteral{}
+	lit.SetPosition(pos)
+	bType := &BTypeBasic{}
+	bType.BTypeSetTag(model.TypeTags_STRING)
+	lit.SetValueType(bType)
+	lit.SetValue(name)
+	lit.SetOriginalValue(name)
+	return lit
+}
+
 func (n *NodeBuilder) createExpression(expressionNode tree.Node) BLangExpression {
 	return n.createActionOrExpression(expressionNode).(BLangExpression) //nolint:forcetypeassert // only called where expressions are expected, not actions
 }
@@ -2045,9 +2066,8 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			if specificField.ValueExpr() == nil {
 				panic("mapping constructor var-name field not implemented")
 			}
-			keyExpr := n.createExpression(specificField.FieldName())
 			key := &BLangMappingKey{
-				Expr:        keyExpr,
+				Expr:        n.createSpecificFieldNameLiteral(specificField.FieldName()),
 				ComputedKey: false,
 			}
 			key.SetPosition(getPosition(n.de(), specificField.FieldName()))

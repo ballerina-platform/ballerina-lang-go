@@ -32,14 +32,14 @@
           (user-defined-type R)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (list-constructor-expr
                 (literal 255)))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (list-constructor-expr))
             (key-value
-              (simple-var-ref z)
+              (literal z)
               (list-constructor-expr))))))
       (var-def
         (variable x (type

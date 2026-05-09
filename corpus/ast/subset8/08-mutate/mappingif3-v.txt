@@ -51,10 +51,10 @@
           (user-defined-type SN)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal str))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (literal 3))))))
       (var-def
         (variable u (type

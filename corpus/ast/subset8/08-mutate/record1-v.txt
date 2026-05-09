@@ -51,10 +51,10 @@
           (user-defined-type UU)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal 1))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (literal yyy))))))
       (if
         (type-test-expr is

@@ -9,13 +9,13 @@
         (user-defined-type ColouredPoint)) (expr
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref x)
+            (literal x)
             (literal 10))
           (key-value
-            (simple-var-ref y)
+            (literal y)
             (literal 20))
           (key-value
-            (simple-var-ref colour)
+            (literal colour)
             (literal red))))))
     (var-def
       (variable cp2 (type
@@ -32,10 +32,10 @@
         (user-defined-type Point)) (expr
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref x)
+            (literal x)
             (literal 10))
           (key-value
-            (simple-var-ref y)
+            (literal y)
             (literal 20))))))
     (var-def
       (variable p2 (type
@@ -101,15 +101,15 @@
     (return
       (mapping-constructor-expr
         (key-value
-          (simple-var-ref x)
+          (literal x)
           (field-based-access x
             (simple-var-ref movedPoint)))
         (key-value
-          (simple-var-ref y)
+          (literal y)
           (field-based-access y
             (simple-var-ref movedPoint)))
         (key-value
-          (simple-var-ref colour)
+          (literal colour)
           (literal white))))
   )
 )

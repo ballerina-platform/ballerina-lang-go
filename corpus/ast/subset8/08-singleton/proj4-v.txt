@@ -34,13 +34,13 @@
             (user-defined-type Point))) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal 44))
             (key-value
-              (simple-var-ref y)
+              (literal y)
               (literal 88))
             (key-value
-              (simple-var-ref z)
+              (literal z)
               (literal point))))))
       (var-def
         (variable xy (type
@@ -63,10 +63,10 @@
         (simple-var-ref p)
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref x)
+            (literal x)
             (literal 44))
           (key-value
-            (simple-var-ref y)
+            (literal y)
             (literal 88))))
       (var-def
         (variable y (type

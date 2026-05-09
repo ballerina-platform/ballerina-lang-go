@@ -13,7 +13,7 @@
         (literal 1)
         (mapping-constructor-expr
           (key-value
-            (simple-var-ref a)
+            (literal a)
             (literal 1)))
         (literal 3.1)
         (literal test)))

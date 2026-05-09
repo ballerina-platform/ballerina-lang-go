@@ -38,7 +38,7 @@
           (user-defined-type R)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref a)
+              (literal a)
               (literal 2.345e32d))))))
       (expression-stmt
         (invocation io println (

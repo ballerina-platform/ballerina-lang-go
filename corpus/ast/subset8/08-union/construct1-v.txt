@@ -21,7 +21,7 @@
           (user-defined-type XY)) (expr
           (mapping-constructor-expr
             (key-value
-              (simple-var-ref x)
+              (literal x)
               (literal 17))))))
       (if
         (type-test-expr is

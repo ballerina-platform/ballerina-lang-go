@@ -9,10 +9,10 @@
           (field-based-access a
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref a)
+                (literal a)
                 (literal 1))
               (key-value
-                (simple-var-ref b)
+                (literal b)
                 (literal 2)))))))
       (expression-stmt
         (invocation io println (
@@ -20,10 +20,10 @@
             (field-based-access b
               (mapping-constructor-expr
                 (key-value
-                  (simple-var-ref a)
+                  (literal a)
                   (literal 1))
                 (key-value
-                  (simple-var-ref b)
+                  (literal b)
                   (literal 2))))
             (literal 1)))))
       (expression-stmt
@@ -33,12 +33,12 @@
               (field-based-access b
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref a)
+                    (literal a)
                     (literal 1))
                   (key-value
-                    (simple-var-ref b)
+                    (literal b)
                     (mapping-constructor-expr
                       (key-value
-                        (simple-var-ref c)
+                        (literal c)
                         (literal 4)))))))
             (literal 1))))))))
