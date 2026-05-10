@@ -1,27 +1,29 @@
 (package
   (import-package ballerina io (as io))
-  (const H () ())
-  (const C () ())
   (const S () ())
   (const T () ())
+  (const U () ())
+  (const H () ())
   (function init () ()
     (block-function-body
       (assignment
         (simple-var-ref H)
-        (literal Hello))
+        (literal hello))
       (assignment
-        (simple-var-ref C)
-        (literal , ))
+        (simple-var-ref U)
+        (literal world))
       (assignment
         (simple-var-ref T)
-        (literal there))
+        (simple-var-ref U))
       (assignment
         (simple-var-ref S)
         (binary-expr +
           (binary-expr +
-            (simple-var-ref H)
-            (simple-var-ref C))
-          (simple-var-ref T)))))
+            (binary-expr +
+              (simple-var-ref H)
+              (literal , ))
+            (simple-var-ref T))
+          (literal !)))))
   (function main () (
     (value-type null))
     (block-function-body

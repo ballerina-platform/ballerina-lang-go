@@ -95,6 +95,15 @@ type deferredEmptinessCheck struct {
 	onEmpty func()
 }
 
+// resolutionStatus tracks lazy resolution progress for cycle detection.
+type resolutionStatus int
+
+const (
+	resolutionPending resolutionStatus = iota
+	resolutionInProgress
+	resolutionDone
+)
+
 type packageTypeResolver struct {
 	ctx             *context.CompilerContext
 	tyCtx           semtypes.Context
@@ -105,9 +114,17 @@ type packageTypeResolver struct {
 	// a function boundary during lambda body resolution. nil when not inside a lambda.
 	capturedNarrowedVars map[model.SymbolRef]bool
 
-	// packageVarNodes maps a constant's symbol ref to its AST node.
-	// While a constant is being resolved, its entry is set to nil (cycle detection).
-	packageVarNodes      map[model.SymbolRef]*ast.BLangConstant
+	// packageConstants maps a constant's symbol ref to its AST node.
+	packageConstants map[model.SymbolRef]*ast.BLangConstant
+	// inferredGlobalVarNodes holds module-level vars **without** a type
+	// annotation. Their type comes from their initializer expression, so they
+	// must be resolved lazily (driven by ensureResolved) the same way
+	// constants are.
+	inferredGlobalVarNodes map[model.SymbolRef]*ast.BLangSimpleVariable
+	// lazyResolutionStatus tracks per-symbol resolution progress (for both
+	// constants and inferred-typed module-level vars) for cycle detection.
+	// Absence means resolution has not started.
+	lazyResolutionStatus map[model.SymbolRef]resolutionStatus
 	functionNodes        map[model.SymbolRef]*ast.BLangFunction
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
 	typeDefnNodes        map[model.SymbolRef]model.TypeDefinition
@@ -437,20 +454,22 @@ func (f *functionTypeResolver) nextMonoFnName(origName string) string {
 
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
-		ctx:                 ctx,
-		tyCtx:               semtypes.ContextFrom(ctx.GetTypeEnv()),
-		importedSymbols:     importedSymbols,
-		pkg:                 pkg,
-		implicitImports:     make(map[string]ast.BLangImportPackage),
-		packageVarNodes:     make(map[model.SymbolRef]*ast.BLangConstant),
-		functionNodes:       make(map[model.SymbolRef]*ast.BLangFunction),
-		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
-		typeDefnNodes:       make(map[model.SymbolRef]model.TypeDefinition),
-		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
-		classAtomSymbols:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
-		classSymbolByType:   make(map[semtypes.SemType]model.SymbolRef),
-		monoCounters:        make(map[string]int),
-		scope:               moduleScope,
+		ctx:                    ctx,
+		tyCtx:                  semtypes.ContextFrom(ctx.GetTypeEnv()),
+		importedSymbols:        importedSymbols,
+		pkg:                    pkg,
+		implicitImports:        make(map[string]ast.BLangImportPackage),
+		packageConstants:       make(map[model.SymbolRef]*ast.BLangConstant),
+		inferredGlobalVarNodes: make(map[model.SymbolRef]*ast.BLangSimpleVariable),
+		lazyResolutionStatus:   make(map[model.SymbolRef]resolutionStatus),
+		functionNodes:          make(map[model.SymbolRef]*ast.BLangFunction),
+		mappingAtomToBType:     make(map[*semtypes.MappingAtomicType]ast.BType),
+		typeDefnNodes:          make(map[model.SymbolRef]model.TypeDefinition),
+		mappingAtomToSymRef:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+		classAtomSymbols:       make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+		classSymbolByType:      make(map[semtypes.SemType]model.SymbolRef),
+		monoCounters:           make(map[string]int),
+		scope:                  moduleScope,
 	}
 }
 
@@ -481,15 +500,41 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 		_, ok := resolveTypeDefinition(t, defn, depth)
 		return ok
 	}
-	if c, inMap := t.packageVarNodes[ref]; inMap {
-		if c == nil {
-			// we are already resolving this
-			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), diagnostics.Location{})
+	if c, inMap := t.packageConstants[ref]; inMap {
+		switch t.lazyResolutionStatus[ref] {
+		case resolutionDone:
+			return true
+		case resolutionInProgress:
+			var pos diagnostics.Location
+			if c.Name != nil {
+				pos = c.Name.GetPosition()
+			}
+			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), pos)
 			return false
+		default:
+			t.lazyResolutionStatus[ref] = resolutionInProgress
+			ok := resolveConstant(t, c)
+			t.lazyResolutionStatus[ref] = resolutionDone
+			return ok
 		}
-		t.packageVarNodes[ref] = nil // mark as in-progress
-		defer delete(t.packageVarNodes, ref)
-		return resolveConstant(t, c)
+	}
+	if gv, inMap := t.inferredGlobalVarNodes[ref]; inMap {
+		switch t.lazyResolutionStatus[ref] {
+		case resolutionDone:
+			return true
+		case resolutionInProgress:
+			var pos diagnostics.Location
+			if gv.Name != nil {
+				pos = gv.Name.GetPosition()
+			}
+			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), pos)
+			return false
+		default:
+			t.lazyResolutionStatus[ref] = resolutionInProgress
+			ok := resolveSimpleVariable(t, nil, gv)
+			t.lazyResolutionStatus[ref] = resolutionDone
+			return ok
+		}
 	}
 	if fn, ok := t.functionNodes[ref]; ok {
 		_, ok := resolveFunctionSignature(t, fn)
@@ -658,7 +703,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		t.typeDefnNodes[classDef.Symbol()] = classDef
 	}
 	for i := range pkg.Constants {
-		t.packageVarNodes[pkg.Constants[i].Symbol()] = &pkg.Constants[i]
+		t.packageConstants[pkg.Constants[i].Symbol()] = &pkg.Constants[i]
 	}
 	for i := range pkg.Functions {
 		t.functionNodes[pkg.Functions[i].Symbol()] = &pkg.Functions[i]
@@ -688,6 +733,9 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
+	for i := range pkg.GlobalVars {
+		resolveGlobalVarType(t, &pkg.GlobalVars[i])
+	}
 	for i := range pkg.Constants {
 		if !resolveConstant(t, &pkg.Constants[i]) {
 			return
@@ -715,9 +763,10 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
 	}
 	for i := range pkg.GlobalVars {
-		resolveSimpleVariable(t, nil, &pkg.GlobalVars[i])
+		resolveGlobalVarInit(t, &pkg.GlobalVars[i])
 		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
+	detectGlobalVarInitCycles(t, pkg)
 
 	t.drainDeferredEmptinessChecks()
 }
@@ -1822,6 +1871,148 @@ func resolveVariableDefStmt(t typeResolver, chain *binding, s *ast.BLangSimpleVa
 	}
 
 	return defaultStmtEffect(effectChain), true
+}
+
+// detectGlobalVarInitCycles flags cycles in the dependency graph induced by
+// module-level variable initializer expressions. Constants get cycle detection
+// for free via packageTypeResolver.ensureResolved while types are being
+// resolved; module vars don't go through that path, so we do a dedicated pass here.
+// Cross-module references are leaves — imported modules' inits are guaranteed
+// to have run already by the time this module's init runs.
+func detectGlobalVarInitCycles(t typeResolver, pkg *ast.BLangPackage) {
+	if len(pkg.GlobalVars) == 0 {
+		return
+	}
+	// Inferred-type globals are cycle-checked via ensureResolved during the
+	// init-expression pass (the in-progress nil-marker pattern that constants
+	// also use). Skip them here to avoid duplicate diagnostics.
+	nodeSet := make(map[model.SymbolRef]int, len(pkg.GlobalVars))
+	for i := range pkg.GlobalVars {
+		if pkg.GlobalVars[i].TypeNode() == nil {
+			continue
+		}
+		nodeSet[pkg.GlobalVars[i].Symbol()] = i
+	}
+
+	deps := make([][]int, len(pkg.GlobalVars))
+	for i := range pkg.GlobalVars {
+		gv := &pkg.GlobalVars[i]
+		if gv.Expr == nil || gv.TypeNode() == nil {
+			continue
+		}
+		v := &globalVarDepCollector{
+			t:       t,
+			nodeSet: nodeSet,
+			deps:    make(map[int]struct{}),
+		}
+		ast.Walk(v, gv.Expr)
+		for d := range v.deps {
+			deps[i] = append(deps[i], d)
+		}
+	}
+
+	// https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search
+	const (
+		unvisited = 0
+		inStack   = 1
+		done      = 2
+	)
+	state := make([]int, len(pkg.GlobalVars))
+
+	var visit func(i int) bool
+	visit = func(i int) bool {
+		switch state[i] {
+		case inStack:
+			t.semanticError(
+				fmt.Sprintf("invalid cycle detected for %s", pkg.GlobalVars[i].Name.GetValue()),
+				pkg.GlobalVars[i].Name.GetPosition(),
+			)
+			return false
+		case done:
+			return true
+		default:
+			state[i] = inStack
+			for _, d := range deps[i] {
+				if !visit(d) {
+					return false
+				}
+			}
+			state[i] = done
+			return true
+		}
+	}
+
+	for i := range pkg.GlobalVars {
+		if pkg.GlobalVars[i].TypeNode() == nil {
+			continue
+		}
+		if !visit(i) {
+			return
+		}
+	}
+}
+
+type globalVarDepCollector struct {
+	t       typeResolver
+	nodeSet map[model.SymbolRef]int // symbol → index into pkg.GlobalVars
+	deps    map[int]struct{}
+}
+
+func (c *globalVarDepCollector) depends(ref model.SymbolRef) {
+	unnarrowed := c.t.unnarrowedSymbol(ref)
+	if idx, ok := c.nodeSet[unnarrowed]; ok {
+		c.deps[idx] = struct{}{}
+	}
+}
+
+func (c *globalVarDepCollector) Visit(node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.BLangSimpleVarRef:
+		c.depends(n.Symbol())
+	case *ast.BLangConstRef:
+		c.depends(n.Symbol())
+	}
+	return c
+}
+
+func (c *globalVarDepCollector) VisitTypeData(_ *model.TypeData) ast.Visitor { return c }
+
+func resolveGlobalVarType(t typeResolver, node *ast.BLangSimpleVariable) bool {
+	node.Name.SetDeterminedType(semtypes.NEVER)
+	typeNode := node.TypeNode()
+	if typeNode == nil {
+		if pt, ok := t.(*packageTypeResolver); ok {
+			pt.inferredGlobalVarNodes[node.Symbol()] = node
+		}
+		return true
+	}
+	semType, ok := resolveBType(t, typeNode, 0)
+	if !ok {
+		setExpectedType(node, semtypes.NEVER)
+		updateSymbolType(t, node, semtypes.NEVER)
+		return false
+	}
+	setExpectedType(node, semType)
+	updateSymbolType(t, node, semType)
+	return true
+}
+
+func resolveGlobalVarInit(t typeResolver, node *ast.BLangSimpleVariable) bool {
+	if node.Expr == nil {
+		return true
+	}
+	if node.TypeNode() == nil {
+		if pt, ok := t.(*packageTypeResolver); ok {
+			return pt.ensureResolved(node.Symbol(), 0)
+		}
+		return resolveSimpleVariable(t, nil, node)
+	}
+	semType := node.GetDeterminedType()
+	if semType == nil {
+		return false
+	}
+	_, _, ok := resolveActionOrExpression(t, nil, node.Expr, semType)
+	return ok
 }
 
 func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimpleVariable) bool {

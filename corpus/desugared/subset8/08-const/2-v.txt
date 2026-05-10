@@ -7,13 +7,6 @@
   (function init () ()
     (block-function-body
       (assignment
-        (simple-var-ref N)
-        (binary-expr +
-          (binary-expr +
-            (simple-var-ref N1)
-            (simple-var-ref N2))
-          (simple-var-ref N3)))
-      (assignment
         (simple-var-ref N1)
         (literal 100))
       (assignment
@@ -21,7 +14,14 @@
         (literal 20))
       (assignment
         (simple-var-ref N3)
-        (literal 3))))
+        (literal 3))
+      (assignment
+        (simple-var-ref N)
+        (binary-expr +
+          (binary-expr +
+            (simple-var-ref N1)
+            (simple-var-ref N2))
+          (simple-var-ref N3)))))
   (function main () (
     (value-type null))
     (block-function-body

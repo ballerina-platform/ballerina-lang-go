@@ -62,9 +62,6 @@ var (
 		// Tests that cause unrecoverable Go runtime errors.
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
 		"subset8/08-comparable/order5-v.bal",
-		// Missing init exp for constants.
-		"subset8/08-const/2-v.bal",
-		"subset8/08-const/3-v.bal",
 		"subset8/08-const/const3-v.bal",
 
 		// Workspace tests whose errors are at the project-loading level
@@ -532,9 +529,6 @@ var (
 		// Migrated from nballerina testSuite/08-import/const4-e: cycle-detection picks a different
 		// break point than the upstream compiler, so the reported error path is not stable.
 		"import-const4-e",
-
-		// Missing init exp for constants.
-		"import-const1-v",
 
 		// Expected error:
 		"import-const5-e",
