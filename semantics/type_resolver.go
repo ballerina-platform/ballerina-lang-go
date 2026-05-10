@@ -4403,7 +4403,7 @@ func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchS
 
 		var bodyChain *binding
 		var ok bool
-		clause.AcceptedType, bodyChain, ok = matchClauseAcceptedType(t, chain, clause)
+		clause.AcceptedType, bodyChain, ok = matchClauseAcceptedType(t, chain, clause, remainingType)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -4468,13 +4468,19 @@ func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchS
 	return statementEffect{result, false}, true
 }
 
-func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMatchClause) (semtypes.SemType, *binding, bool) {
+func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMatchClause, remainingType semtypes.SemType) (semtypes.SemType, *binding, bool) {
+	tyCtx := semtypes.ContextFrom(t.typeEnv())
 	var acceptedTy semtypes.SemType = semtypes.NEVER
-	for _, pattern := range clause.Patterns {
+	patternRemaining := remainingType
+	for i, pattern := range clause.Patterns {
 		patternTy, ok := resolveMatchPattern(t, chain, pattern)
 		if !ok {
 			return nil, nil, false
 		}
+		if i > 0 && semtypes.IsEmpty(tyCtx, semtypes.Intersect(patternTy, patternRemaining)) {
+			t.semanticError("unmatchable match pattern", pattern.GetPosition())
+		}
+		patternRemaining = semtypes.Diff(patternRemaining, patternTy)
 		acceptedTy = semtypes.Union(acceptedTy, patternTy)
 	}
 	if clause.Guard != nil {

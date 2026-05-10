@@ -150,10 +150,6 @@ var (
 
 		// ----- End of constant folding -----
 
-		// duplicate / overlapping match patterns.
-		"subset8/08-bug/matchwild1-e.bal",
-		"subset8/08-match/3-e.bal",
-
 		// empty type detection of mapping and list members
 		"subset8/08-bug/intersect1-e.bal",
 		"subset8/08-bug/intersect2-e.bal",
