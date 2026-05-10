@@ -177,13 +177,6 @@ var (
 		"subset8/08-inclusive/compoundassign3-e.bal",
 		"subset8/08-map/compoundassign-e.bal",
 
-		// nil liftig can't be used in compound assignment
-		"subset8/08-nillifting/compound1-e.bal",
-		"subset8/08-nillifting/compound2-e.bal",
-		"subset8/08-nillifting/compound3-e.bal",
-		"subset8/08-nillifting/compound5-e.bal",
-		"subset8/08-nillifting/compound7-e.bal",
-		"subset8/08-nillifting/compound11-e.bal",
 		// member access on mapping type is ()|projection and this should fold in to compound assignemnt
 		"subset8/08-record/compoundassign4-e.bal",
 
@@ -447,12 +440,6 @@ var (
 		"subset8/08-mapping/9-e.bal",
 		"subset8/08-narrowing/7-e.bal",
 		"subset8/08-narrowing/9-e.bal",
-		"subset8/08-nillifting/compound10-e.bal",
-		"subset8/08-nillifting/compound12-e.bal",
-		"subset8/08-nillifting/compound4-e.bal",
-		"subset8/08-nillifting/compound6-e.bal",
-		"subset8/08-nillifting/compound8-e.bal",
-		"subset8/08-nillifting/compound9-e.bal",
 		"subset8/08-record/fieldlvalue6-e.bal",
 		"subset8/08-tuple/construct4-e.bal",
 

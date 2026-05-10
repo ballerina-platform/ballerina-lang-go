@@ -1314,7 +1314,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangCompoundAssignment:
-		if !analyzeAssignment(a, n) {
+		if !analyzeCompoundAssignment(a, n) {
 			return nil
 		}
 		return a
@@ -1408,6 +1408,19 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 	expectedType := variable.GetDeterminedType()
 	expression := assignment.GetExpression().(ast.BLangActionOrExpression)
 	return analyzeActionOrExpression(a, expression, expectedType)
+}
+
+func analyzeCompoundAssignment[A analyzer](a A, assignment *ast.BLangCompoundAssignment) bool {
+	if !analyzeAssignment(a, assignment) {
+		return false
+	}
+	lhsTy := assignment.GetVariable().(ast.BLangExpression).GetDeterminedType()
+	rhsTy := assignment.GetExpression().(ast.BLangActionOrExpression).GetDeterminedType()
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
+		a.semanticErr("compound assignment operands cannot be nilable", assignment.GetPosition())
+		return false
+	}
+	return true
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) bool {
