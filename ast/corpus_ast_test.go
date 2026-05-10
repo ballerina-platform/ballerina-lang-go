@@ -42,13 +42,6 @@ var astGenerationSkipList = []string{
 	"subset8/08-function/intersection13-v.bal",
 	"subset8/08-list/compoundassign1-v.bal",
 	"subset8/08-match/2-v.bal",
-	"subset8/08-semtype/not1-v.bal",
-	"subset8/08-semtype/objectCompliment-v.bal",
-	"subset8/08-semtype/proj10-v.bal",
-	"subset8/08-semtype/proj2-v.bal",
-	"subset8/08-semtype/proj3-v.bal",
-	"subset8/08-semtype/proj7-v.bal",
-	"subset8/08-semtype/proj8-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
 	"subset8/08-bug/listfill1-v.bal",
@@ -59,34 +52,13 @@ var astGenerationSkipList = []string{
 	"subset8/08-fill/order-v.bal",
 	"subset8/08-list/fixedlength1-v.bal",
 	"subset8/08-list/fixedlength2-v.bal",
-	"subset8/08-semtype/fixed-length-array-large-v.bal",
-	"subset8/08-semtype/fixed-length-array-readonly-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple-readonly-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple2-v.bal",
-	"subset8/08-semtype/fixed-length-array-v.bal",
-	"subset8/08-semtype/fixed-length-array2-v.bal",
-	"subset8/08-semtype/proj6-v.bal",
-	"subset8/08-semtype/proj9-v.bal",
 	"subset8/08-tuple/comp9-v.bal",
 
 	// Runtime panic in this stage on the migrated test.
-	"subset8/08-semtype/xml-complex-ro-v.bal",
-	"subset8/08-semtype/xml-complex-rw-v.bal",
-	"subset8/08-semtype/xml-never-v.bal",
-	"subset8/08-semtype/xml-readonly-v.bal",
-	"subset8/08-semtype/xml-sequence-v.bal",
 
 	// Table-type descriptors not yet supported.
-	"subset8/08-semtype/anydata-v.bal",
-	"subset8/08-semtype/table-readonly-v.bal",
-	"subset8/08-semtype/table-v.bal",
-	"subset8/08-semtype/table2-v.bal",
-	"subset8/08-semtype/table3-v.bal",
 
 	// AST node type not yet handled by this stage.
-	"subset8/08-semtype/function-v.bal",
-	"subset8/08-semtype/vararg-v.bal",
 }
 
 func TestASTGeneration(t *testing.T) {
@@ -189,13 +161,6 @@ var walkTraversalSkipList = []string{
 	"subset8/08-function/intersection13-v.bal",
 	"subset8/08-list/compoundassign1-v.bal",
 	"subset8/08-match/2-v.bal",
-	"subset8/08-semtype/not1-v.bal",
-	"subset8/08-semtype/objectCompliment-v.bal",
-	"subset8/08-semtype/proj10-v.bal",
-	"subset8/08-semtype/proj2-v.bal",
-	"subset8/08-semtype/proj3-v.bal",
-	"subset8/08-semtype/proj7-v.bal",
-	"subset8/08-semtype/proj8-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
 	"subset8/08-bug/listfill1-v.bal",
@@ -206,34 +171,13 @@ var walkTraversalSkipList = []string{
 	"subset8/08-fill/order-v.bal",
 	"subset8/08-list/fixedlength1-v.bal",
 	"subset8/08-list/fixedlength2-v.bal",
-	"subset8/08-semtype/fixed-length-array-large-v.bal",
-	"subset8/08-semtype/fixed-length-array-readonly-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple-readonly-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple-v.bal",
-	"subset8/08-semtype/fixed-length-array-tuple2-v.bal",
-	"subset8/08-semtype/fixed-length-array-v.bal",
-	"subset8/08-semtype/fixed-length-array2-v.bal",
-	"subset8/08-semtype/proj6-v.bal",
-	"subset8/08-semtype/proj9-v.bal",
 	"subset8/08-tuple/comp9-v.bal",
 
 	// AST node missing source position info.
-	"subset8/08-semtype/object-v.bal",
-	"subset8/08-semtype/objectRecursion-v.bal",
 
 	// parse errors
-	"subset8/08-semtype/xml-complex-ro-v.bal",
-	"subset8/08-semtype/xml-complex-rw-v.bal",
-	"subset8/08-semtype/xml-never-v.bal",
-	"subset8/08-semtype/xml-readonly-v.bal",
-	"subset8/08-semtype/xml-sequence-v.bal",
 
 	// Table-type descriptors not yet supported.
-	"subset8/08-semtype/anydata-v.bal",
-	"subset8/08-semtype/table-readonly-v.bal",
-	"subset8/08-semtype/table-v.bal",
-	"subset8/08-semtype/table2-v.bal",
-	"subset8/08-semtype/table3-v.bal",
 }
 
 func TestWalkTraversal(t *testing.T) {

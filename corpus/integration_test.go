@@ -77,20 +77,15 @@ var (
 		// once that's registered in DiagnosticEnv).
 		"project/missing-package-e",
 		"project/parse-error-e",
+		// --- Needs constant folding ---
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/83
 
-		// Expected error: migrated -e tests for which the frontend currently produces no
-		// diagnostic. Skipped so we don't bake an empty stderr into the expected fixture.
+		// pure literal fold + reachability of always-false branch.
 		"subset8/08-bitwise/complement3-e.bal",
-		"subset8/08-bug/assignforeach-e.bal",
-		"subset8/08-bug/init2-e.bal",
-		"subset8/08-bug/intersect1-e.bal",
-		"subset8/08-bug/intersect2-e.bal",
-		"subset8/08-bug/main2-e.bal",
-		"subset8/08-bug/matchwild1-e.bal",
-		"subset8/08-colon/ident1-e.bal",
-		"subset8/08-colon/ident2-e.bal",
-		"subset8/08-colon/ident3-e.bal",
 		"subset8/08-const/1-e.bal",
+		"subset8/08-const/7-e.bal",
+		"subset8/08-const/8-e.bal",
+		"subset8/08-const/9-e.bal",
 		"subset8/08-const/10-e.bal",
 		"subset8/08-const/11-e.bal",
 		"subset8/08-const/12-e.bal",
@@ -100,71 +95,23 @@ var (
 		"subset8/08-const/16-e.bal",
 		"subset8/08-const/17-e.bal",
 		"subset8/08-const/18-e.bal",
-		"subset8/08-const/23-e.bal",
-		"subset8/08-const/7-e.bal",
-		"subset8/08-const/8-e.bal",
-		"subset8/08-const/9-e.bal",
-		"subset8/08-decimal/const5-e.bal",
-		"subset8/08-decimal/const6-e.bal",
-		"subset8/08-equal/3-e.bal",
-		"subset8/08-equal/4-e.bal",
-		"subset8/08-equal/5-e.bal",
-		"subset8/08-fill/10-e.bal",
-		"subset8/08-fill/15-e.bal",
-		"subset8/08-fill/18-e.bal",
-		"subset8/08-fill/21-e.bal",
-		"subset8/08-fill/22-e.bal",
 		"subset8/08-float/5-e.bal",
 		"subset8/08-float/7-e.bal",
-		"subset8/08-hex/decimal1-e.bal",
-		"subset8/08-inclusive/compoundassign3-e.bal",
-		"subset8/08-inclusive/construct5-e.bal",
-		"subset8/08-inclusive/duplicate2-e.bal",
-		"subset8/08-infinite/infiniteRecord4-e.bal",
-		"subset8/08-list/17-e.bal",
-		"subset8/08-list/6-e.bal",
-		"subset8/08-list/fixedlength1-e.bal",
-		"subset8/08-list/fixedlength2-e.bal",
-		"subset8/08-list/fixedlength3-e.bal",
-		"subset8/08-list/fixedlength4-e.bal",
-		"subset8/08-list/fixedlength5-e.bal",
-		"subset8/08-list/fixedlength6-e.bal",
-		"subset8/08-list/fixedlength7-e.bal",
-		"subset8/08-list/fixedlength8-e.bal",
-		"subset8/08-list/fixedlength9-e.bal",
-		"subset8/08-map/compoundassign-e.bal",
-		"subset8/08-mapping/14-e.bal",
-		"subset8/08-mapping/4-e.bal",
-		"subset8/08-mapping/6-e.bal",
-		"subset8/08-mapping/7-e.bal",
-		"subset8/08-match/19-e.bal",
-		"subset8/08-match/3-e.bal",
-		"subset8/08-match/7-e.bal",
-		"subset8/08-narrowing/10-e.bal",
-		"subset8/08-narrowing/11-e.bal",
-		"subset8/08-narrowing/12-e.bal",
-		"subset8/08-narrowing/15-e.bal",
-		"subset8/08-narrowing/2-e.bal",
-		"subset8/08-narrowing/4-e.bal",
-		"subset8/08-narrowing/5-e.bal",
-		"subset8/08-narrowing/6-e.bal",
-		"subset8/08-narrowing/8-e.bal",
-		"subset8/08-narrowing/if18-e.bal",
 		"subset8/08-narrowing/unreach3-e.bal",
 		"subset8/08-narrowing/unreach4-e.bal",
-		"subset8/08-nillifting/compound1-e.bal",
-		"subset8/08-nillifting/compound11-e.bal",
-		"subset8/08-nillifting/compound2-e.bal",
-		"subset8/08-nillifting/compound3-e.bal",
-		"subset8/08-nillifting/compound5-e.bal",
-		"subset8/08-nillifting/compound7-e.bal",
-		"subset8/08-record/assign1-e.bal",
-		"subset8/08-record/compoundassign4-e.bal",
-		"subset8/08-semtype/xml-e.bal",
-		"subset8/08-singleton/decimal10-e.bal",
-		"subset8/08-singleton/decimal11-e.bal",
-		"subset8/08-singleton/decimal12-e.bal",
-		"subset8/08-singleton/decimal13-e.bal",
+		"subset8/08-singleton/nil1-e.bal",
+		"subset8/08-singleton/stringconcat1-e.bal",
+		"subset8/08-string/1-e.bal",
+		"subset8/08-string/5-e.bal",
+
+		// singleton narrowing + fold + reachability.
+		"subset8/08-narrowing/2-e.bal",
+		"subset8/08-narrowing/4-e.bal",
+		"subset8/08-narrowing/6-e.bal",
+		"subset8/08-narrowing/8-e.bal",
+		"subset8/08-narrowing/10-e.bal",
+		"subset8/08-narrowing/12-e.bal",
+		"subset8/08-narrowing/15-e.bal",
 		"subset8/08-singleton/decimal2-e.bal",
 		"subset8/08-singleton/decimal4-e.bal",
 		"subset8/08-singleton/decimal5-e.bal",
@@ -172,19 +119,120 @@ var (
 		"subset8/08-singleton/decimal7-e.bal",
 		"subset8/08-singleton/decimal8-e.bal",
 		"subset8/08-singleton/decimal9-e.bal",
-		"subset8/08-singleton/nil1-e.bal",
+		"subset8/08-singleton/decimal10-e.bal",
+		"subset8/08-singleton/decimal11-e.bal",
+		"subset8/08-singleton/decimal12-e.bal",
+		"subset8/08-singleton/decimal13-e.bal",
 		"subset8/08-singleton/not1-e.bal",
 		"subset8/08-singleton/string1-e.bal",
-		"subset8/08-singleton/stringconcat1-e.bal",
-		"subset8/08-string/1-e.bal",
-		"subset8/08-string/5-e.bal",
+
+		// match-arm reachability after discriminator fold/narrowing.
+		"subset8/08-match/7-e.bal",
+		"subset8/08-match/19-e.bal",
+
+		// disjoint-singleton == / != diagnostic.
+		"subset8/08-equal/3-e.bal",
+		"subset8/08-equal/4-e.bal",
+		"subset8/08-equal/5-e.bal",
+
+		// numeric literal range / typed-cast overflow.
+		"subset8/08-const/23-e.bal",
+		"subset8/08-decimal/const5-e.bal",
+		"subset8/08-decimal/const6-e.bal",
+		"subset8/08-hex/decimal1-e.bal",
 		"subset8/08-typecast/8-e.bal",
+
+		// const declaration requires singleton-shaped RHS.
+		"subset8/08-list/6-e.bal",
+		"subset8/08-list/17-e.bal",
+		"subset8/08-mapping/6-e.bal",
+		"subset8/08-mapping/7-e.bal",
+
+		// ----- End of constant folding -----
+
+		// duplicate / overlapping match patterns.
+		"subset8/08-bug/matchwild1-e.bal",
+		"subset8/08-match/3-e.bal",
+
+		// empty type detection of mapping and list members
+		"subset8/08-bug/intersect1-e.bal",
+		"subset8/08-bug/intersect2-e.bal",
+		"subset8/08-infinite/infiniteRecord4-e.bal",
+
+		// singleton fillter values
+		"subset8/08-fill/10-e.bal",
+		"subset8/08-fill/15-e.bal",
+		"subset8/08-fill/18-e.bal",
+		"subset8/08-fill/21-e.bal",
+		"subset8/08-fill/22-e.bal",
+
+		// mapping constructor
+		// identifiers can't be used for rest fields
+		"subset8/08-inclusive/construct5-e.bal",
+		"subset8/08-mapping/14-e.bal",
+		// detect duplicate keys
+		"subset8/08-inclusive/duplicate2-e.bal",
+		"subset8/08-mapping/4-e.bal",
+
+		// fixed length array index expression type
+		// 	type project gives you never if out of range
+		"subset8/08-list/fixedlength1-e.bal",
+		"subset8/08-list/fixedlength2-e.bal",
+		// assignment should check the expression type
+		"subset8/08-list/fixedlength3-e.bal",
+		"subset8/08-list/fixedlength4-e.bal",
+		// this shouldn't happen check
+		"subset8/08-list/fixedlength5-e.bal",
+		// list constructor should check the each members type against the projection
+		"subset8/08-list/fixedlength6-e.bal",
+		// fixed length array type defintion should check length is either int literal or constant ref
+		// 	-- check that expression type is subtype of singleton int
+		"subset8/08-list/fixedlength7-e.bal",
+		//  -- must be know at compile time singleton check should be enough
+		"subset8/08-list/fixedlength8-e.bal",
+		// fixed length array size mismatch
+		"subset8/08-list/fixedlength9-e.bal",
+
+		// mapping index based access should use the type projection, result type is ()|projection
+		"subset8/08-inclusive/compoundassign3-e.bal",
+		"subset8/08-map/compoundassign-e.bal",
+
+		// nil liftig can't be used in compound assignment
+		"subset8/08-nillifting/compound1-e.bal",
+		"subset8/08-nillifting/compound2-e.bal",
+		"subset8/08-nillifting/compound3-e.bal",
+		"subset8/08-nillifting/compound5-e.bal",
+		"subset8/08-nillifting/compound7-e.bal",
+		"subset8/08-nillifting/compound11-e.bal",
+		// member access on mapping type is ()|projection and this should fold in to compound assignemnt
+		"subset8/08-record/compoundassign4-e.bal",
+
+		// Type narrowing
+		// bug:
+		"subset8/08-bug/assignforeach-e.bal",
+		"subset8/08-narrowing/if18-e.bal",
+		// Can't assign to a narrowed variable inside a loop
+		"subset8/08-narrowing/5-e.bal",
+		"subset8/08-narrowing/11-e.bal",
+
+		// not sure if this should be detected as an error. Revisit after fixing mapping index based access.
+		"subset8/08-record/assign1-e.bal",
+
+		// Unused local variable detection
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/439
 		"subset8/08-unused/unused1-e.bal",
 		"subset8/08-unused/unused2-e.bal",
 		"subset8/08-unused/unused3-e.bal",
 		"subset8/08-unused/unused4-e.bal",
 		"subset8/08-unused/unused5-e.bal",
 		"subset8/08-unused/unused6-e.bal",
+
+		//  main / init function signature validation. (either () or error? not error)
+		"subset8/08-bug/init2-e.bal",
+		"subset8/08-bug/main2-e.bal",
+
+		// Group K: migration content lost; fixtures are byte-identical placeholders.
+		// Need recovery from upstream nballerina before they can produce diagnostics.
 
 		// Expected clean run: migrated -v tests that produce diagnostics or runtime errors
 		"subset8/08-bench/ackermann-v.bal",
@@ -297,19 +345,6 @@ var (
 		"subset8/08-nested/fill1-v.bal",
 		"subset8/08-nested/push1-v.bal",
 		"subset8/08-rest/construct7-v.bal",
-		"subset8/08-semtype/array-v.bal",
-		"subset8/08-semtype/not1-v.bal",
-		"subset8/08-semtype/objectCompliment-v.bal",
-		"subset8/08-semtype/optional-field-record1-v.bal",
-		"subset8/08-semtype/optional-field-record3-v.bal",
-		"subset8/08-semtype/proj10-v.bal",
-		"subset8/08-semtype/proj2-v.bal",
-		"subset8/08-semtype/proj3-v.bal",
-		"subset8/08-semtype/proj7-v.bal",
-		"subset8/08-semtype/proj8-v.bal",
-		"subset8/08-semtype/readonly-record-field-v.bal",
-		"subset8/08-semtype/readonly-record-field2-v.bal",
-		"subset8/08-semtype/record-proj-v.bal",
 		"subset8/08-singleton/float1-v.bal",
 		"subset8/08-singleton/floattest1-v.bal",
 		"subset8/08-singleton/floattest2-v.bal",
@@ -384,26 +419,6 @@ var (
 		"subset8/08-fill/order-v.bal",
 		"subset8/08-list/fixedlength1-v.bal",
 		"subset8/08-list/fixedlength2-v.bal",
-		"subset8/08-semtype/anydata-v.bal",
-		"subset8/08-semtype/fixed-length-array-large-v.bal",
-		"subset8/08-semtype/fixed-length-array-readonly-v.bal",
-		"subset8/08-semtype/fixed-length-array-tuple-readonly-v.bal",
-		"subset8/08-semtype/fixed-length-array-tuple-v.bal",
-		"subset8/08-semtype/fixed-length-array-tuple2-v.bal",
-		"subset8/08-semtype/fixed-length-array-v.bal",
-		"subset8/08-semtype/fixed-length-array2-v.bal",
-		"subset8/08-semtype/proj6-v.bal",
-		"subset8/08-semtype/proj9-v.bal",
-		"subset8/08-semtype/recurse-v.bal",
-		"subset8/08-semtype/table-readonly-v.bal",
-		"subset8/08-semtype/table-v.bal",
-		"subset8/08-semtype/table2-v.bal",
-		"subset8/08-semtype/table3-v.bal",
-		"subset8/08-semtype/xml-complex-ro-v.bal",
-		"subset8/08-semtype/xml-complex-rw-v.bal",
-		"subset8/08-semtype/xml-never-v.bal",
-		"subset8/08-semtype/xml-readonly-v.bal",
-		"subset8/08-semtype/xml-sequence-v.bal",
 		"subset8/08-tuple/comp9-v.bal",
 
 		// Expected frontend error: migrated -e tests where pi did not catch the error in

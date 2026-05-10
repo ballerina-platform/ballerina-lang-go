@@ -1,3 +1,0 @@
-module $anon.. v 0.0.0;
-FOO  "f2";
-ONE  1;
