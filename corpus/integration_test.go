@@ -77,8 +77,6 @@ var (
 		// once that's registered in DiagnosticEnv).
 		"project/missing-package-e",
 		"project/parse-error-e",
-		// Migrated from nballerina testSuite/12-nested/order4-e.bal: stack overflow in semantics.ResolveLocalNodes.
-		"subset8/08-nested/order4-e.bal",
 
 		// Expected error: migrated -e tests for which the frontend currently produces no
 		// diagnostic. Skipped so we don't bake an empty stderr into the expected fixture.

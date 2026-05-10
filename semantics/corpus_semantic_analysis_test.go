@@ -238,9 +238,6 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 }
 
 var semanticAnalysisErrorSkipList = []string{
-	// Migrated test that triggers a stack overflow in semantics.ResolveLocalNodes.
-	"subset8/08-nested/order4-e.bal",
-
 	// Expected error: got nothing.
 	"subset8/08-bitwise/complement3-e.bal",
 	"subset8/08-bug/assignforeach-e.bal",

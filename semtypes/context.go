@@ -42,14 +42,12 @@ type context struct {
 }
 
 type comparableMemo struct {
-	semType1   SemType
-	semType2   SemType
 	comparable bool
 }
 
 type comparableMemoKey struct {
-	semType1 SemType
-	semType2 SemType
+	key1 string
+	key2 string
 }
 
 func (c *context) pushToMemoStack(m *bddMemo) {
@@ -188,10 +186,14 @@ func ContextFrom(env Env) Context {
 	}
 }
 
-func (c *context) comparableMemo(t1, t2 SemType) *comparableMemo {
-	return c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
+func (c *context) comparableMemo(b1, b2 Bdd) *comparableMemo {
+	return c._comparableMemo[comparableMemoKeyOf(b1, b2)]
 }
 
-func (c *context) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
-	c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
+func (c *context) setComparableMemo(b1, b2 Bdd, memo *comparableMemo) {
+	c._comparableMemo[comparableMemoKeyOf(b1, b2)] = memo
+}
+
+func comparableMemoKeyOf(b1, b2 Bdd) comparableMemoKey {
+	return comparableMemoKey{key1: b1.canonicalKey(), key2: b2.canonicalKey()}
 }

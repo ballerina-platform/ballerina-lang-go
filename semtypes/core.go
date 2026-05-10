@@ -1079,13 +1079,23 @@ func Comparable(cx Context, t1, t2 SemType) bool {
 }
 
 // t1, t2 must be subtype of LIST|?
+// According to the spec
+// [T...] is ordered, if T is ordered;
+// [] is ordered;
+// [T, rest] is ordered if T is ordered and [rest] is ordered.
 func comparableNillableList(cx Context, t1, t2 SemType) bool {
-	memoized := cx.comparableMemo(t1, t2)
-	if memoized != nil {
-		return memoized.comparable
+	b1, ok1 := listSubtypeBdd(t1)
+	b2, ok2 := listSubtypeBdd(t2)
+	var memo *comparableMemo
+	if ok1 && ok2 {
+		if memoized := cx.comparableMemo(b1, b2); memoized != nil {
+			return memoized.comparable
+		}
+		// We assume recursive types aren't comparable. We need this because spec defines list ordering
+		// inductively.
+		memo = &comparableMemo{comparable: false}
+		cx.setComparableMemo(b1, b2, memo)
 	}
-	memo := comparableMemo{semType1: t1, semType2: t2}
-	cx.setComparableMemo(t1, t2, &memo)
 	listMemberTypes1 := ListAllMemberTypesInner(cx, t1)
 	listMemberTypes2 := ListAllMemberTypesInner(cx, t2)
 	ranges1 := listMemberTypes1.Ranges
@@ -1096,12 +1106,27 @@ func comparableNillableList(cx Context, t1, t2 SemType) bool {
 		i1 := combinedRange.I1
 		i2 := combinedRange.I2
 		if i1 != -1 && i2 != -1 && !Comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
-			memo.comparable = false
 			return false
 		}
 	}
-	memo.comparable = true
+	if memo != nil {
+		memo.comparable = true
+	}
 	return true
+}
+
+func listSubtypeBdd(t SemType) (Bdd, bool) {
+	ct, ok := t.(*ComplexSemType)
+	if !ok {
+		return nil, false
+	}
+	bdd, ok := getComplexSubtypeData(ct, BTList).(Bdd)
+	if !ok {
+		// can happen for all or nothing case. No need to memoize them though I am not
+		// sure if we reach that point we are at a valid state
+		return nil, false
+	}
+	return bdd, true
 }
 
 func ContainsUndef(t SemType) bool {
