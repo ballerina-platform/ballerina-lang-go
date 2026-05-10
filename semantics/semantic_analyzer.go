@@ -978,9 +978,25 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 	for _, fd := range expr.FieldDefaults {
 		hasValue[fd.FieldName] = true
 	}
+	seen := make(map[string]bool, len(expr.Fields))
+	namedFields := make(map[string]bool, len(mat.Names))
+	for _, n := range mat.Names {
+		namedFields[n] = true
+	}
 	for _, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
 		keyName := recordKeyName(kv.Key)
+		if seen[keyName] {
+			a.semanticErr(fmt.Sprintf("duplicate key '%s' in mapping constructor", keyName), kv.Key.GetPosition())
+			return false
+		}
+		seen[keyName] = true
+		// For record type desc (ie len(mat.Names) > 0) if the key is not a string literal it must be
+		// nameed field
+		if kv.Key.Kind == ast.MappingKeyIdentifier && len(mat.Names) > 0 && !namedFields[keyName] {
+			a.semanticErr(fmt.Sprintf("identifier '%s' cannot be used as a key for a rest field; use a string literal instead", keyName), kv.Key.GetPosition())
+			return false
+		}
 		hasValue[keyName] = true
 		fieldExpectedType := mat.FieldInnerVal(keyName)
 		if !analyzeActionOrExpression(a, kv.ValueExpr, fieldExpectedType) {

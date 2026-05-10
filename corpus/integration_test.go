@@ -154,14 +154,6 @@ var (
 		"subset8/08-fill/21-e.bal",
 		"subset8/08-fill/22-e.bal",
 
-		// mapping constructor
-		// identifiers can't be used for rest fields
-		"subset8/08-inclusive/construct5-e.bal",
-		"subset8/08-mapping/14-e.bal",
-		// detect duplicate keys
-		"subset8/08-inclusive/duplicate2-e.bal",
-		"subset8/08-mapping/4-e.bal",
-
 		// fixed length array index expression type
 		// 	type project gives you never if out of range
 		"subset8/08-list/fixedlength1-e.bal",

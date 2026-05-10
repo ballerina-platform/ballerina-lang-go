@@ -2051,8 +2051,8 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			computedNameField := field.(*tree.ComputedNameFieldNode)
 			keyExpr := n.createExpression(computedNameField.FieldNameExpr())
 			key := &BLangMappingKey{
-				Expr:        keyExpr,
-				ComputedKey: true,
+				Expr: keyExpr,
+				Kind: MappingKeyComputed,
 			}
 			key.SetPosition(getPosition(n.de(), computedNameField.FieldNameExpr()))
 			keyValueField := &BLangMappingKeyValueField{
@@ -2066,9 +2066,14 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			if specificField.ValueExpr() == nil {
 				panic("mapping constructor var-name field not implemented")
 			}
+			_, isStringLit := specificField.FieldName().(*tree.BasicLiteralNode)
+			keyKind := MappingKeyIdentifier
+			if isStringLit {
+				keyKind = MappingKeyStringLiteral
+			}
 			key := &BLangMappingKey{
-				Expr:        n.createSpecificFieldNameLiteral(specificField.FieldName()),
-				ComputedKey: false,
+				Expr: n.createSpecificFieldNameLiteral(specificField.FieldName()),
+				Kind: keyKind,
 			}
 			key.SetPosition(getPosition(n.de(), specificField.FieldName()))
 			keyValueField := &BLangMappingKeyValueField{

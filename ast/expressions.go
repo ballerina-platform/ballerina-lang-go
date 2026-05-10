@@ -99,6 +99,14 @@ func (*bLangExpressionBase) expressionNode()     {}
 func (*BLangRemoteMethodCallAction) actionNode()         {}
 func (*BLangRemoteMethodCallAction) actionOrExpression() {}
 
+type MappingKeyKind uint8
+
+const (
+	MappingKeyStringLiteral MappingKeyKind = iota
+	MappingKeyIdentifier
+	MappingKeyComputed
+)
+
 type (
 	NarrowedTypes struct {
 		TrueType  BType
@@ -338,8 +346,8 @@ type (
 
 	BLangMappingKey struct {
 		bLangNodeBase
-		Expr        BLangExpression
-		ComputedKey bool
+		Expr BLangExpression
+		Kind MappingKeyKind
 	}
 
 	BLangMappingKeyValueField struct {
