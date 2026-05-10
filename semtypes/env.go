@@ -15,7 +15,10 @@
 // under the License.
 package semtypes
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // Env is an opaque pointer to the type environment. All (potentially recursive) types are defined in a type environment.
 // Performing type operations involving types defined in different type environments is an undefined behaviour. Therefore it
@@ -29,6 +32,8 @@ func CreateTypeEnv() Env {
 	}
 	fillRecAtoms(predefTypeEnv, &env.recListAtoms, predefTypeEnv.initializedRecListAtoms)
 	fillRecAtoms(predefTypeEnv, &env.recMappingAtoms, predefTypeEnv.initializedRecMappingAtoms)
+	// Treat every pre-existing rec atom slot as already populated. NOTE: this means we treat nil "padding" slots to have been filled
+	env.populatedRecAtoms = int32(len(env.recListAtoms) + len(env.recMappingAtoms) + len(env.recFunctionAtoms))
 	for _, each := range predefTypeEnv.initializedCellAtoms {
 		env.cellAtom(each.atomicType)
 	}
@@ -47,6 +52,11 @@ type env struct {
 
 	recFunctionAtoms      []*functionAtomicType
 	recFunctionAtomsMutex sync.Mutex
+
+	// populatedRecAtoms counts the number of recursive atom slots  that have been filled
+	// with a non-nil atomic type. The env is "ready" for emptiness checks
+	// when this equals the total number of allocated rec atom slots.
+	populatedRecAtoms int32
 
 	distinctAtoms     int
 	distinctAtomMutex sync.Mutex
@@ -94,6 +104,7 @@ func (e *env) setRecFunctionAtomType(rec recAtom, atomicType *functionAtomicType
 	e.recFunctionAtomsMutex.Lock()
 	defer e.recFunctionAtomsMutex.Unlock()
 	e.recFunctionAtoms[rec.index()] = atomicType
+	atomic.AddInt32(&e.populatedRecAtoms, 1)
 }
 
 func (e *env) getRecFunctionAtomType(rec recAtom) *functionAtomicType {
@@ -171,12 +182,23 @@ func (e *env) setRecListAtomType(rec recAtom, atomicType *ListAtomicType) {
 	e.recListAtomsMutex.Lock()
 	defer e.recListAtomsMutex.Unlock()
 	e.recListAtoms[rec.index()] = atomicType
+	atomic.AddInt32(&e.populatedRecAtoms, 1)
 }
 
 func (e *env) setRecMappingAtomType(rec recAtom, atomicType *MappingAtomicType) {
 	e.recMappingAtomsMutex.Lock()
 	defer e.recMappingAtomsMutex.Unlock()
 	e.recMappingAtoms[rec.index()] = atomicType
+	atomic.AddInt32(&e.populatedRecAtoms, 1)
+}
+
+// IsReady reports whether every allocated recursive atom slot has been
+// populated with a non-nil atomic type. Emptiness checks (semtypes.IsEmpty)
+// require a ready env; calling them earlier may dereference an unset
+// recursive atom and panic.
+func (e *env) IsReady() bool {
+	total := e.recListAtomCount() + e.recMappingAtomCount() + e.recFunctionAtomCount()
+	return int(atomic.LoadInt32(&e.populatedRecAtoms)) == total
 }
 
 func (e *env) getRecListAtomType(rec recAtom) *ListAtomicType {

@@ -150,11 +150,6 @@ var (
 
 		// ----- End of constant folding -----
 
-		// empty type detection of mapping and list members
-		"subset8/08-bug/intersect1-e.bal",
-		"subset8/08-bug/intersect2-e.bal",
-		"subset8/08-infinite/infiniteRecord4-e.bal",
-
 		// singleton fillter values
 		"subset8/08-fill/10-e.bal",
 		"subset8/08-fill/15-e.bal",

@@ -84,6 +84,15 @@ type typeResolver interface {
 	nextMonoFnName(origName string) string
 
 	lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool)
+
+	ensureNotEmpty(ty semtypes.SemType, onEmpty func()) bool
+}
+
+// deferredEmptinessCheck is an emptiness check that was registered while the
+// type env still had unset recursive atoms. It runs once the env is ready.
+type deferredEmptinessCheck struct {
+	ty      semtypes.SemType
+	onEmpty func()
 }
 
 type packageTypeResolver struct {
@@ -108,6 +117,37 @@ type packageTypeResolver struct {
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
 	classSymbolByType    map[semtypes.SemType]model.SymbolRef
+
+	deferredEmptinessChecks []deferredEmptinessCheck
+}
+
+func (t *packageTypeResolver) ensureNotEmpty(ty semtypes.SemType, onEmpty func()) bool {
+	if t.typeEnv().IsReady() {
+		if semtypes.IsEmpty(t.typeContext(), ty) {
+			onEmpty()
+			return false
+		}
+		return true
+	}
+	t.deferredEmptinessChecks = append(t.deferredEmptinessChecks, deferredEmptinessCheck{ty: ty, onEmpty: onEmpty})
+	return true
+}
+
+// drainDeferredEmptinessChecks runs every queued emptiness check. The type
+// env must be ready at this point; if it is not, that signals that not all
+// recursive atoms were resolved which is a compiler bug.
+func (t *packageTypeResolver) drainDeferredEmptinessChecks() {
+	if !t.typeEnv().IsReady() {
+		t.internalError("type env not ready when draining deferred emptiness checks", diagnostics.Location{})
+		return
+	}
+	cx := t.typeContext()
+	for _, c := range t.deferredEmptinessChecks {
+		if semtypes.IsEmpty(cx, c.ty) {
+			c.onEmpty()
+		}
+	}
+	t.deferredEmptinessChecks = nil
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -313,6 +353,10 @@ func (f *functionTypeResolver) compilerContext() *context.CompilerContext {
 
 func (f *functionTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
 	return f.parentResolver.lookupClassMethodSymbol(receiverTy, methodName)
+}
+
+func (f *functionTypeResolver) ensureNotEmpty(ty semtypes.SemType, onEmpty func()) bool {
+	return f.parentResolver.ensureNotEmpty(ty, onEmpty)
 }
 
 func (f *functionTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
@@ -675,17 +719,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 
-	tctx := t.tyCtx
-	for _, defn := range pkg.TypeDefinitions {
-		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
-			t.semanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
-		}
-	}
-	for _, class := range pkg.ClassDefinitions {
-		if semtypes.IsEmpty(tctx, t.symbolType(class.Symbol())) {
-			t.semanticError(fmt.Sprintf("class definition %s is empty", class.Name.GetValue()), class.GetPosition())
-		}
-	}
+	t.drainDeferredEmptinessChecks()
 }
 
 func resolveBlockStatements(t typeResolver, chain *binding, stmts []ast.BLangStatement) (statementEffect, bool) {
@@ -1140,11 +1174,18 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
 		addInclusionsToTypeSymbol(t, defn)
+		kind := "type definition"
 		if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
 			if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
 				t.setSymbolType(selfRef, semType)
 			}
+			kind = "class definition"
 		}
+		name := defn.GetName().GetValue()
+		pos := defn.GetPosition()
+		t.ensureNotEmpty(semType, func() {
+			t.semanticError(fmt.Sprintf("%s %s is empty", kind, name), pos)
+		})
 		return semType, true
 	}
 	// This can happen with recursion
@@ -3943,8 +3984,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return nil, false
 		}
 		result := semtypes.Intersect(lhs, rhs)
-		if semtypes.IsEmpty(t.typeContext(), result) {
-			t.semanticError("intersection type is empty (equivalent to never)", ty.GetPosition())
+		pos := ty.GetPosition()
+		if !t.ensureNotEmpty(result, func() {
+			t.semanticError("intersection type is empty (equivalent to never)", pos)
+		}) {
 			return nil, false
 		}
 		return result, true
