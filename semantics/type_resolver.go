@@ -4076,6 +4076,37 @@ func typeFromFunctionSignature(t typeResolver, sig model.FunctionSignature) semt
 		semtypes.FunctionQualifiersFrom(t.typeEnv(), sig.IsIsolated(), sig.IsTransactional()))
 }
 
+func resolveFixedArraySize(t typeResolver, lenExp ast.BLangExpression) (int, bool) {
+	actionOrExpr, ok := lenExp.(ast.BLangActionOrExpression)
+	if !ok {
+		t.semanticError("fixed-length array size must be a singleton int", lenExp.GetPosition())
+		return 0, false
+	}
+	if _, _, ok := resolveActionOrExpression(t, nil, actionOrExpr, semtypes.INT); !ok {
+		return 0, false
+	}
+	sizeTy := lenExp.GetDeterminedType()
+	if sizeTy == nil || !semtypes.IsSubtypeSimple(sizeTy, semtypes.INT) {
+		t.semanticError("fixed-length array size must be a singleton int", lenExp.GetPosition())
+		return 0, false
+	}
+	shape := semtypes.SingleShape(sizeTy)
+	if shape.IsEmpty() {
+		t.semanticError("fixed-length array size must be a singleton int", lenExp.GetPosition())
+		return 0, false
+	}
+	val, ok := shape.Get().Value.(int64)
+	if !ok {
+		t.semanticError("fixed-length array size must be a singleton int", lenExp.GetPosition())
+		return 0, false
+	}
+	if val < 0 {
+		t.semanticError("fixed-length array size must be non-negative", lenExp.GetPosition())
+		return 0, false
+	}
+	return int(val), true
+}
+
 func resolveBType(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {
 	bLangNode := btype.(ast.BLangNode)
 	if bLangNode.GetDeterminedType() != nil {
@@ -4146,7 +4177,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				if lenExp == nil {
 					elemTy = d.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), elemTy)
 				} else {
-					length := int(lenExp.(*ast.BLangLiteral).Value.(int64))
+					length, ok := resolveFixedArraySize(t, lenExp)
+					if !ok {
+						return nil, false
+					}
 					elemTy = d.DefineListTypeWrappedWithEnvSemTypesInt(t.typeEnv(), []semtypes.SemType{elemTy}, length)
 				}
 			}

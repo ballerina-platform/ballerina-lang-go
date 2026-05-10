@@ -3406,7 +3406,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 		if dimensionNode.ArrayLength() == nil {
 			sizes = append(sizes, nil)
 		} else {
-			panic("array length expression handling unimplemented")
+			sizes = append(sizes, n.createExpression(dimensionNode.ArrayLength()))
 		}
 	}
 	dimensionSize = len(sizes)

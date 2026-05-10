@@ -45,8 +45,6 @@ var birSerializationRoundtripSkipList = []string{
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/fill4-p.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-list/fixedlength1-v.bal",
-	"subset8/08-list/fixedlength2-v.bal",
 	"subset8/08-nested/exact1-p.bal",
 	"subset8/08-nested/proj1-p.bal",
 	"subset8/08-rest/exact1-p.bal",

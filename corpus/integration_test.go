@@ -154,25 +154,6 @@ var (
 		"subset8/08-fill/21-e.bal",
 		"subset8/08-fill/22-e.bal",
 
-		// fixed length array index expression type
-		// 	type project gives you never if out of range
-		"subset8/08-list/fixedlength1-e.bal",
-		"subset8/08-list/fixedlength2-e.bal",
-		// assignment should check the expression type
-		"subset8/08-list/fixedlength3-e.bal",
-		"subset8/08-list/fixedlength4-e.bal",
-		// this shouldn't happen check
-		"subset8/08-list/fixedlength5-e.bal",
-		// list constructor should check the each members type against the projection
-		"subset8/08-list/fixedlength6-e.bal",
-		// fixed length array type defintion should check length is either int literal or constant ref
-		// 	-- check that expression type is subtype of singleton int
-		"subset8/08-list/fixedlength7-e.bal",
-		//  -- must be know at compile time singleton check should be enough
-		"subset8/08-list/fixedlength8-e.bal",
-		// fixed length array size mismatch
-		"subset8/08-list/fixedlength9-e.bal",
-
 		// mapping index based access should use the type projection, result type is ()|projection
 		"subset8/08-inclusive/compoundassign3-e.bal",
 		"subset8/08-map/compoundassign-e.bal",
@@ -390,8 +371,6 @@ var (
 		"subset8/08-fill/19-v.bal",
 		"subset8/08-fill/20-v.bal",
 		"subset8/08-fill/order-v.bal",
-		"subset8/08-list/fixedlength1-v.bal",
-		"subset8/08-list/fixedlength2-v.bal",
 		"subset8/08-tuple/comp9-v.bal",
 
 		// Expected frontend error: migrated -e tests where pi did not catch the error in

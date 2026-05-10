@@ -50,8 +50,6 @@ var astGenerationSkipList = []string{
 	"subset8/08-fill/19-v.bal",
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-list/fixedlength1-v.bal",
-	"subset8/08-list/fixedlength2-v.bal",
 	"subset8/08-tuple/comp9-v.bal",
 
 	// Runtime panic in this stage on the migrated test.
@@ -169,8 +167,6 @@ var walkTraversalSkipList = []string{
 	"subset8/08-fill/19-v.bal",
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-list/fixedlength1-v.bal",
-	"subset8/08-list/fixedlength2-v.bal",
 	"subset8/08-tuple/comp9-v.bal",
 
 	// AST node missing source position info.
