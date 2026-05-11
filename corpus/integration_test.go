@@ -150,13 +150,6 @@ var (
 
 		// ----- End of constant folding -----
 
-		// singleton fillter values
-		"subset8/08-fill/10-e.bal",
-		"subset8/08-fill/15-e.bal",
-		"subset8/08-fill/18-e.bal",
-		"subset8/08-fill/21-e.bal",
-		"subset8/08-fill/22-e.bal",
-
 		// Unused local variable detection
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/439
 		"subset8/08-unused/unused1-e.bal",
@@ -173,7 +166,6 @@ var (
 		"subset8/08-bitwise/shift3-v.bal",
 		"subset8/08-bug/charcast1-v.bal",
 		"subset8/08-bug/charcast2-v.bal",
-		"subset8/08-bug/fill1-v.bal",
 		"subset8/08-bug/shiftresulttype1-v.bal",
 		"subset8/08-bug/shiftresulttype2-v.bal",
 		"subset8/08-decimal/add1-v.bal",
@@ -213,13 +205,7 @@ var (
 		"subset8/08-error/check10-v.bal",
 		"subset8/08-error/check3-v.bal",
 		// invalid filling value
-		"subset8/08-fill/1-v.bal",
-		"subset8/08-fill/17-v.bal",
-		"subset8/08-fill/2-v.bal",
-		"subset8/08-fill/3-v.bal",
-		"subset8/08-fill/4-v.bal",
-		"subset8/08-fill/5-v.bal",
-		"subset8/08-fill/8-v.bal",
+		"subset8/08-fill/4-v.bal", // SingleShape decimal prints big.Rat with %v
 		"subset8/08-fill/chain2-v.bal",
 		"subset8/08-fill/fill1-v.bal",
 		"subset8/08-fill/fill2-v.bal",
@@ -316,6 +302,7 @@ var (
 		"subset8/08-map/int5-p.bal",
 		"subset8/08-nested/exact2-p.bal",
 		"subset8/08-nested/exact4-p.bal",
+		"subset8/08-nested/fill3-p.bal",
 		"subset8/08-nested/exact5-p.bal",
 		"subset8/08-nested/exact6-p.bal",
 		"subset8/08-record/inherent1-p.bal",

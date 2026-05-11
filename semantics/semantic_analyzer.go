@@ -967,6 +967,13 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 			return false
 		}
 	}
+	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+		memberTy := lat.MemberAtInnerVal(i)
+		if _, ok := semtypes.FillerValue(a.tyCtx(), memberTy); !ok {
+			a.semanticErr(fmt.Sprintf("missing required member at index %d: type '%s' has no filler value", i, semtypes.ToString(a.tyCtx(), memberTy)), expr.GetPosition())
+			return false
+		}
+	}
 	return validateResolvedType(a, expr, expectedType)
 }
 

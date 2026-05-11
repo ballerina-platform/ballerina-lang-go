@@ -47,6 +47,9 @@ func (l *loopTypeResolver) expectedReturnType() semtypes.SemType {
 	return l.parentResolver.expectedReturnType()
 }
 func (l *loopTypeResolver) parent() typeResolver  { return l.parentResolver }
+func (l *loopTypeResolver) nextMonoFnName(origName string) string {
+	return l.parentResolver.nextMonoFnName(origName)
+}
 func (l *loopTypeResolver) typeEnv() semtypes.Env { return l.parentResolver.typeEnv() }
 
 func (l *loopTypeResolver) semanticError(msg string, loc diagnostics.Location) {

@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type birReader struct {
@@ -550,9 +551,9 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
 		valuesCount := br.readLength()
-		values := make([]*bir.BIROperand, valuesCount)
+		arrayValues := make([]*bir.BIROperand, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
-			values[k] = br.readOperand(varMap)
+			arrayValues[k] = br.readOperand(varMap)
 		}
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
@@ -561,7 +562,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			},
 			Type:   ty,
 			SizeOp: sizeOp,
-			Values: values,
+			Values: arrayValues,
+			Filler: br.restFillerFactoryForListType(ty),
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
@@ -914,6 +916,19 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		}
 		return br.getFromCP(int(idx))
 	}
+}
+
+func (br *birReader) restFillerFactoryForListType(ty semtypes.SemType) values.FillerFactory {
+	if ty == nil {
+		return nil
+	}
+	tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+	lat := semtypes.ToListAtomicType(tyCx, ty)
+	if lat == nil {
+		return nil
+	}
+	factory, _ := values.FillerFactoryFor(tyCx, lat.Rest())
+	return factory
 }
 
 func (br *birReader) read(v any) {

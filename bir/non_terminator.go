@@ -68,7 +68,7 @@ type (
 		SizeOp *BIROperand
 		Type   semtypes.SemType
 		Values []*BIROperand
-		Filler values.BalValue
+		Filler values.FillerFactory
 	}
 
 	// JBallerina call this NewStruct but prints as NewMap
@@ -268,7 +268,7 @@ func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
 }
 
-func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue, pos Location) *NewArray {
+func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.FillerFactory, pos Location) *NewArray {
 	return &NewArray{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{

@@ -87,7 +87,8 @@ func execNewObject(ctx *Context, newObject *bir.NewObject, frame *Frame) {
 	classDef := ctx.GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
 	for _, field := range classDef.Fields {
-		fieldValues[field.Name] = values.DefaultValueForType(field.Ty)
+		fv, _ := values.FillerValue(ctx.TypeCheckContext(), field.Ty)
+		fieldValues[field.Name] = fv
 	}
 	methodKeys := make(map[string]string, len(classDef.VTable))
 	for methodName, method := range classDef.VTable {

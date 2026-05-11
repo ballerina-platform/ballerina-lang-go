@@ -26,10 +26,10 @@ import (
 type List struct {
 	Type   semtypes.SemType
 	elems  []BalValue
-	filler BalValue
+	filler FillerFactory
 }
 
-func NewList(size int, ty semtypes.SemType, filler BalValue) *List {
+func NewList(size int, ty semtypes.SemType, filler FillerFactory) *List {
 	return &List{elems: make([]BalValue, size), Type: ty, filler: filler}
 }
 
@@ -48,7 +48,7 @@ func (l *List) FillingSet(idx int, value BalValue) {
 		l.elems[idx] = value
 		return
 	}
-	if l.filler == NeverValue {
+	if l.filler == nil {
 		panic("can't fill values")
 	}
 	if idx >= math.MaxInt32 {
@@ -58,13 +58,13 @@ func (l *List) FillingSet(idx int, value BalValue) {
 	if newLen <= cap(l.elems) {
 		l.elems = l.elems[:newLen]
 		for i := currentLen; i < idx; i++ {
-			l.elems[i] = l.filler
+			l.elems[i] = l.filler()
 		}
 		l.elems[idx] = value
 		return
 	}
 	for len(l.elems) < idx {
-		l.elems = append(l.elems, l.filler)
+		l.elems = append(l.elems, l.filler())
 	}
 	l.elems = append(l.elems, value)
 }

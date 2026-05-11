@@ -755,6 +755,8 @@ func singleton(v any) SemType {
 		return StringConst(s)
 	} else if b, ok := v.(bool); ok {
 		return BooleanConst(b)
+	} else if r, ok := v.(*big.Rat); ok {
+		return DecimalConst(*r)
 	} else {
 		panic("Unsupported type: " + fmt.Sprintf("%T", v))
 	}

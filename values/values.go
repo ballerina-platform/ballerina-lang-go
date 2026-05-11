@@ -17,11 +17,12 @@
 package values
 
 import (
-	"ballerina-lang-go/semtypes"
 	"math"
 	"math/big"
 	"strconv"
 	"strings"
+
+	"ballerina-lang-go/semtypes"
 )
 
 // Currently this is just an alias on any but I think we will need to add methods to this like type
@@ -40,36 +41,58 @@ type TypeDesc struct {
 	Type semtypes.SemType
 }
 
-func DefaultValueForType(t semtypes.SemType) BalValue {
-	if t == nil {
-		// TODO: this should panic when our operands properly have types
-		return nil
+// FillerFactory produces a fresh filler value each time it is invoked.
+// Mutable filler values (lists, mappings) must be unique per slot, so they
+// cannot be cached as a single shared value.
+type FillerFactory func() BalValue
+
+// FillerValue returns the runtime value representation for filler value according to https://ballerina.io/spec/lang/master/#FillMember
+func FillerValue(cx semtypes.Context, t semtypes.SemType) (BalValue, bool) {
+	factory, ok := FillerFactoryFor(cx, t)
+	if !ok {
+		return nil, false
 	}
-	if semtypes.IsNever(t) {
-		return NeverValue
-	} else if semtypes.IsSubtypeSimple(t, semtypes.BOOLEAN) {
-		return false
-	} else if semtypes.IsSubtypeSimple(t, semtypes.INT) {
-		return int64(0)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.FLOAT) {
-		return float64(0)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.STRING) {
-		return ""
-	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
-		return big.NewRat(0, 1)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.MAPPING) {
-		return NewMap(t)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
-		// TODO: this needs to be properly implemeneted for lists
-		return NewList(0, semtypes.NEVER, NeverValue)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.OBJECT) {
-		return nil
-	} else if semtypes.IsSubtypeSimple(t, semtypes.HANDLE) {
-		return nil
-	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
-		return nil
-	} else {
-		return NeverValue
+	return factory(), true
+}
+
+// FillerFactoryFor returns a factory that produces a fresh filler value for
+// the given type on each invocation.
+func FillerFactoryFor(cx semtypes.Context, t semtypes.SemType) (FillerFactory, bool) {
+	filler, ok := semtypes.FillerValue(cx, t)
+	if !ok {
+		return nil, false
+	}
+	return fillerFactoryFromDesc(cx, filler), true
+}
+
+func fillerFactoryFromDesc(cx semtypes.Context, f semtypes.Filler) FillerFactory {
+	switch f := f.(type) {
+	case semtypes.SingleValueFiller:
+		v := f.Value
+		return func() BalValue { return v }
+	case semtypes.MappingFiller:
+		ty := f.Type
+		return func() BalValue { return NewMap(ty) }
+	case semtypes.ListFiller:
+		return listFillerFactory(cx, f)
+	default:
+		panic("unknown filler kind")
+	}
+}
+
+func listFillerFactory(cx semtypes.Context, f semtypes.ListFiller) FillerFactory {
+	memberFactories := make([]FillerFactory, len(f.Members))
+	for i, m := range f.Members {
+		memberFactories[i] = fillerFactoryFromDesc(cx, m)
+	}
+	restFactory, _ := FillerFactoryFor(cx, f.Atomic.Rest())
+	ty := f.Type
+	return func() BalValue {
+		list := NewList(len(memberFactories), ty, restFactory)
+		for i, mf := range memberFactories {
+			list.elems[i] = mf()
+		}
+		return list
 	}
 }
 

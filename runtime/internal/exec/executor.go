@@ -39,7 +39,7 @@ func executeFunction(ctx *Context, birFunc bir.BIRFunction, args []values.BalVal
 }
 
 func createFunctionFrame(ctx *Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) *Frame {
-	locals := initLocalsForFunction(birFunc, args)
+	locals := initLocalsForFunction(ctx, birFunc, args)
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
 	ctx.PushFrame(frame)
 	if ctx.CallStackDepth() > maxRecursionDepth {
@@ -48,10 +48,9 @@ func createFunctionFrame(ctx *Context, birFunc *bir.BIRFunction, args []values.B
 	return frame
 }
 
-func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
+func initLocalsForFunction(ctx *Context, birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
-	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
 	argOffset := 0
 	if hasFunctionFlag(birFunc.Flags, model.Flag_ATTACHED) {
 		locals[1] = args[0]
@@ -62,7 +61,6 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 		locals[i+1+argOffset] = args[i+argOffset]
 	}
 
-	var offset int
 	if birFunc.RestParams != nil {
 		restArgs := args[requiredCount+argOffset:]
 		restParamIdx := requiredCount + 1 + argOffset
@@ -72,17 +70,12 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 			list.FillingSet(j, arg)
 		}
 		locals[restParamIdx] = list
-		offset = restParamIdx + 1
 	} else {
 		if len(args) > requiredCount+argOffset {
 			panic(values.NewErrorWithMessage("too many arguments"))
 		}
-		offset = requiredCount + 1 + argOffset
 	}
 
-	for i := offset; i < len(*localVars); i++ {
-		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
-	}
 	return locals
 }
 

@@ -39,6 +39,7 @@ type context struct {
 	_isolatedTopMemo    SemType
 	_iterableMemo       SemType
 	_comparableMemo     map[comparableMemoKey]*comparableMemo
+	_fillerMemo         map[atomicType]Filler
 }
 
 type comparableMemo struct {
@@ -182,6 +183,7 @@ func ContextFrom(env Env) Context {
 		_mappingMemo:    make(map[string]*bddMemo),
 		_functionMemo:   make(map[string]*bddMemo),
 		_comparableMemo: make(map[comparableMemoKey]*comparableMemo),
+		_fillerMemo:     make(map[atomicType]Filler),
 		_conjunctions:   make([]conjunction, 0, 64),
 	}
 }

@@ -960,22 +960,26 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 
 	lat := expr.AtomicType
 	exprPos := ctx.loc(expr.GetPosition())
+	tyCx := semtypes.TypeCheckContext(ctx.birCx.CompilerContext.GetTypeEnv())
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
-		ty := lat.MemberAt(i)
-		fillerVal := values.DefaultValueForType(ty)
+		ty := lat.MemberAtInnerVal(i)
+		fillerVal, ok := values.FillerValue(tyCx, ty)
+		if !ok {
+			ctx.birCx.CompilerContext.InternalError("no filler value for list member type; semantic analysis should have rejected this", expr.GetPosition())
+		}
 		fillerOperand := ctx.addTempVar(ty)
 		fillerLoad := NewConstantLoad(fillerOperand, fillerVal, exprPos)
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
-	fillerVal := values.DefaultValueForType(lat.Rest())
+	restFiller, _ := values.FillerFactoryFor(tyCx, lat.Rest())
 
 	sizeOperand := ctx.addTempVar(semtypes.INT)
 	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(semtypes.LIST)
-	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, fillerVal, exprPos)
+	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, restFiller, exprPos)
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,
