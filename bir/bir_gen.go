@@ -179,7 +179,14 @@ func buildLookupKey(pkg model.PackageIdentifier, qualifiedName string) string {
 }
 
 func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
-	return buildLookupKey(symRef.Package, ctx.CompilerContext.GetSymbol(symRef).Name())
+	sym := ctx.CompilerContext.GetSymbol(symRef)
+	if mono, ok := sym.(model.MonomorphicFunctionSymbol); ok {
+		// For monomorphic functions (ex: dependently typed functions), in runtime we dispatch to a single
+		// polymorphic function
+		origRef := mono.PolymorphicSymbol()
+		return buildLookupKey(origRef.Package, ctx.CompilerContext.GetSymbol(origRef).Name())
+	}
+	return buildLookupKey(symRef.Package, sym.Name())
 }
 
 func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {
@@ -799,8 +806,20 @@ func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.B
 		return lambdaFunction(ctx, curBB, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return generateCall(ctx, curBB, expr)
+	case *ast.BLangTypedescExpr:
+		return typedescExpression(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
+	}
+}
+
+func typedescExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	td := &values.TypeDesc{Type: expr.Constraint}
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.loc(expr.GetPosition())))
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
 	}
 }
 
@@ -1314,8 +1333,20 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		fn := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
-		fn.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		lookupKey := buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		var fn *BIRFunction
+		if method.IsNative() {
+			fn = &BIRFunction{
+				Name:              model.Name(method.GetName().GetValue()),
+				OriginalName:      model.Name(method.GetName().GetValue()),
+				Flags:             method.FlagsAsInt64(),
+				FunctionLookupKey: lookupKey,
+			}
+			fn.Pos = birLoc(ctx.CompilerContext.DiagnosticEnv(), method.GetPosition())
+		} else {
+			fn = transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+			fn.FunctionLookupKey = lookupKey
+		}
 		birClassDef.VTable[methodName] = fn
 	}
 

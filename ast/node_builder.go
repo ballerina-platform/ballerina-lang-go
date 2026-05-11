@@ -1954,7 +1954,9 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
 	pos := getPosition(n.de(), checkExpressionNode)
-	expr := n.createExpression(checkExpressionNode.Expression())
+	// we are deviating from the spec here (https://ballerina.io/spec/lang/master/#section_6.33) check is only suppose
+	// to work with expression but jBallerina also allow remote method calls (which is an action)
+	expr := n.createActionOrExpression(checkExpressionNode.Expression())
 	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos
@@ -2272,7 +2274,9 @@ func (n *NodeBuilder) TransformRestArgument(restArgumentNode *tree.RestArgumentN
 }
 
 func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNode *tree.InferredTypedescDefaultNode) BLangNode {
-	panic("TransformInferredTypedescDefault unimplemented")
+	node := &BLangInferredTypedescDefault{}
+	node.pos = getPosition(n.de(), inferredTypedescDefaultNode)
+	return node
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
@@ -3960,10 +3964,36 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
-	if parameterizedTypeDescriptorNode.Kind() == common.ERROR_TYPE_DESC {
+	switch parameterizedTypeDescriptorNode.Kind() {
+	case common.ERROR_TYPE_DESC:
 		return n.transformErrorTypeDescriptor(parameterizedTypeDescriptorNode)
+	case common.TYPEDESC_TYPE_DESC:
+		return n.transformTypedescTypeDescriptor(parameterizedTypeDescriptorNode)
 	}
-	panic("TransformParameterizedTypeDescriptor supported only for error type descriptors")
+	panic("TransformParameterizedTypeDescriptor supported only for error and typedesc type descriptors")
+}
+
+func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTypeDescriptorNode) BLangNode {
+	typeParamNode := node.TypeParamNode()
+	if typeParamNode == nil {
+		valueType := &BLangValueType{}
+		valueType.pos = getPosition(n.de(), node)
+		valueType.TypeKind = model.TypeKind_TYPEDESC
+		return valueType
+	}
+	constrainedType := &BLangConstrainedType{}
+	constrainedType.pos = getPosition(n.de(), node)
+	base := &BLangValueType{}
+	base.pos = getPosition(n.de(), node)
+	base.TypeKind = model.TypeKind_TYPEDESC
+	constrainedType.Type = model.TypeData{TypeDescriptor: base}
+	constraint := typeParamNode.TypeNode()
+	if constraint == nil {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(typeParamNode)}
+	} else {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(constraint)}
+	}
+	return constrainedType
 }
 
 func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {

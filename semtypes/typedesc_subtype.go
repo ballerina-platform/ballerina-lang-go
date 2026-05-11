@@ -18,14 +18,7 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type typedescSubtype struct{}
-
-func newTypedescSubtype() typedescSubtype {
-	this := typedescSubtype{}
-	return this
-}
-
-func typedescContaining(env Env, constraint SemType) SemType {
+func TypedescContaining(env Env, constraint SemType) SemType {
 	if common.PointerEqualToValue(VAL, constraint) {
 		return TYPEDESC
 	}
@@ -34,4 +27,26 @@ func typedescContaining(env Env, constraint SemType) SemType {
 	mappingType := mappingDef.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, nil, constraint, CellMutability_CELL_MUT_NONE)
 	bdd := subtypeData(mappingType, BTMapping).(Bdd)
 	return createBasicSemType(BTTypeDesc, bdd)
+}
+
+// TypedescConstraint extracts the constraint T from a typedesc<T>.
+// Returns VAL when td is the unconstrained typedesc, nil if td is not a typedesc built via TypedescContaining.
+func TypedescConstraint(ctx Context, td SemType) SemType {
+	if !IsSubtypeSimple(td, TYPEDESC) {
+		return nil
+	}
+	if _, ok := td.(BasicTypeBitSet); ok {
+		return VAL
+	}
+	mappingTy := convertTypeDescToMapping(ctx, td)
+	return MappingMemberTypeInnerVal(ctx, mappingTy, STRING)
+}
+
+func convertTypeDescToMapping(ctx Context, ty SemType) SemType {
+	td := Intersect(ty, TYPEDESC)
+	if IsEmpty(ctx, td) {
+		return nil
+	}
+	bdd := subtypeData(td, BTTypeDesc)
+	return createBasicSemType(BTMapping, bdd)
 }
