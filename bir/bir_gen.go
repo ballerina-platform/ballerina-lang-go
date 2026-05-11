@@ -1001,11 +1001,12 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	}
 	indexEffect := handleActionOrExpression(ctx, bb, expr.IndexExpr)
 	containerRefEffect := handleActionOrExpression(ctx, indexEffect.block, expr.Expr)
+	currBB := containerRefEffect.block
 	fieldAccess := NewFieldAccess(fieldAccessKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(expr.GetPosition()))
-	bb.Instructions = append(bb.Instructions, fieldAccess)
+	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
-		block:  bb,
+		block:  currBB,
 	}
 }
 

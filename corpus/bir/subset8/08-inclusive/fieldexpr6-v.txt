@@ -3,12 +3,13 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad x
+    %3 = origin() -> bb1;
+  }
+  bb1 {
     %1 = %3[%2];
     x = %1;
     %5 = x;
     %6 = println(%5) -> bb2;
-  }
-  bb1 {
   }
   bb2 {
     return;
