@@ -161,13 +161,9 @@ var (
 
 		// Expected clean run: migrated -v tests that produce diagnostics or runtime errors
 		"subset8/08-bench/map-v.bal",
-		"subset8/08-bitwise/shift1-v.bal",
-		"subset8/08-bitwise/shift2-v.bal",
-		"subset8/08-bitwise/shift3-v.bal",
 		"subset8/08-bug/charcast1-v.bal",
 		"subset8/08-bug/charcast2-v.bal",
-		"subset8/08-bug/shiftresulttype1-v.bal",
-		"subset8/08-bug/shiftresulttype2-v.bal",
+		"subset8/08-bug/fill1-v.bal",
 		"subset8/08-decimal/add1-v.bal",
 		"subset8/08-decimal/add7-v.bal",
 		"subset8/08-decimal/const1-v.bal",

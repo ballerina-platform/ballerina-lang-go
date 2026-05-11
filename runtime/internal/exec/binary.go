@@ -237,28 +237,30 @@ func refEqual(op1, op2 values.BalValue) bool {
 }
 
 func execBinaryOpBitwiseAnd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a & b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a & b })
 }
 
 func execBinaryOpBitwiseOr(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a | b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a | b })
 }
 
 func execBinaryOpBitwiseXor(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a ^ b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a ^ b })
 }
 
 func execBinaryOpBitwiseLeftShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a << uint(b) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a << uint(b&shiftAmountMask) })
 }
 
 func execBinaryOpBitwiseRightShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a >> uint(b) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a >> uint(b&shiftAmountMask) })
 }
 
 func execBinaryOpBitwiseUnsignedRightShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return int64(uint64(a) >> uint(b)) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return int64(uint64(a) >> uint(b&shiftAmountMask)) })
 }
+
+const shiftAmountMask = 0x3F
 
 func execUnaryOpNot(ctx *Context, unaryOp *bir.UnaryOp, frame *Frame) {
 	op := getOperandValue(ctx, unaryOp.RhsOp, frame)
@@ -286,22 +288,13 @@ func execUnaryOpBitwiseComplement(ctx *Context, unaryOp *bir.UnaryOp, frame *Fra
 	setOperandValue(ctx, unaryOp.LhsOp, frame, ^v)
 }
 
-func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
+func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
 	v1 := op1.(int64)
 	v2 := op2.(int64)
-	if isShift {
-		validateShiftAmount(v2)
-	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, bitOp(v1, v2))
 }
 
 func getBinaryRhsValues(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue) {
 	return getOperandValue(ctx, &binaryOp.RhsOp1, frame), getOperandValue(ctx, &binaryOp.RhsOp2, frame)
-}
-
-func validateShiftAmount(amount int64) {
-	if amount < 0 || amount >= 64 {
-		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount)))
-	}
 }

@@ -19,9 +19,9 @@ import ballerina/io;
 
 public function main() {
     int amount = 64;
-    io:println(shift(1, amount));
+    io:println(shift(1, amount)); // @output 1
 }
 
 function shift(int x, int amount) returns int {
-    return x << amount; // @panic invalid shift amount
+    return x << amount; // amount is masked with 0x3F, so 64 -> 0
 }
