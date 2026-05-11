@@ -127,17 +127,24 @@ func execArrayFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 }
 
 func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
-	m := getOperandValue(ctx, access.LhsOp, frame).(*values.Map)
-	keyVal := getOperandValue(ctx, access.KeyOp, frame)
-	keyStr := keyVal.(string)
+	container := getOperandValue(ctx, access.LhsOp, frame)
+	keyStr := getOperandValue(ctx, access.KeyOp, frame).(string)
+	if container == nil {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", keyStr)))
+	}
+	m := container.(*values.Map)
 	valueVal := getOperandValue(ctx, access.RhsOp, frame)
 	m.Put(keyStr, valueVal)
 }
 
 func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
-	m := getOperandValue(ctx, access.RhsOp, frame).(*values.Map)
+	container := getOperandValue(ctx, access.RhsOp, frame)
 	key := getOperandValue(ctx, access.KeyOp, frame).(string)
-	value, _ := m.Get(key)
+	if container == nil {
+		setOperandValue(ctx, access.LhsOp, frame, nil)
+		return
+	}
+	value, _ := container.(*values.Map).Get(key)
 	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 

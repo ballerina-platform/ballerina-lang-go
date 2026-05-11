@@ -3662,9 +3662,14 @@ func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangInde
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		resultTy = semtypes.ListMemberTypeInnerVal(t.typeContext(), containerExprTy, keyExprTy)
-	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
-		memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), containerExprTy, keyExprTy)
-		maybeMissing := semtypes.ContainsUndef(memberTy)
+	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL) {
+		containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+		mappingTy := containerExprTy
+		if containerNilable {
+			mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
+		}
+		memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), mappingTy, keyExprTy)
+		maybeMissing := semtypes.ContainsUndef(memberTy) || containerNilable
 		if maybeMissing {
 			memberTy = semtypes.Union(semtypes.Diff(memberTy, semtypes.UNDEF), semtypes.NIL)
 		}
@@ -3698,16 +3703,24 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 		return memberTy, defaultExpressionEffect(chain), true
 	}
 
-	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
+	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL) {
 		t.semanticError("unsupported container type for field access", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
-	memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), containerExprTy, keyTy)
+	containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+	mappingTy := containerExprTy
+	if containerNilable {
+		mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
+	}
+	memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), mappingTy, keyTy)
 	maybeMissing := semtypes.ContainsUndef(memberTy)
 	if maybeMissing {
 		t.semanticError("field base access is only possible for required fields", expr.GetPosition())
 		return nil, expressionEffect{}, false
+	}
+	if containerNilable {
+		memberTy = semtypes.Union(memberTy, semtypes.NIL)
 	}
 
 	setExpectedType(expr, memberTy)

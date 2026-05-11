@@ -200,7 +200,6 @@ var (
 		"subset8/08-error/check3-v.bal",
 		// invalid filling value
 		"subset8/08-fill/4-v.bal", // SingleShape decimal prints big.Rat with %v
-		"subset8/08-fill/chain2-v.bal",
 		"subset8/08-fill/fill2-v.bal",
 		"subset8/08-fill/fill3-v.bal",
 		"subset8/08-fill/fill7-v.bal",
@@ -310,7 +309,6 @@ var (
 		// Expected runtime panic, but got frontend error.
 		"subset8/08-decimal/tofloat4-p.bal",
 		"subset8/08-decimal/toint13-p.bal",
-		"subset8/08-fill/fill4-p.bal",
 		"subset8/08-nested/exact1-p.bal",
 		"subset8/08-nested/proj1-p.bal",
 		"subset8/08-rest/exact1-p.bal",

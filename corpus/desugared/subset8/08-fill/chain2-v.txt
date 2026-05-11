@@ -22,10 +22,11 @@
             (literal i)
             (literal 4))))
       (assignment
-        (field-based-access i
+        (index-based-access
           (index-based-access
             (simple-var-ref m)
-            (literal x)))
+            (literal x))
+          (literal i))
         (literal 2))
       (expression-stmt
         (invocation io println (

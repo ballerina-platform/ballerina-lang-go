@@ -18,11 +18,13 @@
             (user-defined-type R2))) (expr
           (mapping-constructor-expr))))
       (assignment
-        (field-based-access y
-          (field-based-access x
+        (index-based-access
+          (index-based-access
             (index-based-access
               (simple-var-ref m)
-              (literal foo))))
+              (literal foo))
+            (literal x))
+          (literal y))
         (literal 42))
       (expression-stmt
         (invocation io println (
