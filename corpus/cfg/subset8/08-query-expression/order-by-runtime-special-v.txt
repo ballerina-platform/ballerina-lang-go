@@ -1,0 +1,108 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable specialFloats (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 4)
+          (literal <nil>)
+          (literal 3.5)
+          (literal 2)))))
+    (var-def
+      (variable ascSpecialFloats (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable value))
+            (simple-var-ref specialFloats))
+          (order-by-clause
+            (order-key ascending
+              (simple-var-ref value)))
+          (select-clause
+            (simple-var-ref value))))))
+    (var-def
+      (variable descSpecialFloats (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable value))
+            (simple-var-ref specialFloats))
+          (order-by-clause
+            (order-key descending
+              (simple-var-ref value)))
+          (select-clause
+            (simple-var-ref value))))))
+    (var-def
+      (variable specialRows (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 1)
+            (literal <nil>))
+          (list-constructor-expr
+            (literal 1)
+            (literal 2))
+          (list-constructor-expr
+            (literal 1))
+          (list-constructor-expr
+            (literal 2))))))
+    (var-def
+      (variable ascSpecialRows (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 2 ([][]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable row))
+            (simple-var-ref specialRows))
+          (order-by-clause
+            (order-key ascending
+              (simple-var-ref row)))
+          (select-clause
+            (simple-var-ref row))))))
+    (var-def
+      (variable descSpecialRows (type
+        (array-type
+          (union-type
+            (value-type float)
+            (value-type null)) dimensions: 2 ([][]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable row))
+            (simple-var-ref specialRows))
+          (order-by-clause
+            (order-key descending
+              (simple-var-ref row)))
+          (select-clause
+            (simple-var-ref row))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref ascSpecialFloats))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref descSpecialFloats))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref ascSpecialRows))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref descSpecialRows))))
+  )
+)

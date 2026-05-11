@@ -1,0 +1,131 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Person
+    (record-type
+      (field deptId
+        (value-type int))
+      (field name
+        (value-type string))))
+  (type-definition Department
+    (record-type
+      (field id
+        (value-type int))
+      (field locationId
+        (value-type int))))
+  (type-definition Location
+    (record-type
+      (field id
+        (value-type int))
+      (field name
+        (value-type string))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable people (type
+          (array-type
+            (user-defined-type Person) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref deptId)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal Alex)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref deptId)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal Ranjan)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref deptId)
+                (literal 3))
+              (key-value
+                (simple-var-ref name)
+                (literal Casey)))))))
+      (var-def
+        (variable departments (type
+          (constrained-type
+            (builtin-ref-type map)
+            (user-defined-type Department))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref hr)
+              (mapping-constructor-expr
+                (key-value
+                  (simple-var-ref id)
+                  (literal 1))
+                (key-value
+                  (simple-var-ref locationId)
+                  (literal 10))))
+            (key-value
+              (simple-var-ref ops)
+              (mapping-constructor-expr
+                (key-value
+                  (simple-var-ref id)
+                  (literal 2))
+                (key-value
+                  (simple-var-ref locationId)
+                  (literal 20))))))))
+      (var-def
+        (variable locations (type
+          (array-type
+            (user-defined-type Location) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 20))
+              (key-value
+                (simple-var-ref name)
+                (literal Field)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 10))
+              (key-value
+                (simple-var-ref name)
+                (literal HQ)))))))
+      (var-def
+        (variable joined (type
+          (array-type
+            (value-type string) dimensions: 1 ([]))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable person))
+              (simple-var-ref people))
+            (join-clause
+              (var-def
+                (variable dept))
+              (simple-var-ref departments)
+              (on-clause
+                (field-based-access deptId
+                  (simple-var-ref person))
+                (field-based-access id
+                  (simple-var-ref dept))))
+            (join-clause
+              (var-def
+                (variable loc))
+              (simple-var-ref locations)
+              (on-clause
+                (field-based-access locationId
+                  (simple-var-ref dept))
+                (field-based-access id
+                  (simple-var-ref loc))))
+            (select-clause
+              (binary-expr +
+                (binary-expr +
+                  (field-based-access name
+                    (simple-var-ref person))
+                  (literal :))
+                (field-based-access name
+                  (simple-var-ref loc))))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref joined)))))))

@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: order by key expression must have an ordered type
+  --> order-by-non-orderable-e.bal:20:18
+   |
+20 |         order by row ascending
+   |                  ^^^^^^^^^^^^^

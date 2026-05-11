@@ -1260,6 +1260,20 @@ type FromClauseNode interface {
 	InputClauseNode
 }
 
+type JoinClauseNode interface {
+	InputClauseNode
+	GetOnClause() OnClauseNode
+	IsOuterJoin() bool
+}
+
+type OnClauseNode interface {
+	Node
+	GetOnExpression() ExpressionNode
+	SetOnExpression(expression ExpressionNode)
+	GetEqualsExpression() ExpressionNode
+	SetEqualsExpression(expression ExpressionNode)
+}
+
 type SelectClauseNode interface {
 	Node
 	GetExpression() ExpressionNode

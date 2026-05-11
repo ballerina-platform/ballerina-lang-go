@@ -3084,13 +3084,13 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 		modifiedOnKeyword, onKeywordNode := replaceInner(n.OnKeyword, target, replacement)
 
-		modifiedLhsExpression, lhsExpressionNode := replaceInner(n.LhsExpression, target, replacement)
+		modifiedOnExpression, onExpressionNode := replaceInner(n.OnExpression, target, replacement)
 
 		modifiedEqualsKeyword, equalsKeywordNode := replaceInner(n.EqualsKeyword, target, replacement)
 
-		modifiedRhsExpression, rhsExpressionNode := replaceInner(n.RhsExpression, target, replacement)
+		modifiedEqualsExpression, equalsExpressionNode := replaceInner(n.EqualsExpression, target, replacement)
 
-		modified := modifiedOnKeyword || modifiedLhsExpression || modifiedEqualsKeyword || modifiedRhsExpression
+		modified := modifiedOnKeyword || modifiedOnExpression || modifiedEqualsKeyword || modifiedEqualsExpression
 		if modified {
 			return true, createNodeAndAddChildren(&STOnClauseNode{
 
@@ -3098,12 +3098,12 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 
 				OnKeyword: onKeywordNode,
 
-				LhsExpression: lhsExpressionNode,
+				OnExpression: onExpressionNode,
 
 				EqualsKeyword: equalsKeywordNode,
 
-				RhsExpression: rhsExpressionNode,
-			}, onKeywordNode, lhsExpressionNode, equalsKeywordNode, rhsExpressionNode)
+				EqualsExpression: equalsExpressionNode,
+			}, onKeywordNode, onExpressionNode, equalsKeywordNode, equalsExpressionNode)
 		}
 		return false, current
 

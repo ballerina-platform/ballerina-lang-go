@@ -36,9 +36,19 @@ type (
 	BLangFromClause struct {
 		BLangInputClause
 	}
+	BLangJoinClause struct {
+		BLangInputClause
+		OnClause        BLangOnClause
+		IsOuterJoinFlag bool
+	}
 	BLangLetClause struct {
 		bLangNodeBase
 		LetVarDeclarations []model.VariableDefinitionNode
+	}
+	BLangOnClause struct {
+		bLangNodeBase
+		OnExpr     BLangExpression
+		EqualsExpr BLangExpression
 	}
 	BLangWhereClause struct {
 		bLangNodeBase
@@ -48,7 +58,20 @@ type (
 		bLangNodeBase
 		Expression BLangExpression
 	}
+	BLangOrderByClause struct {
+		bLangNodeBase
+		OrderByKeyList []BLangOrderKey
+	}
+	BLangOrderKey struct {
+		bLangNodeBase
+		Expression   BLangExpression
+		IsDescending bool
+	}
 	BLangSelectClause struct {
+		bLangNodeBase
+		Expression BLangExpression
+	}
+	BLangOnConflictClause struct {
 		bLangNodeBase
 		Expression BLangExpression
 	}
@@ -74,10 +97,15 @@ type (
 
 var (
 	_ model.FromClauseNode    = &BLangFromClause{}
+	_ model.JoinClauseNode    = &BLangJoinClause{}
 	_ model.Node              = &BLangLetClause{}
+	_ model.OnClauseNode      = &BLangOnClause{}
 	_ model.Node              = &BLangWhereClause{}
 	_ model.Node              = &BLangLimitClause{}
+	_ model.Node              = &BLangOrderByClause{}
+	_ model.Node              = &BLangOrderKey{}
 	_ model.SelectClauseNode  = &BLangSelectClause{}
+	_ model.Node              = &BLangOnConflictClause{}
 	_ model.CollectClauseNode = &BLangCollectClause{}
 	_ model.DoClauseNode      = &BLangDoClause{}
 	_ model.OnFailClauseNode  = &BLangOnFailClause{}
@@ -85,10 +113,15 @@ var (
 
 var (
 	_ BLangNode = &BLangFromClause{}
+	_ BLangNode = &BLangJoinClause{}
 	_ BLangNode = &BLangLetClause{}
+	_ BLangNode = &BLangOnClause{}
 	_ BLangNode = &BLangWhereClause{}
 	_ BLangNode = &BLangLimitClause{}
+	_ BLangNode = &BLangOrderByClause{}
+	_ BLangNode = &BLangOrderKey{}
 	_ BLangNode = &BLangSelectClause{}
+	_ BLangNode = &BLangOnConflictClause{}
 	_ BLangNode = &BLangCollectClause{}
 	_ BLangNode = &BLangDoClause{}
 	_ BLangNode = &BLangOnFailClause{}
@@ -96,6 +129,73 @@ var (
 
 func (b *BLangFromClause) GetKind() model.NodeKind {
 	return model.NodeKind_FROM
+}
+
+func (b *BLangJoinClause) GetKind() model.NodeKind {
+	return model.NodeKind_JOIN
+}
+
+func (b *BLangJoinClause) GetCollection() model.ExpressionNode {
+	return b.Collection
+}
+
+func (b *BLangJoinClause) SetCollection(collection model.ExpressionNode) {
+	if exp, ok := collection.(BLangExpression); ok {
+		b.Collection = exp
+		return
+	}
+	panic("collection is not a BLangExpression")
+}
+
+func (b *BLangJoinClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
+	return b.VariableDefinitionNode
+}
+
+func (b *BLangJoinClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
+	b.VariableDefinitionNode = variableDefinitionNode
+}
+
+func (b *BLangJoinClause) IsDeclaredWithVar() bool {
+	return b.IsDeclaredWithVarFlag
+}
+
+func (b *BLangJoinClause) GetOnClause() model.OnClauseNode {
+	if b.OnClause.OnExpr == nil && b.OnClause.EqualsExpr == nil {
+		return nil
+	}
+	return &b.OnClause
+}
+
+func (b *BLangJoinClause) IsOuterJoin() bool {
+	return b.IsOuterJoinFlag
+}
+
+func (b *BLangOnClause) GetKind() model.NodeKind {
+	return model.NodeKind_ON
+}
+
+func (b *BLangOnClause) GetOnExpression() model.ExpressionNode {
+	return b.OnExpr
+}
+
+func (b *BLangOnClause) SetOnExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		b.OnExpr = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
+}
+
+func (b *BLangOnClause) GetEqualsExpression() model.ExpressionNode {
+	return b.EqualsExpr
+}
+
+func (b *BLangOnClause) SetEqualsExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		b.EqualsExpr = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
 }
 
 func (b *BLangFromClause) GetCollection() model.ExpressionNode {
@@ -150,11 +250,35 @@ func (b *BLangSelectClause) GetKind() model.NodeKind {
 	return model.NodeKind_SELECT
 }
 
+func (b *BLangOrderByClause) GetKind() model.NodeKind {
+	return model.NodeKind_ORDER_BY
+}
+
+func (b *BLangOrderKey) GetKind() model.NodeKind {
+	return model.NodeKind_ORDER_KEY
+}
+
 func (b *BLangSelectClause) GetExpression() model.ExpressionNode {
 	return b.Expression
 }
 
 func (b *BLangSelectClause) SetExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		b.Expression = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
+}
+
+func (b *BLangOnConflictClause) GetKind() model.NodeKind {
+	return model.NodeKind_ON_CONFLICT
+}
+
+func (b *BLangOnConflictClause) GetExpression() model.ExpressionNode {
+	return b.Expression
+}
+
+func (b *BLangOnConflictClause) SetExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
 		b.Expression = exp
 		return

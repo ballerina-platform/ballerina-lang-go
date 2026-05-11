@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: outer join clause variable must be declared with var
+  --> outer-join-nested-typed-e.bal:38:13
+   |
+38 |             outer join Location loc in locations // @error
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+39 |             on dept.locationId equals loc.id
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
