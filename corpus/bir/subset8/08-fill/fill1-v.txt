@@ -8,7 +8,7 @@ main() -> nil{
     v = %2;
     %4 = ConstantLoad 42
     %6 = ConstantLoad 3
-    %5 = v[%6];
+    %5 = v[%6] (fill);
     %7 = ConstantLoad 7
     %5[%7] = %4;
     %9 = ConstantLoad 7

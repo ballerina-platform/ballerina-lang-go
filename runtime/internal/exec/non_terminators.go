@@ -117,6 +117,15 @@ func execArrayLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	setOperandValue(ctx, access.LhsOp, frame, list.Get(idx))
 }
 
+func execArrayFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	list := getOperandValue(ctx, access.RhsOp, frame).(*values.List)
+	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
+	if idx < 0 {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
+	}
+	setOperandValue(ctx, access.LhsOp, frame, list.FillingGet(idx))
+}
+
 func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	m := getOperandValue(ctx, access.LhsOp, frame).(*values.Map)
 	keyVal := getOperandValue(ctx, access.KeyOp, frame)

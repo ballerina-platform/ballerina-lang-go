@@ -69,6 +69,23 @@ func (l *List) FillingSet(idx int, value BalValue) {
 	l.elems = append(l.elems, value)
 }
 
+// FillingGet returns the value at idx, growing the list with filler values when idx is beyond the current length.
+func (l *List) FillingGet(idx int) BalValue {
+	if idx < len(l.elems) {
+		return l.elems[idx]
+	}
+	if l.filler == nil {
+		panic("can't fill values")
+	}
+	if idx >= math.MaxInt32 {
+		panic("list too long")
+	}
+	for len(l.elems) <= idx {
+		l.elems = append(l.elems, l.filler())
+	}
+	return l.elems[idx]
+}
+
 func (l *List) Append(values ...BalValue) {
 	l.elems = append(l.elems, values...)
 }

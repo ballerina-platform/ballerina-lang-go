@@ -7,7 +7,7 @@ main() -> nil{
     m = %2;
     %4 = ConstantLoad 42
     %6 = ConstantLoad 1
-    %5 = m[%6];
+    %5 = m[%6] (fill);
     %7 = ConstantLoad x
     %5[%7] = %4;
     %9 = ConstantLoad 1

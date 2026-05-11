@@ -166,6 +166,8 @@ func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Fra
 			execArrayStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
 			execArrayLoad(ctx, v, frame)
+		case bir.INSTRUCTION_KIND_ARRAY_FILLING_LOAD:
+			execArrayFillingLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_STORE:
 			execMapStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_LOAD:

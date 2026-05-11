@@ -201,7 +201,6 @@ var (
 		// invalid filling value
 		"subset8/08-fill/4-v.bal", // SingleShape decimal prints big.Rat with %v
 		"subset8/08-fill/chain2-v.bal",
-		"subset8/08-fill/fill1-v.bal",
 		"subset8/08-fill/fill2-v.bal",
 		"subset8/08-fill/fill3-v.bal",
 		"subset8/08-fill/fill7-v.bal",

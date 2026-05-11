@@ -514,7 +514,7 @@ func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLa
 
 func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect, pos Location) statementEffect {
 	currBB := valueEffect.block
-	containerRefEffect := handleActionOrExpression(ctx, currBB, varRef.Expr)
+	containerRefEffect := assignmentContainerReference(ctx, currBB, varRef.Expr)
 	currBB = containerRefEffect.block
 	indexEffect := handleActionOrExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
@@ -984,6 +984,29 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	return expressionEffect{
 		result: resultOperand,
 		block:  bb,
+	}
+}
+
+// assignmentContainerReference produces the container reference for an indexed assignment LHS.
+// When the container is itself an index-based access on a list, the inner read must be a
+// filling load so that intermediate arrays are grown (and filled) before storing.
+func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
+	inner, ok := expr.(*ast.BLangIndexBasedAccess)
+	if !ok {
+		return handleActionOrExpression(ctx, bb, expr)
+	}
+	containerType := inner.Expr.GetDeterminedType()
+	if !semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
+		return handleActionOrExpression(ctx, bb, expr)
+	}
+	resultOperand := ctx.addTempVar(inner.GetDeterminedType())
+	indexEffect := handleActionOrExpression(ctx, bb, inner.IndexExpr)
+	containerRefEffect := assignmentContainerReference(ctx, indexEffect.block, inner.Expr)
+	fieldAccess := NewFieldAccess(INSTRUCTION_KIND_ARRAY_FILLING_LOAD, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(inner.GetPosition()))
+	containerRefEffect.block.Instructions = append(containerRefEffect.block.Instructions, fieldAccess)
+	return expressionEffect{
+		result: resultOperand,
+		block:  containerRefEffect.block,
 	}
 }
 

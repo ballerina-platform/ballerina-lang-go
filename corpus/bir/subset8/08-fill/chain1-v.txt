@@ -17,7 +17,7 @@ main() -> nil{
     %14 = %13;
     %7 = + %12 %14;
     %16 = ConstantLoad 0
-    %15 = v[%16];
+    %15 = v[%16] (fill);
     %17 = ConstantLoad 0
     %15[%17] = %7;
     %19 = ConstantLoad 0

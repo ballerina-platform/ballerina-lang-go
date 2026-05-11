@@ -9,7 +9,7 @@ main() -> nil{
     %4 = ConstantLoad 0
     %5 = newArray [int...][%4]{}
     %7 = ConstantLoad 0
-    %6 = v[%7];
+    %6 = v[%7] (fill);
     %8 = ConstantLoad 0
     %6[%8] = %5;
     %10 = ConstantLoad 0
