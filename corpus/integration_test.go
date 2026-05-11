@@ -92,6 +92,9 @@ var (
 		"subset8/08-const/16-e.bal",
 		"subset8/08-const/17-e.bal",
 		"subset8/08-const/18-e.bal",
+		"subset8/08-const/7-v.bal",
+		"subset8/08-const/8-v.bal",
+		"subset8/08-const/10-v.bal",
 		"subset8/08-float/5-e.bal",
 		"subset8/08-float/7-e.bal",
 		"subset8/08-narrowing/unreach3-e.bal",
@@ -163,9 +166,6 @@ var (
 		"subset8/08-unused/unused5-e.bal",
 		"subset8/08-unused/unused6-e.bal",
 
-		// Group K: migration content lost; fixtures are byte-identical placeholders.
-		// Need recovery from upstream nballerina before they can produce diagnostics.
-
 		// Expected clean run: migrated -v tests that produce diagnostics or runtime errors
 		"subset8/08-bench/ackermann-v.bal",
 		"subset8/08-bench/map-v.bal",
@@ -177,9 +177,6 @@ var (
 		"subset8/08-bug/fill1-v.bal",
 		"subset8/08-bug/shiftresulttype1-v.bal",
 		"subset8/08-bug/shiftresulttype2-v.bal",
-		"subset8/08-const/10-v.bal",
-		"subset8/08-const/7-v.bal",
-		"subset8/08-const/8-v.bal",
 		"subset8/08-decimal/add1-v.bal",
 		"subset8/08-decimal/add7-v.bal",
 		"subset8/08-decimal/const1-v.bal",
