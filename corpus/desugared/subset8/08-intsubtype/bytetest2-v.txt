@@ -49,7 +49,7 @@
           (literal 0))))
       (expression-stmt
         (invocation b (
-          (literal 0/1))))))
+          (literal 0))))))
   (function b (
     (variable n (type
       (value-type any)))) (

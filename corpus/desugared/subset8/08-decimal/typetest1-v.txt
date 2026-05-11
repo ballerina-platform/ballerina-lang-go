@@ -20,7 +20,7 @@
       (block-stmt
         (assignment
           (simple-var-ref x)
-          (literal 10/1))
+          (literal 10))
         (if
           (type-test-expr is
             (simple-var-ref x)

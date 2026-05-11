@@ -3,18 +3,18 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad x1
-    %2 = ConstantLoad 2/1
+    %2 = ConstantLoad 2
     %3 = ConstantLoad x2
-    %4 = ConstantLoad 2589569785738035/1125899906842624
+    %4 = ConstantLoad 2.3
     %5 = ConstantLoad x3
-    %6 = ConstantLoad 23000000000000000000000000000000000/1
+    %6 = ConstantLoad 2.3E+34
     %7 = newMap {| decimal... |}{%1=%2, %3=%4, %5=%6}
     m1 = %7;
     %9 = println(m1) -> bb1;
   }
   bb1 {
     %10 = ConstantLoad x1
-    %11 = ConstantLoad 5404319552844595/4503599627370496
+    %11 = ConstantLoad 1.2
     %12 = newMap {| int|decimal... |}{%10=%11}
     m2 = %12;
     %15 = ConstantLoad x1
@@ -24,7 +24,7 @@ main() -> nil{
     %18 = println(%17) -> bb2;
   }
   bb2 {
-    %19 = ConstantLoad 230000000000000000000000000000000000/1
+    %19 = ConstantLoad 2.3E+35
     %20 = ConstantLoad x2
     m2[%20] = %19;
     %21 = println(m2) -> bb3;

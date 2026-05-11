@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
@@ -899,9 +899,9 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		var idx int32
 		br.read(&idx)
 		str := br.getStringFromCP(int(idx))
-		r := new(big.Rat)
-		if _, ok := r.SetString(str); !ok {
-			panic(fmt.Sprintf("invalid decimal value: %s", str))
+		r, err := decimal.FromString(str)
+		if err != nil {
+			panic(fmt.Sprintf("invalid decimal value %q: %v", str, err))
 		}
 		return r
 	case model.TypeTags_NIL:

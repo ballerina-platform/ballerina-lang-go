@@ -6,7 +6,7 @@
       (var-def
         (variable d (type
           (value-type decimal)) (expr
-          (literal 46116860184273879038/5))))
+          (literal 9223372036854775807.6))))
       (expression-stmt
         (invocation io println (
           (type-conversion-expr

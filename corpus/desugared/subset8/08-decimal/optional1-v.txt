@@ -20,7 +20,7 @@
       (block-stmt
         (assignment
           (simple-var-ref d1)
-          (literal 23/10))
+          (literal 2.3))
         (expression-stmt
           (invocation io println (
             (simple-var-ref d1))))))))

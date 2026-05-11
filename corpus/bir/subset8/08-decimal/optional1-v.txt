@@ -15,7 +15,7 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %6 = ConstantLoad 23/10
+    %6 = ConstantLoad 2.3
     d1 = %6;
     %7 = d1;
     %8 = println(%7) -> bb4;

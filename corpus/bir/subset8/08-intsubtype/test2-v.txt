@@ -120,7 +120,7 @@ main() -> nil{
     %74 = d(%73) -> bb22;
   }
   bb22 {
-    %75 = ConstantLoad 0/1
+    %75 = ConstantLoad 0
     %76 = %75;
     %77 = d(%76) -> bb23;
   }

@@ -20,7 +20,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math/big"
+
+	"ballerina-lang-go/decimal"
 )
 
 type TypePool struct {
@@ -522,7 +523,7 @@ func unmarshalBooleanSubtype(r *bytes.Reader) booleanSubtypeEntry {
 type sized interface {
 	int8 | int16 | int32 | int64 |
 		uint8 | uint16 | uint32 | uint64 |
-		float32 | float64 | decimal
+		float32 | float64 | decimalEntry
 }
 type enumerableSubtypeEntry[T sized] struct {
 	allowed bool
@@ -571,27 +572,31 @@ func unmarshalFloatSubtype(r *bytes.Reader) floatSubtypeEntry {
 
 // decimal subtype
 
-type decimalSubtypeEntry enumerableSubtypeEntry[decimal]
+type decimalSubtypeEntry enumerableSubtypeEntry[decimalEntry]
 
-// big.Rat is not fixed size
-type decimal struct {
-	num   int64
-	denom int64
+// Decimal singletons can hold arbitrary-precision values, so we round-trip them
+// through their canonical decimal128 string form rather than packing into fixed
+// width integers.
+type decimalEntry struct {
+	value string
 }
 
 func fromDecimalSubtype(st *decimalSubtype) decimalSubtypeEntry {
-	values := make([]decimal, len(st.Values()))
+	values := make([]decimalEntry, len(st.Values()))
 	for i, v := range st.Values() {
 		r := v.Value()
-		values[i] = decimal{num: r.Num().Int64(), denom: r.Denom().Int64()}
+		values[i] = decimalEntry{value: r.String()}
 	}
 	return decimalSubtypeEntry{allowed: st.Allowed(), nValues: int32(len(values)), values: values}
 }
 
 func toDecimalSubtype(entry decimalSubtypeEntry) ProperSubtypeData {
-	values := make([]enumerableType[big.Rat], len(entry.values))
+	values := make([]enumerableType[decimal.Decimal], len(entry.values))
 	for i, v := range entry.values {
-		r := new(big.Rat).SetFrac64(v.num, v.denom)
+		r, err := decimal.FromString(v.value)
+		if err != nil {
+			panic(fmt.Sprintf("invalid serialized decimal value %q: %v", v.value, err))
+		}
 		d := enumerableDecimalFrom(*r)
 		values[i] = &d
 	}
@@ -602,8 +607,11 @@ func marshalDecimalSubtype(buf *bytes.Buffer, entry decimalSubtypeEntry) {
 	write(buf, entry.allowed)
 	write(buf, entry.nValues)
 	for _, v := range entry.values {
-		write(buf, v.num)
-		write(buf, v.denom)
+		b := []byte(v.value)
+		write(buf, int32(len(b)))
+		if _, err := buf.Write(b); err != nil {
+			panic(fmt.Sprintf("writing decimal value bytes: %v", err))
+		}
 	}
 }
 
@@ -611,10 +619,15 @@ func unmarshalDecimalSubtype(r *bytes.Reader) decimalSubtypeEntry {
 	var entry decimalSubtypeEntry
 	read(r, &entry.allowed)
 	read(r, &entry.nValues)
-	entry.values = make([]decimal, entry.nValues)
+	entry.values = make([]decimalEntry, entry.nValues)
 	for j := range entry.values {
-		read(r, &entry.values[j].num)
-		read(r, &entry.values[j].denom)
+		var n int32
+		read(r, &n)
+		b := make([]byte, n)
+		if _, err := r.Read(b); err != nil {
+			panic(fmt.Sprintf("reading decimal value bytes: %v", err))
+		}
+		entry.values[j].value = string(b)
 	}
 	return entry
 }

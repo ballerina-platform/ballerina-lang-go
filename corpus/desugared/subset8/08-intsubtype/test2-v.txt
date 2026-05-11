@@ -79,7 +79,7 @@
           (literal 0))))
       (expression-stmt
         (invocation d (
-          (literal 0/1))))
+          (literal 0))))
       (expression-stmt
         (invocation d (
           (literal true))))))

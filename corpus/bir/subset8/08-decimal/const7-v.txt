@@ -1,9 +1,9 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-D1  110.0;
+D1  1.1E+2;
 D10  decimal;
-D2  110.0;
-D3  990000000000000000000000.0;
+D2  1.1E+2;
+D3  9.9E+23;
 D4  decimal;
 D5  decimal;
 D6  decimal;

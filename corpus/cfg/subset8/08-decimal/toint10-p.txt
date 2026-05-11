@@ -3,7 +3,7 @@
     (var-def
       (variable d (type
         (value-type decimal)) (expr
-        (literal 9223372036854775808/1))))
+        (literal 9223372036854775808))))
     (expression-stmt
       (invocation io println (
         (type-conversion-expr

@@ -17,13 +17,13 @@
     (block-function-body
       (assignment
         (simple-var-ref D1)
-        (literal 110/1))
+        (literal 1.1E+2))
       (assignment
         (simple-var-ref D2)
-        (literal 110/1))
+        (literal 1.1E+2))
       (assignment
         (simple-var-ref D3)
-        (literal 990000000000000000000000/1))
+        (literal 9.9E+23))
       (assignment
         (simple-var-ref D4)
         (binary-expr +

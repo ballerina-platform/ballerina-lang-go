@@ -1,8 +1,8 @@
 -- stdout --
-false
 true
 false
-false
-false
-false
+true
+true
+true
+true
 -- stderr --

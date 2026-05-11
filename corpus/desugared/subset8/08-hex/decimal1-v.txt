@@ -6,7 +6,7 @@
       (var-def
         (variable d (type
           (value-type decimal)) (expr
-          (literal 12/1))))
+          (literal 12))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref d)))))))

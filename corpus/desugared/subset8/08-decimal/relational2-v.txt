@@ -9,13 +9,13 @@
     (block-function-body
       (assignment
         (simple-var-ref x)
-        (literal 3/2))
+        (literal 1.5))
       (assignment
         (simple-var-ref y)
-        (literal 3/1))
+        (literal 3))
       (assignment
         (simple-var-ref z)
-        (literal 3/1))))
+        (literal 3))))
   (function main () (
     (value-type null))
     (block-function-body

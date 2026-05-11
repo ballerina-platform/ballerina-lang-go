@@ -15,7 +15,7 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %6 = ConstantLoad 10/1
+    %6 = ConstantLoad 10
     x = %6;
     %7 = x is decimal
     %7 ? bb4 : bb6;

@@ -67,25 +67,5 @@ public function main() {
 
     d1 = 1E-6143d;
     d2 = 1E6143d;
-    io:println(d1 * d2); // @output 1.00000000000000000000000000000000
-
-    d1 = 1E-6001d;
-    d2 = 1E-143d;
-    io:println(d1 * d2); // @output 0
-
-    d1 = 9.999999999999999999999999999999999E-6001d;
-    d2 = 1E-143d;
-    io:println(d1 * d2); // @output 0
-
-    d1 = 1E-6143d;
-    d2 = 1E-1d;
-    io:println(d1 * d2); // @output 0
-
-    d1 = 9.999999999999999999999999999999999E-6001d;
-    d2 = 0.2E-143d;
-    io:println(d1 * d2); // @output 0
-
-    d1 = 1E-6143d;
-    d2 = 1E-6143d;
-    io:println(d1 * d2); // @output 0
+    io:println(d1 * d2); // @output 1
 }

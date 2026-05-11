@@ -12,7 +12,7 @@
         (index-based-access
           (simple-var-ref d)
           (literal 1))
-        (literal 1/10))
+        (literal 0.1))
       (expression-stmt
         (invocation io println (
           (index-based-access

@@ -11,13 +11,13 @@
           (mapping-constructor-expr
             (key-value
               (literal x1)
-              (literal 2/1))
+              (literal 2))
             (key-value
               (literal x2)
-              (literal 2589569785738035/1125899906842624))
+              (literal 2.3))
             (key-value
               (literal x3)
-              (literal 23000000000000000000000000000000000/1))))))
+              (literal 2.3E+34))))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref m1))))
@@ -31,7 +31,7 @@
           (mapping-constructor-expr
             (key-value
               (literal x1)
-              (literal 5404319552844595/4503599627370496))))))
+              (literal 1.2))))))
       (expression-stmt
         (invocation io println (
           (type-test-expr is
@@ -43,7 +43,7 @@
         (index-based-access
           (simple-var-ref m2)
           (literal x2))
-        (literal 230000000000000000000000000000000000/1))
+        (literal 2.3E+35))
       (expression-stmt
         (invocation io println (
           (simple-var-ref m2)))))))

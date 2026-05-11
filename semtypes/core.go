@@ -18,10 +18,10 @@ package semtypes
 
 import (
 	"fmt"
-	"math/big"
 	"math/bits"
 
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/decimal"
 )
 
 const (
@@ -736,7 +736,7 @@ func SingleShape(t SemType) common.Optional[Value] {
 		if value.IsEmpty() {
 			return common.OptionalEmpty[Value]()
 		} else {
-			return common.OptionalOf(valueFrom(fmt.Sprintf("%v", value.Get())))
+			return common.OptionalOf(valueFrom(value.Get()))
 		}
 	}
 	return common.OptionalEmpty[Value]()
@@ -755,7 +755,7 @@ func singleton(v any) SemType {
 		return StringConst(s)
 	} else if b, ok := v.(bool); ok {
 		return BooleanConst(b)
-	} else if r, ok := v.(*big.Rat); ok {
+	} else if r, ok := v.(*decimal.Decimal); ok {
 		return DecimalConst(*r)
 	} else {
 		panic("Unsupported type: " + fmt.Sprintf("%T", v))
@@ -774,8 +774,7 @@ func containsConst(t SemType, v any) bool {
 	} else if b, ok := v.(bool); ok {
 		return containsConstBoolean(t, b)
 	} else {
-		// Assuming it's a BigDecimal (big.Rat in Go)
-		return containsConstDecimal(t, v.(big.Rat))
+		return containsConstDecimal(t, v.(decimal.Decimal))
 	}
 }
 
@@ -816,7 +815,7 @@ func containsConstFloat(t SemType, n float64) bool {
 	}
 }
 
-func containsConstDecimal(t SemType, n big.Rat) bool {
+func containsConstDecimal(t SemType, n decimal.Decimal) bool {
 	if b, ok := t.(BasicTypeBitSet); ok {
 		return (b.all() & (1 << BTDecimal.Code())) != 0
 	} else {

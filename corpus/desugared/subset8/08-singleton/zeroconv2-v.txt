@@ -6,5 +6,5 @@
       (expression-stmt
         (invocation io println (
           (type-conversion-expr
-            (literal 0/1)
+            (literal 0)
             (value-type int))))))))

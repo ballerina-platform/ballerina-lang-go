@@ -4,7 +4,7 @@ main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = ConstantLoad 6.4
-    %3 = ConstantLoad 100/1
+    %3 = ConstantLoad 100
     %4 = ConstantLoad 10
     %5 = ConstantLoad 11
     %6 = ConstantLoad 5

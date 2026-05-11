@@ -10,7 +10,7 @@
       (variable d (type
         (value-type decimal)) (expr
         (invocation foo (
-          (literal 233/10))))))
+          (literal 23.3))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref d))))

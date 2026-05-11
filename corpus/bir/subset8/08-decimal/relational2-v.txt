@@ -1,8 +1,8 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 x  1.5;
-y  3.0;
-z  3.0;
+y  3;
+z  3;
 main() -> nil{
   bb0 {
     %1 = <= x y;

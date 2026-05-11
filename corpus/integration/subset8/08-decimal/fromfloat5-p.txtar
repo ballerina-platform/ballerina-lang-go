@@ -1,4 +1,4 @@
 -- stdout --
 -- stderr --
-error: divide by zero
-        at main(fromfloat5-p.bal:20)
+error: arithmetic overflow
+        at main(fromfloat5-p.bal:21)

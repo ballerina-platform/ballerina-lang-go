@@ -13,7 +13,7 @@ main() -> nil{
     %7 = println(%6) -> bb2;
   }
   bb2 {
-    %8 = ConstantLoad 6/5
+    %8 = ConstantLoad 1.2
     d1 = %8;
     %9 = d1;
     %10 = println(%9) -> bb3;
@@ -24,7 +24,7 @@ main() -> nil{
     %13 = println(%12) -> bb4;
   }
   bb4 {
-    %14 = ConstantLoad 61/50
+    %14 = ConstantLoad 1.22
     d3 = %14;
     %16 = d3;
     %17 = println(%16) -> bb5;

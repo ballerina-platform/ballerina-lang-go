@@ -16,7 +16,7 @@
           (value-type int)))))
     (assignment
       (simple-var-ref d1)
-      (literal 6/5))
+      (literal 1.2))
     (expression-stmt
       (invocation io println (
         (simple-var-ref d1))))
@@ -30,7 +30,7 @@
         (union-type
           (value-type decimal)
           (value-type float))) (expr
-        (literal 61/50))))
+        (literal 1.22))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref d3))))

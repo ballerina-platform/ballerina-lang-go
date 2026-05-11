@@ -19,7 +19,6 @@ package semantics
 import (
 	"fmt"
 	"maps"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,6 +27,7 @@ import (
 	"ballerina-lang-go/ast"
 	balCommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -1796,26 +1796,31 @@ func resolveAsFloat(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool
 }
 
 func resolveAsDecimal(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
-	var ratVal *big.Rat
+	var decVal *decimal.Decimal
 	switch v := n.GetValue().(type) {
 	case string:
 		parsed, ok := parseDecimalValue(t, stripFloatingPointTypeSuffix(v), n.GetPosition())
 		if !ok {
 			return nil, false
 		}
-		ratVal = parsed
-	case *big.Rat:
-		ratVal = v
+		decVal = parsed
+	case *decimal.Decimal:
+		decVal = v
 	case int64:
-		ratVal = new(big.Rat).SetInt64(v)
+		decVal = decimal.FromInt64(v)
 	case float64:
-		ratVal = new(big.Rat).SetFloat64(v)
+		d, err := decimal.FromString(strconv.FormatFloat(v, 'g', -1, 64))
+		if err != nil {
+			t.internalError(fmt.Sprintf("failed to convert float %v to decimal: %v", v, err), n.GetPosition())
+			return nil, false
+		}
+		decVal = d
 	default:
 		t.internalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
 		return nil, false
 	}
-	n.SetValue(ratVal)
-	return semtypes.DecimalConst(*ratVal), true
+	n.SetValue(decVal)
+	return semtypes.DecimalConst(*decVal), true
 }
 
 func resolveNumericLiteralValue(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) (semtypes.SemType, bool) {
@@ -1843,13 +1848,13 @@ func parseFloatValue(t typeResolver, strValue string, pos diagnostics.Location) 
 	return f, true
 }
 
-func parseDecimalValue(t typeResolver, strValue string, pos diagnostics.Location) (*big.Rat, bool) {
-	r := new(big.Rat)
-	if _, ok := r.SetString(strValue); !ok {
+func parseDecimalValue(t typeResolver, strValue string, pos diagnostics.Location) (*decimal.Decimal, bool) {
+	d, err := decimal.FromLiteral(strValue)
+	if err != nil {
 		t.syntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), pos)
-		return big.NewRat(0, 1), false
+		return decimal.FromInt64(0), false
 	}
-	return r, true
+	return d, true
 }
 
 func resolveNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral, expectedType semtypes.SemType) bool {
@@ -3199,9 +3204,8 @@ func negateNumericType(t typeResolver, expr *ast.BLangUnaryExpr, exprTy semtypes
 		return semtypes.IntConst(v * -1)
 	case float64:
 		return semtypes.FloatConst(v * -1)
-	case big.Rat:
-		negOne := new(big.Rat).SetInt64(-1)
-		result := new(big.Rat).Mul(&v, negOne)
+	case decimal.Decimal:
+		result := v.Neg()
 		return semtypes.DecimalConst(*result)
 	default:
 		return exprTy

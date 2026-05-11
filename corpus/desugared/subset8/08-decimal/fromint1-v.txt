@@ -60,6 +60,5 @@
       (expression-stmt
         (invocation io println (
           (type-conversion-expr
-            (unary-expr -
-              (literal 9223372036854775807))
+            (literal -9223372036854775808)
             (value-type decimal))))))))

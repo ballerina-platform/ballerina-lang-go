@@ -21,6 +21,7 @@ import (
 	"math"
 
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/values"
 )
 
@@ -42,6 +43,9 @@ func execBinaryOpAdd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case string:
 		v2 := op2.(string)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1+v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Add, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2)))
 	}
@@ -62,6 +66,9 @@ func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1-v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Sub, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T - %T", op1, op2)))
 	}
@@ -80,6 +87,9 @@ func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1*v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Mul, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T * %T", op1, op2)))
 	}
@@ -99,10 +109,10 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Quo, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2)))
 	}
@@ -119,10 +129,10 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1%v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, math.Mod(v1, v2))
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Rem, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2)))
 	}
@@ -147,6 +157,9 @@ func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case bool:
 		v2 := op2.(bool)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, v1.Cmp(v2) == 0)
 	default:
 		setOperandValue(ctx, binaryOp.LhsOp, frame, false)
 	}
@@ -171,9 +184,22 @@ func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case bool:
 		v2 := op2.(bool)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, v1.Cmp(v2) != 0)
 	default:
 		setOperandValue(ctx, binaryOp.LhsOp, frame, true)
 	}
+}
+
+// decimalArith invokes a decimal arithmetic method (Add/Sub/Mul/Quo/Rem) and
+// converts a typed decimal error into a Ballerina runtime error panic.
+func decimalArith(op func(*decimal.Decimal) (*decimal.Decimal, *decimal.Error), b *decimal.Decimal) *decimal.Decimal {
+	out, err := op(b)
+	if err != nil {
+		panic(values.NewErrorWithMessage(err.Error()))
+	}
+	return out
 }
 
 func execBinaryOpGT(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
@@ -233,6 +259,13 @@ func refEqual(op1, op2 values.BalValue) bool {
 		}
 		return false
 	}
+	if d1, ok := op1.(*decimal.Decimal); ok {
+		d2, ok := op2.(*decimal.Decimal)
+		if !ok {
+			return false
+		}
+		return d1.ExactEqual(d2)
+	}
 	return op1 == op2
 }
 
@@ -277,8 +310,10 @@ func execUnaryOpNegate(ctx *Context, unaryOp *bir.UnaryOp, frame *Frame) {
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
 	case float64:
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
+	case *decimal.Decimal:
+		setOperandValue(ctx, unaryOp.LhsOp, frame, v.Neg())
 	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op)))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64, float64, or *decimal.Decimal)", op)))
 	}
 }
 

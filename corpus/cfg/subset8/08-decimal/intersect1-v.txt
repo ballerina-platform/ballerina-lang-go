@@ -9,7 +9,7 @@
           (union-type
             (value-type decimal)
             (value-type float)))) (expr
-        (literal 230000000000000000000000/1))))
+        (literal 2.3E+23))))
     (var-def
       (variable t2 (type
         (intersection-type

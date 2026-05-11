@@ -16,7 +16,9 @@
 
 package semtypes
 
-import "math/big"
+import (
+	"ballerina-lang-go/decimal"
+)
 
 // Filler is a marker interface for all filler values.
 type Filler interface {
@@ -99,7 +101,7 @@ func FillerValue(cx Context, t SemType) (Filler, bool) {
 		}
 		return nil, false
 	case DECIMAL:
-		zero := big.NewRat(0, 1)
+		zero := decimal.FromInt64(0)
 		if IsSubtype(cx, DecimalConst(*zero), t) {
 			return SingleValueFiller(valueFrom(zero)), true
 		}

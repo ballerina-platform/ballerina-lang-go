@@ -17,11 +17,9 @@
 package values
 
 import (
-	"math"
-	"math/big"
 	"strconv"
-	"strings"
 
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/semtypes"
 )
 
@@ -108,7 +106,7 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return semtypes.FloatConst(v)
 	case string:
 		return semtypes.StringConst(v)
-	case *big.Rat:
+	case *decimal.Decimal:
 		return semtypes.DecimalConst(*v)
 	case *List:
 		return v.Type
@@ -146,17 +144,11 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 	case int64:
 		return strconv.FormatInt(t, 10)
 	case float64:
-		if t == math.Trunc(t) {
-			return strconv.FormatFloat(t, 'f', 1, 64)
-		}
-		return strconv.FormatFloat(t, 'g', -1, 64)
+		return FormatFloat(t)
 	case bool:
 		return strconv.FormatBool(t)
-	case *big.Rat:
-		s := t.FloatString(20)
-		s = strings.TrimRight(s, "0")
-		s = strings.TrimRight(s, ".")
-		return s
+	case *decimal.Decimal:
+		return t.FormatBallerina()
 	case *List:
 		return t.String(visited)
 	case *Map:

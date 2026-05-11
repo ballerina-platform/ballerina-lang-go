@@ -2122,7 +2122,40 @@ func (n *NodeBuilder) TransformUnaryExpression(unaryExpressionNode *tree.UnaryEx
 	pos := getPosition(n.de(), unaryExpressionNode)
 	operator := model.OperatorKindValueFrom(unaryExpressionNode.UnaryOperator().Text())
 	expr := n.createExpression(unaryExpressionNode.Expression())
+	if operator == model.OperatorKind_SUB {
+		if lit, ok := expr.(*BLangLiteral); ok && foldNegativeIntLiteral(lit) {
+			lit.SetPosition(pos)
+			return lit
+		}
+	}
 	return createBLangUnaryExpr(pos, operator, expr)
+}
+
+// foldNegativeIntLiteral folds `-N` into a single int literal when `N` is an
+// integer literal whose positive value overflows int64 but the negated value
+// fits (e.g. `-9223372036854775808`). Without this fold, `N` is parsed as a
+// float (losing precision) and later coerced back to int, corrupting the
+// value used at runtime (e.g. for `<decimal>-9223372036854775808`).
+func foldNegativeIntLiteral(lit *BLangLiteral) bool {
+	if lit.GetValueType().BTypeGetTag() != model.TypeTags_INT {
+		return false
+	}
+	if _, isFloat := lit.GetValue().(float64); !isFloat {
+		return false
+	}
+	raw := lit.OriginalValue
+	base := 10
+	if strings.HasPrefix(raw, "0x") || strings.HasPrefix(raw, "0X") {
+		raw = raw[2:]
+		base = 16
+	}
+	parsed, err := strconv.ParseInt("-"+raw, base, 64)
+	if err != nil {
+		return false
+	}
+	lit.SetValue(parsed)
+	lit.OriginalValue = "-" + lit.OriginalValue
+	return true
 }
 
 func (n *NodeBuilder) TransformComputedNameField(computedNameFieldNode *tree.ComputedNameFieldNode) BLangNode {

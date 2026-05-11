@@ -9,9 +9,9 @@
           (array-type
             (value-type decimal) dimensions: 1 ([]))) (expr
           (list-constructor-expr
-            (literal 2/1)
-            (literal 2589569785738035/1125899906842624)
-            (literal 23000000000000000000000000000000000/1)))))
+            (literal 2)
+            (literal 2.3)
+            (literal 2.3E+34)))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref arr1))))
@@ -22,7 +22,7 @@
               (value-type decimal)
               (value-type int)) dimensions: 1 ([]))) (expr
           (list-constructor-expr
-            (literal 5404319552844595/4503599627370496)))))
+            (literal 1.2)))))
       (expression-stmt
         (invocation io println (
           (type-test-expr is
@@ -36,13 +36,13 @@
             (value-type decimal) dimensions: 2 ([][]))) (expr
           (list-constructor-expr
             (list-constructor-expr
-              (literal 1/1)
-              (literal 2/1))
+              (literal 1)
+              (literal 2))
             (list-constructor-expr
-              (literal 3/1)
-              (literal 31/10))
+              (literal 3)
+              (literal 3.1))
             (list-constructor-expr
-              (literal 43300000000000000000000000000000000/1))))))
+              (literal 4.33E+34))))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref arr3))))
@@ -51,7 +51,7 @@
           (index-based-access
             (simple-var-ref arr3)
             (literal 0))
-          (literal 1100000000000/1))))
+          (literal 1.1E+12))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref arr3)))))))

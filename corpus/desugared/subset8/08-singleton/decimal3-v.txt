@@ -8,7 +8,7 @@
       (if
         (binary-expr ==
           (simple-var-ref d)
-          (literal 1/1))
+          (literal 1))
         (block-stmt
           (return
             (unary-expr -
@@ -22,4 +22,4 @@
       (expression-stmt
         (invocation io println (
           (invocation foo (
-            (literal 1/1)))))))))
+            (literal 1.00)))))))))

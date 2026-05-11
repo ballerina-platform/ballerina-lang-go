@@ -55,6 +55,6 @@
         (literal 0))))
     (expression-stmt
       (invocation b (
-        (literal 0/1))))
+        (literal 0))))
   )
 )

@@ -1,4 +1,4 @@
 -- stdout --
 -- stderr --
-error: divide by zero
-        at main(fromfloat6-p.bal:20)
+error: not a valid decimal
+        at main(fromfloat6-p.bal:21)

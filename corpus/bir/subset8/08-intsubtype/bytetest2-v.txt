@@ -74,7 +74,7 @@ main() -> nil{
     %44 = b(%43) -> bb14;
   }
   bb14 {
-    %45 = ConstantLoad 0/1
+    %45 = ConstantLoad 0
     %46 = %45;
     %47 = b(%46) -> bb15;
   }

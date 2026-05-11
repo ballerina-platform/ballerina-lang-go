@@ -2,13 +2,13 @@
   (bb0 () (bb1 bb2)
     (binary-expr ==
       (simple-var-ref d)
-      (literal 1/1))
+      (literal 1))
   )
   (bb1 (bb0) ()
     (return
       (binary-expr +
         (simple-var-ref d)
-        (literal 1/1)))
+        (literal 1)))
   )
   (bb2 (bb0) ()
     (return
@@ -20,6 +20,6 @@
     (expression-stmt
       (invocation io println (
         (invocation foo (
-          (literal 1/1))))))
+          (literal 1.00))))))
   )
 )
