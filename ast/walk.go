@@ -503,6 +503,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangTypedescExpr:
 		walkTypeDescriptor(v, node.typeDescriptor)
 
+	case *BLangInferredTypedescDefault:
+		// leaf — no children
+
 	case *BLangTypeConversionExpr:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))

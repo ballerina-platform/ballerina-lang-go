@@ -623,3 +623,35 @@ func TestObjectTypeDiff(t *testing.T) {
 		t.Errorf("got %q expected %q", actual, expected)
 	}
 }
+
+func TestTypedescUnconstrained(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, TYPEDESC)
+	expected := "typedesc"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestTypedescConstrained(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := TypedescContaining(env, INT)
+	actual := ToString(cx, ty)
+	expected := "typedesc<int>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestTypedescConstrainedUnion(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := TypedescContaining(env, Union(INT, STRING))
+	actual := ToString(cx, ty)
+	expected := "typedesc<int|string>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}

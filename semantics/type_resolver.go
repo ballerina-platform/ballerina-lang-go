@@ -81,6 +81,7 @@ type typeResolver interface {
 	currentScope() model.Scope
 	setCurrentScope(scope model.Scope)
 	nextDefaultFnName() string
+	nextMonoFnName(origName string) string
 
 	lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool)
 }
@@ -102,6 +103,7 @@ type packageTypeResolver struct {
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
 	typeDefnNodes        map[model.SymbolRef]model.TypeDefinition
 	defaultFnSymbolCount int
+	monoCounters         map[string]int
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
@@ -197,6 +199,12 @@ func (t *packageTypeResolver) nextDefaultFnName() string {
 	return name
 }
 
+func (t *packageTypeResolver) nextMonoFnName(origName string) string {
+	idx := t.monoCounters[origName]
+	t.monoCounters[origName] = idx + 1
+	return fmt.Sprintf("$mono$%s$%d", origName, idx)
+}
+
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
 	classRef, ok := t.classSymbolByType[receiverTy]
 	if !ok {
@@ -244,6 +252,7 @@ type functionTypeResolver struct {
 	implicitImports      map[string]ast.BLangImportPackage
 	capturedNarrowedVars map[model.SymbolRef]bool
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
+	monoCounters         map[string]int
 	defaultFnSymbolCount int
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
@@ -376,6 +385,12 @@ func (f *functionTypeResolver) nextDefaultFnName() string {
 	return name
 }
 
+func (f *functionTypeResolver) nextMonoFnName(origName string) string {
+	idx := f.monoCounters[origName]
+	f.monoCounters[origName] = idx + 1
+	return fmt.Sprintf("$mono$%s$%d", origName, idx)
+}
+
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
 		ctx:                 ctx,
@@ -390,6 +405,7 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classSymbolByType:   make(map[semtypes.SemType]model.SymbolRef),
+		monoCounters:        make(map[string]int),
 		scope:               moduleScope,
 	}
 }
@@ -514,6 +530,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 			tyCtx:               semtypes.ContextFrom(p.typeEnv()),
 			implicitImports:     make(map[string]ast.BLangImportPackage),
 			mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+			monoCounters:        make(map[string]int),
 			scope:               classDef.Scope(),
 			mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		}
@@ -545,6 +562,15 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	}
 }
 
+func isPolymorphicFnSymbol(sym model.FunctionSymbol) bool {
+	switch sym.(type) {
+	case model.DependentlyTypedFunctionSymbol, model.GenericFunctionSymbol:
+		return true
+	default:
+		return false
+	}
+}
+
 func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functionTypeResolver {
 	fnSymbol := p.getSymbol(fn.Symbol())
 	fnSym, ok := fnSymbol.(model.FunctionSymbol)
@@ -555,11 +581,14 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 	ft := &functionTypeResolver{
 		parentResolver:      p,
 		tyCtx:               semtypes.ContextFrom(p.typeEnv()),
-		retTy:               fnSym.Signature().ReturnType,
 		implicitImports:     make(map[string]ast.BLangImportPackage),
 		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		monoCounters:        make(map[string]int),
 		scope:               fn.Scope(),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+	}
+	if !isPolymorphicFnSymbol(fnSym) {
+		ft.retTy = fnSym.Signature().ReturnType
 	}
 	switch body := fn.Body.(type) {
 	case *ast.BLangExternFunctionBody:
@@ -818,6 +847,10 @@ func resolveOnFailClause(t typeResolver, chain *binding, clause *ast.BLangOnFail
 }
 
 func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.SemType, bool) {
+	fnSym := t.getSymbol(fn.Symbol())
+	if depSym, ok := fnSym.(model.DependentlyTypedFunctionSymbol); ok {
+		return resolveDependentlyTypedFunctionSignature(t, fn, depSym)
+	}
 	if ty := t.symbolType(fn.Symbol()); ty != nil {
 		return ty, true
 	}
@@ -853,22 +886,15 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	} else {
 		returnTy = semtypes.NIL
 	}
-	isolated := fn.IsIsolated()
-	transactional := fn.IsTransactional()
 	functionDefn := semtypes.NewFunctionDefinition()
 	fnType := functionDefn.Define(t.typeEnv(), paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), fn.IsIsolated(), fn.IsTransactional()))
 
 	// Update symbol type for the function
 	updateSymbolType(t, fn, fnType)
-	fnSymbol := t.getSymbol(fn.Symbol()).(model.FunctionSymbol)
+	fnSymbol := fnSym.(model.FunctionSymbol)
 	sig := fnSymbol.Signature()
-	if isolated {
-		sig.Flags |= model.FuncSymbolFlagIsolated
-	}
-	if transactional {
-		sig.Flags |= model.FuncSymbolFlagTransactional
-	}
+	sig.Flags |= fn.FuncSymbolFlags()
 	sig.ParamTypes = paramTypes
 	paramNames := make([]string, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
@@ -879,21 +905,107 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	sig.RestParamType = restTy
 	fnSymbol.SetSignature(sig)
 
-	defaultableParams := fnSymbol.DefaultableParams()
+	setDefaultableParamFnSignatures(t, fnSymbol.DefaultableParams(), paramTypes)
+
+	return fnType, true
+}
+
+func resolveDependentlyTypedFunctionSignature(t typeResolver, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) (semtypes.SemType, bool) {
+	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
+	paramsByName := make(map[string]param, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
-		dp, ok := defaultableParams.Get(i)
+		p := &fn.RequiredParams[i]
+		resolveSimpleVariable(t, nil, p)
+		paramTypes[i] = p.GetDeterminedType()
+		paramsByName[p.GetName().GetValue()] = param{index: i, ty: paramTypes[i]}
+	}
+	retTd, ok := fn.GetReturnTypeDescriptor().(ast.BLangNode)
+	if !ok {
+		t.internalError("dependently-typed function has no return type descriptor", fn.GetPosition())
+		return nil, false
+	}
+	retOp, ok := buildReturnTypeOp(t, paramsByName, retTd)
+	if !ok {
+		t.internalError("failed to build return type op for dependently-typed function", fn.GetPosition())
+		return nil, false
+	}
+	setOtherNodesAsNever(retTd)
+	sym.SetParamTypes(paramTypes)
+	sym.SetReturnType(retOp)
+	setDefaultableParamFnSignatures(t, sym.DefaultableParams(), paramTypes)
+	setOtherNodesAsNever(fn)
+	return semtypes.NEVER, true
+}
+
+// setDefaultableParamFnSignatures populates the signature of each non-typedesc
+// default-provider function. The signature is (paramTypes[:i]) -> paramTypes[i].
+func setDefaultableParamFnSignatures(t typeResolver, defaultable *model.DefaultableParamInfo, paramTypes []semtypes.SemType) {
+	for i := range paramTypes {
+		dp, ok := defaultable.Get(i)
 		if !ok {
 			continue
 		}
+		if dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			continue
+		}
 		defaultFnSym := t.getSymbol(dp.Symbol).(model.FunctionSymbol)
-		defaultSig := model.FunctionSignature{
+		sig := model.FunctionSignature{
 			ParamTypes: paramTypes[:i],
 			ReturnType: paramTypes[i],
 		}
-		defaultFnSym.SetSignature(defaultSig)
+		defaultFnSym.SetSignature(sig)
 	}
+}
 
-	return fnType, true
+type param struct {
+	index int
+	ty    semtypes.SemType
+}
+
+// buildReturnTypeOp translates a return-type-descriptor AST node into a TypeOp tree.
+// A user-defined-type node whose name matches a typedesc parameter becomes a RefTypeOp.
+// Union and intersection nodes recurse. Everything else is resolved to a concrete semtype
+// and wrapped in an IdentityTypeOp.
+func buildReturnTypeOp(t typeResolver, params map[string]param, node ast.BLangNode) (model.TypeOp, bool) {
+	switch n := node.(type) {
+	case *ast.BLangUnionTypeNode:
+		lhs, ok := buildReturnTypeOp(t, params, n.Lhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		rhs, ok := buildReturnTypeOp(t, params, n.Rhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		return &model.BinaryTypeOp{Kind: model.TypeOpUnion, Lhs: lhs, Rhs: rhs}, true
+	case *ast.BLangIntersectionTypeNode:
+		lhs, ok := buildReturnTypeOp(t, params, n.Lhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		rhs, ok := buildReturnTypeOp(t, params, n.Rhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		return &model.BinaryTypeOp{Kind: model.TypeOpIntersection, Lhs: lhs, Rhs: rhs}, true
+	case *ast.BLangUserDefinedType:
+		if n.PkgAlias.Value == "" {
+			if p, ok := params[n.TypeName.Value]; ok && semtypes.IsSubtypeSimple(p.ty, semtypes.TYPEDESC) {
+				return &model.RefTypeOp{Index: p.index}, true
+			}
+		}
+		ty, ok := resolveBType(t, n, 0)
+		if !ok {
+			return nil, false
+		}
+		return &model.IdentityTypeOp{Type: ty}, true
+	default:
+		ty, ok := resolveBType(t, node.(ast.BType), 0)
+		if !ok {
+			return nil, false
+		}
+		return &model.IdentityTypeOp{Type: ty}, true
+	}
 }
 
 func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
@@ -910,6 +1022,7 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 		retTy:               fnSym.Signature().ReturnType,
 		implicitImports:     make(map[string]ast.BLangImportPackage),
 		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		monoCounters:        make(map[string]int),
 		scope:               e.Function.Scope(),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 	}
@@ -1229,7 +1342,7 @@ func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunctio
 		kind = model.InclusionMemberKindResourceMethod
 	}
 	md := model.NewMethodDescriptor(name, kind, vis, method.Symbol())
-	md.SetMemberType(t.symbolType(method.Symbol()))
+	md.SetMemberType(methodMemberType(t, method.Symbol()))
 	return md
 }
 
@@ -1359,7 +1472,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	}
 	for name := range classDef.Methods {
 		method := classDef.Methods[name]
-		methodTy := t.symbolType(method.Symbol())
+		methodTy := methodMemberType(t, method.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if method.IsPublic() {
 			vis = semtypes.VisibilityPublic
@@ -1746,7 +1859,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangUnaryExpr:
 		return resolveUnaryExpr(t, chain, e, expectedType)
 	case *ast.BLangInvocation:
-		return resolveInvocation(t, chain, e)
+		return resolveInvocation(t, chain, e, expectedType)
 	case *ast.BLangIndexBasedAccess:
 		return resolveIndexBasedAccess(t, chain, e)
 	case *ast.BLangFieldBaseAccess:
@@ -1770,9 +1883,9 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangTypeTestExpr:
 		return resolveTypeTestExpr(t, chain, e)
 	case *ast.BLangCheckedExpr:
-		return resolveCheckedExpr(t, chain, e)
+		return resolveCheckedExpr(t, chain, e, expectedType)
 	case *ast.BLangCheckPanickedExpr:
-		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr)
+		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr, expectedType)
 	case *ast.BLangTrapExpr:
 		return resolveTrapExpr(t, chain, e)
 	case *ast.BLangNamedArgsExpression:
@@ -1788,11 +1901,29 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangLambdaFunction:
 		return resolveLambdaFunctionExpr(t, chain, e)
 	case *ast.BLangRemoteMethodCallAction:
-		return resolveRemoteMethodCallAction(t, chain, e)
+		return resolveRemoteMethodCallAction(t, chain, e, expectedType)
+	case *ast.BLangInferredTypedescDefault:
+		return resolveInferredTypedescDefault(t, chain, e, expectedType)
 	default:
 		t.internalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+}
+
+// resolveInferredTypedescDefault handles the "<>" default value that appears as
+// the initializer of a dependently-typed function's typedesc parameter.
+//
+// When encountered as the parameter's own default initializer (expectedType is
+// the parameter's declared typedesc type) it just adopts that type. When it is
+// synthesized into a call-site argument list, expectedType is the inferred
+// typedesc<T>. In either case the determined type becomes expectedType.
+func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLangInferredTypedescDefault, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if expectedType == nil || !semtypes.IsSubtypeSimple(expectedType, semtypes.TYPEDESC) {
+		t.semanticError("inferred typedesc default '<>' is only allowed as the default for a typedesc parameter", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(e, expectedType)
+	return expectedType, defaultExpressionEffect(chain), true
 }
 
 func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
@@ -1946,8 +2077,12 @@ func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semt
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
+func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	var innerExpected semtypes.SemType
+	if expectedType != nil {
+		innerExpected = semtypes.Union(expectedType, semtypes.ERROR)
+	}
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, innerExpected)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3190,7 +3325,7 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 	return memberTy, defaultExpressionEffect(chain), true
 }
 
-func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation) (semtypes.SemType, expressionEffect, bool) {
+func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	symbol := expr.RawSymbol
 	if symbol == nil {
 		t.internalError("invocation has no symbol", expr.GetPosition())
@@ -3203,9 +3338,9 @@ func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	)
 	switch s := symbol.(type) {
 	case *deferredMethodSymbol:
-		ty, effect, resolved = resolveMethodCall(t, chain, expr, s)
+		ty, effect, resolved = resolveMethodCall(t, chain, expr, s, expectedType)
 	case *model.SymbolRef:
-		ty, effect, resolved = resolveFunctionCall(t, chain, expr, *s)
+		ty, effect, resolved = resolveFunctionCall(t, chain, expr, *s, expectedType)
 	default:
 		t.internalError(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol), expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -3222,13 +3357,13 @@ func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	return ty, effect, true
 }
 
-func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
+func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	if semtypes.IsSubtypeSimple(recieverTy, semtypes.OBJECT) {
-		return resolveObjectMethodCall(t, chain, expr, methodSymbol)
+		return resolveObjectMethodCall(t, chain, expr, methodSymbol, expectedType)
 	}
 	var symbolRef model.SymbolRef
 	var pkgAlias ast.BLangIdentifier
@@ -3255,7 +3390,7 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	expr.ArgExprs = argExprs
 	expr.Expr = nil
 	expr.PkgAlias = &pkgAlias
-	return resolveFunctionCall(t, chain, expr, symbolRef)
+	return resolveFunctionCall(t, chain, expr, symbolRef, expectedType)
 }
 
 func isRemoteMethod(t typeResolver, objType semtypes.SemType, methodName string) bool {
@@ -3264,11 +3399,11 @@ func isRemoteMethod(t typeResolver, objType semtypes.SemType, methodName string)
 	return kindTy != nil && semtypes.IsSubtype(ctx, kindTy, semtypes.StringConst("remote-method"))
 }
 
-func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
+func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy := expr.Expr.GetDeterminedType()
 	if methodRef, ok := t.lookupClassMethodSymbol(recieverTy, methodSymbol.name); ok {
 		expr.SetSymbol(methodRef)
-		return resolveFunctionCall(t, chain, expr, methodRef)
+		return resolveFunctionCall(t, chain, expr, methodRef, expectedType)
 	}
 	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, recieverTy, methodSymbol.name, methodSymbol, expr.ArgExprs, expr)
 	if ok {
@@ -3318,7 +3453,7 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 	return symbolRef, retTy, defaultExpressionEffect(chain), true
 }
 
-func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction) (semtypes.SemType, expressionEffect, bool) {
+func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	receiverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
@@ -3336,7 +3471,7 @@ func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLa
 	expr.Name.SetDeterminedType(semtypes.NEVER)
 	if methodRef, ok := t.lookupClassMethodSymbol(receiverTy, remoteMethodName); ok {
 		expr.SetMethodSymbol(methodRef)
-		return resolveFunctionCall(t, chain, expr, methodRef)
+		return resolveFunctionCall(t, chain, expr, methodRef, expectedType)
 	}
 	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, receiverTy, remoteMethodName, expr.RawSymbol.(*deferredMethodSymbol), expr.ArgExprs, expr)
 	if ok {
@@ -3376,12 +3511,29 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 	return symbolRef, pkgAlias, true
 }
 
-func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSymbol model.SymbolRef) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
+func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSymbol model.SymbolRef, expectedType semtypes.SemType) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
 	baseSymbol := t.getSymbol(fnSymbol)
 	switch sym := baseSymbol.(type) {
+	case model.DependentlyTypedFunctionSymbol:
+		_, argTys, chain, ok := argArray(t, sym, sym.ParamTypes(), nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		if !ok {
+			return nil, fnSymbol, chain, false
+		}
+		monoName := t.nextMonoFnName(sym.Name())
+		monoSym := sym.Monomorphize(t.typeContext(), monoName, fnSymbol, argTys)
+		scope := t.currentScope()
+		scope.AddSymbol(monoName, monoSym)
+		monoRef, ok := scope.GetSymbol(monoName)
+		if !ok {
+			t.internalError("monomorphized symbol missing from scope", inv.GetPosition())
+			return nil, fnSymbol, chain, false
+		}
+		monoSym.SetType(typeFromFunctionSignature(t, monoSym.Signature()))
+		inv.SetResolvedSymbol(monoRef)
+		return argTys, monoRef, chain, true
 	case model.GenericFunctionSymbol:
 		paramTyes := make([]semtypes.SemType, len(sym.ParamNames()))
-		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, inv.CallArgs(), inv.GetPosition())
+		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
@@ -3393,7 +3545,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 			return nil, fnSymbol, chain, false
 		}
 		sig := sym.Signature()
-		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition())
+		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
 		return argTys, fnSymbol, chain, ok
 	case *model.ValueSymbol:
 		narrowedSymbol := lookupSymbol(chain, fnSymbol)
@@ -3436,7 +3588,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 	}
 }
 
-func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
+func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location, C semtypes.SemType) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
 	paramNames := sym.ParamNames()
 	nRequired := len(paramNames)
 	reorderdArgs := make([]ast.BLangExpression, nRequired)
@@ -3485,20 +3637,36 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	}
 	for i, each := range reorderdArgs {
 		if each == nil {
-			if _, isDefaultable := sym.DefaultableParams().Get(i); !isDefaultable {
+			dp, isDefaultable := sym.DefaultableParams().Get(i)
+			if !isDefaultable {
 				t.semanticError(fmt.Sprintf("missing required parameter '%s'", paramNames[i]), loc)
 				return nil, nil, chain, false
 			}
-			tys = append(tys, paramTypes[i])
+			if dp.Kind == model.DefaultableParamKindInferredTypedesc {
+				if C == nil {
+					t.semanticError(fmt.Sprintf("cannot infer typedesc argument for parameter '%s': no contextually expected type", paramNames[i]), loc)
+					return nil, nil, chain, false
+				}
+				ctx := t.typeContext()
+				T := semtypes.TypedescConstraint(ctx, paramTypes[i])
+				S := semtypes.Intersect(T, C)
+				if semtypes.IsEmpty(ctx, S) {
+					t.semanticError(fmt.Sprintf("cannot infer maximal type such that it is a subtype of both %s and %s", semtypes.ToString(ctx, T), semtypes.ToString(ctx, C)), loc)
+					return nil, nil, chain, false
+				}
+				tys = append(tys, semtypes.TypedescContaining(t.typeEnv(), S))
+			} else {
+				tys = append(tys, paramTypes[i])
+			}
 			continue
 		}
-		var expectedType semtypes.SemType
+		var paramExpectedTy semtypes.SemType
 		if i < nRequired {
-			expectedType = paramTypes[i]
+			paramExpectedTy = paramTypes[i]
 		} else {
-			expectedType = restParamTy
+			paramExpectedTy = restParamTy
 		}
-		ty, effect, ok := resolveActionOrExpression(t, chain, each, expectedType)
+		ty, effect, ok := resolveActionOrExpression(t, chain, each, paramExpectedTy)
 		if !ok {
 			return nil, nil, chain, false
 		}
@@ -3511,8 +3679,8 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	return reorderdArgs, tys, chain, true
 }
 
-func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
-	argTys, symbolRef, chain, ok := resolveFunctionCallArgs(t, chain, inv, symbolRef)
+func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRef model.SymbolRef, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	argTys, symbolRef, chain, ok := resolveFunctionCallArgs(t, chain, inv, symbolRef, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3530,6 +3698,35 @@ func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRe
 
 	setExpectedType(inv, retTy)
 	return retTy, defaultExpressionEffect(chain), true
+}
+
+// methodMemberType returns a function type describing a class method for inclusion in its
+// object type. For a dependently-typed method the symbol has no stored type (monomorphization
+// happens per call site); synthesize a function type from its param types and the return type
+// that results from applying the return TypeOp against those param types.
+func methodMemberType(t typeResolver, methodRef model.SymbolRef) semtypes.SemType {
+	sym := t.getSymbol(methodRef)
+	depSym, ok := sym.(model.DependentlyTypedFunctionSymbol)
+	if !ok {
+		return t.symbolType(methodRef)
+	}
+	paramTypes := depSym.ParamTypes()
+	retTy := depSym.ReturnType().Apply(t.typeContext(), paramTypes)
+	sig := model.FunctionSignature{
+		ParamTypes:    paramTypes,
+		ReturnType:    retTy,
+		RestParamType: semtypes.NEVER,
+		Flags:         depSym.FuncFlags(),
+	}
+	return typeFromFunctionSignature(t, sig)
+}
+
+func typeFromFunctionSignature(t typeResolver, sig model.FunctionSignature) semtypes.SemType {
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), sig.ParamTypes, len(sig.ParamTypes), sig.RestParamType, semtypes.CellMutability_CELL_MUT_NONE)
+	fnDefn := semtypes.NewFunctionDefinition()
+	return fnDefn.Define(t.typeEnv(), paramListTy, sig.ReturnType,
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), sig.IsIsolated(), sig.IsTransactional()))
 }
 
 func resolveBType(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {
@@ -3581,6 +3778,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return semtypes.CreateAnydata(t.typeContext()), true
 		case model.TypeKind_HANDLE:
 			return semtypes.HANDLE, true
+		case model.TypeKind_TYPEDESC:
+			return semtypes.TYPEDESC, true
 		default:
 			t.internalError("unexpected type tag", diagnostics.Location{})
 			return nil, false
@@ -3687,6 +3886,12 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
 				t.setMappingAtomBType(mat, ty)
 				return semType, true
+			case model.TypeKind_TYPEDESC:
+				constraint, ok := resolveTypeDataPair(t, &ty.Constraint, depth+1)
+				if !ok {
+					return nil, false
+				}
+				return semtypes.TypedescContaining(t.typeEnv(), constraint), true
 			default:
 				t.unimplemented("unsupported base type kind", diagnostics.Location{})
 				return nil, false
