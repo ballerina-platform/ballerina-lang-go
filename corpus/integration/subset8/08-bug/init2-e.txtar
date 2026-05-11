@@ -1,10 +1,10 @@
 -- stdout --
 -- stderr --
 error[SEMANTIC_ERROR]: 'init' function must have return type '()' or  'error?'
-  --> init3-e.bal:21:1
+  --> init2-e.bal:21:1
    |
-21 | function init() returns int? { // @error
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 | function init() returns error { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 22 | 
    | 
 23 | }

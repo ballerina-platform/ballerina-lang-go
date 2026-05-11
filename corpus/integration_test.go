@@ -181,10 +181,6 @@ var (
 		"subset8/08-unused/unused5-e.bal",
 		"subset8/08-unused/unused6-e.bal",
 
-		//  main / init function signature validation. (either () or error? not error)
-		"subset8/08-bug/init2-e.bal",
-		"subset8/08-bug/main2-e.bal",
-
 		// Group K: migration content lost; fixtures are byte-identical placeholders.
 		// Need recovery from upstream nballerina before they can produce diagnostics.
 

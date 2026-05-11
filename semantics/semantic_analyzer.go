@@ -361,34 +361,34 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
+func validateInitFunction(a analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if function.IsPublic() {
-		parent.semanticErr("'init' function cannot be declared as public", pos)
+		a.semanticErr("'init' function cannot be declared as public", pos)
 	}
 
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'init' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'init' function must have return type '()' or  'error?'", pos)
+		}
 	}
 
 	if len(function.RequiredParams) > 0 || function.RestParam != nil {
-		parent.semanticErr("'init' function cannot have parameters", pos)
+		a.semanticErr("'init' function cannot have parameters", pos)
 	}
 }
 
-func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
-	// Check 1: Must be public
+func validateMainFunction(a analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if !fnSymbol.IsPublic() {
-		parent.semanticErr("'main' function must be public", pos)
+		a.semanticErr("'main' function must be public", pos)
 	}
 
-	// Check 2: Must return error?
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
 
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'main' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'main' function must have return type '()' or  'error?'", pos)
+		}
 	}
 }
 
