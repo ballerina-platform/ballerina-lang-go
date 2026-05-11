@@ -1,0 +1,28 @@
+(package
+  (import-package ballerina http (as http))
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (function main () (
+    (union-type
+      (error-type)
+      (value-type null)))
+    (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation http parseHeader (
+            (literal text/plain;q=0.9, application/json))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$0))) ())
+      (var-def
+        (variable values (expr
+          (simple-var-ref $desugar$0))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.array length (
+            (simple-var-ref values))))))
+      (return
+        (literal <nil>)))))

@@ -14,12 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/http;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/http/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+public function main() returns error? {
+    _ = check http:parseHeader(42); // @error argument type mismatch
+}

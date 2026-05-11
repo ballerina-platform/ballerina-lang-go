@@ -14,12 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/http;
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/http/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+public function main() returns error? {
+    var values = check http:parseHeader("text/plain;q=0.9, application/json");
+    io:println(values.length()); // @output 2
+    return;
+}

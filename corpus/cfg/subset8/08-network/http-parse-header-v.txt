@@ -1,0 +1,15 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable values (expr
+        (checked-expr
+          (invocation http parseHeader (
+            (literal text/plain;q=0.9, application/json)))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation lang.array length (
+          (simple-var-ref values))))))
+    (return
+      (literal <nil>))
+  )
+)
