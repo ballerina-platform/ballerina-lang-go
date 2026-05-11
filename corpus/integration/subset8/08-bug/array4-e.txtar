@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected int, got "s"
+error[SEMANTIC_ERROR]: incompatible type: expected never, got "s"
   --> array4-e.bal:20:17
    |
 20 |         v1[0] = "s"; // @error

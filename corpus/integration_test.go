@@ -154,9 +154,6 @@ var (
 		"subset8/08-fill/21-e.bal",
 		"subset8/08-fill/22-e.bal",
 
-		// not sure if this should be detected as an error. Revisit after fixing mapping index based access.
-		"subset8/08-record/assign1-e.bal",
-
 		// Unused local variable detection
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/439
 		"subset8/08-unused/unused1-e.bal",

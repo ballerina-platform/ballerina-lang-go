@@ -41,5 +41,5 @@
             (index-based-access
               (simple-var-ref x)
               (literal 0))
-            (literal 1.0))) ())
+            (literal 1))) ())
       (block-stmt))))

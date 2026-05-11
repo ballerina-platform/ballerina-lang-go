@@ -800,9 +800,23 @@ func resolveStatement(t typeResolver, chain *binding, stmt ast.BLangStatement) (
 }
 
 func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statementEffect, bool) {
-	lhsTy, _, ok := resolveActionOrExpression(t, nil, s.GetVariable().(ast.BLangExpression), nil)
-	if !ok {
-		return statementEffect{}, false
+	var lhsTy semtypes.SemType
+	switch lhs := s.GetVariable().(type) {
+	case *ast.BLangIndexBasedAccess, *ast.BLangFieldBaseAccess:
+		// we don't assign to the actual container so shoud use the narrowed type for the container variable
+		var lhsEffect expressionEffect
+		var ok bool
+		lhsTy, lhsEffect, ok = resolveActionOrExpression(t, chain, lhs.(ast.BLangExpression), nil)
+		if !ok {
+			return statementEffect{}, false
+		}
+		chain = lhsEffect.ifTrue
+	default:
+		var ok bool
+		lhsTy, _, ok = resolveActionOrExpression(t, nil, lhs.(ast.BLangExpression), nil)
+		if !ok {
+			return statementEffect{}, false
+		}
 	}
 	if _, _, ok := resolveActionOrExpression(t, chain, s.GetExpression().(ast.BLangActionOrExpression), lhsTy); !ok {
 		return statementEffect{}, false
