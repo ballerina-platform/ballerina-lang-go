@@ -17,13 +17,14 @@
 package exec
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/values"
-	"fmt"
 )
 
-const maxRecursionDepth = 1000
+const maxRecursionDepth = 5000
 
 func executeFunction(ctx *Context, birFunc bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
 	frame := createFunctionFrame(ctx, &birFunc, args, parentFrame)

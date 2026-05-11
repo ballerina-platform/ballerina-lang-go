@@ -167,7 +167,6 @@ var (
 		"subset8/08-unused/unused6-e.bal",
 
 		// Expected clean run: migrated -v tests that produce diagnostics or runtime errors
-		"subset8/08-bench/ackermann-v.bal",
 		"subset8/08-bench/map-v.bal",
 		"subset8/08-bitwise/shift1-v.bal",
 		"subset8/08-bitwise/shift2-v.bal",
