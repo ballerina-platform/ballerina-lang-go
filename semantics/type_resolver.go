@@ -808,7 +808,7 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 		return statementEffect{}, false
 	}
 	if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
-		return unnarrowSymbol(t, chain, expr.Symbol()), true
+		return unnarrowSymbolAt(t, chain, expr.Symbol(), s.GetVariable().(ast.BLangExpression).GetPosition()), true
 	}
 	return defaultStmtEffect(chain), true
 }
@@ -859,13 +859,18 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
-		bodyEffect, ok := resolveBlockStatements(t, exprEffect.ifTrue, s.Body.Stmts)
+		loopT := &loopTypeResolver{parentResolver: t}
+		bodyEffect, ok := resolveBlockStatements(loopT, exprEffect.ifTrue, s.Body.Stmts)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
 		s.Body.SetDeterminedType(semtypes.NEVER)
 		resolveOnFailClause(t, chain, &s.OnFailClause)
+		validateLoopAssignments(t, loopT, bodyEffect, chain)
 		result := exprEffect.ifFalse
+		for _, b := range loopT.breaks {
+			result = mergeChains(t, result, b, semtypes.Union)
+		}
 		if !bodyEffect.nonCompletion {
 			result = mergeChains(t, result, bodyEffect.binding, semtypes.Union)
 		}
@@ -892,14 +897,26 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 				return defaultStmtEffect(chain), false
 			}
 		}
-		// Foreach loop can't create a conditional narrowing at the begining so at the end there shouldn't be
-		// any narrowing.
-		_, ok := resolveBlockStatements(t, chain, s.Body.Stmts)
+		// foreach may run zero times, so the post-loop chain starts from the
+		// loop-entry chain. Body completion and any break paths are merged in.
+		loopT := &loopTypeResolver{parentResolver: t}
+		bodyEffect, ok := resolveBlockStatements(loopT, chain, s.Body.Stmts)
 		s.Body.SetDeterminedType(semtypes.NEVER)
 		if s.OnFailClause != nil {
 			resolveOnFailClause(t, chain, s.OnFailClause)
 		}
-		return defaultStmtEffect(chain), ok
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		validateLoopAssignments(t, loopT, bodyEffect, chain)
+		result := chain
+		for _, b := range loopT.breaks {
+			result = mergeChains(t, result, b, semtypes.Union)
+		}
+		if !bodyEffect.nonCompletion {
+			result = mergeChains(t, result, bodyEffect.binding, semtypes.Union)
+		}
+		return statementEffect{result, false}, true
 	case *ast.BLangPanic:
 		if _, _, ok := resolveActionOrExpression(t, chain, s.Expr, semtypes.ERROR); !ok {
 			return defaultStmtEffect(chain), false
@@ -907,7 +924,19 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 		return statementEffect{nil, true}, true
 	case *ast.BLangMatchStatement:
 		return resolveMatchStatement(t, chain, s)
-	case *ast.BLangBreak, *ast.BLangContinue:
+	case *ast.BLangBreak:
+		if loopT, ok := t.(*loopTypeResolver); ok {
+			loopT.recordBreak(chain)
+		} else {
+			t.semanticError("break statement not allowed outside loop", s.GetPosition())
+		}
+		return statementEffect{binding: nil, nonCompletion: true}, true
+	case *ast.BLangContinue:
+		if loopT, ok := t.(*loopTypeResolver); ok {
+			loopT.recordContinue(chain)
+		} else {
+			t.semanticError("continue statement not allowed outside loop", s.GetPosition())
+		}
 		return statementEffect{binding: nil, nonCompletion: true}, true
 	default:
 		t.internalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
@@ -1863,7 +1892,7 @@ func resolveVariableDefStmt(t typeResolver, chain *binding, s *ast.BLangSimpleVa
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
-		effectChain = effect.ifTrue
+		effectChain = mergeChains(t, effect.ifTrue, effect.ifFalse, semtypes.Union)
 		if typeNode == nil {
 			setExpectedType(variable, exprTy)
 			updateSymbolType(t, variable, exprTy)

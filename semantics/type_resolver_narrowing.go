@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type binding struct {
@@ -27,6 +28,11 @@ type binding struct {
 	ref            model.SymbolRef
 	narrowedSymbol model.SymbolRef
 	prev           *binding
+	// assignmentPos is set on unnarrowing entries created by an assignment
+	// statement. The loop arms use it to report assignments to variables
+	// narrowed outside the loop whose effect reaches the loop top via the
+	// body's natural completion or a continue path.
+	assignmentPos diagnostics.Location
 	// defaultType is used for unreachable branches (e.g. false branch of constant true)
 	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
 	defaultType semtypes.SemType
@@ -38,6 +44,12 @@ type binding struct {
 
 func (b *binding) isUnnarrowing() bool {
 	return b.ref == b.narrowedSymbol
+}
+
+// isAssignment reports whether this binding entry was produced by an
+// assignment statement (carrying that statement's source position).
+func (b *binding) isAssignment() bool {
+	return !diagnostics.IsLocationEmpty(b.assignmentPos)
 }
 
 type expressionEffect struct {
@@ -84,6 +96,14 @@ func narrowSymbol(t typeResolver, underlying model.SymbolRef, ty semtypes.SemTyp
 }
 
 func unnarrowSymbol(t typeResolver, chain *binding, symbol model.SymbolRef) statementEffect {
+	return unnarrowSymbolAt(t, chain, symbol, diagnostics.Location{})
+}
+
+// unnarrowSymbolAt is unnarrowSymbol but records the position of the
+// assignment that triggered the unnarrowing. Loop arms use this position to
+// report assignments to variables narrowed outside the loop whose effect
+// reaches the loop top.
+func unnarrowSymbolAt(t typeResolver, chain *binding, symbol model.SymbolRef, pos diagnostics.Location) statementEffect {
 	_, isNarrowed, isCaptured := lookupBinding(chain, symbol)
 	if isCaptured {
 		t.trackCapturedVar(symbol)
@@ -95,8 +115,35 @@ func unnarrowSymbol(t typeResolver, chain *binding, symbol model.SymbolRef) stat
 		ref:            symbol,
 		narrowedSymbol: symbol,
 		prev:           chain,
+		assignmentPos:  pos,
 	}
 	return statementEffect{chain, false}
+}
+
+// reportOutsideLoopAssignments walks chains that flow back to the top of an
+// enclosing loop (the body's natural completion and every continue path) and
+// emits a semantic error for each assignment-introduced unnarrowing entry
+// whose target is narrowed in the loop's entry chain. The walk stops at
+// loopEntry: anything below it belongs to the surrounding scope.
+func reportOutsideLoopAssignments(t typeResolver, chains []*binding, loopEntry *binding) {
+	for _, chain := range chains {
+		seen := make(map[model.SymbolRef]bool)
+		for c := chain; c != nil && c != loopEntry; c = c.prev {
+			if c.functionBoundary {
+				continue
+			}
+			if seen[c.ref] {
+				continue
+			}
+			seen[c.ref] = true
+			if !c.isAssignment() {
+				continue
+			}
+			if _, isNarrowed, _ := lookupBinding(loopEntry, c.ref); isNarrowed {
+				t.semanticError("cannot assign to a variable narrowed outside the enclosing loop", c.assignmentPos)
+			}
+		}
+	}
 }
 
 func accumNarrowedTypes(t typeResolver, chain *binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {

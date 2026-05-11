@@ -161,14 +161,6 @@ var (
 		// member access on mapping type is ()|projection and this should fold in to compound assignemnt
 		"subset8/08-record/compoundassign4-e.bal",
 
-		// Type narrowing
-		// bug:
-		"subset8/08-bug/assignforeach-e.bal",
-		"subset8/08-narrowing/if18-e.bal",
-		// Can't assign to a narrowed variable inside a loop
-		"subset8/08-narrowing/5-e.bal",
-		"subset8/08-narrowing/11-e.bal",
-
 		// not sure if this should be detected as an error. Revisit after fixing mapping index based access.
 		"subset8/08-record/assign1-e.bal",
 
