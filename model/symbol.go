@@ -481,6 +481,10 @@ func mapToLangPrefixIfNeeded(prefix string) string {
 		return "lang.int"
 	case "array":
 		return "lang.array"
+	case "map":
+		return "lang.map"
+	case "string":
+		return "lang.string"
 	default:
 		return prefix
 	}
