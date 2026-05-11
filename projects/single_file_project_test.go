@@ -129,11 +129,12 @@ func TestDefaultBuildOptions(t *testing.T) {
 	project := result.Project().(*projects.SingleFileProject)
 	buildOpts := project.BuildOptions()
 
-	// Verify expected default buildOptions
+	// Verify expected default buildOptions. OfflineBuild is true because the
+	// test helper pins it; everything else reflects the manifest defaults.
 	assert.True(buildOpts.SkipTests())
 	assert.False(buildOpts.ObservabilityIncluded())
 	assert.False(buildOpts.CodeCoverage())
-	assert.False(buildOpts.OfflineBuild())
+	assert.True(buildOpts.OfflineBuild())
 	assert.False(buildOpts.Experimental())
 	assert.False(buildOpts.TestReport())
 }
