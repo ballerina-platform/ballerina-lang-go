@@ -1,0 +1,66 @@
+(Node
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access value
+          (simple-var-ref self))
+        (simple-var-ref value))
+      (assignment
+        (field-based-access next
+          (simple-var-ref self))
+        (simple-var-ref next))
+    )
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable a (type
+        (user-defined-type Node)) (expr
+        (new (
+          (literal 1)
+          (literal <nil>))))))
+    (var-def
+      (variable b (type
+        (user-defined-type Node)) (expr
+        (new (
+          (literal 2)
+          (simple-var-ref a))))))
+    (var-def
+      (variable c (type
+        (user-defined-type Node)) (expr
+        (new (
+          (literal 3)
+          (simple-var-ref b))))))
+    (var-def
+      (variable total (type
+        (value-type int)) (expr
+        (literal 0))))
+    (var-def
+      (variable cur (type
+        (union-type
+          (user-defined-type Node)
+          (value-type null))) (expr
+        (simple-var-ref c))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (type-test-expr is
+      (simple-var-ref cur)
+      (user-defined-type Node))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref total)
+      (field-based-access value
+        (simple-var-ref cur)))
+    (assignment
+      (simple-var-ref cur)
+      (field-based-access next
+        (simple-var-ref cur)))
+  )
+  (bb3 (bb1) ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref total))))
+  )
+)

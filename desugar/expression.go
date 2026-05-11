@@ -79,6 +79,8 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		return walkArrowFunction(cx, expr)
 	case *ast.BLangQueryExpr:
 		return walkQueryExpr(cx, expr)
+	case *ast.BLangTypedescExpr:
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangLiteral:
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangNumericLiteral:
@@ -476,13 +478,17 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 		if reordered[i] != nil {
 			continue
 		}
+		dp, isDefaultable := defaultableParams.Get(i)
+		if isDefaultable && dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			reordered[i] = synthesizeInferredTypedescArg(cx, sig.ParamTypes[i], pos)
+			continue
+		}
 		for j := len(transformed); j < i; j++ {
 			varDef, varRef := assignToLocal(cx, reordered[j], pos)
 			initStmts = append(initStmts, varDef)
 			reordered[j] = varRef
 			transformed = append(transformed, varRef)
 		}
-		dp, _ := defaultableParams.Get(i)
 		defaultInv := &ast.BLangInvocation{}
 		defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
 		defaultInv.ArgExprs = reordered[:i]
@@ -500,7 +506,18 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 	return initStmts
 }
 
-func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (ast.BLangStatement, *ast.BLangSimpleVarRef) {
+// synthesizeInferredTypedescArg builds the typedesc expression that fills a
+// `typedesc param = <>` slot. The monomorphized signature's param type is
+// typedesc<T>; we unwrap it to recover T as the constraint.
+func synthesizeInferredTypedescArg(cx *functionContext, tdTy semtypes.SemType, pos diagnostics.Location) *ast.BLangTypedescExpr {
+	tyCtx := semtypes.ContextFrom(cx.pkgCtx.typeEnv())
+	tdExpr := &ast.BLangTypedescExpr{Constraint: semtypes.TypedescConstraint(tyCtx, tdTy)}
+	tdExpr.SetPosition(pos)
+	tdExpr.SetDeterminedType(tdTy)
+	return tdExpr
+}
+
+func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (model.StatementNode, *ast.BLangSimpleVarRef) {
 	ty := initExpr.GetDeterminedType()
 	tempName, tempSymRef := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
 	tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}

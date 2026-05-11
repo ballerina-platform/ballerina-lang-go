@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: dependently-typed function return type dependent and defined parts must be disjoint
+  --> dependent-fn-4-e.bal:17:1
+   |
+17 | function inferredUnion(int val, typedesc retTy = <>) returns retTy|error = external; // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

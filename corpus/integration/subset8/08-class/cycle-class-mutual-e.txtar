@@ -1,0 +1,45 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: class definition A is empty
+  --> cycle-class-mutual-e.bal:17:1
+   |
+17 | class A { // @error
+   | ^^^^^^^^^^^^^^^^^^^
+18 |     int va;
+   |     ^^^^^^^
+19 |     B b;
+   |     ^^^^
+20 | 
+   | 
+21 |     function init(int va, B b) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+22 |         self.va = va;
+   |         ^^^^^^^^^^^^^
+23 |         self.b = b;
+   |         ^^^^^^^^^^^
+24 |     }
+   |     ^
+25 | }
+   | ^
+
+error[SEMANTIC_ERROR]: class definition B is empty
+  --> cycle-class-mutual-e.bal:27:1
+   |
+27 | class B { // @error
+   | ^^^^^^^^^^^^^^^^^^^
+28 |     int vb;
+   |     ^^^^^^^
+29 |     A a;
+   |     ^^^^
+30 | 
+   | 
+31 |     function init(int vb, A a) {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+32 |         self.vb = vb;
+   |         ^^^^^^^^^^^^^
+33 |         self.a = a;
+   |         ^^^^^^^^^^^
+34 |     }
+   |     ^
+35 | }
+   | ^

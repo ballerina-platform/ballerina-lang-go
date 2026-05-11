@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: type definition Foo is empty
+  --> cycle-object-direct-e.bal:17:1
+   |
+17 | type Foo object { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     int value;
+   |     ^^^^^^^^^^
+19 |     Foo f;
+   |     ^^^^^^
+20 | };
+   | ^^

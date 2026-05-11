@@ -684,6 +684,38 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	return bir.GenBir(cx, pkg), nil
 }
 
+func BenchmarkIntegration(b *testing.B) {
+	testPairs := test_util.GetTests(b, test_util.Bench, func(path string) bool {
+		return true
+	})
+	for _, testPair := range testPairs {
+		b.Run(testPair.Name, func(b *testing.B) {
+			expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
+			if err != nil {
+				b.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
+			}
+
+			var stdout, stderr string
+			b.ResetTimer()
+			for b.Loop() {
+				stdout, stderr = runIntegrationCase(testPair.InputPath)
+			}
+			b.StopTimer()
+
+			result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+			if !result.success {
+				b.Fatalf("output mismatch for %s:\nstdout:\n%s\nstderr:\n%s",
+					testPair.InputPath,
+					test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout),
+					test_util.FormatExpectedGot(
+						normalizeIntegrationStderr(result.expectedStderr),
+						normalizeIntegrationStderr(result.actualStderr),
+					))
+			}
+		})
+	}
+}
+
 func getBallerinaEnvPath() (string, error) {
 	if balEnv := os.Getenv(projects.BallerinaEnvVar); balEnv != "" {
 		return balEnv, nil

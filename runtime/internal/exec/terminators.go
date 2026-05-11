@@ -39,8 +39,7 @@ func execCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock
 
 func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
 	if callInfo.IsMethodCall {
-		fn := resolveObjectMethod(ctx, callInfo, args)
-		return executeFunction(ctx, *fn, args, nil)
+		return dispatchMethodCall(ctx, callInfo, args)
 	}
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
@@ -52,10 +51,10 @@ func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) value
 		}
 		return result
 	}
-	return lookupAndExecute(ctx, callInfo, args)
+	return lookupAndExecute(ctx, callInfo, args, callInfo.FunctionLookupKey)
 }
 
-func resolveObjectMethod(ctx *Context, callInfo *bir.Call, args []values.BalValue) *bir.BIRFunction {
+func dispatchMethodCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
 	receiverObj := args[0].(*values.Object)
 	lookupKey, found := receiverObj.MethodLookupKey(string(callInfo.Name))
 	if !found {
@@ -64,25 +63,32 @@ func resolveObjectMethod(ctx *Context, callInfo *bir.Call, args []values.BalValu
 
 	// The same call site can be polymorphic across executions (e.g., iterating over a list
 	// of objects with different concrete types). Cache only when it matches the receiver.
-	if callInfo.CachedBIRFunc != nil {
-		if callInfo.CachedMethodLookupKey == lookupKey {
-			return callInfo.CachedBIRFunc
+	if callInfo.CachedMethodLookupKey == lookupKey {
+		if callInfo.CachedBIRFunc != nil {
+			return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
+		}
+		if callInfo.CachedNativeFunc != nil {
+			result, err := callInfo.CachedNativeFunc(args)
+			if err != nil {
+				panic(err)
+			}
+			return result
 		}
 	}
 
-	fn := ctx.GetBIRFunction(lookupKey)
-	callInfo.CachedBIRFunc = fn
+	callInfo.CachedBIRFunc = nil
+	callInfo.CachedNativeFunc = nil
 	callInfo.CachedMethodLookupKey = lookupKey
-	return fn
+	return lookupAndExecute(ctx, callInfo, args, lookupKey)
 }
 
-func lookupAndExecute(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
-	fn := ctx.GetBIRFunction(callInfo.FunctionLookupKey)
+func lookupAndExecute(ctx *Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) values.BalValue {
+	fn := ctx.GetBIRFunction(lookupKey)
 	if fn != nil {
 		callInfo.CachedBIRFunc = fn
 		return executeFunction(ctx, *fn, args, nil)
 	}
-	externFn := ctx.GetNativeFunction(callInfo.FunctionLookupKey)
+	externFn := ctx.GetNativeFunction(lookupKey)
 	if externFn != nil {
 		callInfo.CachedNativeFunc = externFn.Impl
 		result, err := externFn.Impl(args)
