@@ -6,7 +6,7 @@ hello world
 func1
 5
 3
-func2
 func1
-4
+func2
+5
 -- stderr --

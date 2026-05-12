@@ -8,24 +8,21 @@ main() -> nil{
     %4 = ConstantLoad 1
     %5 = newArray [[int...]...][%4]{%3}
     v = %5;
+    %8 = ConstantLoad 0
+    %7 = v[%8] (fill);
     %9 = ConstantLoad 0
-    %11 = ConstantLoad 0
-    %10 = v[%11];
-    %8 = %10[%9];
-    %12 = %8;
-    %13 = ConstantLoad 3
-    %14 = %13;
-    %7 = + %12 %14;
+    %10 = %7[%9];
+    %11 = %10;
+    %12 = ConstantLoad 3
+    %13 = %12;
+    %14 = + %11 %13;
+    %7[%9] = %14;
     %16 = ConstantLoad 0
-    %15 = v[%16] (fill);
-    %17 = ConstantLoad 0
-    %15[%17] = %7;
-    %19 = ConstantLoad 0
-    %21 = ConstantLoad 0
-    %20 = v[%21];
-    %18 = %20[%19];
-    %22 = %18;
-    %23 = println(%22) -> bb1;
+    %18 = ConstantLoad 0
+    %17 = v[%18];
+    %15 = %17[%16];
+    %19 = %15;
+    %20 = println(%19) -> bb1;
   }
   bb1 {
     return;

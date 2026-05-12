@@ -40,7 +40,6 @@ var astGenerationSkipList = []string{
 	// parse error
 	"subset8/08-function/intersection11-v.bal",
 	"subset8/08-function/intersection13-v.bal",
-	"subset8/08-list/compoundassign1-v.bal",
 	"subset8/08-match/2-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
@@ -155,7 +154,6 @@ var walkTraversalSkipList = []string{
 	// parse error
 	"subset8/08-function/intersection11-v.bal",
 	"subset8/08-function/intersection13-v.bal",
-	"subset8/08-list/compoundassign1-v.bal",
 	"subset8/08-match/2-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.

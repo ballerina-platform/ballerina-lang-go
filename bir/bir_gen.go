@@ -413,9 +413,56 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 }
 
 func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
+	pos := ctx.loc(stmt.GetPosition())
+	if indexRef, ok := stmt.VarRef.(*ast.BLangIndexBasedAccess); ok {
+		return compoundAssignmentToMember(ctx, curBB, stmt, indexRef, pos)
+	}
 	ref := stmt.VarRef.(ast.BLangExpression)
-	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), ctx.loc(stmt.GetPosition()))
-	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, ctx.loc(stmt.GetPosition()))
+	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), pos)
+	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, pos)
+}
+
+// compoundAssignmentToMember handles compound assignment with an index-based access LHS
+// (e.g. `x[i] += rhs`). The container reference and index expression must be evaluated
+// only once even though the LHS is conceptually both read and written.
+func compoundAssignmentToMember(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment, ref *ast.BLangIndexBasedAccess, pos Location) statementEffect {
+	containerEffect := assignmentContainerReference(ctx, curBB, ref.Expr)
+	indexEffect := handleActionOrExpression(ctx, containerEffect.block, ref.IndexExpr)
+	curBB = indexEffect.block
+
+	loadKind, storeKind := memberAccessInstructionKinds(ref.Expr.GetDeterminedType())
+
+	lhsValue := ctx.addTempVar(ref.GetDeterminedType())
+	load := NewFieldAccess(loadKind, lhsValue, indexEffect.result, containerEffect.result, pos)
+	curBB.Instructions = append(curBB.Instructions, load)
+	lhsEffect := snapshotIfNeeded(ctx, expressionEffect{result: lhsValue, block: curBB}, pos)
+	curBB = lhsEffect.block
+
+	rhsEffect := handleActionOrExpression(ctx, curBB, stmt.Expr)
+	rhsEffect = snapshotIfNeeded(ctx, rhsEffect, pos)
+	curBB = rhsEffect.block
+
+	resultOperand := ctx.addTempVar(ref.GetDeterminedType())
+	binaryOp := NewBinaryOp(operatorKindToBinaryInstructionKind(stmt.OpKind), resultOperand, lhsEffect.result, rhsEffect.result, pos)
+	curBB.Instructions = append(curBB.Instructions, binaryOp)
+
+	store := NewFieldAccess(storeKind, containerEffect.result, indexEffect.result, resultOperand, pos)
+	curBB.Instructions = append(curBB.Instructions, store)
+	return statementEffect{
+		block: curBB,
+	}
+}
+
+func memberAccessInstructionKinds(containerType semtypes.SemType) (loadKind, storeKind InstructionKind) {
+	containerType = semtypes.Diff(containerType, semtypes.NIL)
+	switch {
+	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+		return INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_ARRAY_STORE
+	case semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT):
+		return INSTRUCTION_KIND_OBJECT_LOAD, INSTRUCTION_KIND_OBJECT_STORE
+	default:
+		return INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_MAP_STORE
+	}
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
@@ -518,16 +565,8 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 	currBB = containerRefEffect.block
 	indexEffect := handleActionOrExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
-	containerType := varRef.Expr.GetDeterminedType()
-	var fieldAccessKind InstructionKind
-	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccessKind = INSTRUCTION_KIND_ARRAY_STORE
-	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
-		fieldAccessKind = INSTRUCTION_KIND_OBJECT_STORE
-	} else {
-		fieldAccessKind = INSTRUCTION_KIND_MAP_STORE
-	}
-	fieldAccess := NewFieldAccess(fieldAccessKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
+	_, storeKind := memberAccessInstructionKinds(varRef.Expr.GetDeterminedType())
+	fieldAccess := NewFieldAccess(storeKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return statementEffect{
 		block: currBB,
@@ -1013,19 +1052,11 @@ func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.
 func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
 	// Assignment is handled in assignmentStatement to this is always a load
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	containerType := expr.Expr.GetDeterminedType()
-	var fieldAccessKind InstructionKind
-	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccessKind = INSTRUCTION_KIND_ARRAY_LOAD
-	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
-		fieldAccessKind = INSTRUCTION_KIND_OBJECT_LOAD
-	} else {
-		fieldAccessKind = INSTRUCTION_KIND_MAP_LOAD
-	}
+	loadKind, _ := memberAccessInstructionKinds(expr.Expr.GetDeterminedType())
 	indexEffect := handleActionOrExpression(ctx, bb, expr.IndexExpr)
 	containerRefEffect := handleActionOrExpression(ctx, indexEffect.block, expr.Expr)
 	currBB := containerRefEffect.block
-	fieldAccess := NewFieldAccess(fieldAccessKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(expr.GetPosition()))
+	fieldAccess := NewFieldAccess(loadKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(expr.GetPosition()))
 	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
@@ -1138,50 +1169,53 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr ast.BLangExpression, rhsExpr ast.BLangActionOrExpression, resultType semtypes.SemType, pos Location) expressionEffect {
-	var kind InstructionKind
+func operatorKindToBinaryInstructionKind(opKind model.OperatorKind) InstructionKind {
 	switch opKind {
 	case model.OperatorKind_ADD:
-		kind = INSTRUCTION_KIND_ADD
+		return INSTRUCTION_KIND_ADD
 	case model.OperatorKind_SUB:
-		kind = INSTRUCTION_KIND_SUB
+		return INSTRUCTION_KIND_SUB
 	case model.OperatorKind_MUL:
-		kind = INSTRUCTION_KIND_MUL
+		return INSTRUCTION_KIND_MUL
 	case model.OperatorKind_DIV:
-		kind = INSTRUCTION_KIND_DIV
+		return INSTRUCTION_KIND_DIV
 	case model.OperatorKind_MOD:
-		kind = INSTRUCTION_KIND_MOD
+		return INSTRUCTION_KIND_MOD
 	case model.OperatorKind_EQUAL:
-		kind = INSTRUCTION_KIND_EQUAL
+		return INSTRUCTION_KIND_EQUAL
 	case model.OperatorKind_NOT_EQUAL:
-		kind = INSTRUCTION_KIND_NOT_EQUAL
+		return INSTRUCTION_KIND_NOT_EQUAL
 	case model.OperatorKind_GREATER_THAN:
-		kind = INSTRUCTION_KIND_GREATER_THAN
+		return INSTRUCTION_KIND_GREATER_THAN
 	case model.OperatorKind_GREATER_EQUAL:
-		kind = INSTRUCTION_KIND_GREATER_EQUAL
+		return INSTRUCTION_KIND_GREATER_EQUAL
 	case model.OperatorKind_LESS_THAN:
-		kind = INSTRUCTION_KIND_LESS_THAN
+		return INSTRUCTION_KIND_LESS_THAN
 	case model.OperatorKind_LESS_EQUAL:
-		kind = INSTRUCTION_KIND_LESS_EQUAL
+		return INSTRUCTION_KIND_LESS_EQUAL
 	case model.OperatorKind_REF_EQUAL:
-		kind = INSTRUCTION_KIND_REF_EQUAL
+		return INSTRUCTION_KIND_REF_EQUAL
 	case model.OperatorKind_REF_NOT_EQUAL:
-		kind = INSTRUCTION_KIND_REF_NOT_EQUAL
+		return INSTRUCTION_KIND_REF_NOT_EQUAL
 	case model.OperatorKind_BITWISE_AND:
-		kind = INSTRUCTION_KIND_BITWISE_AND
+		return INSTRUCTION_KIND_BITWISE_AND
 	case model.OperatorKind_BITWISE_OR:
-		kind = INSTRUCTION_KIND_BITWISE_OR
+		return INSTRUCTION_KIND_BITWISE_OR
 	case model.OperatorKind_BITWISE_XOR:
-		kind = INSTRUCTION_KIND_BITWISE_XOR
+		return INSTRUCTION_KIND_BITWISE_XOR
 	case model.OperatorKind_BITWISE_LEFT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_LEFT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_LEFT_SHIFT
 	case model.OperatorKind_BITWISE_RIGHT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT
 	case model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT
 	default:
 		panic("unexpected binary operator kind")
 	}
+}
+
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr ast.BLangExpression, rhsExpr ast.BLangActionOrExpression, resultType semtypes.SemType, pos Location) expressionEffect {
+	kind := operatorKindToBinaryInstructionKind(opKind)
 	resultOperand := ctx.addTempVar(resultType)
 	op1Effect := handleActionOrExpression(ctx, curBB, lhsExpr)
 	op1Effect = snapshotIfNeeded(ctx, op1Effect, pos)

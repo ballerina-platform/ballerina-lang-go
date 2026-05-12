@@ -8,32 +8,30 @@ main() -> nil{
     %4 = ConstantLoad 5
     %5 = newMap {| n: int, x: float, never... |}{%1=%2, %3=%4}
     r = %5;
-    %9 = ConstantLoad x
-    %8 = r[%9];
-    %10 = %8;
-    %11 = ConstantLoad 1
-    %12 = %11;
-    %7 = + %10 %12;
-    %13 = ConstantLoad x
-    r[%13] = %7;
-    %16 = ConstantLoad n
-    %15 = r[%16];
-    %17 = %15;
-    %18 = ConstantLoad 2
-    %19 = %18;
-    %14 = - %17 %19;
-    %20 = ConstantLoad n
-    r[%20] = %14;
-    %22 = ConstantLoad x
-    %21 = r[%22];
-    %23 = %21;
-    %24 = println(%23) -> bb1;
+    %7 = ConstantLoad x
+    %8 = r[%7];
+    %9 = %8;
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %12 = + %9 %11;
+    r[%7] = %12;
+    %13 = ConstantLoad n
+    %14 = r[%13];
+    %15 = %14;
+    %16 = ConstantLoad 2
+    %17 = %16;
+    %18 = - %15 %17;
+    r[%13] = %18;
+    %20 = ConstantLoad x
+    %19 = r[%20];
+    %21 = %19;
+    %22 = println(%21) -> bb1;
   }
   bb1 {
-    %26 = ConstantLoad n
-    %25 = r[%26];
-    %27 = %25;
-    %28 = println(%27) -> bb2;
+    %24 = ConstantLoad n
+    %23 = r[%24];
+    %25 = %23;
+    %26 = println(%25) -> bb2;
   }
   bb2 {
     return;

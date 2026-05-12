@@ -26,9 +26,9 @@ public function main() {
     io:println(x[0]); // @output 44
     x[0] /= 2;
     io:println(x[0]); // @output 22
-    x[0] & = 5;
+    x[0] &= 5;
     io:println(x[0]); // @output 4
-    x[0]| = 9;
+    x[0] |= 9;
     io:println(x[0]); // @output 13
     x[0] ^= 2;
     io:println(x[0]); // @output 15

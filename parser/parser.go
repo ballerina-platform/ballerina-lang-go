@@ -12583,6 +12583,11 @@ func (b *BallerinaParser) parseTypedBindingPatternOrMemberAccessRhs(typeDescOrEx
 			common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN, true)
 		return b.parseTypedBindingPatternTypeRhs(typeDesc, context)
 	case common.PIPE_TOKEN, common.BITWISE_AND_TOKEN:
+		if (!isTypedBindingPattern) && allowAssignment && (b.peekN(2).Kind() == common.EQUAL_TOKEN) && b.isValidLVExpr(typeDescOrExpr) {
+			keyExpr := b.getKeyExpr(member)
+			typeDescOrExpr = b.getExpression(typeDescOrExpr)
+			return tree.CreateIndexedExpressionNode(typeDescOrExpr, openBracket, keyExpr, closeBracket)
+		}
 		return b.parseComplexTypeDescInTypedBPOrExprRhs(typeDescOrExpr, openBracket, member, closeBracket,
 			isTypedBindingPattern)
 	case common.IN_KEYWORD:

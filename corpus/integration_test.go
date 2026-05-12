@@ -218,9 +218,6 @@ var (
 		"subset8/08-list/14-v.bal",
 		"subset8/08-list/equal-v.bal",
 		"subset8/08-nested/eqcycle2-v.bal",
-		// invalid compound assign result
-		"subset8/08-list/compoundassign1-v.bal",
-		"subset8/08-list/compoundassign2-v.bal",
 		// invalid map eq
 		"subset8/08-map/equal-v.bal",
 		"subset8/08-mapping/1-v.bal",

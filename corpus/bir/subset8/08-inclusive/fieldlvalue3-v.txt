@@ -8,18 +8,17 @@ main() -> nil{
     %4 = ConstantLoad 88
     %5 = newMap {| x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%1=%2, %3=%4}
     p = %5;
-    %9 = ConstantLoad x
-    %8 = p[%9];
-    %10 = %8;
-    %11 = ConstantLoad 22
-    %12 = %11;
-    %7 = + %10 %12;
-    %13 = ConstantLoad x
-    p[%13] = %7;
-    %15 = ConstantLoad x
-    %14 = p[%15];
-    %16 = %14;
-    %17 = println(%16) -> bb1;
+    %7 = ConstantLoad x
+    %8 = p[%7];
+    %9 = %8;
+    %10 = ConstantLoad 22
+    %11 = %10;
+    %12 = + %9 %11;
+    p[%7] = %12;
+    %14 = ConstantLoad x
+    %13 = p[%14];
+    %15 = %13;
+    %16 = println(%15) -> bb1;
   }
   bb1 {
     return;

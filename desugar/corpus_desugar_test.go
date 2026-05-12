@@ -42,7 +42,6 @@ var desugarSkipList = []string{
 	// Source uses syntax pi does not yet parse (compilation unit nil).
 	"subset8/08-function/intersection11-v.bal",
 	"subset8/08-function/intersection13-v.bal",
-	"subset8/08-list/compoundassign1-v.bal",
 	"subset8/08-match/2-v.bal",
 
 	// Desugar panics on an unsupported construct.
