@@ -61,6 +61,9 @@ type (
 		Kind  InstructionKind
 		KeyOp *BIROperand
 		RhsOp *BIROperand
+		// Filler is set for filling load instructions on maps so the
+		// runtime can insert a fresh filler value for absent keys.
+		Filler values.FillerFactory
 	}
 
 	NewArray struct {

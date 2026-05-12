@@ -49,10 +49,10 @@ func (l *List) FillingSet(idx int, value BalValue) {
 		return
 	}
 	if l.filler == nil {
-		panic("can't fill values")
+		panic(NewErrorWithMessage("no filler value"))
 	}
 	if idx >= math.MaxInt32 {
-		panic("list too long")
+		panic(NewErrorWithMessage("list too long"))
 	}
 	newLen := idx + 1
 	if newLen <= cap(l.elems) {
@@ -75,10 +75,10 @@ func (l *List) FillingGet(idx int) BalValue {
 		return l.elems[idx]
 	}
 	if l.filler == nil {
-		panic("can't fill values")
+		panic(NewErrorWithMessage("no filler value"))
 	}
 	if idx >= math.MaxInt32 {
-		panic("list too long")
+		panic(NewErrorWithMessage("list too long"))
 	}
 	for len(l.elems) <= idx {
 		l.elems = append(l.elems, l.filler())

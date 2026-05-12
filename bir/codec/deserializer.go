@@ -534,18 +534,28 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD,
 		bir.INSTRUCTION_KIND_ARRAY_STORE, bir.INSTRUCTION_KIND_ARRAY_LOAD,
 		bir.INSTRUCTION_KIND_ARRAY_FILLING_LOAD,
+		bir.INSTRUCTION_KIND_MAP_FILLING_LOAD,
 		bir.INSTRUCTION_KIND_OBJECT_STORE, bir.INSTRUCTION_KIND_OBJECT_LOAD:
 		lhsOp := br.readOperand(varMap)
 		keyOp := br.readOperand(varMap)
 		rhsOp := br.readOperand(varMap)
+		var filler values.FillerFactory
+		if instructionKind == bir.INSTRUCTION_KIND_MAP_FILLING_LOAD && lhsOp != nil && lhsOp.VariableDcl != nil {
+			// After filling, the loaded value is guaranteed non-nil, so strip NIL
+			// from the operand type before looking up the filler factory.
+			tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+			valueType := semtypes.Diff(lhsOp.VariableDcl.GetType(), semtypes.NIL)
+			filler, _ = values.FillerFactoryFor(tyCx, valueType)
+		}
 		return &bir.FieldAccess{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Kind:  instructionKind,
-			KeyOp: keyOp,
-			RhsOp: rhsOp,
+			Kind:   instructionKind,
+			KeyOp:  keyOp,
+			RhsOp:  rhsOp,
+			Filler: filler,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
 		ty := br.readType()

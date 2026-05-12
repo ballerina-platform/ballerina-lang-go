@@ -8,8 +8,8 @@ main() -> nil{
     %4 = ConstantLoad 42
     %6 = ConstantLoad x
     %8 = ConstantLoad 1
-    %7 = m[%8];
-    %5 = %7[%6];
+    %7 = m[%8] (fill);
+    %5 = %7[%6] (fill);
     %9 = ConstantLoad y
     %5[%9] = %4;
     %11 = ConstantLoad 1

@@ -9,7 +9,7 @@ main() -> nil{
     %5 = newMap {| b: {| i: int, never... |}, never... |}{%1=%4}
     a = %5;
     %8 = ConstantLoad b
-    %7 = a[%8];
+    %7 = a[%8] (fill);
     %9 = ConstantLoad i
     %10 = %7[%9];
     %11 = %10;
@@ -18,7 +18,7 @@ main() -> nil{
     %14 = + %11 %13;
     %7[%9] = %14;
     %16 = ConstantLoad b
-    %15 = a[%16];
+    %15 = a[%16] (fill);
     %17 = ConstantLoad i
     %18 = %15[%17];
     %19 = %18;

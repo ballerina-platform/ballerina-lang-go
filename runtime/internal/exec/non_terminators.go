@@ -136,6 +136,15 @@ func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	m.Put(keyStr, valueVal)
 }
 
+func execMapFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	container := getOperandValue(ctx, access.RhsOp, frame)
+	key := getOperandValue(ctx, access.KeyOp, frame).(string)
+	if container == nil {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", key)))
+	}
+	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(key, access.Filler))
+}
+
 func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	container := getOperandValue(ctx, access.RhsOp, frame)
 	key := getOperandValue(ctx, access.KeyOp, frame).(string)

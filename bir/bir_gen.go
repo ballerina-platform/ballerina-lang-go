@@ -1033,21 +1033,37 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 }
 
 // assignmentContainerReference produces the container reference for an indexed assignment LHS.
-// When the container is itself an index-based access on a list, the inner read must be a
-// filling load so that intermediate arrays are grown (and filled) before storing.
+// When the container is itself an index-based access on a list or mapping, the inner read
+// must be a filling load so that intermediate arrays grow (and fill) and absent map keys
+// are populated with a filler value before storing.
 func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
 	inner, ok := expr.(*ast.BLangIndexBasedAccess)
 	if !ok {
 		return handleActionOrExpression(ctx, bb, expr)
 	}
-	containerType := inner.Expr.GetDeterminedType()
-	if !semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
+	// The container of an indexed lvalue access can show up as a nilable type
+	// when it itself comes from another map index (e.g. `m["a"]["b"]` where the
+	// inner lookup nominally yields `T?`). After filling, the container is
+	// guaranteed non-nil, so we strip `()` before classifying.
+	containerType := semtypes.Diff(inner.Expr.GetDeterminedType(), semtypes.NIL)
+	var fillingKind InstructionKind
+	var filler values.FillerFactory
+	switch {
+	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+		fillingKind = INSTRUCTION_KIND_ARRAY_FILLING_LOAD
+	case semtypes.IsSubtypeSimple(containerType, semtypes.MAPPING):
+		fillingKind = INSTRUCTION_KIND_MAP_FILLING_LOAD
+		tyCx := semtypes.TypeCheckContext(ctx.birCx.CompilerContext.GetTypeEnv())
+		valueType := semtypes.MappingMemberTypeInnerVal(tyCx, containerType, semtypes.STRING)
+		filler, _ = values.FillerFactoryFor(tyCx, valueType)
+	default:
 		return handleActionOrExpression(ctx, bb, expr)
 	}
 	resultOperand := ctx.addTempVar(inner.GetDeterminedType())
 	indexEffect := handleActionOrExpression(ctx, bb, inner.IndexExpr)
 	containerRefEffect := assignmentContainerReference(ctx, indexEffect.block, inner.Expr)
-	fieldAccess := NewFieldAccess(INSTRUCTION_KIND_ARRAY_FILLING_LOAD, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(inner.GetPosition()))
+	fieldAccess := NewFieldAccess(fillingKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(inner.GetPosition()))
+	fieldAccess.Filler = filler
 	containerRefEffect.block.Instructions = append(containerRefEffect.block.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,

@@ -189,11 +189,6 @@ var (
 		// decimal fillers printed as <unsupported>.
 		"subset8/08-fill/4-v.bal",
 
-		// Auto-fill for nested member lvalues (m[k1][k2] = v, arr[i][k] = v) not implemented.
-		"subset8/08-fill/fill2-v.bal",
-		"subset8/08-fill/fill3-v.bal",
-		"subset8/08-fill/fill7-v.bal",
-
 		// Float `==` / `===` NaN and signed-zero semantics differ from Ballerina spec
 		// (NaN should equal NaN under `==`; `+0.0` should not equal `-0.0` under `===`).
 		"subset8/08-float/9-v.bal",

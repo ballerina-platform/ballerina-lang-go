@@ -1,4 +1,4 @@
 -- stdout --
 -- stderr --
-error: can't fill values
+error: no filler value
         at main(fill2-p.bal:23)

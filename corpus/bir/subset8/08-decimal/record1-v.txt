@@ -37,7 +37,7 @@ main() -> nil{
   bb4 {
     %25 = ConstantLoad 23.1
     %27 = ConstantLoad d
-    %26 = r3[%27];
+    %26 = r3[%27] (fill);
     %28 = ConstantLoad d1
     %26[%28] = %25;
     %29 = println(r3) -> bb5;

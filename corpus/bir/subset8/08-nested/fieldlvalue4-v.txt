@@ -8,7 +8,7 @@ main() -> nil{
     r = %3;
     %5 = ConstantLoad 32
     %7 = ConstantLoad m
-    %6 = r[%7];
+    %6 = r[%7] (fill);
     %8 = ConstantLoad x
     %6[%8] = %5;
     %9 = println(r) -> bb1;

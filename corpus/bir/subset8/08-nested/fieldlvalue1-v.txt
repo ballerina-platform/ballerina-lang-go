@@ -14,7 +14,7 @@ main() -> nil{
     p = %9;
     %11 = ConstantLoad Jane
     %13 = ConstantLoad name
-    %12 = p[%13];
+    %12 = p[%13] (fill);
     %14 = ConstantLoad first
     %12[%14] = %11;
     %16 = ConstantLoad name
