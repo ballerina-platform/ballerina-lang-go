@@ -1606,6 +1606,20 @@ func narrowCandidates(candidates, expectedType semtypes.SemType) semtypes.SemTyp
 }
 
 func pickNumericType(t typeResolver, n *ast.BLangLiteral, candidates semtypes.SemType) (semtypes.SemType, bool) {
+	// For integer literals whose magnitude does not fit in an int64, the
+	// value is preserved as the original numeric text (see parseLong). If
+	// the candidate set still allows a wider numeric type, pick that instead
+	// of forcing an int parse that will overflow.
+	if strVal, isStr := n.GetValue().(string); isStr && n.GetValueType().BTypeGetTag() == model.TypeTags_INT {
+		if _, err := strconv.ParseInt(strVal, 0, 64); err != nil {
+			switch {
+			case semtypes.ContainsBasicType(candidates, semtypes.DECIMAL):
+				return resolveAsDecimal(t, n)
+			case semtypes.ContainsBasicType(candidates, semtypes.FLOAT):
+				return resolveAsFloat(t, n)
+			}
+		}
+	}
 	switch {
 	case semtypes.ContainsBasicType(candidates, semtypes.INT):
 		return resolveAsInt(t, n)

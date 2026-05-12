@@ -62,5 +62,5 @@
         (invocation io println (
           (type-conversion-expr
             (unary-expr -
-              (literal 9.223372036854776e+18))
+              (literal 9223372036854775808))
             (value-type decimal))))))))

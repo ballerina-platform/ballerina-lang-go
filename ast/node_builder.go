@@ -18,7 +18,6 @@ package ast
 
 import (
 	"fmt"
-	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -1108,19 +1107,15 @@ func getIntegerLiteral(cx *context.CompilerContext, literal tree.Node, textValue
 	return nil
 }
 
-// parseLong parses a long integer value
+// parseLong parses a long integer value. When the literal does not fit
+// in an int64, the original numeric text is returned so that later stages
+// can resolve it without losing precision (e.g. when the literal targets
+// decimal or a wider numeric type).
 // migrated from BLangNodeBuilder.java:6680:5
 func parseLong(originalNodeValue, processedNodeValue string, radix int) any {
 	val, err := strconv.ParseInt(processedNodeValue, radix, 64)
 	if err != nil {
-		fVal, fErr := strconv.ParseFloat(processedNodeValue, 64)
-		if fErr != nil {
-			panic("Unimplemented")
-		}
-		if math.IsInf(fVal, 0) {
-			return originalNodeValue
-		}
-		return fVal
+		return originalNodeValue
 	}
 	return val
 }

@@ -66,7 +66,7 @@ main() -> nil{
     %44 = println(%43) -> bb10;
   }
   bb10 {
-    %45 = ConstantLoad 9223372036854775807
+    %45 = ConstantLoad 9223372036854775808/1
     %46 = unknown %45;
     %47 = <decimal>(%46)
     %48 = %47;
