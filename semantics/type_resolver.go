@@ -800,6 +800,69 @@ func resolveStatement(t typeResolver, chain *binding, stmt ast.BLangStatement) (
 	return effect, ok
 }
 
+func resolveCompoundAssignment(t typeResolver, chain *binding, s *ast.BLangCompoundAssignment) (statementEffect, bool) {
+	lhs := s.GetVariable().(ast.BLangExpression)
+	rhs := s.GetExpression().(ast.BLangActionOrExpression)
+	lhsTy, rhsChain, ok := resolveCompoundAssignmentLhs(t, chain, lhs)
+	if !ok {
+		return statementEffect{}, false
+	}
+	if _, _, ok := resolveCompoundAssignmentInner(t, rhsChain, lhsTy, rhs, s.OpKind, s.GetPosition()); !ok {
+		return statementEffect{}, false
+	}
+	if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
+		return unnarrowSymbolAt(t, rhsChain, expr.Symbol(), lhs.GetPosition()), true
+	}
+	return defaultStmtEffect(rhsChain), true
+}
+
+// resolveCompoundAssignmentLhs resolves the LHS of a compound assignment and returns the
+// narrowed LHS type to use as the operand type along with the chain in which the RHS should be
+// resolved. The LHS node's determined type is always set to its writable (unnarrowed) type so
+// that later assignment validation checks the RHS against the declared target type.
+func resolveCompoundAssignmentLhs(t typeResolver, chain *binding, lhs ast.BLangExpression) (semtypes.SemType, *binding, bool) {
+	switch lhs.(type) {
+	case *ast.BLangIndexBasedAccess, *ast.BLangFieldBaseAccess:
+		lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, lhs, nil)
+		if !ok {
+			return nil, nil, false
+		}
+		return lhsTy, lhsEffect.ifTrue, true
+	default:
+		_, _, ok := resolveActionOrExpression(t, nil, lhs, nil)
+		if !ok {
+			return nil, nil, false
+		}
+		if ref, isVarRef := varRefExp(chain, lhs); isVarRef {
+			return t.symbolType(ref), chain, true
+		}
+		return lhs.GetDeterminedType(), chain, true
+	}
+}
+
+func resolveCompoundAssignmentInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	// Use the widened basic-type form of the LHS as the contextual expected type for the RHS
+	// so that literals (e.g. `r["x"] += 1` where `x` is float) are typed against the LHS basic
+	// type rather than a possibly-singleton narrowed type.
+	rhsExpectedType := semtypes.SemType(semtypes.WidenToBasicTypes(lhsTy))
+	switch op {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		return resolveAdditiveExprInner(t, chain, lhsTy, rhs, op, rhsExpectedType, pos)
+	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
+		return resolveMultiplicativeExprInner(t, chain, lhsTy, rhs, op, rhsExpectedType, pos)
+	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		return resolveBitWiseExprInner(t, chain, lhsTy, rhs, op, pos)
+	case model.OperatorKind_BITWISE_LEFT_SHIFT, model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		return resolveShiftExprInner(t, chain, lhsTy, rhs, op, pos)
+	case model.OperatorKind_AND:
+		return resolveAndExprInner(t, chain, lhsTy, defaultExpressionEffect(chain), rhs, pos)
+	case model.OperatorKind_OR:
+		return resolveOrExprInner(t, chain, lhsTy, defaultExpressionEffect(chain), rhs, pos)
+	}
+	t.internalError(fmt.Sprintf("unexpected compound assignment operator %s", string(op)), pos)
+	return nil, expressionEffect{}, false
+}
+
 func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statementEffect, bool) {
 	var lhsTy semtypes.SemType
 	switch lhs := s.GetVariable().(type) {
@@ -842,7 +905,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 	case *ast.BLangAssignment:
 		return resolveAssignment(t, chain, s)
 	case *ast.BLangCompoundAssignment:
-		return resolveAssignment(t, chain, s)
+		return resolveCompoundAssignment(t, chain, s)
 	case *ast.BLangExpressionStmt:
 		if _, _, ok := resolveActionOrExpression(t, chain, s.Expr, nil); !ok {
 			return defaultStmtEffect(chain), false
@@ -3145,7 +3208,7 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
 	case model.OperatorKind_SUB:
-		resultTy = negateNumericType(t, expr, underlyingTy)
+		resultTy = negateNumericType(underlyingTy)
 	case model.OperatorKind_ADD:
 		resultTy = underlyingTy
 
@@ -3195,7 +3258,7 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func negateNumericType(t typeResolver, expr *ast.BLangUnaryExpr, exprTy semtypes.SemType) semtypes.SemType {
+func negateNumericType(exprTy semtypes.SemType) semtypes.SemType {
 	shape := semtypes.SingleShape(exprTy)
 	if shape.IsEmpty() {
 		return exprTy
@@ -3214,7 +3277,11 @@ func negateNumericType(t typeResolver, expr *ast.BLangUnaryExpr, exprTy semtypes
 }
 
 func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	operandExpectedType := semtypes.Union(semtypes.Union(semtypes.NUMBER, semtypes.STRING), semtypes.XML)
+	supportedTypes := additiveSupportedTypes
+	if expr.GetOperatorKind() == model.OperatorKind_SUB {
+		supportedTypes = semtypes.NUMBER
+	}
+	operandExpectedType := semtypes.Union(supportedTypes, semtypes.XML)
 	if expectedType != nil {
 		operandExpectedType = semtypes.Intersect(operandExpectedType, expectedType)
 	}
@@ -3222,7 +3289,24 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	resultTy, effect, ok := resolveAdditiveExprInner(t, lhsEffect.ifTrue, lhsTy, expr.RhsExpr, expr.GetOperatorKind(), expectedType, expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, expectedType semtypes.SemType, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	supportedTypes := additiveSupportedTypes
+	if op == model.OperatorKind_SUB {
+		supportedTypes = semtypes.NUMBER
+	}
+	operandExpectedType := semtypes.Union(supportedTypes, semtypes.XML)
+	if expectedType != nil {
+		operandExpectedType = semtypes.Intersect(operandExpectedType, expectedType)
+	}
+	rhsTy, _, ok := resolveActionOrExpression(t, chain, rhs, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3234,7 +3318,7 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
 	if numLhsBits != 1 || numRhsBits != 1 {
-		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 
@@ -3242,20 +3326,18 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-	if !semtypes.IsSubtype(ctx, lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, additiveSupportedTypes) {
-		t.semanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+	if !semtypes.IsSubtype(ctx, lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, supportedTypes) {
+		t.semanticError(fmt.Sprintf("invalid type for operand of %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	} else if lhsBasicTy != rhsBasicTy {
-		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
+		t.semanticError("both operands must belong to same basic type", pos)
 		return nil, expressionEffect{}, false
 	}
 	var resultTy semtypes.SemType = lhsBasicTy
 	if nilLifted {
 		resultTy = semtypes.Union(semtypes.NIL, resultTy)
 	}
-	setExpectedType(expr, resultTy)
-	effect := defaultExpressionEffect(lhsEffect.ifTrue)
-	return resultTy, effect, true
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func resolveRangeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -3278,7 +3360,16 @@ func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	resultTy, effect, ok := resolveShiftExprInner(t, lhsEffect.ifTrue, lhsTy, expr.RhsExpr, expr.GetOperatorKind(), expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveShiftExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	rhsTy, _, ok := resolveActionOrExpression(t, chain, rhs, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3287,11 +3378,11 @@ func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr)
 	// TODO: handle singleton typing here
 
 	if semtypes.IsEmpty(ctx, lhsTy) || semtypes.IsEmpty(ctx, rhsTy) || !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-		t.semanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("expect integer types for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 	var resultTy semtypes.SemType = semtypes.INT
-	switch expr.GetOperatorKind() {
+	switch op {
 	case model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
 		for _, ty := range bitWiseOpLookOrder {
 			if semtypes.IsSubtype(ctx, lhsTy, ty) {
@@ -3303,9 +3394,7 @@ func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr)
 	if nilLifted {
 		resultTy = semtypes.Union(resultTy, semtypes.NIL)
 	}
-	setExpectedType(expr, resultTy)
-	effect := defaultExpressionEffect(lhsEffect.ifTrue)
-	return resultTy, effect, true
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func nilLiftedUnderlyingType(lhsTy, rhsTy semtypes.SemType) (semtypes.SemType, semtypes.SemType, bool) {
@@ -3350,7 +3439,20 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	resultTy, effect, ok := resolveMultiplicativeExprInner(t, lhsEffect.ifTrue, lhsTy, expr.RhsExpr, expr.GetOperatorKind(), expectedType, expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveMultiplicativeExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, expectedType semtypes.SemType, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	var operandExpectedType semtypes.SemType = semtypes.NUMBER
+	if expectedType != nil {
+		operandExpectedType = semtypes.Intersect(expectedType, operandExpectedType)
+	}
+	rhsTy, _, ok := resolveActionOrExpression(t, chain, rhs, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3362,14 +3464,14 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
 	if numLhsBits != 1 || numRhsBits != 1 {
-		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 	if !isNumericType(lhsBasicTy) || !isNumericType(rhsBasicTy) {
-		t.semanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("expect numeric types for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 	var resultTy semtypes.SemType
@@ -3377,10 +3479,10 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 		ctx := t.typeContext()
 		if semtypes.IsSubtype(ctx, rhsBasicTy, semtypes.INT) {
 			resultTy = lhsBasicTy
-		} else if expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, lhsBasicTy, semtypes.INT) {
+		} else if op == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, lhsBasicTy, semtypes.INT) {
 			resultTy = rhsBasicTy
 		} else {
-			t.semanticError("both operands must belong to same basic type", expr.GetPosition())
+			t.semanticError("both operands must belong to same basic type", pos)
 			return nil, expressionEffect{}, false
 		}
 	} else {
@@ -3389,9 +3491,7 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 	if nilLifted {
 		resultTy = semtypes.Union(semtypes.NIL, resultTy)
 	}
-	setExpectedType(expr, resultTy)
-	effect := defaultExpressionEffect(lhsEffect.ifTrue)
-	return resultTy, effect, true
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -3399,7 +3499,16 @@ func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExp
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	resultTy, effect, ok := resolveBitWiseExprInner(t, lhsEffect.ifTrue, lhsTy, expr.RhsExpr, expr.GetOperatorKind(), expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveBitWiseExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	rhsTy, _, ok := resolveActionOrExpression(t, chain, rhs, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3411,18 +3520,18 @@ func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExp
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
 	if numLhsBits != 1 || numRhsBits != 1 {
-		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 
 	ctx := t.typeContext()
 	if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-		t.semanticError("expect integer types for bitwise operators", expr.GetPosition())
+		t.semanticError("expect integer types for bitwise operators", pos)
 		return nil, expressionEffect{}, false
 	}
 
 	var resultTy semtypes.SemType = semtypes.INT
-	switch expr.GetOperatorKind() {
+	switch op {
 	case model.OperatorKind_BITWISE_AND:
 		for _, ty := range bitWiseOpLookOrder {
 			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
@@ -3438,16 +3547,13 @@ func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExp
 			}
 		}
 	default:
-		t.unimplemented(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.unimplemented(fmt.Sprintf("unsupported bitwise operator: %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
 	if nilLifted {
 		resultTy = semtypes.Union(resultTy, semtypes.NIL)
 	}
-
-	setExpectedType(expr, resultTy)
-	effect := defaultExpressionEffect(lhsEffect.ifTrue)
-	return resultTy, effect, true
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func resolveBinaryExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
@@ -3521,7 +3627,16 @@ func resolveAndExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
+	resultTy, effect, ok := resolveAndExprInner(t, chain, lhsTy, lhsEffect, expr.RhsExpr, expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveAndExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, lhsEffect expressionEffect, rhs ast.BLangActionOrExpression, _ diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, rhs, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3534,9 +3649,8 @@ func resolveAndExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (
 	} else if isSingletonBool(lhsTy, true) {
 		resultTy = rhsTy
 	}
-	setExpectedType(expr, resultTy)
 
-	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+	if effect, isSingleton := singletonResultEffect(chain, resultTy); isSingleton {
 		return resultTy, effect, true
 	}
 
@@ -3552,7 +3666,16 @@ func resolveOrExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (s
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifFalse, expr.RhsExpr, nil)
+	resultTy, effect, ok := resolveOrExprInner(t, chain, lhsTy, lhsEffect, expr.RhsExpr, expr.GetPosition())
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(expr, resultTy)
+	return resultTy, effect, true
+}
+
+func resolveOrExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, lhsEffect expressionEffect, rhs ast.BLangActionOrExpression, _ diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
+	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifFalse, rhs, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3565,9 +3688,8 @@ func resolveOrExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (s
 	} else if isSingletonBool(lhsTy, false) {
 		resultTy = rhsTy
 	}
-	setExpectedType(expr, resultTy)
 
-	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+	if effect, isSingleton := singletonResultEffect(chain, resultTy); isSingleton {
 		return resultTy, effect, true
 	}
 

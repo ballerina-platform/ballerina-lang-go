@@ -269,9 +269,7 @@ var (
 		// the front-end. The expected stderr is either a runtime error () or a
 		// compiler internal/unimplemented bailout (). The front-end should
 		// detect these statically before reaching this stage.
-		"subset8/08-bug/stringop1-e.bal",
 		"subset8/08-bug/unusedimport-e.bal",
-		"subset8/08-compoundassign/9-e.bal",
 		"subset8/08-error/check8-e.bal",
 		"subset8/08-float/15-e.bal",
 		// rest param not supported in dependently typed functions

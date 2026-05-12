@@ -1,7 +1,7 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected nil, got "s"
-  --> compoundassign2-e.bal:23:20
+error[SEMANTIC_ERROR]: union types not supported for +
+  --> compoundassign2-e.bal:23:9
    |
 23 |         m1["x"] += "s"; // @error
-   |                    ^^^
+   |         ^^^^^^^^^^^^^^^

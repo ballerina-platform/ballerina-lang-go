@@ -233,7 +233,10 @@ func diff(c1, c2 *binding) *binding {
 }
 
 func singletonExprEffect(chain *binding, expr ast.BLangActionOrExpression) (expressionEffect, bool) {
-	ty := expr.GetDeterminedType()
+	return singletonResultEffect(chain, expr.GetDeterminedType())
+}
+
+func singletonResultEffect(chain *binding, ty semtypes.SemType) (expressionEffect, bool) {
 	if ty == nil {
 		return expressionEffect{}, false
 	}
