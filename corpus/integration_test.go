@@ -236,7 +236,7 @@ var (
 		"subset8/08-tuple/tupleunion1-v.bal",
 		"subset8/08-union/construct4-v.bal",
 
-		// Expected runtime panic, but got nothing/wrong panic
+		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177
 		"subset8/08-bytearr/2-p.bal",
 		"subset8/08-bytearr/3-p.bal",
 		"subset8/08-bytearr/4-p.bal",
@@ -258,8 +258,6 @@ var (
 		"subset8/08-tuple/exact1-p.bal",
 		"subset8/08-tuple/exact2-p.bal",
 		"subset8/08-tuple/push3-p.bal",
-
-		// Expected runtime panic, but got frontend error.
 		"subset8/08-nested/exact1-p.bal",
 		"subset8/08-nested/proj1-p.bal",
 		"subset8/08-rest/exact1-p.bal",
