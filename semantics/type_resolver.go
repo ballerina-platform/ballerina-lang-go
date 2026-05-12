@@ -3268,7 +3268,7 @@ func negateNumericType(exprTy semtypes.SemType) semtypes.SemType {
 		return semtypes.IntConst(v * -1)
 	case float64:
 		return semtypes.FloatConst(v * -1)
-	case decimal.Decimal:
+	case *decimal.Decimal:
 		result := v.Neg()
 		return semtypes.DecimalConst(*result)
 	default:

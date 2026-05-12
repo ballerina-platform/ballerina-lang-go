@@ -186,9 +186,6 @@ var (
 		"subset8/08-unused/unused5-e.bal",
 		"subset8/08-unused/unused6-e.bal",
 
-		// decimal fillers printed as <unsupported>.
-		"subset8/08-fill/4-v.bal",
-
 		// Float `==` / `===` NaN and signed-zero semantics differ from Ballerina spec
 		// (NaN should equal NaN under `==`; `+0.0` should not equal `-0.0` under `===`).
 		"subset8/08-float/9-v.bal",

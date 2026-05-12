@@ -736,7 +736,8 @@ func SingleShape(t SemType) common.Optional[Value] {
 		if value.IsEmpty() {
 			return common.OptionalEmpty[Value]()
 		} else {
-			return common.OptionalOf(valueFrom(value.Get()))
+			d := value.Get()
+			return common.OptionalOf(valueFrom(&d))
 		}
 	}
 	return common.OptionalEmpty[Value]()
