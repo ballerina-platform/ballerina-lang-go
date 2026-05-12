@@ -656,7 +656,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 
 func isPolymorphicFnSymbol(sym model.FunctionSymbol) bool {
 	switch sym.(type) {
-	case model.DependentlyTypedFunctionSymbol, model.GenericFunctionSymbol:
+	case model.DependentlyTypedFunctionSymbol, model.ContainerGenericFunctionSymbol:
 		return true
 	default:
 		return false
@@ -4066,13 +4066,29 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		monoSym.SetType(typeFromFunctionSignature(t, monoSym.Signature()))
 		inv.SetResolvedSymbol(monoRef)
 		return argTys, monoRef, chain, true
-	case model.GenericFunctionSymbol:
-		paramTyes := make([]semtypes.SemType, len(sym.ParamNames()))
-		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+	case model.ContainerGenericFunctionSymbol:
+		args := inv.CallArgs()
+		if len(args) == 0 {
+			t.semanticError("missing container argument", inv.GetPosition())
+			return nil, fnSymbol, chain, false
+		}
+		container := args[0]
+		containerTy, _, ok := resolveActionOrExpression(t, chain, container, nil)
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
-		symbolRef := sym.Monomorphize(argTys)
+
+		symbolRef := sym.Monomorphize(containerTy)
+		fnSym, ok := t.getSymbol(symbolRef).(model.FunctionSymbol)
+		if !ok {
+			t.internalError("monomorphized container generic symbol is not a function symbol", inv.GetPosition())
+			return nil, fnSymbol, chain, false
+		}
+		sig := fnSym.Signature()
+		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		if !ok {
+			return nil, fnSymbol, chain, false
+		}
 		inv.SetResolvedSymbol(symbolRef)
 		return argTys, symbolRef, chain, true
 	case model.FunctionSymbol:
@@ -4125,7 +4141,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 
 func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location, C semtypes.SemType) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
 	paramNames := sym.ParamNames()
-	nRequired := len(paramNames)
+	nRequired := len(paramTypes)
 	reorderdArgs := make([]ast.BLangExpression, nRequired)
 	namedArgsByIndex := make(map[int]*ast.BLangNamedArgsExpression)
 	tys := make([]semtypes.SemType, 0, nRequired)

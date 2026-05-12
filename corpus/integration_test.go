@@ -220,11 +220,7 @@ var (
 		"subset8/08-match/2-v.bal",
 		"subset8/08-match/float3-v.bal",
 
-		// Inherent type for mapping/list constructors against union or typed call contexts
-		// (mapping ctor in array.push, tuple rest-element push, R1|R2 = {...}).
-		// Push type
-		"subset8/08-nested/push1-v.bal",
-		"subset8/08-tuple/push2-v.bal",
+		// list constructor inherent type
 		"subset8/08-tuple/tupleunion1-v.bal",
 
 		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177

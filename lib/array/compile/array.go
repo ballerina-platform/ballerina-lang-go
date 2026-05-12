@@ -54,16 +54,12 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	return model.NewExportedSymbolSpace(space, nil)
 }
 
-func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
+func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.ContainerGenericFunctionSymbol, containerTy semtypes.SemType) model.SymbolRef {
 	var mut sync.Mutex
 	monomorphized := make(map[semtypes.SemType]model.SymbolRef)
 	nextIndex := 0
 
-	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
-		if len(args) == 0 {
-			ctx.SemanticError("push() requires at least 1 argument", diagnostics.Location{})
-		}
-		ty := args[0]
+	return func(s model.ContainerGenericFunctionSymbol, ty semtypes.SemType) model.SymbolRef {
 		mut.Lock()
 		defer mut.Unlock()
 		if _, ok := monomorphized[ty]; ok {
@@ -75,7 +71,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 			ctx.SemanticError("expect first argument to be a subtype of (any|error)[]", diagnostics.Location{})
 		}
 		// Is this is correct or do we need to take the list atomic type for this?
-		valType := semtypes.ListProj(tyCtx, ty, semtypes.IntConst(0))
+		valType := semtypes.ListProj(tyCtx, ty, semtypes.INT)
 		pushSignature := model.FunctionSignature{
 			ParamTypes:    []semtypes.SemType{ty},
 			RestParamType: valType,

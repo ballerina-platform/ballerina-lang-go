@@ -1,14 +1,18 @@
 (package
   (import-package ballerina io (as io))
   (import-package ballerina lang array (as lang.array))
-  (const N () (
-    (literal 10)))
+  (const N () ())
   (type-definition C
     (record-type
       (field x
         (value-type float))
       (field y
         (value-type float))))
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref N)
+        (literal 10))))
   (function main () (
     (value-type null))
     (block-function-body
@@ -17,13 +21,17 @@
           (array-type
             (user-defined-type C) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
-      (foreach
-        (var-def
-          (variable i (type
-            (value-type int))))
-        (binary-expr ..<
-          (literal 0)
-          (simple-var-ref N))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref N))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
         (block-stmt
           (expression-stmt
             (invocation lang.array push (
@@ -34,14 +42,23 @@
                   (literal 1))
                 (key-value
                   (literal y)
-                  (literal 2))))))))
-      (foreach
-        (var-def
-          (variable i (type
-            (value-type int))))
-        (binary-expr ..<
-          (literal 0)
-          (simple-var-ref N))
+                  (literal 2))))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$1 (expr
+          (simple-var-ref N))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable c (type
@@ -50,17 +67,24 @@
                 (simple-var-ref v)
                 (simple-var-ref i)))))
           (compound-assignment *
-            (field-based-access x
-              (simple-var-ref c))
+            (index-based-access
+              (simple-var-ref c)
+              (literal x))
             (type-conversion-expr
               (simple-var-ref i)
               (value-type float)))
           (compound-assignment *
-            (field-based-access y
-              (simple-var-ref c))
+            (index-based-access
+              (simple-var-ref c)
+              (literal y))
             (type-conversion-expr
               (simple-var-ref i)
-              (value-type float)))))
+              (value-type float)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
       (var-def
         (variable total1 (type
           (value-type float)) (expr
@@ -69,13 +93,17 @@
         (variable total2 (type
           (value-type float)) (expr
           (literal 0))))
-      (foreach
-        (var-def
-          (variable i (type
-            (value-type int))))
-        (binary-expr ..<
-          (literal 0)
-          (simple-var-ref N))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$2 (expr
+          (simple-var-ref N))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$2))
         (block-stmt
           (var-def
             (variable c (type
@@ -86,17 +114,24 @@
           (compound-assignment +
             (simple-var-ref total1)
             (binary-expr +
-              (field-based-access x
-                (simple-var-ref c))
-              (field-based-access y
-                (simple-var-ref c))))
+              (index-based-access
+                (simple-var-ref c)
+                (literal x))
+              (index-based-access
+                (simple-var-ref c)
+                (literal y))))
           (compound-assignment +
             (simple-var-ref total2)
             (binary-expr *
               (literal 3)
               (type-conversion-expr
                 (simple-var-ref i)
-                (value-type float))))))
+                (value-type float))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
       (expression-stmt
         (invocation io println (
           (binary-expr ==

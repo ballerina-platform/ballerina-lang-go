@@ -72,10 +72,12 @@ type FunctionSymbol interface {
 	ParamNames() []string
 }
 
-// GenericFunctionSymbol represents functions with [@typeParam] types
-type GenericFunctionSymbol interface {
+// ContainerGenericFunctionSymbol represents functions with [@typeParam] types defined for a container.
+// For these we are guranteed to get the container as a reference (**so we know the type**) to the first argument, thus we can always
+// Monomorphize the symbol type with it
+type ContainerGenericFunctionSymbol interface {
 	FunctionSymbol
-	Monomorphize(args []semtypes.SemType) SymbolRef
+	Monomorphize(containerTy semtypes.SemType) SymbolRef
 	Space() *SymbolSpace
 }
 
@@ -243,10 +245,10 @@ type (
 		polymorhpicFn SymbolRef
 	}
 
-	genericFunctionSymbol struct {
+	containerGenericFunctionSymbol struct {
 		name          string
 		space         *SymbolSpace
-		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
+		monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef
 		paramNames    []string
 	}
 
@@ -380,7 +382,7 @@ var (
 	_ Symbol                         = &ValueSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
-	_ GenericFunctionSymbol          = &genericFunctionSymbol{}
+	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
 	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
 	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
 	_ Symbol                         = &SymbolRef{}
@@ -742,59 +744,59 @@ func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
 	return ref, ok
 }
 
-func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
-	return &genericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef) ContainerGenericFunctionSymbol {
+	return &containerGenericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
 }
 
-func (s *genericFunctionSymbol) Name() string {
+func (s *containerGenericFunctionSymbol) Name() string {
 	return s.name
 }
 
-func (s *genericFunctionSymbol) ParamNames() []string {
+func (s *containerGenericFunctionSymbol) ParamNames() []string {
 	return s.paramNames
 }
 
-func (s *genericFunctionSymbol) Type() semtypes.SemType {
+func (s *containerGenericFunctionSymbol) Type() semtypes.SemType {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Kind() SymbolKind {
+func (s *containerGenericFunctionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
 }
 
-func (s *genericFunctionSymbol) SetType(_ semtypes.SemType) {
+func (s *containerGenericFunctionSymbol) SetType(_ semtypes.SemType) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) IsPublic() bool {
+func (s *containerGenericFunctionSymbol) IsPublic() bool {
 	return true
 }
 
-func (s *genericFunctionSymbol) Signature() FunctionSignature {
+func (s *containerGenericFunctionSymbol) Signature() FunctionSignature {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+func (s *containerGenericFunctionSymbol) SetSignature(_ FunctionSignature) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
+func (s *containerGenericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
 	return &DefaultableParamInfo{}
 }
 
-func (s *genericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
+func (s *containerGenericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Copy() Symbol {
+func (s *containerGenericFunctionSymbol) Copy() Symbol {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType) SymbolRef {
-	return s.monomorphizer(s, args)
+func (s *containerGenericFunctionSymbol) Monomorphize(containerTy semtypes.SemType) SymbolRef {
+	return s.monomorphizer(s, containerTy)
 }
 
-func (s *genericFunctionSymbol) Space() *SymbolSpace {
+func (s *containerGenericFunctionSymbol) Space() *SymbolSpace {
 	return s.space
 }
 
