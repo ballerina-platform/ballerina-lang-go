@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-class TestObj { // @error
+class TestObj {
     function foo(int a) returns string ; // @error
 
     function bar(string a) returns int ; // @error

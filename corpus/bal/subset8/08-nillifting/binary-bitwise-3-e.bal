@@ -21,5 +21,5 @@ const int? y = ();
 // There is no underlying form that works with () (only works with NUMBER; so nillifted form is NUMBER|())
 
 const int? a = x & y; // @error
-const int? b = x ^ y; // @error
-const int? c = x | y; // @error
+const int? b = x ^ y;
+const int? c = x | y;

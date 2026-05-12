@@ -135,30 +135,58 @@ func buildExpectedStdout(outputs []outputAnn) string {
 func assertErrorAnnotations(t *testing.T, anns annotations, diags []resolvedDiag) {
 	t.Helper()
 
+	if !hasErrorAnnotation(anns) {
+		t.Errorf("-e test must have at least one @error annotation")
+		return
+	}
+
 	if len(diags) == 0 {
 		t.Errorf("-e test produced no error diagnostics")
 		return
 	}
 
+	covered := make(map[string]map[int]bool)
 	for _, d := range diags {
-		if !diagnosticCoversAnnotatedLine(d, anns) {
+		if !diagnosticCoversAnnotatedLine(d, anns, covered) {
 			t.Errorf("diagnostic at %s:%d-%d not covered by any @error annotation",
 				d.file, d.startLine, d.endLine)
 		}
 	}
+
+	for file, fa := range anns {
+		for _, e := range fa.errors {
+			if !covered[file][e.line] {
+				t.Errorf("@error annotation at %s:%d is not covered by any diagnostic", file, e.line)
+			}
+		}
+	}
 }
 
-func diagnosticCoversAnnotatedLine(d resolvedDiag, anns annotations) bool {
-	fa, ok := anns[d.file]
-	if !ok {
-		return false
-	}
-	for _, e := range fa.errors {
-		if e.line >= d.startLine && e.line <= d.endLine {
+func hasErrorAnnotation(anns annotations) bool {
+	for _, fa := range anns {
+		if len(fa.errors) > 0 {
 			return true
 		}
 	}
 	return false
+}
+
+func diagnosticCoversAnnotatedLine(d resolvedDiag, anns annotations, covered map[string]map[int]bool) bool {
+	fa, ok := anns[d.file]
+	if !ok {
+		return false
+	}
+	matched := false
+	for _, e := range fa.errors {
+		if e.line >= d.startLine && e.line <= d.endLine {
+			if covered[d.file] == nil {
+				covered[d.file] = make(map[int]bool)
+			}
+			covered[d.file][e.line] = true
+			matched = true
+		}
+	}
+	return matched
 }
 
 // stackFrameLineRe matches a frame like `funcName(file.bal:42)` or
@@ -195,12 +223,14 @@ func assertPanicAnnotations(t *testing.T, anns annotations, stdout, stderr strin
 			test_util.FormatExpectedGot(expectedStdout, stdout))
 	}
 
-	for _, frame := range parseStackFrames(stderr) {
-		if frame == want {
-			return
-		}
+	frames := parseStackFrames(stderr)
+	if len(frames) == 0 {
+		t.Errorf("stack trace does not contain a source frame for @panic at %s\nstderr:\n%s", want, stderr)
+		return
 	}
-	t.Errorf("stack trace does not cover @panic at %s\nstderr:\n%s", want, stderr)
+	if frames[0] != want {
+		t.Errorf("top stack frame mismatch for @panic: want %s, got %s\nstderr:\n%s", want, frames[0], stderr)
+	}
 }
 
 // singlePanicAnnotation enforces that the test has exactly one `@panic`
