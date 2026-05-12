@@ -76,6 +76,7 @@ func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, true)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -97,6 +98,7 @@ func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, false)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -120,6 +122,7 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, false)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -146,6 +149,41 @@ func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
 	setOperandValue(ctx, binaryOp.LhsOp, frame, !values.DeepEquals(op1, op2))
+}
+
+// promoteMultiplicativeOperands implements the implicit numeric conversion permitted
+// for multiplicative expressions with mixed numeric operands: when the second operand
+// is int, it is converted to the type of the first operand; when the operation is
+// multiplication and the first operand is int, it is converted to the type of the
+// second operand. The conversion always succeeds for int -> float / decimal.
+func promoteMultiplicativeOperands(op1, op2 values.BalValue, isMul bool) (values.BalValue, values.BalValue) {
+	switch v2 := op2.(type) {
+	case int64:
+		switch v1 := op1.(type) {
+		case int64:
+			return v1, v2
+		case float64:
+			return v1, float64(v2)
+		case *decimal.Decimal:
+			return v1, decimal.FromInt64(v2)
+		default:
+			panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported numeric type: %T", op1)))
+		}
+	}
+	if !isMul {
+		return op1, op2
+	}
+	if v1, ok := op1.(int64); ok {
+		switch op2.(type) {
+		case float64:
+			return float64(v1), op2
+		case *decimal.Decimal:
+			return decimal.FromInt64(v1), op2
+		default:
+			panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported numeric type: %T", op2)))
+		}
+	}
+	return op1, op2
 }
 
 // decimalArith invokes a decimal arithmetic method (Add/Sub/Mul/Quo/Rem) and

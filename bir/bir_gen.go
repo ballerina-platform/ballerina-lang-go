@@ -41,6 +41,11 @@ type Context struct {
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
 	birPkg          *BIRPackage
+	typeCtx         semtypes.Context
+}
+
+func (c *Context) TypeContext() semtypes.Context {
+	return c.typeCtx
 }
 
 type stmtContext struct {
@@ -206,6 +211,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		packageID:       ast.PackageID,
 		birPkg:          birPkg,
 	}
+	genCtx.typeCtx = semtypes.TypeCheckContext(ctx.GetTypeEnv())
 	birPkg.GlobalVars = make(map[string]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, globalVar := range ast.GlobalVars {
@@ -999,7 +1005,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 
 	lat := expr.AtomicType
 	exprPos := ctx.loc(expr.GetPosition())
-	tyCx := semtypes.TypeCheckContext(ctx.birCx.CompilerContext.GetTypeEnv())
+	tyCx := ctx.birCx.typeCtx
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
 		ty := lat.MemberAtInnerVal(i)
 		fillerVal, ok := values.FillerValue(tyCx, ty)

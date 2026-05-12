@@ -186,40 +186,48 @@ var (
 		"subset8/08-unused/unused5-e.bal",
 		"subset8/08-unused/unused6-e.bal",
 
-		// invalid filling value
-		"subset8/08-fill/4-v.bal", // SingleShape decimal prints big.Rat with %v
+		// decimal fillers printed as <unsupported>.
+		"subset8/08-fill/4-v.bal",
+
+		// Auto-fill for nested member lvalues (m[k1][k2] = v, arr[i][k] = v) not implemented.
 		"subset8/08-fill/fill2-v.bal",
 		"subset8/08-fill/fill3-v.bal",
 		"subset8/08-fill/fill7-v.bal",
+
+		// Float `==` / `===` NaN and signed-zero semantics differ from Ballerina spec
+		// (NaN should equal NaN under `==`; `+0.0` should not equal `-0.0` under `===`).
+		"subset8/08-float/9-v.bal",
 		"subset8/08-float/10-v.bal",
 		"subset8/08-float/12-v.bal",
 		"subset8/08-float/14-v.bal",
 		"subset8/08-float/16-v.bal",
-		"subset8/08-float/22-v.bal",
-		"subset8/08-float/24-v.bal",
-		"subset8/08-float/9-v.bal",
-		"subset8/08-float/const3-v.bal",
-		"subset8/08-function/intersection11-v.bal",
-		"subset8/08-function/intersection13-v.bal",
-		"subset8/08-future/fieldexpr1-v.bal",
-		"subset8/08-future/lib1-v.bal",
-		"subset8/08-future/main-v.bal",
-		"subset8/08-future/main2-v.bal",
-		"subset8/08-future/never-v.bal",
-		"subset8/08-future/xmlsubtype-v.bal",
-		"subset8/08-ifelse/ifelse4-v.bal",
-		"subset8/08-match/18-v.bal",
-		"subset8/08-match/2-v.bal",
-		"subset8/08-match/4-v.bal",
-		"subset8/08-match/float3-v.bal",
-		// float +/- zero
+		"subset8/08-float/const3-v.bal", // same issue at constant-folding time
 		"subset8/08-narrowing/3-v.bal",
-		"subset8/08-nested/push1-v.bal",
-		"subset8/08-rest/construct7-v.bal",
 		"subset8/08-singleton/floattest1-v.bal",
 		"subset8/08-singleton/floattest2-v.bal",
-		"subset8/08-singleton/proj4-v.bal",
-		"subset8/08-singleton/typecast1-v.bal",
+		"subset8/08-float/24-v.bal",
+
+		// Float remainder `%` returns NaN for finite operands instead of computing the result.
+		"subset8/08-float/22-v.bal",
+
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/283
+		"subset8/08-future/fieldexpr1-v.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/442
+		"subset8/08-future/main-v.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/443
+		"subset8/08-future/never-v.bal",
+
+		"subset8/08-future/lib1-v.bal",       // io:print missing in langlib
+		"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
+
+		// Do we need to support this technically else if is not reachable?
+		"subset8/08-ifelse/ifelse4-v.bal",
+
+		// Match patterns: const-reference patterns and int-literal-as-float patterns unsupported.
+		"subset8/08-match/2-v.bal",
+		"subset8/08-match/float3-v.bal",
+
+		// lang.value langlib methods (e.g. string.length()) not implemented.
 		"subset8/08-string/10-v.bal",
 		"subset8/08-string/11-v.bal",
 		"subset8/08-string/12-v.bal",
@@ -227,9 +235,18 @@ var (
 		"subset8/08-string/15-v.bal",
 		"subset8/08-string/16-v.bal",
 		"subset8/08-string/17-v.bal",
+
+		// Inherent type for mapping/list constructors against union or typed call contexts
+		// (mapping ctor in array.push, tuple rest-element push, R1|R2 = {...}).
+		"subset8/08-nested/push1-v.bal",
+		"subset8/08-rest/construct7-v.bal",
+		"subset8/08-singleton/proj4-v.bal",
 		"subset8/08-tuple/push2-v.bal",
 		"subset8/08-tuple/tupleunion1-v.bal",
 		"subset8/08-union/construct4-v.bal",
+
+		// Typed-cast not folded as constant expression: `const int X = <int>1.0;`.
+		"subset8/08-singleton/typecast1-v.bal",
 
 		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177
 		"subset8/08-bytearr/2-p.bal",
@@ -256,30 +273,23 @@ var (
 		"subset8/08-nested/exact1-p.bal",
 		"subset8/08-nested/proj1-p.bal",
 		"subset8/08-rest/exact1-p.bal",
-
-		// Expected frontend error: migrated -e tests where pi did not catch the error in
-		// the front-end. The expected stderr is either a runtime error () or a
-		// compiler internal/unimplemented bailout (). The front-end should
-		// detect these statically before reaching this stage.
-		"subset8/08-bug/unusedimport-e.bal",
-		"subset8/08-float/15-e.bal",
-		// rest param not supported in dependently typed functions
-		"subset8/08-function/dependent-fn-5-e.bal",
-		"subset8/08-future/langlib2-e.bal",
-		"subset8/08-future/langlib3-e.bal",
-		"subset8/08-inclusive/fieldlvalue5-e.bal",
-		"subset8/08-list/10-e.bal",
-		"subset8/08-list/compoundassign5-e.bal",
-		"subset8/08-mapping/9-e.bal",
-		"subset8/08-record/fieldlvalue6-e.bal",
-
-		// Wrong runtime panic: migrated -p tests where pi raises "unsupported type" instead
-		// of the intended runtime panic (overflow/conversion/etc). The test exercises a feature
-		// pi has not implemented at runtime (decimal arithmetic on *big.Rat, typed list/map
-		// element checks), so the right panic is never produced.
 		"subset8/08-list/int2-p.bal",
 		"subset8/08-list/int5-p.bal",
 		"subset8/08-map/int2-p.bal",
+
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/441
+		"subset8/08-bug/unusedimport-e.bal",
+
+		// rest param not supported in dependently typed functions
+		"subset8/08-function/dependent-fn-5-e.bal",
+		// Expected frontend error:
+		// length not checking reciever type
+		"subset8/08-future/langlib2-e.bal",
+		"subset8/08-future/langlib3-e.bal",
+
+		// Unsupported match pattern diagnostics for list/mapping patterns.
+		"subset8/08-list/10-e.bal",
+		"subset8/08-mapping/9-e.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.
