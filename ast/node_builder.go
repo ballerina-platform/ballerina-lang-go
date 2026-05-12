@@ -2349,13 +2349,12 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				// Process parameters
 				params := funcSig.Parameters()
 				for param := range params.Iterator() {
-					reqParam := param.(*tree.RequiredParameterNode)
-					paramType := n.createTypeNode(reqParam.TypeName()).(BType)
-					var nameIdent *BLangIdentifier
-					if pn := reqParam.ParamName(); pn != nil {
-						nameIdent = &BLangIdentifier{Value: pn.Text()}
+					ftParam := n.createFunctionTypeParam(param)
+					if _, isRest := param.(*tree.RestParameterNode); isRest {
+						bMethod.RestParam = &ftParam
+					} else {
+						bMethod.RequiredParams = append(bMethod.RequiredParams, ftParam)
 					}
-					bMethod.RequiredParams = append(bMethod.RequiredParams, BLangFunctionTypeParam{Name: nameIdent, TypeDesc: paramType})
 				}
 
 				// Process return type

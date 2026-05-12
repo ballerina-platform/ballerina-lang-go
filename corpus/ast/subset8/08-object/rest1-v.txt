@@ -1,0 +1,73 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition Adder
+    (variable base (type
+      (value-type int)))
+    (function init (
+      (variable base (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access base
+            (simple-var-ref self))
+          (simple-var-ref base))))
+    (function sum () (
+      (value-type int))
+      (block-function-body
+        (var-def
+          (variable total (type
+            (value-type int)) (expr
+            (field-based-access base
+              (simple-var-ref self)))))
+        (foreach
+          (var-def
+            (variable i (type
+              (value-type int))))
+          (binary-expr ..<
+            (literal 0)
+            (invocation length expr:
+              (simple-var-ref vals) ()))
+          (block-stmt
+            (assignment
+              (simple-var-ref total)
+              (binary-expr +
+                (simple-var-ref total)
+                (index-based-access
+                  (simple-var-ref vals)
+                  (simple-var-ref i))))))
+        (return
+          (simple-var-ref total)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type Adder)) (expr
+          (new (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref a) ()))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref a) (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref a) (
+            (literal 1)
+            (literal 2)
+            (literal 3))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref a) (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)))))))))
