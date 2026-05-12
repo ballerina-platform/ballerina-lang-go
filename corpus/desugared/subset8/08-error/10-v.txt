@@ -1,5 +1,6 @@
 (package
   (import-package ballerina io (as io))
+  (import-package ballerina lang error (as lang.error))
   (function main () (
     (value-type null))
     (block-function-body
@@ -11,8 +12,8 @@
       (var-def
         (variable s (type
           (value-type string)) (expr
-          (invocation message expr:
-            (simple-var-ref err) ()))))
+          (invocation lang.error message (
+            (simple-var-ref err))))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref s)))))))

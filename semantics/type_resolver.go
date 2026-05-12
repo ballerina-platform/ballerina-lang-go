@@ -33,6 +33,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 
 	array "ballerina-lang-go/lib/array/compile"
+	bError "ballerina-lang-go/lib/error/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
 )
@@ -3781,6 +3782,8 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bInt.PackageName, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bMap.PackageName, methodSymbol.name, expr)
+	case semtypes.IsSubtypeSimple(recieverTy, semtypes.ERROR):
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bError.PackageName, methodSymbol.name, expr)
 	default:
 		t.unimplemented("lang.value not implemented", expr.GetPosition())
 		return nil, expressionEffect{}, false

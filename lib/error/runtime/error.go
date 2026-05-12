@@ -14,13 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+package errorrt
 
 import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 )
+
+const (
+	orgName    = "ballerina"
+	moduleName = "lang.error"
+)
+
+func errorMessage(args []values.BalValue) (values.BalValue, error) {
+	err := args[0].(*values.Error)
+	return err.Message, nil
+}
+
+func initErrorModule(rt *runtime.Runtime) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "message", errorMessage)
+}
+
+func init() {
+	runtime.RegisterModuleInitializer(initErrorModule)
+}
