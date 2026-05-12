@@ -140,56 +140,12 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, op1 == nil && op2 == nil)
-		return
-	}
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case *decimal.Decimal:
-		v2 := op2.(*decimal.Decimal)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1.Cmp(v2) == 0)
-	default:
-		setOperandValue(ctx, binaryOp.LhsOp, frame, false)
-	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.DeepEquals(op1, op2))
 }
 
 func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, (op1 == nil) != (op2 == nil))
-		return
-	}
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case *decimal.Decimal:
-		v2 := op2.(*decimal.Decimal)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1.Cmp(v2) != 0)
-	default:
-		setOperandValue(ctx, binaryOp.LhsOp, frame, true)
-	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, !values.DeepEquals(op1, op2))
 }
 
 // decimalArith invokes a decimal arithmetic method (Add/Sub/Mul/Quo/Rem) and

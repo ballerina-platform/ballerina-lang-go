@@ -148,6 +148,9 @@ var (
 		"subset8/08-mapping/6-e.bal",
 		"subset8/08-mapping/7-e.bal",
 
+		// field base access not supported on mapping-constructor expressions
+		"subset8/08-mapping/5-v.bal",
+
 		"subset8/08-decimal/add2-e.bal",
 		"subset8/08-decimal/add3-e.bal",
 		"subset8/08-decimal/add4-e.bal",
@@ -213,17 +216,6 @@ var (
 		"subset8/08-future/never-v.bal",
 		"subset8/08-future/xmlsubtype-v.bal",
 		"subset8/08-ifelse/ifelse4-v.bal",
-		// invalid list eq
-		"subset8/08-list/1-v.bal",
-		"subset8/08-list/14-v.bal",
-		"subset8/08-list/equal-v.bal",
-		"subset8/08-nested/eqcycle2-v.bal",
-		// invalid map eq
-		"subset8/08-map/equal-v.bal",
-		"subset8/08-mapping/1-v.bal",
-		"subset8/08-mapping/5-v.bal",
-		"subset8/08-nested/bdd1-v.bal",
-		"subset8/08-nested/eqcycle1-v.bal",
 		"subset8/08-match/18-v.bal",
 		"subset8/08-match/2-v.bal",
 		"subset8/08-match/4-v.bal",
