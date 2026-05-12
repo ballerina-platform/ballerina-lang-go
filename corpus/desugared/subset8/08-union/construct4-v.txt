@@ -39,6 +39,7 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (field-based-access z
-                (simple-var-ref xyz)))))) ())
+              (index-based-access
+                (simple-var-ref xyz)
+                (literal z)))))) ())
       (block-stmt))))

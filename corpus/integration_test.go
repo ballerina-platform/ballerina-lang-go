@@ -221,12 +221,10 @@ var (
 
 		// Inherent type for mapping/list constructors against union or typed call contexts
 		// (mapping ctor in array.push, tuple rest-element push, R1|R2 = {...}).
+		// Push type
 		"subset8/08-nested/push1-v.bal",
-		"subset8/08-rest/construct7-v.bal",
-		"subset8/08-singleton/proj4-v.bal",
 		"subset8/08-tuple/push2-v.bal",
 		"subset8/08-tuple/tupleunion1-v.bal",
-		"subset8/08-union/construct4-v.bal",
 
 		// Typed-cast not folded as constant expression: `const int X = <int>1.0;`.
 		"subset8/08-singleton/typecast1-v.bal",
