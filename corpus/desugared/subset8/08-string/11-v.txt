@@ -1,5 +1,6 @@
 (package
   (import-package ballerina io (as io))
+  (import-package ballerina lang string (as lang.string))
   (function main () (
     (value-type null))
     (block-function-body
@@ -12,5 +13,5 @@
           (simple-var-ref s))))
       (expression-stmt
         (invocation io println (
-          (invocation length expr:
-            (simple-var-ref s) ())))))))
+          (invocation lang.string length (
+            (simple-var-ref s)))))))))

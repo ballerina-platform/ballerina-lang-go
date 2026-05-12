@@ -209,7 +209,6 @@ var (
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/443
 		"subset8/08-future/never-v.bal",
 
-		"subset8/08-future/lib1-v.bal",       // io:print missing in langlib
 		"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
 
 		// Do we need to support this technically else if is not reachable?
@@ -218,15 +217,6 @@ var (
 		// Match patterns: const-reference patterns and int-literal-as-float patterns unsupported.
 		"subset8/08-match/2-v.bal",
 		"subset8/08-match/float3-v.bal",
-
-		// lang.value langlib methods (e.g. string.length()) not implemented.
-		"subset8/08-string/10-v.bal",
-		"subset8/08-string/11-v.bal",
-		"subset8/08-string/12-v.bal",
-		"subset8/08-string/13-v.bal",
-		"subset8/08-string/15-v.bal",
-		"subset8/08-string/16-v.bal",
-		"subset8/08-string/17-v.bal",
 
 		// Inherent type for mapping/list constructors against union or typed call contexts
 		// (mapping ctor in array.push, tuple rest-element push, R1|R2 = {...}).

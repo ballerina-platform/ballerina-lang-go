@@ -18,6 +18,7 @@ package compile
 
 import (
 	"ballerina-lang-go/context"
+	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -36,5 +37,15 @@ func GetStringSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	charSym := model.NewTypeSymbol("Char", true)
 	charSym.SetType(semtypes.CHAR)
 	space.AddSymbol("Char", &charSym)
+
+	lengthSignature := model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{semtypes.STRING},
+		ReturnType: semtypes.INT,
+		Flags:      model.FuncSymbolFlagIsolated,
+	}
+	lengthSymbol := model.NewFunctionSymbol("length", lengthSignature, true)
+	space.AddSymbol("length", lengthSymbol)
+	lengthRef, _ := space.GetSymbol("length")
+	ctx.SetSymbolType(lengthRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lengthSignature))
 	return model.NewExportedSymbolSpace(space, nil)
 }

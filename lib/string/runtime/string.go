@@ -14,14 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+package stringruntime
 
 import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-	_ "ballerina-lang-go/lib/string/runtime"
+	"fmt"
+	"unicode/utf8"
+
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 )
+
+const (
+	orgName    = "ballerina"
+	moduleName = "lang.string"
+)
+
+func initStringModule(rt *runtime.Runtime) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "length", func(args []values.BalValue) (values.BalValue, error) {
+		s, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be a string")
+		}
+		return int64(utf8.RuneCountInString(s)), nil
+	})
+}
+
+func init() {
+	runtime.RegisterModuleInitializer(initStringModule)
+}
