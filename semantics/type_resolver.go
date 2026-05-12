@@ -37,6 +37,7 @@ import (
 	bInt "ballerina-lang-go/lib/int/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
 	bString "ballerina-lang-go/lib/string/compile"
+	bValue "ballerina-lang-go/lib/value/compile"
 )
 
 type typeResolver interface {
@@ -3910,8 +3911,7 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.STRING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bString.PackageName, methodSymbol.name, expr)
 	default:
-		t.unimplemented("lang.value not implemented", expr.GetPosition())
-		return nil, expressionEffect{}, false
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bValue.PackageName, methodSymbol.name, expr)
 	}
 	if !ok {
 		return nil, expressionEffect{}, false

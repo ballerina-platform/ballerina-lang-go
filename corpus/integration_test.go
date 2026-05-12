@@ -209,6 +209,7 @@ var (
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/443
 		"subset8/08-future/never-v.bal",
 
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/288
 		"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
 
 		// Do we need to support this technically else if is not reachable?
@@ -264,10 +265,6 @@ var (
 
 		// rest param not supported in dependently typed functions
 		"subset8/08-function/dependent-fn-5-e.bal",
-		// Expected frontend error:
-		// length not checking reciever type
-		"subset8/08-future/langlib2-e.bal",
-		"subset8/08-future/langlib3-e.bal",
 
 		// Unsupported match pattern diagnostics for list/mapping patterns.
 		"subset8/08-list/10-e.bal",
