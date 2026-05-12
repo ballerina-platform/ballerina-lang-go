@@ -188,9 +188,6 @@ var (
 
 		// Expected clean run: migrated -v tests that produce diagnostics or runtime errors
 		"subset8/08-error/10-v.bal",
-		"subset8/08-error/check1-v.bal",
-		"subset8/08-error/check10-v.bal",
-		"subset8/08-error/check3-v.bal",
 		// invalid filling value
 		"subset8/08-fill/4-v.bal", // SingleShape decimal prints big.Rat with %v
 		"subset8/08-fill/fill2-v.bal",

@@ -9,9 +9,17 @@
   (function errorViaCheck () (
     (error-type))
     (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation newError ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$0))) ())
       (expression-stmt
-        (checked-expr
-          (invocation newError ())))))
+        (simple-var-ref $desugar$0))))
   (function newError () (
     (error-type))
     (block-function-body

@@ -17,12 +17,13 @@
 package semantics
 
 import (
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"sync"
 )
 
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
@@ -86,7 +87,7 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	}
 	sym := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
 	retType := sym.Signature().ReturnType
-	if semtypes.IsSubtypeSimple(retType, semtypes.NIL) {
+	if semtypes.ContainsBasicType(retType, semtypes.NIL) {
 		return
 	}
 
@@ -113,7 +114,33 @@ func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	}
 	last := bb.nodes[len(bb.nodes)-1]
 	k := last.GetKind()
-	return k == model.NodeKind_RETURN || k == model.NodeKind_PANIC
+	if k == model.NodeKind_RETURN || k == model.NodeKind_PANIC {
+		return true
+	}
+	return isCheckTerminal(last)
+}
+
+// isCheckTerminal reports whether stmt is an expression statement
+// of the form `check E;` where E is subtype of error (if not it needds to continue)
+func isCheckTerminal(stmt model.Node) bool {
+	exprStmt, ok := stmt.(*ast.BLangExpressionStmt)
+	if !ok {
+		return false
+	}
+	// BLangCheckPanickedExpr embeds BLangCheckedExpr; only the plain `check`
+	// (not `checkpanic`) returns the error from the enclosing function.
+	switch checkExpr := exprStmt.Expr.(type) {
+	case *ast.BLangCheckPanickedExpr:
+		return false
+	case *ast.BLangCheckedExpr:
+		inner, ok := checkExpr.Expr.(ast.BLangExpression)
+		if !ok {
+			return false
+		}
+		// If exper contains other values it needs to continue
+		return semtypes.IsSubtypeSimple(inner.GetDeterminedType(), semtypes.ERROR)
+	}
+	return false
 }
 
 func positionForMissingReturn(bb basicBlock, fn *ast.BLangFunction) diagnostics.Location {
