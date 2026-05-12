@@ -18,7 +18,6 @@ package semantics_test
 
 import (
 	"flag"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -103,7 +102,7 @@ func TestSymbolResolver(t *testing.T) {
 
 func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range symbolResolverSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping symbol resolver test for %s", testCase.InputPath)
 			return
 		}

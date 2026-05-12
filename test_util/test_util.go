@@ -170,6 +170,10 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	return filepath.Join(outputBaseDir, relPath)
 }
 
+func HasPathSuffix(path, suffix string) bool {
+	return strings.HasSuffix(filepath.ToSlash(path), filepath.ToSlash(suffix))
+}
+
 func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 	return pal.Platform{
 		IO: pal.IO{

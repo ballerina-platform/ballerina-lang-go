@@ -19,7 +19,6 @@ package ast_test
 import (
 	"flag"
 	"fmt"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -104,7 +103,7 @@ func TestASTGeneration(t *testing.T) {
 
 func testASTGeneration(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range astGenerationSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping AST generation test for %s", testCase.InputPath)
 			return
 		}
@@ -251,7 +250,7 @@ func TestWalkTraversal(t *testing.T) {
 
 func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range walkTraversalSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping walk traversal test for %s", testCase.InputPath)
 			return
 		}

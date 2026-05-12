@@ -18,7 +18,6 @@ package desugar_test
 
 import (
 	"flag"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -140,7 +139,7 @@ func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 
 func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range desugarSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping desugar test for %s", testCase.InputPath)
 			return
 		}

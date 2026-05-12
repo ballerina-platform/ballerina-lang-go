@@ -18,7 +18,6 @@ package semantics_test
 
 import (
 	"flag"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -140,7 +139,7 @@ func TestTypeResolver(t *testing.T) {
 
 func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range typeResolverSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping type resolver test for %s", testCase.InputPath)
 			return
 		}

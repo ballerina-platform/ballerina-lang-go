@@ -58,7 +58,7 @@ func shouldIgnoreFile(filePath string) bool {
 
 	for _, ignoreList := range allIgnoreLists {
 		for _, ignorePath := range ignoreList {
-			if strings.HasSuffix(filePath, ignorePath) {
+			if test_util.HasPathSuffix(filePath, ignorePath) {
 				return true
 			}
 		}

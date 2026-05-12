@@ -18,7 +18,6 @@ package semantics_test
 
 import (
 	"flag"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/context"
@@ -223,7 +222,7 @@ func TestCFGGeneration(t *testing.T) {
 // testCFGGeneration tests CFG generation for a single .bal file.
 func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
 	for _, skip := range cfgGenerationSkipList {
-		if strings.HasSuffix(testPair.InputPath, skip) {
+		if test_util.HasPathSuffix(testPair.InputPath, skip) {
 			t.Skipf("Skipping CFG generation test for %s", testPair.InputPath)
 			return
 		}

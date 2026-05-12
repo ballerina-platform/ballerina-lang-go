@@ -24,8 +24,6 @@ import (
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
 	"flag"
-	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -157,7 +155,7 @@ func TestSemanticAnalysis(t *testing.T) {
 
 func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	for _, skip := range semanticAnalysisSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
+		if test_util.HasPathSuffix(testCase.InputPath, skip) {
 			t.Skipf("Skipping semantic analysis test for %s", testCase.InputPath)
 			return
 		}
@@ -442,10 +440,8 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 }
 
 func shouldSkipSemanticAnalysisErrorTest(inputPath string) bool {
-	normalizedInputPath := filepath.ToSlash(inputPath)
 	for _, skip := range semanticAnalysisErrorSkipList {
-		normalizedSkipPath := filepath.ToSlash(skip)
-		if strings.HasSuffix(normalizedInputPath, normalizedSkipPath) {
+		if test_util.HasPathSuffix(inputPath, skip) {
 			return true
 		}
 	}

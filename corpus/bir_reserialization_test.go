@@ -119,7 +119,7 @@ func TestBIRSerializationRoundtrip(t *testing.T) {
 
 func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 	for _, skip := range birSerializationRoundtripSkipList {
-		if strings.HasSuffix(testPair.InputPath, skip) {
+		if test_util.HasPathSuffix(testPair.InputPath, skip) {
 			t.Skipf("Skipping BIR serialization roundtrip test for %s", testPair.InputPath)
 			return
 		}

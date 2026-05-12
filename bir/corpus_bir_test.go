@@ -19,7 +19,6 @@ package bir_test
 import (
 	"flag"
 	"os"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/bir"
@@ -183,7 +182,7 @@ func TestBIRGeneration(t *testing.T) {
 // testBIRGeneration tests BIR generation for a single .bal file.
 func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	for _, skip := range birGenerationSkipList {
-		if strings.HasSuffix(testPair.InputPath, skip) {
+		if test_util.HasPathSuffix(testPair.InputPath, skip) {
 			t.Skipf("Skipping BIR generation test for %s", testPair.InputPath)
 			return
 		}

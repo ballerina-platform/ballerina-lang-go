@@ -19,6 +19,7 @@ package exec
 import (
 	"fmt"
 	"math"
+	"math/big"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
@@ -275,6 +276,8 @@ func execUnaryOpNegate(ctx *Context, unaryOp *bir.UnaryOp, frame *Frame) {
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
 	case float64:
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
+	case *big.Rat:
+		setOperandValue(ctx, unaryOp.LhsOp, frame, new(big.Rat).Neg(v))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op)))
 	}
