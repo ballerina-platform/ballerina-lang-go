@@ -167,7 +167,7 @@ func mappingFiller(cx Context, t SemType) (Filler, bool) {
 		return nil, false
 	}
 	if filler, memoized := cx._fillerMemo[mat]; memoized {
-		return filler, filler == nil
+		return filler, filler != nil
 	}
 	filler := MappingFiller{Atomic: mat, Type: t}
 	cx._fillerMemo[mat] = filler
@@ -180,13 +180,13 @@ func listFiller(cx Context, t SemType) (Filler, bool) {
 		return nil, false
 	}
 	if filler, memoized := cx._fillerMemo[lat]; memoized {
-		return filler, filler == nil
+		return filler, filler != nil
 	}
 	cx._fillerMemo[lat] = nil
 
-	memberFillers := make([]Filler, len(lat.Members.initial))
-	for i, memberTy := range lat.Members.initial {
-		filler, ok := FillerValue(cx, cellInnerVal(&memberTy))
+	memberFillers := make([]Filler, lat.Members.FixedLength)
+	for i := 0; i < lat.Members.FixedLength; i++ {
+		filler, ok := FillerValue(cx, lat.MemberAtInnerVal(i))
 		if !ok {
 			return nil, false
 		}

@@ -3434,7 +3434,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	dimensionSize := dimensionNodes.Size()
 	var sizes []BLangExpression
 
-	for i := dimensionSize - 1; i >= 0; i-- {
+	for i := 0; i < dimensionSize; i++ {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
 			sizes = append(sizes, nil)

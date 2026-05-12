@@ -8804,8 +8804,6 @@ func (b *BallerinaParser) parseTupleTypeDesc() tree.STNode {
 	memberTypeDesc := b.parseTupleMemberTypeDescList()
 	closeBracket := b.parseCloseBracket()
 	b.endContext()
-	openBracket = b.cloneWithDiagnosticIfListEmpty(memberTypeDesc, openBracket,
-		&common.ERROR_MISSING_TYPE_DESC)
 	return tree.CreateTupleTypeDescriptorNode(openBracket, memberTypeDesc, closeBracket)
 }
 

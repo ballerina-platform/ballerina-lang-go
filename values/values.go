@@ -83,10 +83,21 @@ func listFillerFactory(cx semtypes.Context, f semtypes.ListFiller) FillerFactory
 	for i, m := range f.Members {
 		memberFactories[i] = fillerFactoryFromDesc(cx, m)
 	}
-	restFactory, _ := FillerFactoryFor(cx, f.Atomic.Rest())
 	ty := f.Type
+	restType := f.Atomic.Rest()
+	// Resolve the rest filler factory lazily so that recursive types (e.g.
+	// `type A A[]`) do not blow the stack while building the factory graph.
+	var restFactory FillerFactory
+	restResolved := false
+	getRestFactory := func() FillerFactory {
+		if !restResolved {
+			restFactory, _ = FillerFactoryFor(cx, restType)
+			restResolved = true
+		}
+		return restFactory
+	}
 	return func() BalValue {
-		list := NewList(len(memberFactories), ty, restFactory)
+		list := NewList(len(memberFactories), ty, getRestFactory())
 		for i, mf := range memberFactories {
 			list.elems[i] = mf()
 		}

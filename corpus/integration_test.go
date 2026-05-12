@@ -257,14 +257,6 @@ var (
 		"subset8/08-nested/proj1-p.bal",
 		"subset8/08-rest/exact1-p.bal",
 
-		// Expected clean run: migrated -v tests whose expected stdout contains a runtime
-		// panic (). A -v test must complete without panicking.
-		"subset8/08-fill/11-v.bal",
-		"subset8/08-fill/12-v.bal",
-		"subset8/08-fill/19-v.bal",
-		"subset8/08-fill/20-v.bal",
-		"subset8/08-fill/order-v.bal",
-
 		// Expected frontend error: migrated -e tests where pi did not catch the error in
 		// the front-end. The expected stderr is either a runtime error () or a
 		// compiler internal/unimplemented bailout (). The front-end should
