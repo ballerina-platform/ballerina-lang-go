@@ -117,30 +117,11 @@ func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	if k == model.NodeKind_RETURN || k == model.NodeKind_PANIC {
 		return true
 	}
-	return isCheckTerminal(last)
-}
-
-// isCheckTerminal reports whether stmt is an expression statement
-// of the form `check E;` where E is subtype of error (if not it needds to continue)
-func isCheckTerminal(stmt model.Node) bool {
-	exprStmt, ok := stmt.(*ast.BLangExpressionStmt)
-	if !ok {
-		return false
-	}
-	// BLangCheckPanickedExpr embeds BLangCheckedExpr; only the plain `check`
-	// (not `checkpanic`) returns the error from the enclosing function.
-	switch checkExpr := exprStmt.Expr.(type) {
-	case *ast.BLangCheckPanickedExpr:
-		return false
-	case *ast.BLangCheckedExpr:
-		inner, ok := checkExpr.Expr.(ast.BLangExpression)
-		if !ok {
-			return false
-		}
-		// If exper contains other values it needs to continue
-		return semtypes.IsSubtypeSimple(inner.GetDeterminedType(), semtypes.ERROR)
-	}
-	return false
+	// The only other way a reachable block becomes terminal is via a
+	// `check`/`checkpanic` expression statement whose operand is statically
+	// a subtype of error (see analyzeStatement in control_flow_analyzer.go).
+	_, ok := last.(*ast.BLangExpressionStmt)
+	return ok
 }
 
 func positionForMissingReturn(bb basicBlock, fn *ast.BLangFunction) diagnostics.Location {

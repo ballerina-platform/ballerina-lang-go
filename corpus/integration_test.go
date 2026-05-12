@@ -262,7 +262,6 @@ var (
 		// compiler internal/unimplemented bailout (). The front-end should
 		// detect these statically before reaching this stage.
 		"subset8/08-bug/unusedimport-e.bal",
-		"subset8/08-error/check8-e.bal",
 		"subset8/08-float/15-e.bal",
 		// rest param not supported in dependently typed functions
 		"subset8/08-function/dependent-fn-5-e.bal",
