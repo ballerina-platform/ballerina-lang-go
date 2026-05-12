@@ -234,10 +234,6 @@ var (
 		"subset8/08-string/17-v.bal",
 		"subset8/08-tuple/push2-v.bal",
 		"subset8/08-tuple/tupleunion1-v.bal",
-		// invalid int conversion
-		"subset8/08-typecast/10-v.bal",
-		"subset8/08-typecast/13-v.bal",
-		"subset8/08-typecast/14-v.bal",
 		"subset8/08-union/construct4-v.bal",
 
 		// Expected runtime panic, but got nothing/wrong panic

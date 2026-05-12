@@ -215,7 +215,7 @@ func toInt(value any) int64 {
 		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
 			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast out-of-range value %v to int", v)))
 		}
-		return int64(v)
+		return int64(math.RoundToEven(v))
 	case *decimal.Decimal:
 		return decimalToInt(v)
 	default:

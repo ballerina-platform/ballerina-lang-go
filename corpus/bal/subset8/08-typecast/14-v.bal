@@ -24,5 +24,5 @@ public function main() {
 
     i = 9223372036854775807;
     // xxx print in hex to be more portable 
-    io:println(<float>i); // @output 9223372036854776000.0
+    io:println(<float>i); // @output 9.223372036854776e18
 }
