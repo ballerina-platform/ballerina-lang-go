@@ -29,5 +29,5 @@ type Client client object {
 public function main() {
     Client c = new MyClinet();
     string res = c->get("foo");
-    io:println(res); // @output "fooget"
+    io:println(res); // @output fooget
 }

@@ -738,6 +738,20 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.VariableDefinitionNode.(BLangNode))
 		}
 
+	case *BLangJoinClause:
+		if node.Collection != nil {
+			Walk(v, node.Collection.(BLangNode))
+		}
+		if node.OnClause.OnExpr != nil {
+			Walk(v, node.OnClause.OnExpr.(BLangNode))
+		}
+		if node.VariableDefinitionNode != nil {
+			Walk(v, node.VariableDefinitionNode.(BLangNode))
+		}
+		if node.OnClause.EqualsExpr != nil {
+			Walk(v, node.OnClause.EqualsExpr.(BLangNode))
+		}
+
 	case *BLangSelectClause:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))
@@ -753,7 +767,30 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expression.(BLangNode))
 		}
 
+	case *BLangOnClause:
+		if node.OnExpr != nil {
+			Walk(v, node.OnExpr.(BLangNode))
+		}
+		if node.EqualsExpr != nil {
+			Walk(v, node.EqualsExpr.(BLangNode))
+		}
+
 	case *BLangLimitClause:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
+	case *BLangOrderByClause:
+		for i := range node.OrderByKeyList {
+			Walk(v, &node.OrderByKeyList[i])
+		}
+
+	case *BLangOrderKey:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
+	case *BLangOnConflictClause:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))
 		}

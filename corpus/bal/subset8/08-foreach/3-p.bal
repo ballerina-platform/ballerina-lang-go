@@ -37,9 +37,8 @@ class FailingIterable {
 
 public function main() {
     FailingIterable f = new;
-    foreach int val in f {
+    foreach int val in f { // @panic iterator failed
         io:println(val); // @output 0
                          // @output 1
     }
-    // @panic iterator failed
 }

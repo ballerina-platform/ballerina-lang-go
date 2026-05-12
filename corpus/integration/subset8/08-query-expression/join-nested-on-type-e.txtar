@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected string, got int
+  --> join-nested-on-type-e.bal:38:36
+   |
+38 |             on dept.ownerId equals owner.name // @error
+   |                                    ^^^^^^^^^^

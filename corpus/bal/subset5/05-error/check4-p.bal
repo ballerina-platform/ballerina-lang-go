@@ -18,12 +18,12 @@ import ballerina/io;
 
 public function main() {
     map<int> m = { x: 1 };
-    io:println(-checkpanic nonNil(m["y"]));
+    io:println(-checkpanic nonNil(m["y"])); // @panic nil
 }
 
 function nonNil(int? n) returns int|error {
     if n == () {
-        return error("nil"); // @panic nil
+        return error("nil");
     }
     else {
         return n;

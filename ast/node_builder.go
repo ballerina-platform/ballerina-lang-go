@@ -3018,11 +3018,27 @@ func (n *NodeBuilder) TransformLetClause(letClauseNode *tree.LetClauseNode) BLan
 }
 
 func (n *NodeBuilder) TransformJoinClause(joinClauseNode *tree.JoinClauseNode) BLangNode {
-	panic("TransformJoinClause unimplemented")
+	joinClause := &BLangJoinClause{}
+	joinClause.pos = getPosition(n.de(), joinClauseNode)
+	joinClause.SetCollection(n.createExpression(joinClauseNode.Expression()))
+	bindingPatternNode := joinClauseNode.TypedBindingPattern()
+	joinClause.SetVariableDefinitionNode(
+		n.createBLangVarDef(getPosition(n.de(), bindingPatternNode), bindingPatternNode, nil, nil),
+	)
+	joinClause.IsDeclaredWithVarFlag = isDeclaredWithVar(bindingPatternNode.TypeDescriptor())
+	joinClause.IsOuterJoinFlag = joinClauseNode.OuterKeyword() != nil
+	if onClauseNode := joinClauseNode.JoinOnCondition(); onClauseNode != nil {
+		joinClause.OnClause = *n.TransformOnClause(onClauseNode).(*BLangOnClause)
+	}
+	return joinClause
 }
 
 func (n *NodeBuilder) TransformOnClause(onClauseNode *tree.OnClauseNode) BLangNode {
-	panic("TransformOnClause unimplemented")
+	onClause := &BLangOnClause{}
+	onClause.pos = getPosition(n.de(), onClauseNode)
+	onClause.SetOnExpression(n.createExpression(onClauseNode.OnExpression()))
+	onClause.SetEqualsExpression(n.createExpression(onClauseNode.EqualsExpression()))
+	return onClause
 }
 
 func (n *NodeBuilder) TransformLimitClause(limitClauseNode *tree.LimitClauseNode) BLangNode {
@@ -3033,7 +3049,10 @@ func (n *NodeBuilder) TransformLimitClause(limitClauseNode *tree.LimitClauseNode
 }
 
 func (n *NodeBuilder) TransformOnConflictClause(onConflictClauseNode *tree.OnConflictClauseNode) BLangNode {
-	panic("TransformOnConflictClause unimplemented")
+	onConflictClause := &BLangOnConflictClause{}
+	onConflictClause.pos = getPosition(n.de(), onConflictClauseNode)
+	onConflictClause.SetExpression(n.createExpression(onConflictClauseNode.Expression()))
+	return onConflictClause
 }
 
 func (n *NodeBuilder) TransformQueryPipeline(queryPipelineNode *tree.QueryPipelineNode) BLangNode {
@@ -3076,10 +3095,10 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
-		case common.FROM_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE:
+		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
 			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
-			n.cx.Unimplemented("only from + let + where + limit + select query clauses are supported for now", getPosition(n.de(), clause))
+			n.cx.Unimplemented("only from + join + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
 		}
 	}
 
@@ -3091,7 +3110,7 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	}
 
 	if queryExpressionNode.OnConflictClause() != nil {
-		n.cx.Unimplemented("on conflict clause is not supported yet", getPosition(n.de(), queryExpressionNode.OnConflictClause()))
+		queryExpr.AddQueryClause(n.TransformSyntaxNode(queryExpressionNode.OnConflictClause()))
 	}
 
 	return queryExpr
@@ -3780,11 +3799,31 @@ func (n *NodeBuilder) trimLeftAtMostOne(text string) string {
 }
 
 func (n *NodeBuilder) TransformOrderByClause(orderByClauseNode *tree.OrderByClauseNode) BLangNode {
-	panic("TransformOrderByClause unimplemented")
+	orderByClause := &BLangOrderByClause{}
+	orderByClause.pos = getPosition(n.de(), orderByClauseNode)
+
+	orderKeys := orderByClauseNode.OrderKey()
+	orderByClause.OrderByKeyList = make([]BLangOrderKey, 0, orderKeys.Size())
+	for orderKey := range orderKeys.Iterator() {
+		keyNode, ok := n.TransformOrderKey(orderKey).(*BLangOrderKey)
+		if !ok {
+			panic("expected BLangOrderKey")
+		}
+		orderByClause.OrderByKeyList = append(orderByClause.OrderByKeyList, *keyNode)
+	}
+	return orderByClause
 }
 
 func (n *NodeBuilder) TransformOrderKey(orderKeyNode *tree.OrderKeyNode) BLangNode {
-	panic("TransformOrderKey unimplemented")
+	orderKey := &BLangOrderKey{}
+	orderKey.pos = getPosition(n.de(), orderKeyNode)
+	orderKey.Expression = n.createExpression(orderKeyNode.Expression())
+	if dir := orderKeyNode.OrderDirection(); dir != nil && dir.Kind() == common.DESCENDING_KEYWORD {
+		orderKey.IsDescending = true
+	} else {
+		orderKey.IsDescending = false
+	}
+	return orderKey
 }
 
 func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClauseNode) BLangNode {

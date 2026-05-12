@@ -20,12 +20,12 @@ import testorg/recorddefault.types;
 
 public function main() {
     types:Person p1 = {};
-    io:println(p1.name);
-    io:println(p1.age);
-    io:println(p1.active);
+    io:println(p1.name); // @output John
+    io:println(p1.age); // @output 25
+    io:println(p1.active); // @output true
 
     types:Person p2 = {name: "Jane", age: 30};
-    io:println(p2.name);
-    io:println(p2.age);
-    io:println(p2.active);
+    io:println(p2.name); // @output Jane
+    io:println(p2.age); // @output 30
+    io:println(p2.active); // @output true
 }

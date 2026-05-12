@@ -20,19 +20,19 @@ import testorg/modulevar.vars;
 
 public function main() {
     // Simple variable without init
-    io:println(vars:count);
-    io:println(vars:label);
+    io:println(vars:count); // @output 10
+    io:println(vars:label); // @output initialized
 
     // Simple variable with init
-    io:println(vars:maxRetries);
-    io:println(vars:greeting);
-    io:println(vars:verbose);
+    io:println(vars:maxRetries); // @output 3
+    io:println(vars:greeting); // @output hello
+    io:println(vars:verbose); // @output true
 
     // List/mapping constructor
-    io:println(vars:primes);
-    io:println(vars:limits);
+    io:println(vars:primes); // @output [2,3,5,7,11]
+    io:println(vars:limits); // @output {"min":0,"max":100}
 
     // Query expression
-    io:println(vars:oddNumbers);
-    io:println(vars:tripled);
+    io:println(vars:oddNumbers); // @output [1,3,5]
+    io:println(vars:tripled); // @output [3,6,9,12,15,18]
 }

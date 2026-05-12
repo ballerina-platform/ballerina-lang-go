@@ -1,0 +1,68 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable xs (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 3)
+          (literal 1)
+          (literal 2)
+          (literal 1)))))
+    (var-def
+      (variable asc (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (order-by-clause
+            (order-key ascending
+              (simple-var-ref x)))
+          (select-clause
+            (simple-var-ref x))))))
+    (var-def
+      (variable desc (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (order-by-clause
+            (order-key descending
+              (simple-var-ref x)))
+          (select-clause
+            (simple-var-ref x))))))
+    (var-def
+      (variable filtered (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (order-by-clause
+            (order-key descending
+              (simple-var-ref x)))
+          (where-clause
+            (binary-expr >
+              (simple-var-ref x)
+              (literal 1)))
+          (select-clause
+            (simple-var-ref x))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref asc))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref desc))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref filtered))))
+  )
+)

@@ -18,5 +18,5 @@ import testorg/crossmoduleclass.models;
 
 public function main() {
     models:Person p = new ("John", 30);
-    p.greet();
+    p.greet(); // @output Hello, my name is John
 }

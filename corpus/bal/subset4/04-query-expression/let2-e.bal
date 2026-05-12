@@ -17,6 +17,6 @@
 public function main() {
     int[] xs = [1, 2, 3];
     int[] out = from var x in xs
-        let int a = b, int b = x
-        select a; // @error
+        let int a = b, int b = x // @error
+        select a;
 }

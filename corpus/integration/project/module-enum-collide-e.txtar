@@ -3,11 +3,11 @@
 error[SEMANTIC_ERROR]: redeclared symbol 'RED'
   --> modules/utils/constants.bal:17:21
    |
-17 | public const string RED = "RED";
+17 | public const string RED = "RED"; // @error
    |                     ^^^
 
 error[SEMANTIC_ERROR]: redeclared symbol 'RED'
   --> modules/utils/enums.bal:18:5
    |
-18 |     RED
+18 |     RED // @error
    |     ^^^

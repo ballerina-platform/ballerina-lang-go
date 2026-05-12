@@ -26,7 +26,7 @@ public function main() {
     Counter c = new ();
     int x = 10;
     x += c->next();
-    io:println(x); // @output "15"
+    io:println(x); // @output 15
     x -= c->next();
-    io:println(x); // @output "10"
+    io:println(x); // @output 10
 }

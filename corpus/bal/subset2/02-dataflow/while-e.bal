@@ -20,5 +20,5 @@ public function main() {
     while a < 10 { // @error
         a = 10;
     }
-    io:println(a);
+    io:println(a); // @error
 }

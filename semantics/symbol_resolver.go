@@ -30,6 +30,7 @@ import (
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
+	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
 )
 
@@ -533,6 +534,7 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
+	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
 	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	return result
