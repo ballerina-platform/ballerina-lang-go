@@ -71,6 +71,11 @@ Stages 5–10 then run concurrently per module, with no cross-module dependencie
 
 - Project test cases ends up in `./corpus/project/` and project names fallow the same convention.
 
+#### Test markers
+- `@output`: test cases can write to standard out using `io:println` and use output marker to indicate expected output.
+- `@error`: -e test cases should use error markers to indicate lines where an error is expect. Text after marker is purely for commenting, not validated against actual error.
+- `@panic`: -p test cases should use panic markers to indicate first line which triggers a panic. We validate it is the first line the stack trace. Similar to error markers text after marker is ignored.
+
 ## Commands
 
 - You can run interpreter as `go run ./cli/cmd run [flags] <path to bal file>`

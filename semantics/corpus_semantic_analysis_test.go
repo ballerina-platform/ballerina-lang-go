@@ -40,13 +40,11 @@ var semanticAnalysisSkipList = []string{
 	"subset8/08-match/2-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
-	"subset8/08-bug/listfill1-v.bal",
 	"subset8/08-fill/11-v.bal",
 	"subset8/08-fill/12-v.bal",
 	"subset8/08-fill/19-v.bal",
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-tuple/comp9-v.bal",
 
 	// Migrated test uses a feature pi does not yet support in this stage.
 	"subset8/08-bug/charcast1-v.bal",
@@ -55,8 +53,6 @@ var semanticAnalysisSkipList = []string{
 	"subset8/08-const/7-v.bal",
 	"subset8/08-const/8-v.bal",
 	"subset8/08-decimal/tofloat3-v.bal",
-	"subset8/08-decimal/tofloat4-p.bal",
-	"subset8/08-decimal/toint13-p.bal",
 	"subset8/08-error/10-v.bal",
 	"subset8/08-error/check1-v.bal",
 	"subset8/08-error/check10-v.bal",
@@ -91,11 +87,6 @@ var semanticAnalysisSkipList = []string{
 	"subset8/08-string/17-v.bal",
 	"subset8/08-tuple/push2-v.bal",
 	"subset8/08-tuple/tupleunion1-v.bal",
-	"subset8/08-typecast/11-v.bal",
-	"subset8/08-typecast/12-v.bal",
-	"subset8/08-typecast/16-v.bal",
-	"subset8/08-typecast/2-p.bal",
-	"subset8/08-typecast/6-p.bal",
 	"subset8/08-union/construct4-v.bal",
 
 	// Table-type descriptors not yet supported.
@@ -267,7 +258,6 @@ var semanticAnalysisErrorSkipList = []string{
 	"subset8/08-float/5-e.bal",
 	"subset8/08-float/7-e.bal",
 	"subset8/08-hex/decimal1-e.bal",
-	"subset8/08-inclusive/compoundassign2-e.bal",
 	"subset8/08-inclusive/compoundassign3-e.bal",
 	"subset8/08-inclusive/construct5-e.bal",
 	"subset8/08-inclusive/duplicate2-e.bal",
@@ -301,9 +291,7 @@ var semanticAnalysisErrorSkipList = []string{
 	"subset8/08-narrowing/4-e.bal",
 	"subset8/08-narrowing/5-e.bal",
 	"subset8/08-narrowing/6-e.bal",
-	"subset8/08-narrowing/7-e.bal",
 	"subset8/08-narrowing/8-e.bal",
-	"subset8/08-narrowing/9-e.bal",
 	"subset8/08-narrowing/if18-e.bal",
 	"subset8/08-narrowing/unreach3-e.bal",
 	"subset8/08-narrowing/unreach4-e.bal",
@@ -339,7 +327,6 @@ var semanticAnalysisErrorSkipList = []string{
 	"subset8/08-singleton/stringconcat1-e.bal",
 	"subset8/08-string/1-e.bal",
 	"subset8/08-string/5-e.bal",
-	"subset8/08-tuple/construct4-e.bal",
 	"subset8/08-typecast/8-e.bal",
 	"subset8/08-unused/unused1-e.bal",
 	"subset8/08-unused/unused2-e.bal",

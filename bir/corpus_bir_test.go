@@ -64,8 +64,6 @@ var birGenerationSkipList = []string{
 	"subset8/08-const/7-v.bal",
 	"subset8/08-const/8-v.bal",
 	"subset8/08-decimal/tofloat3-v.bal",
-	"subset8/08-decimal/tofloat4-p.bal",
-	"subset8/08-decimal/toint13-p.bal",
 	"subset8/08-error/10-v.bal",
 	"subset8/08-error/check1-v.bal",
 	"subset8/08-error/check10-v.bal",
@@ -99,11 +97,6 @@ var birGenerationSkipList = []string{
 	"subset8/08-string/17-v.bal",
 	"subset8/08-tuple/push2-v.bal",
 	"subset8/08-tuple/tupleunion1-v.bal",
-	"subset8/08-typecast/11-v.bal",
-	"subset8/08-typecast/12-v.bal",
-	"subset8/08-typecast/16-v.bal",
-	"subset8/08-typecast/2-p.bal",
-	"subset8/08-typecast/6-p.bal",
 	"subset8/08-union/construct4-v.bal",
 
 	// parse errors
@@ -113,13 +106,11 @@ var birGenerationSkipList = []string{
 	"subset8/08-match/2-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
-	"subset8/08-bug/listfill1-v.bal",
 	"subset8/08-fill/11-v.bal",
 	"subset8/08-fill/12-v.bal",
 	"subset8/08-fill/19-v.bal",
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-tuple/comp9-v.bal",
 
 	// Runtime panic in this stage on the migrated test.
 

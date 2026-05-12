@@ -40,13 +40,11 @@ var typeResolverSkipList = []string{
 	"subset8/08-match/2-v.bal",
 
 	// Fixed-length array type descriptors (e.g. `int[5]`) not yet supported.
-	"subset8/08-bug/listfill1-v.bal",
 	"subset8/08-fill/11-v.bal",
 	"subset8/08-fill/12-v.bal",
 	"subset8/08-fill/19-v.bal",
 	"subset8/08-fill/20-v.bal",
 	"subset8/08-fill/order-v.bal",
-	"subset8/08-tuple/comp9-v.bal",
 
 	// Migrated test uses a feature pi does not yet support in this stage.
 	"subset8/08-error/check3-v.bal",

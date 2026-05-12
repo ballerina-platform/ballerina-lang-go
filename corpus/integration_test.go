@@ -196,18 +196,11 @@ var (
 		"subset8/08-fill/fill2-v.bal",
 		"subset8/08-fill/fill3-v.bal",
 		"subset8/08-fill/fill7-v.bal",
-		"subset8/08-fill/methodcall1-v.bal",
 		"subset8/08-float/10-v.bal",
 		"subset8/08-float/12-v.bal",
 		"subset8/08-float/14-v.bal",
 		"subset8/08-float/16-v.bal",
-		"subset8/08-float/18-v.bal",
-		"subset8/08-float/19-v.bal",
-		"subset8/08-float/2-v.bal",
-		"subset8/08-float/20-v.bal",
-		"subset8/08-float/21-v.bal",
 		"subset8/08-float/22-v.bal",
-		"subset8/08-float/23-v.bal",
 		"subset8/08-float/24-v.bal",
 		"subset8/08-float/9-v.bal",
 		"subset8/08-float/const3-v.bal",
@@ -240,11 +233,8 @@ var (
 		"subset8/08-match/float3-v.bal",
 		// float +/- zero
 		"subset8/08-narrowing/3-v.bal",
-		"subset8/08-narrowing/7-v.bal",
-		"subset8/08-nested/fill1-v.bal",
 		"subset8/08-nested/push1-v.bal",
 		"subset8/08-rest/construct7-v.bal",
-		"subset8/08-singleton/float1-v.bal",
 		"subset8/08-singleton/floattest1-v.bal",
 		"subset8/08-singleton/floattest2-v.bal",
 		"subset8/08-singleton/proj4-v.bal",
@@ -256,21 +246,15 @@ var (
 		"subset8/08-string/15-v.bal",
 		"subset8/08-string/16-v.bal",
 		"subset8/08-string/17-v.bal",
-		"subset8/08-tuple/context1-v.bal",
 		"subset8/08-tuple/push2-v.bal",
 		"subset8/08-tuple/tupleunion1-v.bal",
 		// invalid int conversion
 		"subset8/08-typecast/10-v.bal",
 		"subset8/08-typecast/13-v.bal",
 		"subset8/08-typecast/14-v.bal",
-		"subset8/08-typecast/11-v.bal",
-		"subset8/08-typecast/12-v.bal",
-		"subset8/08-typecast/16-v.bal",
 		"subset8/08-union/construct4-v.bal",
 
 		// Expected runtime panic, but got nothing/wrong panic
-		"subset8/08-bug/fill2-p.bal",
-		"subset8/08-bug/fill4-p.bal",
 		"subset8/08-bytearr/2-p.bal",
 		"subset8/08-bytearr/3-p.bal",
 		"subset8/08-bytearr/4-p.bal",
@@ -278,9 +262,6 @@ var (
 		"subset8/08-exact/map1-p.bal",
 		"subset8/08-exact/push1-p.bal",
 		"subset8/08-exact/record1-p.bal",
-		"subset8/08-fill/14-p.bal",
-		"subset8/08-fill/23-p.bal",
-		"subset8/08-fill/9-p.bal",
 		"subset8/08-inclusive/inherent1-p.bal",
 		"subset8/08-inttest/typecast1-p.bal",
 		"subset8/08-list/push6-p.bal",
@@ -297,23 +278,17 @@ var (
 		"subset8/08-tuple/push3-p.bal",
 
 		// Expected runtime panic, but got frontend error.
-		"subset8/08-decimal/tofloat4-p.bal",
-		"subset8/08-decimal/toint13-p.bal",
 		"subset8/08-nested/exact1-p.bal",
 		"subset8/08-nested/proj1-p.bal",
 		"subset8/08-rest/exact1-p.bal",
-		"subset8/08-typecast/2-p.bal",
-		"subset8/08-typecast/6-p.bal",
 
 		// Expected clean run: migrated -v tests whose expected stdout contains a runtime
 		// panic (). A -v test must complete without panicking.
-		"subset8/08-bug/listfill1-v.bal",
 		"subset8/08-fill/11-v.bal",
 		"subset8/08-fill/12-v.bal",
 		"subset8/08-fill/19-v.bal",
 		"subset8/08-fill/20-v.bal",
 		"subset8/08-fill/order-v.bal",
-		"subset8/08-tuple/comp9-v.bal",
 
 		// Expected frontend error: migrated -e tests where pi did not catch the error in
 		// the front-end. The expected stderr is either a runtime error () or a
@@ -328,18 +303,11 @@ var (
 		"subset8/08-function/dependent-fn-5-e.bal",
 		"subset8/08-future/langlib2-e.bal",
 		"subset8/08-future/langlib3-e.bal",
-		"subset8/08-inclusive/compoundassign2-e.bal",
 		"subset8/08-inclusive/fieldlvalue5-e.bal",
 		"subset8/08-list/10-e.bal",
 		"subset8/08-list/compoundassign5-e.bal",
 		"subset8/08-mapping/9-e.bal",
-		"subset8/08-narrowing/7-e.bal",
-		"subset8/08-narrowing/9-e.bal",
 		"subset8/08-record/fieldlvalue6-e.bal",
-		"subset8/08-tuple/construct4-e.bal",
-
-		// Missing error location:
-		"subset8/08-const/def-e.bal",
 
 		// Wrong runtime panic: migrated -p tests where pi raises "unsupported type" instead
 		// of the intended runtime panic (overflow/conversion/etc). The test exercises a feature
@@ -348,36 +316,6 @@ var (
 		"subset8/08-list/int2-p.bal",
 		"subset8/08-list/int5-p.bal",
 		"subset8/08-map/int2-p.bal",
-		"subset8/08-fill/fill5-p.bal",
-		"subset8/08-fill/fill6-p.bal",
-
-		// Expected panic (-fp / "future panic" suffix): the source documents a runtime panic
-		// (e.g. `// @panic bad mapping store`) but pi neither emits any diagnostic nor panics,
-		// so the run completes silently.
-		"subset8/08-future/fieldlvalue1-fp.bal",
-
-		// Expected output: migrated -v tests where the source documents stdout via
-		//  comments, but pi produces empty stdout. The runtime did not
-		// emit the expected values, so the test would silently pass with a misleading fixture.
-		"subset8/08-inclusive/fieldexpr6-v.bal",
-		"subset8/08-inclusive/fieldexpr7-v.bal",
-		"subset8/08-inclusive/fieldexpr8-v.bal",
-		"subset8/08-nillifting/additive-1-v.bal",
-		"subset8/08-nillifting/additive-4-v.bal",
-		"subset8/08-nillifting/binary-bitwise-1-v.bal",
-		"subset8/08-nillifting/binary-bitwise-4-v.bal",
-		"subset8/08-nillifting/multiplicative-1-v.bal",
-		"subset8/08-nillifting/multiplicative-4-v.bal",
-		"subset8/08-nillifting/shift-1-v.bal",
-		"subset8/08-nillifting/shift-4-v.bal",
-		"subset8/08-nillifting/unary-5-v.bal",
-		"subset8/08-record/fieldexpr9-v.bal",
-		"subset8/08-vararg/lib2-v.bal",
-
-		// Invalid output: migrated -v tests where pi emits stdout that differs from the
-		// values documented by the source's `// @output ...` markers (i.e. the runtime took
-		// the wrong branch).
-		"subset8/08-intersect/mapping2-v.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.

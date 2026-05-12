@@ -36,9 +36,6 @@ import (
 // failing test with -update, and inspect the diff.
 var birSerializationRoundtripSkipList = []string{
 	// Compilation panics, preventing this stage from running.
-	"subset8/08-bug/listfill1-v.bal",
-	"subset8/08-decimal/tofloat4-p.bal",
-	"subset8/08-decimal/toint13-p.bal",
 	"subset8/08-fill/11-v.bal",
 	"subset8/08-fill/12-v.bal",
 	"subset8/08-fill/19-v.bal",
@@ -48,9 +45,6 @@ var birSerializationRoundtripSkipList = []string{
 	"subset8/08-nested/exact1-p.bal",
 	"subset8/08-nested/proj1-p.bal",
 	"subset8/08-rest/exact1-p.bal",
-	"subset8/08-tuple/comp9-v.bal",
-	"subset8/08-typecast/2-p.bal",
-	"subset8/08-typecast/6-p.bal",
 
 	// parse errors
 	"subset8/08-decimal/eq1-v.bal",
@@ -58,13 +52,11 @@ var birSerializationRoundtripSkipList = []string{
 	"subset8/08-fill/17-v.bal",
 
 	// BIR serialization roundtrip produces different output (state leak through unmarshal).
-	"subset8/08-bug/fill2-p.bal",
 	"subset8/08-bug/fill2-v.bal",
 	"subset8/08-bug/fill3-v.bal",
 	"subset8/08-bytearr/1-v.bal",
 	"subset8/08-fill/1-v.bal",
 	"subset8/08-fill/13-v.bal",
-	"subset8/08-fill/14-p.bal",
 	"subset8/08-fill/16-v.bal",
 	"subset8/08-fill/2-v.bal",
 	"subset8/08-fill/3-v.bal",
@@ -72,7 +64,6 @@ var birSerializationRoundtripSkipList = []string{
 	"subset8/08-fill/5-v.bal",
 	"subset8/08-fill/6-v.bal",
 	"subset8/08-fill/8-v.bal",
-	"subset8/08-fill/9-p.bal",
 	"subset8/08-list/1-p.bal",
 	"subset8/08-list/boolean2-v.bal",
 	"subset8/08-list/float4-v.bal",
