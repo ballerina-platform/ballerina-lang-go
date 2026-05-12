@@ -40,5 +40,5 @@ client class Client {
 public function main() {
     Client|Client1 c = new ();
     string res = c->get("foo");
-    io:println(res); // @output "foo get"
+    io:println(res); // @output fooget
 }

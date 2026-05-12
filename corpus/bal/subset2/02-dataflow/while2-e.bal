@@ -25,5 +25,5 @@ public function main() {
             a = 20;
         }
     }
-    io:println(a);
+    io:println(a); // @error
 }

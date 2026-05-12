@@ -3,7 +3,7 @@
 error[SYNTAX_ERROR]: missing close brace token
   --> return-e.bal:22:1
    |
-22 | 
+22 | // @error
    |
 
 error[SYNTAX_ERROR]: missing open brace token

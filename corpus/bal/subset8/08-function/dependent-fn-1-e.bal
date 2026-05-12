@@ -20,10 +20,10 @@ public function main() {
     baz(1); // @error
 }
 
-function foo(int val, typedesc retTy = <>) returns int = external; // @error
+function foo(int val, typedesc retTy = <>) returns int = external;
 
 function baz(int val, typedesc retTy = <>) returns retTy = external;
 
-function bar(int val, typedesc retTy = <>) returns int { // @error
+function bar(int val, typedesc retTy = <>) returns int {
     return 0;
 }

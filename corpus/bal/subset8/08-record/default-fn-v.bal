@@ -27,7 +27,7 @@ type r record {|
 
 public function main() {
     r r1 = {}; //@output foo called
-    io:println(r1.f); // @output 5;
+    io:println(r1.f); // @output 5
     r r2 = {f: 5};
-    io:println(r2.f); //@output 5;
+    io:println(r2.f); //@output 5
 }

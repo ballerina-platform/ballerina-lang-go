@@ -17,9 +17,9 @@
 import ballerina/io;
 
 public enum Color {
-    RED,
-    GREEN,
-    BLUE
+    RED, // @error
+    GREEN, // @error
+    BLUE // @error
 }
 
 public string RED = "red"; // @error

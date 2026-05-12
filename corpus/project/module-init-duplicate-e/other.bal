@@ -16,6 +16,6 @@
 
 int y = 0;
 
-function init() {
+function init() { // @error
     y = 2;
 }

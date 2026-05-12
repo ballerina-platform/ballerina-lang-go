@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: Unknown symbol: b
   --> let2-e.bal:20:21
    |
-20 |         let int a = b, int b = x
+20 |         let int a = b, int b = x // @error
    |                     ^

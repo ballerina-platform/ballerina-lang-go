@@ -3,11 +3,11 @@
 error[SEMANTIC_ERROR]: redeclared symbol 'RED'
   --> modules/utils/a.bal:17:15
    |
-17 | public string RED;
+17 | public string RED; // @error
    |               ^^^
 
 error[SEMANTIC_ERROR]: redeclared symbol 'RED'
   --> modules/utils/b.bal:17:15
    |
-17 | public string RED;
+17 | public string RED; // @error
    |               ^^^

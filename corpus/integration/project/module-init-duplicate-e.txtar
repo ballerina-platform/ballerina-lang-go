@@ -3,11 +3,11 @@
 error[SEMANTIC_ERROR]: redeclared symbol 'init'
   --> main.bal:21:10
    |
-21 | function init() {
+21 | function init() { // @error
    |          ^^^^
 
 error[SEMANTIC_ERROR]: redeclared symbol 'init'
   --> other.bal:19:10
    |
-19 | function init() {
+19 | function init() { // @error
    |          ^^^^
