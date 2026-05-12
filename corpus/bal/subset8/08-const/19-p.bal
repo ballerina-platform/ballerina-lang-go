@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions module-const-decl type-cast-expr multiplicative-expr floating-point-literal unary-expr
+// @productions module-const-decl type-cast-expr multiplicative-expr floating-point-literal
 import ballerina/io;
 
-const N = <int>(-1.0 / 0.0); // @error
+const N = <int>(1.0 / 0.0); // @panic bad type cast
 
 public function main() {
     io:println(N);

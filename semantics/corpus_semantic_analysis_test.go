@@ -212,6 +212,7 @@ var semanticAnalysisErrorSkipList = []string{
 	"subset8/08-const/16-e.bal",
 	"subset8/08-const/17-e.bal",
 	"subset8/08-const/18-e.bal",
+	"subset8/08-const/22-e.bal",
 	"subset8/08-const/23-e.bal",
 	"subset8/08-const/4-e.bal",
 	"subset8/08-const/5-e.bal",

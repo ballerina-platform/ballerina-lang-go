@@ -609,6 +609,8 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		onNonConst(expr)
 	case *ast.BLangUnaryExpr:
 		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangTypeConversionExpr:
+		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangGroupExpr:
 		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangBinaryExpr:

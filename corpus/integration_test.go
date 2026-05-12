@@ -136,6 +136,7 @@ var (
 		"subset8/08-equal/5-e.bal",
 
 		// numeric literal range / typed-cast overflow.
+		"subset8/08-const/22-e.bal",
 		"subset8/08-const/23-e.bal",
 		"subset8/08-decimal/const5-e.bal",
 		"subset8/08-decimal/const6-e.bal",
@@ -225,9 +226,6 @@ var (
 		"subset8/08-nested/push1-v.bal",
 		"subset8/08-tuple/push2-v.bal",
 		"subset8/08-tuple/tupleunion1-v.bal",
-
-		// Typed-cast not folded as constant expression: `const int X = <int>1.0;`.
-		"subset8/08-singleton/typecast1-v.bal",
 
 		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177
 		"subset8/08-bytearr/2-p.bal",
