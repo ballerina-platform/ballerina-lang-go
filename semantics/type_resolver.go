@@ -2398,7 +2398,7 @@ func resolveMappingConstructorBottomUp(t typeResolver, chain *binding, e *ast.BL
 		var keyName string
 		switch keyExpr := kv.Key.Expr.(type) {
 		case *ast.BLangLiteral:
-			keyName = keyExpr.GetOriginalValue()
+			keyName = keyExpr.Value.(string)
 			resolveLiteral(t, keyExpr, nil)
 		case ast.BNodeWithSymbol:
 			t.setSymbolType(keyExpr.Symbol(), valueTy)

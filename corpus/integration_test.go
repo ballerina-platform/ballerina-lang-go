@@ -148,9 +148,6 @@ var (
 		"subset8/08-mapping/6-e.bal",
 		"subset8/08-mapping/7-e.bal",
 
-		// field base access not supported on mapping-constructor expressions
-		"subset8/08-mapping/5-v.bal",
-
 		"subset8/08-decimal/add2-e.bal",
 		"subset8/08-decimal/add3-e.bal",
 		"subset8/08-decimal/add4-e.bal",
