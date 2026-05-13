@@ -995,6 +995,35 @@ func typeTestExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangT
 	}
 }
 
+// materializeFiller emits BIR instructions that construct a fresh filler
+// value for ty at runtime.
+func materializeFiller(ctx *stmtContext, bb *BIRBasicBlock, ty semtypes.SemType, f semtypes.Filler, pos Location) (*BIROperand, *BIRBasicBlock) {
+	tyCx := ctx.birCx.typeCtx
+	switch f := f.(type) {
+	case semtypes.SingleValueFiller:
+		operand := ctx.addTempVar(ty)
+		bb.Instructions = append(bb.Instructions, NewConstantLoad(operand, f.Value, pos))
+		return operand, bb
+	case semtypes.MappingFiller:
+		operand := ctx.addTempVar(f.Type)
+		bb.Instructions = append(bb.Instructions, NewMapConstructor(f.Type, operand, nil, nil, pos))
+		return operand, bb
+	case semtypes.ListFiller:
+		memberOperands := make([]*BIROperand, len(f.Members))
+		for i, memberFiller := range f.Members {
+			memberOperands[i], bb = materializeFiller(ctx, bb, f.Atomic.MemberAtInnerVal(i), memberFiller, pos)
+		}
+		sizeOperand := ctx.addTempVar(semtypes.INT)
+		bb.Instructions = append(bb.Instructions, NewConstantLoad(sizeOperand, int64(len(memberOperands)), pos))
+		restFiller, _ := values.FillerFactoryFor(tyCx, f.Atomic.Rest())
+		operand := ctx.addTempVar(f.Type)
+		bb.Instructions = append(bb.Instructions, NewArrayConstructor(f.Type, operand, sizeOperand, memberOperands, restFiller, pos))
+		return operand, bb
+	default:
+		panic(fmt.Sprintf("unsupported filler kind %T in BIR generation", f))
+	}
+}
+
 func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangListConstructorExpr) expressionEffect {
 	initValues := make([]*BIROperand, len(expr.Exprs))
 	for i, expr := range expr.Exprs {
@@ -1008,13 +1037,12 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	tyCx := ctx.birCx.typeCtx
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
 		ty := lat.MemberAtInnerVal(i)
-		fillerVal, ok := values.FillerValue(tyCx, ty)
+		filler, ok := semtypes.FillerValue(tyCx, ty)
 		if !ok {
 			ctx.birCx.CompilerContext.InternalError("no filler value for list member type; semantic analysis should have rejected this", expr.GetPosition())
 		}
-		fillerOperand := ctx.addTempVar(ty)
-		fillerLoad := NewConstantLoad(fillerOperand, fillerVal, exprPos)
-		bb.Instructions = append(bb.Instructions, fillerLoad)
+		var fillerOperand *BIROperand
+		fillerOperand, bb = materializeFiller(ctx, bb, ty, filler, exprPos)
 		initValues = append(initValues, fillerOperand)
 	}
 	restFiller, _ := values.FillerFactoryFor(tyCx, lat.Rest())
