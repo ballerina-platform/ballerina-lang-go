@@ -58,12 +58,15 @@ const (
 var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
+	// skipIntegrationTests is the integration-level *additional* skip list,
+	// layered on top of the shared test_util.UnsupportedTests baseline.
+	//
+	// The authoritative "pi does not support this end-to-end yet" list lives in
+	// test_util.UnsupportedTests and is reused by every per-stage corpus test.
+	// Only add an entry here when a test must be skipped at integration time but
+	// is still useful at earlier stages; otherwise add it to
+	// test_util.UnsupportedTests so all stages pick it up.
 	skipIntegrationTests = []string{
-		// Tests that cause unrecoverable Go runtime errors.
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
-		"subset8/08-comparable/order5-v.bal",
-		"subset8/08-const/const3-v.bal",
-
 		// Workspace tests whose errors are at the project-loading level
 		// (Ballerina.toml issues — missing package, TOML parse error). These
 		// diagnostics have no source location in any .bal file, so they're
@@ -74,190 +77,10 @@ var (
 		// once that's registered in DiagnosticEnv).
 		"project/missing-package-e",
 		"project/parse-error-e",
-		// --- Needs constant folding ---
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/83
-
-		// pure literal fold + reachability of always-false branch.
-		"subset8/08-bitwise/complement3-e.bal",
-		"subset8/08-const/1-e.bal",
-		"subset8/08-const/7-e.bal",
-		"subset8/08-const/8-e.bal",
-		"subset8/08-const/9-e.bal",
-		"subset8/08-const/10-e.bal",
-		"subset8/08-const/11-e.bal",
-		"subset8/08-const/12-e.bal",
-		"subset8/08-const/13-e.bal",
-		"subset8/08-const/14-e.bal",
-		"subset8/08-const/15-e.bal",
-		"subset8/08-const/16-e.bal",
-		"subset8/08-const/17-e.bal",
-		"subset8/08-const/18-e.bal",
-		"subset8/08-const/7-v.bal",
-		"subset8/08-const/8-v.bal",
-		"subset8/08-const/10-v.bal",
-		"subset8/08-float/5-e.bal",
-		"subset8/08-float/7-e.bal",
-		"subset8/08-narrowing/unreach3-e.bal",
-		"subset8/08-narrowing/unreach4-e.bal",
-		"subset8/08-singleton/nil1-e.bal",
-		"subset8/08-singleton/stringconcat1-e.bal",
-		"subset8/08-string/1-e.bal",
-		"subset8/08-string/5-e.bal",
-
-		// singleton narrowing + fold + reachability.
-		"subset8/08-narrowing/2-e.bal",
-		"subset8/08-narrowing/4-e.bal",
-		"subset8/08-narrowing/6-e.bal",
-		"subset8/08-narrowing/8-e.bal",
-		"subset8/08-narrowing/10-e.bal",
-		"subset8/08-narrowing/12-e.bal",
-		"subset8/08-narrowing/15-e.bal",
-		"subset8/08-singleton/decimal2-e.bal",
-		"subset8/08-singleton/decimal4-e.bal",
-		"subset8/08-singleton/decimal5-e.bal",
-		"subset8/08-singleton/decimal6-e.bal",
-		"subset8/08-singleton/decimal7-e.bal",
-		"subset8/08-singleton/decimal8-e.bal",
-		"subset8/08-singleton/decimal9-e.bal",
-		"subset8/08-singleton/decimal10-e.bal",
-		"subset8/08-singleton/decimal11-e.bal",
-		"subset8/08-singleton/decimal12-e.bal",
-		"subset8/08-singleton/decimal13-e.bal",
-		"subset8/08-singleton/not1-e.bal",
-		"subset8/08-singleton/string1-e.bal",
-
-		// match-arm reachability after discriminator fold/narrowing.
-		"subset8/08-match/7-e.bal",
-		"subset8/08-match/19-e.bal",
-
-		// disjoint-singleton == / != diagnostic.
-		"subset8/08-equal/3-e.bal",
-		"subset8/08-equal/4-e.bal",
-		"subset8/08-equal/5-e.bal",
-
-		// numeric literal range / typed-cast overflow.
-		"subset8/08-const/22-e.bal",
-		"subset8/08-const/23-e.bal",
-		"subset8/08-decimal/const5-e.bal",
-		"subset8/08-decimal/const6-e.bal",
-		"subset8/08-hex/decimal1-e.bal",
-		"subset8/08-typecast/8-e.bal",
-
-		// const declaration requires singleton-shaped RHS.
-		"subset8/08-list/6-e.bal",
-		"subset8/08-list/17-e.bal",
-		"subset8/08-mapping/6-e.bal",
-		"subset8/08-mapping/7-e.bal",
-
-		"subset8/08-decimal/add2-e.bal",
-		"subset8/08-decimal/add3-e.bal",
-		"subset8/08-decimal/add4-e.bal",
-		"subset8/08-decimal/add5-e.bal",
-		"subset8/08-decimal/add6-e.bal",
-		"subset8/08-decimal/div2-e.bal",
-		"subset8/08-decimal/div3-e.bal",
-		"subset8/08-decimal/div4-e.bal",
-		"subset8/08-decimal/fromfloat2-e.bal",
-		"subset8/08-decimal/fromfloat3-e.bal",
-		"subset8/08-decimal/mul2-e.bal",
-		"subset8/08-decimal/mul3-e.bal",
-		"subset8/08-decimal/mul4-e.bal",
-		"subset8/08-decimal/mul5-e.bal",
-		"subset8/08-decimal/rem3-e.bal",
-		"subset8/08-decimal/rem4-e.bal",
-		"subset8/08-decimal/sub2-e.bal",
-		"subset8/08-decimal/sub3-e.bal",
-		"subset8/08-decimal/toint2-e.bal",
-		"subset8/08-decimal/toint3-e.bal",
-		"subset8/08-decimal/toint4-e.bal",
-		"subset8/08-decimal/toint5-e.bal",
-		"subset8/08-decimal/toint6-e.bal",
-
-		"subset8/08-const/4-e.bal",
-		"subset8/08-const/5-e.bal",
-		"subset8/08-const/6-e.bal",
-		// ----- End of constant folding -----
-
-		// Unused local variable detection
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/439
-		"subset8/08-unused/unused1-e.bal",
-		"subset8/08-unused/unused2-e.bal",
-		"subset8/08-unused/unused3-e.bal",
-		"subset8/08-unused/unused4-e.bal",
-		"subset8/08-unused/unused5-e.bal",
-		"subset8/08-unused/unused6-e.bal",
-
-		// Float `==` / `===` NaN and signed-zero semantics differ from Ballerina spec
-		// (NaN should equal NaN under `==`; `+0.0` should not equal `-0.0` under `===`).
-		"subset8/08-float/9-v.bal",
-		"subset8/08-float/10-v.bal",
-		"subset8/08-float/12-v.bal",
-		"subset8/08-float/14-v.bal",
-		"subset8/08-float/16-v.bal",
-		"subset8/08-float/const3-v.bal", // same issue at constant-folding time
-		"subset8/08-narrowing/3-v.bal",
-		"subset8/08-singleton/floattest1-v.bal",
-		"subset8/08-singleton/floattest2-v.bal",
-		"subset8/08-float/24-v.bal",
-
-		// Float remainder `%` returns NaN for finite operands instead of computing the result.
-		"subset8/08-float/22-v.bal",
-
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/283
-		"subset8/08-future/fieldexpr1-v.bal",
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/442
-		"subset8/08-future/main-v.bal",
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/443
-		"subset8/08-future/never-v.bal",
-
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/288
-		"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
-
-		// Do we need to support this technically else if is not reachable?
-		"subset8/08-ifelse/ifelse4-v.bal",
-
-		// Match patterns:
-		// 		const-reference patterns and int-literal-as-float patterns unsupported.
-		"subset8/08-match/2-v.bal",
-		"subset8/08-match/float3-v.bal",
-		//    Unsupported match pattern diagnostics for list/mapping patterns.
-		"subset8/08-list/10-e.bal",
-		"subset8/08-mapping/9-e.bal",
-
-		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177
-		"subset8/08-bytearr/2-p.bal",
-		"subset8/08-bytearr/3-p.bal",
-		"subset8/08-bytearr/4-p.bal",
-		"subset8/08-exact/array1-p.bal",
-		"subset8/08-exact/map1-p.bal",
-		"subset8/08-exact/push1-p.bal",
-		"subset8/08-exact/record1-p.bal",
-		"subset8/08-inclusive/inherent1-p.bal",
-		"subset8/08-inttest/typecast1-p.bal",
-		"subset8/08-list/push6-p.bal",
-		"subset8/08-map/int5-p.bal",
-		"subset8/08-nested/exact2-p.bal",
-		"subset8/08-nested/exact4-p.bal",
-		"subset8/08-nested/fill3-p.bal",
-		"subset8/08-nested/exact5-p.bal",
-		"subset8/08-nested/exact6-p.bal",
-		"subset8/08-record/inherent1-p.bal",
-		"subset8/08-record/inherent2-p.bal",
-		"subset8/08-tuple/exact1-p.bal",
-		"subset8/08-tuple/exact2-p.bal",
-		"subset8/08-tuple/push3-p.bal",
-		"subset8/08-nested/exact1-p.bal",
-		"subset8/08-nested/proj1-p.bal",
-		"subset8/08-rest/exact1-p.bal",
-		"subset8/08-list/int2-p.bal",
-		"subset8/08-list/int5-p.bal",
-		"subset8/08-map/int2-p.bal",
-
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/441
-		"subset8/08-bug/unusedimport-e.bal",
-
-		// rest param not supported in dependently typed functions
-		"subset8/08-function/dependent-fn-5-e.bal",
+		// Pre-existing -fp.bal test that does not currently surface a runtime
+		// panic or a compile-time `fatal[...]` bailout, so it does not satisfy
+		// the future-test contract yet. Tracked separately.
+		"subset8/08-future/fieldlvalue1-fp.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.
@@ -433,7 +256,7 @@ func suffixOf(name string) string {
 func checkExpectedOutputInvariants(t *testing.T, name, stdout, stderr string, projectScope bool) {
 	t.Helper()
 	stderrNonEmpty := strings.TrimSpace(stderr) != ""
-	listName := "skipIntegrationTests"
+	listName := "test_util.UnsupportedTests (or skipIntegrationTests)"
 	if projectScope {
 		listName = "skipProjectIntegrationTests"
 	}
@@ -527,8 +350,12 @@ func isTestSkipped(tc test_util.TestCase) bool {
 	return isSkipKey(filepath.ToSlash(tc.Name))
 }
 
+// isSkipKey reports whether the given corpus-relative key should be skipped at
+// integration time. A test is skipped when it is on the shared
+// test_util.UnsupportedTests baseline or on the integration-only
+// skipIntegrationTests additions.
 func isSkipKey(key string) bool {
-	return slices.Contains(skipIntegrationTests, key)
+	return test_util.IsUnsupported(key) || slices.Contains(skipIntegrationTests, key)
 }
 
 func isProjectTestSkipped(dirName string) bool {

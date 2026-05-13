@@ -23,6 +23,7 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type PrettyPrinter struct {
@@ -356,7 +357,20 @@ func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
-	return fmt.Sprintf("%s = ConstantLoad %v", p.PrintOperand(*load.LhsOp), load.Value)
+	return fmt.Sprintf("%s = ConstantLoad %s", p.PrintOperand(*load.LhsOp), formatConstantValue(load.Value))
+}
+
+// formatConstantValue renders a BIR constant value for debug pretty printing.
+// Primitive values keep Go's default `%v` format so the existing BIR text
+// fixtures (which were captured with `%v`) remain stable. Composite Ballerina
+// values such as list/tuple/map fillers are routed through values.String so
+// they get a Ballerina-shaped form rather than a Go struct-pointer dump.
+func formatConstantValue(v any) string {
+	switch v.(type) {
+	case *values.List, *values.Map, *values.Error, *values.Function, *values.Object, *values.TypeDesc:
+		return values.String(v, map[uintptr]bool{})
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 func (p *PrettyPrinter) PrintUnaryOp(op *UnaryOp) string {
