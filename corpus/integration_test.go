@@ -49,6 +49,9 @@ const (
 	corpusProjectBaseDir            = "../corpus/project"
 	corpusProjectIntegrationBaseDir = "../corpus/integration/project"
 
+	corpusWorkspaceBaseDir            = "../corpus/workspace"
+	corpusWorkspaceIntegrationBaseDir = "../corpus/integration/workspace"
+
 	panicPrefix = "panic: "
 )
 
@@ -60,6 +63,17 @@ var (
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
 		"subset8/08-comparable/order5-v.bal",
 		"subset8/08-const/const3-v.bal",
+
+		// Workspace tests whose errors are at the project-loading level
+		// (Ballerina.toml issues — missing package, TOML parse error). These
+		// diagnostics have no source location in any .bal file, so they're
+		// filtered out by resolveErrorDiagnostics. The annotation validator
+		// requires source-located diagnostics for -e tests, so these can't be
+		// satisfied today. Skip until the validator handles loader-level errors
+		// (or until the diagnostics are re-routed to Ballerina.toml's text doc
+		// once that's registered in DiagnosticEnv).
+		"project/missing-package-e",
+		"project/parse-error-e",
 	}
 )
 
@@ -112,6 +126,31 @@ func TestProjectIntegration(t *testing.T) {
 		t.Run(dirName, func(t *testing.T) {
 			t.Parallel()
 			testProjectIntegration(t, dirName, projDir, txtarPath)
+		})
+	}
+}
+
+// TestWorkspaceIntegration runs the same compile + interpret pipeline against
+// each fixture under corpus/workspace/<name>/, comparing stdout/stderr to
+// corpus/integration/workspace/<name>.txtar.
+//
+// Convention: the first package in `[workspace].packages` is the entrypoint.
+// projects.Load auto-detects the workspace and WorkspaceProject.CurrentPackage
+// returns that first member, so the existing project pipeline works as-is.
+func TestWorkspaceIntegration(t *testing.T) {
+	if _, err := os.Stat(corpusWorkspaceBaseDir); os.IsNotExist(err) {
+		return
+	}
+
+	workspaceDirs := findProjectDirs(corpusWorkspaceBaseDir)
+
+	for _, wsDir := range workspaceDirs {
+		dirName := filepath.Base(wsDir)
+		txtarPath := filepath.Join(corpusWorkspaceIntegrationBaseDir, dirName+".txtar")
+
+		t.Run(dirName, func(t *testing.T) {
+			t.Parallel()
+			testProjectIntegration(t, dirName, wsDir, txtarPath)
 		})
 	}
 }
@@ -408,9 +447,13 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
+	// Loader-level diagnostics (workspace manifest errors, package manifest
+	// errors flagged before compilation) are separate from compilation
+	// diagnostics. Surface both so corpus -e cases can assert on either.
+	printDiagnostics(fsys, stderrBuf, result.Diagnostics(), compilation.DiagnosticEnv())
 	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	diags = resolveErrorDiagnostics(compilation.DiagnosticResult(), compilation.DiagnosticEnv())
-	if compilation.DiagnosticResult().HasErrors() {
+	if result.Diagnostics().HasErrors() || compilation.DiagnosticResult().HasErrors() {
 		return nil, diags, nil
 	}
 

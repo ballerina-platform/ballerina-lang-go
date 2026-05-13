@@ -156,7 +156,7 @@ func (r *defaultPackageResolver) ResolveByName(
 		}
 
 		versions, err := repo.GetPackageVersions(ctx, org, name, options)
-		if err != nil {
+		if err != nil || len(versions) == 0 {
 			continue
 		}
 		latest, ok := pickLatest(versions, identityVersion)
@@ -165,9 +165,14 @@ func (r *defaultPackageResolver) ResolveByName(
 			continue
 		}
 
+		// Once a repo lists at least one version, it owns the package by
+		// precedence. If the subsequent GetPackage fails, treat the lookup
+		// as terminally unresolved — falling through to a lower-priority
+		// repo would silently substitute a different source's package for a
+		// broken higher-priority one.
 		pkg, err := repo.GetPackage(ctx, org, name, latest.String(), options)
 		if err != nil || pkg == nil {
-			continue
+			return nil
 		}
 
 		if !options.DisableCache() {

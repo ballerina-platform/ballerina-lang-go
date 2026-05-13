@@ -1,0 +1,6 @@
+-- stdout --
+-- stderr --
+ballerina: no package found at path
+within workspace
+-- exitcode --
+1
