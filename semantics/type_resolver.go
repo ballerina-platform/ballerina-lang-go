@@ -2591,7 +2591,7 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 
 	e.AtomicType = *mat
 	if ref, ok := t.getMappingAtomSymRef(mat); ok {
-		if carrier := getMemberCarrier(t, ref); carrier != nil {
+		if carrier, ok := t.getSymbol(ref).(model.MemberCarrier); ok {
 			e.FieldDefaults = carrier.FieldDefaults()
 		}
 	} else if bType, ok := t.getMappingAtomBType(mat); ok {
@@ -4449,7 +4449,7 @@ func resolveIncludedRecordSlot(t typeResolver, chain *binding, s *mappingSlot, l
 	mc.Fields = fields
 	mc.AtomicType = *mat
 	if ref, ok := t.getMappingAtomSymRef(mat); ok {
-		if carrier := getMemberCarrier(t, ref); carrier != nil {
+		if carrier, ok := t.getSymbol(ref).(model.MemberCarrier); ok {
 			mc.FieldDefaults = carrier.FieldDefaults()
 		}
 	}
