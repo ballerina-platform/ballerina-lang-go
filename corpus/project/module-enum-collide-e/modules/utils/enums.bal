@@ -15,5 +15,5 @@
 // under the License.
 
 public enum Color {
-    RED
+    RED // @error
 }

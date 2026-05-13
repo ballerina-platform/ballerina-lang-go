@@ -1,0 +1,106 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+calls  int;
+nextLimit() -> int{
+  bb0 {
+    %2 = ConstantLoad 1
+    %3 = %2;
+    %1 = + calls %3;
+    calls = %1;
+    %4 = ConstantLoad 2
+    %0 = %4;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
+    %4 = ConstantLoad 3
+    %5 = newArray [int...][%4]{%1, %2, %3}
+    xs = %5;
+    $desugar$0 = xs;
+    %8 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    %11 = newArray list[%10]{}
+    $desugar$2 = %11;
+    %14 = ConstantLoad 0
+    $desugar$3 = %14;
+    %16 = nextLimit() -> bb2;
+  }
+  bb2 {
+    $desugar$4 = %16;
+    %19 = $desugar$4;
+    %20 = ConstantLoad 0
+    %21 = %20;
+    %18 = < %19 %21;
+    %18 ? bb3 : bb4;
+  }
+  bb3 {
+    %22 = ConstantLoad limit cannot be negative
+    %23 = newError error(%22)
+    panic %23;
+  }
+  bb4 {
+    %24 = ConstantLoad 0
+    $desugar$5 = %24;
+    GOTO bb5;
+  }
+  bb5 {
+    %27 = $desugar$3;
+    %28 = $desugar$1;
+    %26 = < %27 %28;
+    %26 ? bb6 : bb7;
+  }
+  bb6 {
+    PushScopeFrame 18
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
+    (1, x) = %0;
+    %2 = (1, $desugar$5);
+    %3 = (1, $desugar$4);
+    %1 = >= %2 %3;
+    %1 ? bb8 : bb9;
+  }
+  bb7 {
+    ys = $desugar$2;
+    %30 = println(ys) -> bb11;
+  }
+  bb8 {
+    %5 = (1, $desugar$3);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$3) = %4;
+    PopScopeFrame
+    GOTO bb5;
+  }
+  bb9 {
+    %9 = (1, $desugar$5);
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %8 = + %9 %11;
+    (1, $desugar$5) = %8;
+    %12 = (1, x);
+    %13 = push((1, $desugar$2),%12) -> bb10;
+  }
+  bb10 {
+    %15 = (1, $desugar$3);
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %14 = + %15 %17;
+    (1, $desugar$3) = %14;
+    PopScopeFrame
+    GOTO bb5;
+  }
+  bb11 {
+    %31 = println(calls) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}

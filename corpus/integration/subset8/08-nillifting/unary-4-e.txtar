@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: expect numeric type for +
   --> unary-4-e.bal:20:16
    |
-20 | const int? x = +base2; // @error 
+20 | const int? x = +base2; // @error
    |                ^^^^^^

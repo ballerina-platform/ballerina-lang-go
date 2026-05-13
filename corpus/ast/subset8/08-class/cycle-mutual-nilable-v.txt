@@ -1,0 +1,97 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition A
+    (variable va (type
+      (value-type int)))
+    (variable b (type
+      (union-type
+        (user-defined-type B)
+        (value-type null))))
+    (function init (
+      (variable va (type
+        (value-type int)))
+      (variable b (type
+        (union-type
+          (user-defined-type B)
+          (value-type null))))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access va
+            (simple-var-ref self))
+          (simple-var-ref va))
+        (assignment
+          (field-based-access b
+            (simple-var-ref self))
+          (simple-var-ref b)))))
+  (class-definition B
+    (variable vb (type
+      (value-type int)))
+    (variable a (type
+      (union-type
+        (user-defined-type A)
+        (value-type null))))
+    (function init (
+      (variable vb (type
+        (value-type int)))
+      (variable a (type
+        (union-type
+          (user-defined-type A)
+          (value-type null))))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access vb
+            (simple-var-ref self))
+          (simple-var-ref vb))
+        (assignment
+          (field-based-access a
+            (simple-var-ref self))
+          (simple-var-ref a)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type A)) (expr
+          (new (
+            (literal 1)
+            (literal <nil>))))))
+      (var-def
+        (variable b (type
+          (user-defined-type B)) (expr
+          (new (
+            (literal 2)
+            (simple-var-ref a))))))
+      (var-def
+        (variable a2 (type
+          (user-defined-type A)) (expr
+          (new (
+            (literal 3)
+            (simple-var-ref b))))))
+      (var-def
+        (variable total (type
+          (value-type int)) (expr
+          (field-based-access va
+            (simple-var-ref a2)))))
+      (var-def
+        (variable bRef (type
+          (union-type
+            (user-defined-type B)
+            (value-type null))) (expr
+          (field-based-access b
+            (simple-var-ref a2)))))
+      (if
+        (type-test-expr is
+          (simple-var-ref bRef)
+          (user-defined-type B))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref total)
+            (field-based-access vb
+              (simple-var-ref bRef)))) ())
+      (block-stmt
+        (expression-stmt
+          (invocation io println (
+            (simple-var-ref total))))))))

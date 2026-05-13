@@ -17,6 +17,6 @@
 public function main() {
     int[] xs = [1, 2, 3];
     int[] out = from var x in xs
-        where x + 1
-        select x; // @error
+        where x + 1 // @error
+        select x;
 }

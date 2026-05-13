@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: outer join clause variable must be declared with var
+  --> outer-join-typed-e.bal:32:9
+   |
+32 |         outer join Department dept in departments // @error
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+33 |         on person.id equals dept.id
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^

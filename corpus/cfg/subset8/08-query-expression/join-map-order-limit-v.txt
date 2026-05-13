@@ -1,0 +1,87 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable people (type
+        (constrained-type
+          (builtin-ref-type map)
+          (user-defined-type Person))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref first)
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal Ranjan))))
+          (key-value
+            (simple-var-ref second)
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal Alex))))))))
+    (var-def
+      (variable departments (type
+        (constrained-type
+          (builtin-ref-type map)
+          (user-defined-type Department))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref hr)
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal HR))))
+          (key-value
+            (simple-var-ref ops)
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal Ops))))))))
+    (var-def
+      (variable joined (type
+        (array-type
+          (value-type string) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable person))
+            (simple-var-ref people))
+          (join-clause
+            (var-def
+              (variable dept))
+            (simple-var-ref departments)
+            (on-clause
+              (field-based-access id
+                (simple-var-ref person))
+              (field-based-access id
+                (simple-var-ref dept))))
+          (order-by-clause
+            (order-key ascending
+              (field-based-access id
+                (simple-var-ref person))))
+          (limit-clause
+            (literal 1))
+          (select-clause
+            (binary-expr +
+              (binary-expr +
+                (field-based-access name
+                  (simple-var-ref person))
+                (literal :))
+              (field-based-access name
+                (simple-var-ref dept))))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref joined))))
+  )
+)

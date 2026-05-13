@@ -29,7 +29,7 @@ client class Client {
 public function main() {
     Client c = new ();
     string res = c->get("foo");
-    io:println(res); // @output "foo get"
+    io:println(res); // @output fooget
     res = c->getT();
-    io:println(res); // @output "bar get"
+    io:println(res); // @output barget
 }

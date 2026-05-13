@@ -1,0 +1,94 @@
+(deptIdOrMissing
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref dept)
+      (user-defined-type Department))
+  )
+  (bb1 (bb0) ()
+    (return
+      (field-based-access id
+        (simple-var-ref dept)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+)
+(deptNameOrNil
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref dept)
+      (user-defined-type Department))
+  )
+  (bb1 (bb0) ()
+    (return
+      (field-based-access name
+        (simple-var-ref dept)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal <nil>))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable people (type
+        (array-type
+          (user-defined-type Person) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref id)
+              (literal 1))
+            (key-value
+              (simple-var-ref name)
+              (literal Alex)))
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref id)
+              (literal 3))
+            (key-value
+              (simple-var-ref name)
+              (literal Casey)))))))
+    (var-def
+      (variable departments (type
+        (array-type
+          (user-defined-type Department) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref id)
+              (literal 1))
+            (key-value
+              (simple-var-ref name)
+              (literal HR)))))))
+    (var-def
+      (variable joined (type
+        (array-type
+          (union-type
+            (value-type string)
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable person))
+            (simple-var-ref people))
+          (join-clause outer
+            (var-def
+              (variable dept))
+            (simple-var-ref departments)
+            (on-clause
+              (field-based-access id
+                (simple-var-ref person))
+              (invocation deptIdOrMissing (
+                (simple-var-ref dept)))))
+          (select-clause
+            (invocation deptNameOrNil (
+              (simple-var-ref dept))))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref joined))))
+  )
+)

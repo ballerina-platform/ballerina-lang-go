@@ -20,6 +20,6 @@ public function main() {
     f();
 }
 
-function f() { // @panic stack overflow
-    f();
+function f() {
+    f(); // @panic stack overflow
 }

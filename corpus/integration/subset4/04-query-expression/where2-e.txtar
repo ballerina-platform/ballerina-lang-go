@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: Unknown symbol: y
   --> where2-e.bal:20:15
    |
-20 |         where y > 1
+20 |         where y > 1 // @error
    |               ^

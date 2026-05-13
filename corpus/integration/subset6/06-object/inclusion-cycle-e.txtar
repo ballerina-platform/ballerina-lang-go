@@ -15,8 +15,8 @@ error[SEMANTIC_ERROR]: error resolving type inclusion
 error[SEMANTIC_ERROR]: error resolving type inclusion
   --> inclusion-cycle-e.bal:22:8
    |
-22 | type B object {
-   |        ^^^^^^^^
+22 | type B object { // @error
+   |        ^^^^^^^^^^^^^^^^^^
 23 |     *A;
    |     ^^^
 24 |     int y;

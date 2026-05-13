@@ -9,5 +9,5 @@ error[SEMANTIC_ERROR]: variable may not be initialized
 error[SEMANTIC_ERROR]: variable may not be initialized
   --> while2-e.bal:28:16
    |
-28 |     io:println(a);
+28 |     io:println(a); // @error
    |                ^

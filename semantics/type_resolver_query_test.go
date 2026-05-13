@@ -199,9 +199,67 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			diagSub: "limit clause expression must be int",
 		},
 		{
+			name: "order by key resolution fails",
+			clause: newOrderByClause(
+				newOrderKey(newUnsupportedExprNode(), true),
+			),
+			diagSub: "unsupported expression type",
+		},
+		{
+			name: "order by key non-ordered type",
+			clause: newOrderByClause(
+				newOrderKey(newEmptyMappingLiteral(), true),
+			),
+			diagSub: "order by key expression must have an ordered type",
+		},
+		{
+			name: "join collection non-list",
+			clause: newJoinClause(
+				newIntLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				newOnClause(newIntLiteral(1), newIntLiteral(1)),
+			),
+			diagSub: "query from clause currently supports only list or map collections",
+		},
+		{
+			name: "outer join without var",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", newValueType(model.TypeKind_INT), nil),
+				false,
+				true,
+				newOnClause(newIntLiteral(1), newIntLiteral(1)),
+			),
+			diagSub: "outer join clause variable must be declared with var",
+		},
+		{
+			name: "join without on clause",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				nil,
+			),
+			diagSub: "join clause requires an on clause",
+		},
+		{
+			name: "join incompatible on clause types",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				newOnClause(newStringLiteral("x"), newIntLiteral(1)),
+			),
+			diagSub: "incompatible type",
+		},
+		{
 			name:    "unsupported intermediate clause",
 			clause:  newCollectClause(),
-			diagSub: "only let + where + limit clauses are supported as intermediate query clauses",
+			diagSub: "only join + let + where + order by + limit clauses are supported as intermediate query clauses",
 		},
 	}
 
@@ -213,7 +271,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 				newSelectClause(newIntLiteral(1)),
 			)
 			resolver, cx := newTestQueryResolver()
-			_, ok := resolveQueryIntermediateClauses(resolver, nil, query)
+			_, ok := resolveQueryIntermediateClauses(resolver, nil, query, len(query.QueryClauseList)-1)
 			if ok {
 				t.Fatalf("expected resolveQueryIntermediateClauses to fail")
 			}
@@ -289,6 +347,201 @@ func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
 	assertDiagnosticContains(t, cx, "incompatible type")
 }
 
+func TestResolveQueryExprOrderByClause(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(newIntLiteral(1), true)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for order by clause")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprJoinClause(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2), nil, true),
+		newJoinClause(
+			newIntListLiteral(2, 3),
+			newSimpleVarDef("j", nil, nil),
+			true,
+			false,
+			newOnClause(newIntLiteral(1), newIntLiteral(1)),
+		),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for join clause")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprMultipleOrderByConsecutive(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(newIntLiteral(1), true)),
+		newOrderByClause(newOrderKey(newIntLiteral(2), false)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for consecutive order by clauses")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprMultipleOrderByNonConsecutive(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(newIntLiteral(1), true)),
+		newWhereClause(newBoolLiteral(true)),
+		newOrderByClause(newOrderKey(newIntLiteral(2), false)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for non-consecutive order by clauses")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprOrderByRejectsMixedSimpleUnion(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	keySymbol := model.NewValueSymbol("k", false, false, false)
+	space.AddSymbol("k", &keySymbol)
+	keySymbolRef, _ := space.GetSymbol("k")
+	cx.SetSymbolType(keySymbolRef, semtypes.Union(semtypes.INT, semtypes.STRING))
+
+	keyRef := &ast.BLangSimpleVarRef{
+		VariableName: &ast.BLangIdentifier{
+			Value: "k",
+		},
+	}
+	keyRef.SetPosition(queryTestPos)
+	keyRef.SetSymbol(keySymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(keyRef, true)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	_, _, ok := resolveQueryExpr(resolver, nil, query)
+	if ok {
+		t.Fatalf("expected resolveQueryExpr to fail for non-ordered mixed simple union")
+	}
+	assertDiagnosticContains(t, cx, "order by key expression must have an ordered type")
+}
+
+func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
+	t.Run("on conflict with non-map construct type", func(t *testing.T) {
+		resolver, cx := newTestQueryResolver()
+		query := newQueryExpr(
+			newFromClause(newIntListLiteral(1), nil, true),
+			newSelectClause(newIntLiteral(1)),
+			newOnConflictClause(newErrorConstructorExpr()),
+		)
+		_, _, ok := resolveQueryExpr(resolver, nil, query)
+		if ok {
+			t.Fatalf("expected resolveQueryExpr to fail for non-map on conflict")
+		}
+		assertDiagnosticContains(t, cx, "on conflict clause is supported only for map query construct type")
+	})
+
+	t.Run("on conflict expression must be error?", func(t *testing.T) {
+		resolver, cx := newTestQueryResolver()
+		query := newQueryExpr(
+			newFromClause(newIntListLiteral(1), nil, true),
+			newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
+			newOnConflictClause(newIntLiteral(1)),
+		)
+		query.QueryConstructType = model.TypeKind_MAP
+		_, _, ok := resolveQueryExpr(resolver, nil, query)
+		if ok {
+			t.Fatalf("expected resolveQueryExpr to fail for invalid on conflict expression")
+		}
+		assertDiagnosticContains(t, cx, "on conflict clause expression must be error?")
+	})
+}
+
+func TestResolveQueryExprMapConstructTypeOnConflictNil(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1), nil, true),
+		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
+		newOnConflictClause(newNilLiteral()),
+	)
+	query.QueryConstructType = model.TypeKind_MAP
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict nil")
+	}
+	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
+	if !semtypes.IsSubtype(tyCtx, queryTy, semtypes.MAPPING) {
+		t.Fatalf("expected query result type to be mapping, got %v", queryTy)
+	}
+	if semtypes.IsSubtype(tyCtx, semtypes.ERROR, queryTy) {
+		t.Fatalf("expected query result type not to include error, got %v", queryTy)
+	}
+}
+
+func TestResolveQueryExprMapConstructTypeOnConflictError(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1), nil, true),
+		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
+		newOnConflictClause(newErrorConstructorExpr()),
+	)
+	query.QueryConstructType = model.TypeKind_MAP
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict error")
+	}
+	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
+	if !semtypes.IsSubtype(tyCtx, semtypes.ERROR, queryTy) {
+		t.Fatalf("expected query result type to include error, got %v", queryTy)
+	}
+}
+
 func newTestQueryResolver() (*packageTypeResolver, *context.CompilerContext) {
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
@@ -334,6 +587,28 @@ func newFromClause(collection ast.BLangExpression, varDef model.VariableDefiniti
 	return fromClause
 }
 
+func newJoinClause(
+	collection ast.BLangExpression,
+	varDef model.VariableDefinitionNode,
+	declaredWithVar bool,
+	isOuterJoin bool,
+	onClause *ast.BLangOnClause,
+) *ast.BLangJoinClause {
+	joinClause := &ast.BLangJoinClause{
+		BLangInputClause: ast.BLangInputClause{
+			VariableDefinitionNode: varDef,
+			IsDeclaredWithVarFlag:  declaredWithVar,
+		},
+		IsOuterJoinFlag: isOuterJoin,
+	}
+	if onClause != nil {
+		joinClause.OnClause = *onClause
+	}
+	joinClause.SetPosition(queryTestPos)
+	joinClause.SetCollection(collection)
+	return joinClause
+}
+
 func newSelectClause(expr ast.BLangExpression) *ast.BLangSelectClause {
 	selectClause := &ast.BLangSelectClause{}
 	selectClause.SetPosition(queryTestPos)
@@ -357,6 +632,15 @@ func newWhereClause(expr ast.BLangExpression) *ast.BLangWhereClause {
 	return whereClause
 }
 
+func newOnClause(lhs ast.BLangExpression, rhs ast.BLangExpression) *ast.BLangOnClause {
+	onClause := &ast.BLangOnClause{
+		OnExpr:     lhs,
+		EqualsExpr: rhs,
+	}
+	onClause.SetPosition(queryTestPos)
+	return onClause
+}
+
 func newLimitClause(expr ast.BLangExpression) *ast.BLangLimitClause {
 	limitClause := &ast.BLangLimitClause{
 		Expression: expr,
@@ -370,6 +654,31 @@ func newCollectClause() *ast.BLangCollectClause {
 	collectClause.SetPosition(queryTestPos)
 	collectClause.SetExpression(newIntLiteral(1))
 	return collectClause
+}
+
+func newOrderByClause(keys ...ast.BLangOrderKey) *ast.BLangOrderByClause {
+	orderByClause := &ast.BLangOrderByClause{
+		OrderByKeyList: keys,
+	}
+	orderByClause.SetPosition(queryTestPos)
+	return orderByClause
+}
+
+func newOrderKey(expr ast.BLangExpression, isAscending bool) ast.BLangOrderKey {
+	orderKey := ast.BLangOrderKey{
+		Expression:   expr,
+		IsDescending: !isAscending,
+	}
+	orderKey.SetPosition(queryTestPos)
+	return orderKey
+}
+
+func newOnConflictClause(expr ast.BLangExpression) *ast.BLangOnConflictClause {
+	onConflictClause := &ast.BLangOnConflictClause{
+		Expression: expr,
+	}
+	onConflictClause.SetPosition(queryTestPos)
+	return onConflictClause
 }
 
 func newEmptySimpleVarDef() *ast.BLangSimpleVariableDef {
@@ -443,12 +752,42 @@ func newStringLiteral(value string) *ast.BLangLiteral {
 	return literal
 }
 
+func newBoolLiteral(value bool) *ast.BLangLiteral {
+	literal := &ast.BLangLiteral{}
+	literal.SetPosition(queryTestPos)
+	literal.SetValue(value)
+	literal.SetValueType(ast.NewBType(model.TypeTags_BOOLEAN, "", 0))
+	return literal
+}
+
+func newNilLiteral() *ast.BLangLiteral {
+	literal := &ast.BLangLiteral{}
+	literal.SetPosition(queryTestPos)
+	literal.SetValue(nil)
+	literal.SetValueType(ast.NewBType(model.TypeTags_NIL, "", 0))
+	return literal
+}
+
 func newListLiteral(values ...ast.BLangExpression) *ast.BLangListConstructorExpr {
 	listExpr := &ast.BLangListConstructorExpr{
 		Exprs: values,
 	}
 	listExpr.SetPosition(queryTestPos)
 	return listExpr
+}
+
+func newEmptyMappingLiteral() *ast.BLangMappingConstructorExpr {
+	mapExpr := &ast.BLangMappingConstructorExpr{
+		Fields: []model.MappingField{},
+	}
+	mapExpr.SetPosition(queryTestPos)
+	return mapExpr
+}
+
+func newErrorConstructorExpr() *ast.BLangErrorConstructorExpr {
+	errExpr := &ast.BLangErrorConstructorExpr{}
+	errExpr.SetPosition(queryTestPos)
+	return errExpr
 }
 
 func newUnsupportedExprNode() ast.BLangExpression {

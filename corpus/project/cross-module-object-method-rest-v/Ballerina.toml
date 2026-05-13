@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "crossmoduleobjectmethodrest"
+version = "0.1.0"

@@ -21,12 +21,12 @@ public function main() {
 }
 
 function div(int x, int y) returns int {
-    return x / checkpanic nonZero(y);
+    return x / checkpanic nonZero(y); // @panic zero
 }
 
 function nonZero(int n) returns int|error {
     if n == 0 {
-        return error("zero"); // @panic zero
+        return error("zero");
     }
     return n;
 }

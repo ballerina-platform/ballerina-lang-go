@@ -10,71 +10,71 @@ main() -> nil{
     %5 = newArray [int...][%4]{%1, %2, %3}
     xs = %5;
     $desugar$0 = xs;
-    %8 = ConstantLoad 0
-    %9 = newArray list[%8]{}
-    $desugar$1 = %9;
-    %11 = ConstantLoad 0
-    $desugar$2 = %11;
-    %13 = length($desugar$0) -> bb1;
+    %8 = length($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$3 = %13;
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    %11 = newArray list[%10]{}
+    $desugar$2 = %11;
+    %14 = ConstantLoad 0
+    $desugar$3 = %14;
     GOTO bb2;
   }
   bb2 {
-    %16 = $desugar$2;
-    %17 = $desugar$3;
-    %15 = < %16 %17;
-    %15 ? bb3 : bb4;
+    %19 = $desugar$3;
+    %20 = $desugar$1;
+    %18 = < %19 %20;
+    %18 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 22
-    %0 = (1, $desugar$0)[(1, $desugar$2)];
-    x = %0;
-    %3 = x;
-    %4 = ConstantLoad 2
-    %5 = %4;
-    %2 = * %3 %5;
-    a = %2;
-    %8 = a;
-    %9 = ConstantLoad 3
-    %10 = %9;
-    %7 = + %8 %10;
-    b = %7;
-    %13 = b;
-    %14 = ConstantLoad 2
-    %15 = %14;
-    %12 = * %13 %15;
-    %16 = %12;
-    %17 = push((1, $desugar$1),%16) -> bb5;
+    PushScopeFrame 19
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
+    (1, x) = %0;
+    %2 = (1, x);
+    %3 = ConstantLoad 2
+    %4 = %3;
+    %1 = * %2 %4;
+    (1, a) = %1;
+    %6 = (1, a);
+    %7 = ConstantLoad 3
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, b) = %5;
+    %10 = (1, b);
+    %11 = ConstantLoad 2
+    %12 = %11;
+    %9 = * %10 %12;
+    %13 = %9;
+    %14 = push((1, $desugar$2),%13) -> bb5;
   }
   bb4 {
-    out = $desugar$1;
-    %20 = ConstantLoad 0
-    %19 = out[%20];
-    %21 = %19;
-    %22 = println(%21) -> bb6;
+    out = $desugar$2;
+    %23 = ConstantLoad 0
+    %22 = out[%23];
+    %24 = %22;
+    %25 = println(%24) -> bb6;
   }
   bb5 {
-    %19 = (1, $desugar$2);
-    %20 = ConstantLoad 1
-    %21 = %20;
-    %18 = + %19 %21;
-    (1, $desugar$2) = %18;
+    %16 = (1, $desugar$3);
+    %17 = ConstantLoad 1
+    %18 = %17;
+    %15 = + %16 %18;
+    (1, $desugar$3) = %15;
     PopScopeFrame
     GOTO bb2;
   }
   bb6 {
-    %24 = ConstantLoad 1
-    %23 = out[%24];
-    %25 = %23;
-    %26 = println(%25) -> bb7;
+    %27 = ConstantLoad 1
+    %26 = out[%27];
+    %28 = %26;
+    %29 = println(%28) -> bb7;
   }
   bb7 {
-    %28 = ConstantLoad 2
-    %27 = out[%28];
-    %29 = %27;
-    %30 = println(%29) -> bb8;
+    %31 = ConstantLoad 2
+    %30 = out[%31];
+    %32 = %30;
+    %33 = println(%32) -> bb8;
   }
   bb8 {
     return;

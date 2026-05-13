@@ -17,6 +17,6 @@
 public function main() {
     int[] xs = [1, 2, 3];
     int[] out = from var x in xs
-        limit "2"
-        select x; // @error
+        limit "2" // @error
+        select x;
 }

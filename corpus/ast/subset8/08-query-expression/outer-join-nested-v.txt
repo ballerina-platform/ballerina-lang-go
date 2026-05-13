@@ -1,0 +1,169 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Person
+    (record-type
+      (field id
+        (value-type int))
+      (field name
+        (value-type string))))
+  (type-definition Department
+    (record-type
+      (field ownerId
+        (value-type int))
+      (field locationId
+        (value-type int))))
+  (type-definition Location
+    (record-type
+      (field id
+        (value-type int))
+      (field name
+        (value-type string))))
+  (function locationIdOrMissing (
+    (variable loc (type
+      (union-type
+        (user-defined-type Location)
+        (value-type null))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref loc)
+          (user-defined-type Location))
+        (block-stmt
+          (return
+            (field-based-access id
+              (simple-var-ref loc)))) ())
+      (block-stmt
+        (return
+          (unary-expr -
+            (literal 1))))))
+  (function locationNameOrNil (
+    (variable loc (type
+      (union-type
+        (user-defined-type Location)
+        (value-type null))))) (
+    (union-type
+      (value-type string)
+      (value-type null)))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref loc)
+          (user-defined-type Location))
+        (block-stmt
+          (return
+            (field-based-access name
+              (simple-var-ref loc)))) ())
+      (block-stmt
+        (return
+          (literal <nil>)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable people (type
+          (array-type
+            (user-defined-type Person) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal Alex)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal Ranjan)))))))
+      (var-def
+        (variable departments (type
+          (array-type
+            (user-defined-type Department) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 1))
+              (key-value
+                (simple-var-ref locationId)
+                (literal 10)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 1))
+              (key-value
+                (simple-var-ref locationId)
+                (literal 30)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 2))
+              (key-value
+                (simple-var-ref locationId)
+                (literal 20)))))))
+      (var-def
+        (variable locations (type
+          (array-type
+            (user-defined-type Location) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 10))
+              (key-value
+                (simple-var-ref name)
+                (literal HQ)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 20))
+              (key-value
+                (simple-var-ref name)
+                (literal Remote)))))))
+      (var-def
+        (variable result (type
+          (array-type
+            (union-type
+              (value-type string)
+              (value-type null)) dimensions: 2 ([][]))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable person))
+              (simple-var-ref people))
+            (select-clause
+              (query-expr
+                (from-clause
+                  (var-def
+                    (variable dept))
+                  (simple-var-ref departments))
+                (join-clause outer
+                  (var-def
+                    (variable loc))
+                  (simple-var-ref locations)
+                  (on-clause
+                    (field-based-access locationId
+                      (simple-var-ref dept))
+                    (invocation locationIdOrMissing (
+                      (simple-var-ref loc)))))
+                (where-clause
+                  (binary-expr ==
+                    (field-based-access ownerId
+                      (simple-var-ref dept))
+                    (field-based-access id
+                      (simple-var-ref person))))
+                (order-by-clause
+                  (order-key ascending
+                    (field-based-access locationId
+                      (simple-var-ref dept))))
+                (select-clause
+                  (invocation locationNameOrNil (
+                    (simple-var-ref loc))))))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result)))))))

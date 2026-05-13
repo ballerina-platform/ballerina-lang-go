@@ -1954,7 +1954,9 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
 	pos := getPosition(n.de(), checkExpressionNode)
-	expr := n.createExpression(checkExpressionNode.Expression())
+	// we are deviating from the spec here (https://ballerina.io/spec/lang/master/#section_6.33) check is only suppose
+	// to work with expression but jBallerina also allow remote method calls (which is an action)
+	expr := n.createActionOrExpression(checkExpressionNode.Expression())
 	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos
@@ -2272,7 +2274,9 @@ func (n *NodeBuilder) TransformRestArgument(restArgumentNode *tree.RestArgumentN
 }
 
 func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNode *tree.InferredTypedescDefaultNode) BLangNode {
-	panic("TransformInferredTypedescDefault unimplemented")
+	node := &BLangInferredTypedescDefault{}
+	node.pos = getPosition(n.de(), inferredTypedescDefaultNode)
+	return node
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
@@ -2345,13 +2349,12 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				// Process parameters
 				params := funcSig.Parameters()
 				for param := range params.Iterator() {
-					reqParam := param.(*tree.RequiredParameterNode)
-					paramType := n.createTypeNode(reqParam.TypeName()).(BType)
-					var nameIdent *BLangIdentifier
-					if pn := reqParam.ParamName(); pn != nil {
-						nameIdent = &BLangIdentifier{Value: pn.Text()}
+					ftParam := n.createFunctionTypeParam(param)
+					if _, isRest := param.(*tree.RestParameterNode); isRest {
+						bMethod.RestParam = &ftParam
+					} else {
+						bMethod.RequiredParams = append(bMethod.RequiredParams, ftParam)
 					}
-					bMethod.RequiredParams = append(bMethod.RequiredParams, BLangFunctionTypeParam{Name: nameIdent, TypeDesc: paramType})
 				}
 
 				// Process return type
@@ -3015,11 +3018,27 @@ func (n *NodeBuilder) TransformLetClause(letClauseNode *tree.LetClauseNode) BLan
 }
 
 func (n *NodeBuilder) TransformJoinClause(joinClauseNode *tree.JoinClauseNode) BLangNode {
-	panic("TransformJoinClause unimplemented")
+	joinClause := &BLangJoinClause{}
+	joinClause.pos = getPosition(n.de(), joinClauseNode)
+	joinClause.SetCollection(n.createExpression(joinClauseNode.Expression()))
+	bindingPatternNode := joinClauseNode.TypedBindingPattern()
+	joinClause.SetVariableDefinitionNode(
+		n.createBLangVarDef(getPosition(n.de(), bindingPatternNode), bindingPatternNode, nil, nil),
+	)
+	joinClause.IsDeclaredWithVarFlag = isDeclaredWithVar(bindingPatternNode.TypeDescriptor())
+	joinClause.IsOuterJoinFlag = joinClauseNode.OuterKeyword() != nil
+	if onClauseNode := joinClauseNode.JoinOnCondition(); onClauseNode != nil {
+		joinClause.OnClause = *n.TransformOnClause(onClauseNode).(*BLangOnClause)
+	}
+	return joinClause
 }
 
 func (n *NodeBuilder) TransformOnClause(onClauseNode *tree.OnClauseNode) BLangNode {
-	panic("TransformOnClause unimplemented")
+	onClause := &BLangOnClause{}
+	onClause.pos = getPosition(n.de(), onClauseNode)
+	onClause.SetOnExpression(n.createExpression(onClauseNode.OnExpression()))
+	onClause.SetEqualsExpression(n.createExpression(onClauseNode.EqualsExpression()))
+	return onClause
 }
 
 func (n *NodeBuilder) TransformLimitClause(limitClauseNode *tree.LimitClauseNode) BLangNode {
@@ -3030,7 +3049,10 @@ func (n *NodeBuilder) TransformLimitClause(limitClauseNode *tree.LimitClauseNode
 }
 
 func (n *NodeBuilder) TransformOnConflictClause(onConflictClauseNode *tree.OnConflictClauseNode) BLangNode {
-	panic("TransformOnConflictClause unimplemented")
+	onConflictClause := &BLangOnConflictClause{}
+	onConflictClause.pos = getPosition(n.de(), onConflictClauseNode)
+	onConflictClause.SetExpression(n.createExpression(onConflictClauseNode.Expression()))
+	return onConflictClause
 }
 
 func (n *NodeBuilder) TransformQueryPipeline(queryPipelineNode *tree.QueryPipelineNode) BLangNode {
@@ -3073,10 +3095,10 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
-		case common.FROM_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE:
+		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
 			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
-			n.cx.Unimplemented("only from + let + where + limit + select query clauses are supported for now", getPosition(n.de(), clause))
+			n.cx.Unimplemented("only from + join + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
 		}
 	}
 
@@ -3088,7 +3110,7 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	}
 
 	if queryExpressionNode.OnConflictClause() != nil {
-		n.cx.Unimplemented("on conflict clause is not supported yet", getPosition(n.de(), queryExpressionNode.OnConflictClause()))
+		queryExpr.AddQueryClause(n.TransformSyntaxNode(queryExpressionNode.OnConflictClause()))
 	}
 
 	return queryExpr
@@ -3777,11 +3799,31 @@ func (n *NodeBuilder) trimLeftAtMostOne(text string) string {
 }
 
 func (n *NodeBuilder) TransformOrderByClause(orderByClauseNode *tree.OrderByClauseNode) BLangNode {
-	panic("TransformOrderByClause unimplemented")
+	orderByClause := &BLangOrderByClause{}
+	orderByClause.pos = getPosition(n.de(), orderByClauseNode)
+
+	orderKeys := orderByClauseNode.OrderKey()
+	orderByClause.OrderByKeyList = make([]BLangOrderKey, 0, orderKeys.Size())
+	for orderKey := range orderKeys.Iterator() {
+		keyNode, ok := n.TransformOrderKey(orderKey).(*BLangOrderKey)
+		if !ok {
+			panic("expected BLangOrderKey")
+		}
+		orderByClause.OrderByKeyList = append(orderByClause.OrderByKeyList, *keyNode)
+	}
+	return orderByClause
 }
 
 func (n *NodeBuilder) TransformOrderKey(orderKeyNode *tree.OrderKeyNode) BLangNode {
-	panic("TransformOrderKey unimplemented")
+	orderKey := &BLangOrderKey{}
+	orderKey.pos = getPosition(n.de(), orderKeyNode)
+	orderKey.Expression = n.createExpression(orderKeyNode.Expression())
+	if dir := orderKeyNode.OrderDirection(); dir != nil && dir.Kind() == common.DESCENDING_KEYWORD {
+		orderKey.IsDescending = true
+	} else {
+		orderKey.IsDescending = false
+	}
+	return orderKey
 }
 
 func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClauseNode) BLangNode {
@@ -3960,10 +4002,36 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
-	if parameterizedTypeDescriptorNode.Kind() == common.ERROR_TYPE_DESC {
+	switch parameterizedTypeDescriptorNode.Kind() {
+	case common.ERROR_TYPE_DESC:
 		return n.transformErrorTypeDescriptor(parameterizedTypeDescriptorNode)
+	case common.TYPEDESC_TYPE_DESC:
+		return n.transformTypedescTypeDescriptor(parameterizedTypeDescriptorNode)
 	}
-	panic("TransformParameterizedTypeDescriptor supported only for error type descriptors")
+	panic("TransformParameterizedTypeDescriptor supported only for error and typedesc type descriptors")
+}
+
+func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTypeDescriptorNode) BLangNode {
+	typeParamNode := node.TypeParamNode()
+	if typeParamNode == nil {
+		valueType := &BLangValueType{}
+		valueType.pos = getPosition(n.de(), node)
+		valueType.TypeKind = model.TypeKind_TYPEDESC
+		return valueType
+	}
+	constrainedType := &BLangConstrainedType{}
+	constrainedType.pos = getPosition(n.de(), node)
+	base := &BLangValueType{}
+	base.pos = getPosition(n.de(), node)
+	base.TypeKind = model.TypeKind_TYPEDESC
+	constrainedType.Type = model.TypeData{TypeDescriptor: base}
+	constraint := typeParamNode.TypeNode()
+	if constraint == nil {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(typeParamNode)}
+	} else {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(constraint)}
+	}
+	return constrainedType
 }
 
 func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {

@@ -19,6 +19,6 @@ import ballerina/io;
 
 public function main() {
     int? x = ();
-    io:println(x & 1);
+    io:println(x & 1); // @output 
 }
 
