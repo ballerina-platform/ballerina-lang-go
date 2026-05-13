@@ -17,9 +17,13 @@
 package main
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"strings"
 
@@ -31,6 +35,41 @@ import (
 	"golang.org/x/term"
 )
 
+type nativeHTTPClient struct {
+	client *http.Client
+}
+
+func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, url, bodyReader)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	req.Header.Set("User-Agent", "ballerina")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	for k, vals := range reqHeaders {
+		if len(vals) == 0 {
+			continue
+		}
+		req.Header.Set(k, vals[0])
+		for _, v := range vals[1:] {
+			req.Header.Add(k, v)
+		}
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	respBody, err := io.ReadAll(resp.Body)
+	return resp.StatusCode, map[string][]string(resp.Header), respBody, err
+}
+
 var nativePal = pal.Platform{
 	IO: pal.IO{
 		Stdout: func(p []byte) (n int, err error) {
@@ -38,6 +77,44 @@ var nativePal = pal.Platform{
 		},
 		Stderr: func(p []byte) (n int, err error) {
 			return os.Stderr.Write(p)
+		},
+	},
+	HTTP: pal.HTTP{
+		NewClient: func(cfg pal.ClientConfig) pal.HTTPClient {
+			tlsConfig := &tls.Config{InsecureSkipVerify: cfg.TLS.InsecureSkipVerify} //nolint:gosec
+			if len(cfg.TLS.CACertPEM) > 0 {
+				pool := x509.NewCertPool()
+				pool.AppendCertsFromPEM(cfg.TLS.CACertPEM)
+				tlsConfig.RootCAs = pool
+				if !cfg.TLS.InsecureSkipVerify {
+					// Go 1.15+ requires SANs for hostname verification; many self-signed and
+					// Java-issued certs only set the CN field. When a custom CA is provided
+					// we do our own verification so CN-only certs are accepted as a fallback.
+					tlsConfig.InsecureSkipVerify = true //nolint:gosec
+					tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool)
+				}
+			}
+			if len(cfg.TLS.ClientCertPEM) > 0 && len(cfg.TLS.ClientKeyPEM) > 0 {
+				if cert, err := tls.X509KeyPair(cfg.TLS.ClientCertPEM, cfg.TLS.ClientKeyPEM); err == nil {
+					tlsConfig.Certificates = []tls.Certificate{cert}
+				}
+			}
+			transport := &http.Transport{TLSClientConfig: tlsConfig}
+			protocols := new(http.Protocols)
+			if cfg.HTTPVersion == "2.0" {
+				protocols.SetHTTP2(true)
+				protocols.SetUnencryptedHTTP2(true)
+			} else {
+				protocols.SetHTTP1(true)
+			}
+			transport.Protocols = protocols
+			c := &http.Client{Timeout: cfg.Timeout, Transport: transport}
+			if !cfg.FollowRedirects {
+				c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				}
+			}
+			return &nativeHTTPClient{client: c}
 		},
 	},
 }
@@ -254,4 +331,47 @@ func buildPointer(lineContent string, startCol, highlightLen int) string {
 		b.WriteByte('^')
 	}
 	return b.String()
+}
+
+// tlsVerifyConnectionWithCNFallback returns a VerifyConnection callback that verifies the
+// server's certificate chain against rootCAs and falls back to CN-based hostname matching
+// when no SANs are present. Go 1.15+ disabled CN-only hostname verification (RFC 6125 §2.3),
+// but many self-signed and Java-issued certificates still rely on it.
+func tlsVerifyConnectionWithCNFallback(rootCAs *x509.CertPool) func(tls.ConnectionState) error {
+	return func(cs tls.ConnectionState) error {
+		opts := x509.VerifyOptions{
+			Roots:         rootCAs,
+			Intermediates: x509.NewCertPool(),
+		}
+		for _, cert := range cs.PeerCertificates[1:] {
+			opts.Intermediates.AddCert(cert)
+		}
+		if _, err := cs.PeerCertificates[0].Verify(opts); err != nil {
+			return err
+		}
+		// cs.ServerName is the SNI hostname (no port). Try SAN-based verification first;
+		// fall back to CN matching for legacy certificates.
+		leaf := cs.PeerCertificates[0]
+		if err := leaf.VerifyHostname(cs.ServerName); err == nil {
+			return nil
+		}
+		return tlsMatchCN(leaf.Subject.CommonName, cs.ServerName)
+	}
+}
+
+// tlsMatchCN checks whether pattern (a certificate CN) matches host.
+// Supports simple wildcard patterns of the form "*.example.com".
+func tlsMatchCN(pattern, host string) error {
+	pattern = strings.ToLower(strings.TrimSuffix(pattern, "."))
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+	if pattern == host {
+		return nil
+	}
+	if strings.HasPrefix(pattern, "*.") {
+		suffix := pattern[1:] // ".example.com"
+		if strings.HasSuffix(host, suffix) && strings.Count(host, ".") == strings.Count(suffix, ".") {
+			return nil
+		}
+	}
+	return fmt.Errorf("x509: certificate CN %q does not match host %q", pattern, host)
 }

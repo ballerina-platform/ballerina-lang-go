@@ -1,0 +1,132 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil|error{
+  bb0 {
+    %1 = ConstantLoad https://example.com
+    %2 = $Client.init$default$1(%1) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %2;
+    %4 = newObject ballerina/http:Client
+    %5 = ConstantLoad https://example.com
+    %6 = init(%4,%5,$desugar$0) -> bb2;
+  }
+  bb2 {
+    %8 = %6 is nil
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %7 = %4;
+    GOTO bb5;
+  }
+  bb4 {
+    %7 = %6;
+    GOTO bb5;
+  }
+  bb5 {
+    $desugar$1 = %7;
+    %10 = $desugar$1 is error
+    %10 ? bb6 : bb7;
+  }
+  bb6 {
+    %0 = $desugar$1;
+    return;
+  }
+  bb7 {
+    c = $desugar$1;
+    %12 = ConstantLoad /post
+    $desugar$2 = %12;
+    %14 = ConstantLoad hello world
+    $desugar$3 = %14;
+    %16 = $Client.post$default$2($desugar$2,$desugar$3) -> bb8;
+  }
+  bb8 {
+    $desugar$4 = %16;
+    %18 = $Client.post$default$3($desugar$2,$desugar$3,$desugar$4) -> bb9;
+  }
+  bb9 {
+    $desugar$5 = %18;
+    %20 = $remote$post(c,$desugar$2,$desugar$3,$desugar$4,$desugar$5) -> bb10;
+  }
+  bb10 {
+    $desugar$6 = %20;
+    %22 = $desugar$6 is error
+    %22 ? bb11 : bb12;
+  }
+  bb11 {
+    %0 = $desugar$6;
+    return;
+  }
+  bb12 {
+    r = $desugar$6;
+    %25 = ConstantLoad statusCode
+    %24 = r[%25];
+    %26 = %24;
+    %27 = println(%26) -> bb13;
+  }
+  bb13 {
+    %28 = ConstantLoad /post
+    %29 = ConstantLoad {"key":"value"}
+    %30 = ConstantLoad <nil>
+    %31 = %30;
+    %32 = ConstantLoad application/json
+    %33 = $remote$post(c,%28,%29,%31,%32) -> bb14;
+  }
+  bb14 {
+    $desugar$7 = %33;
+    %35 = $desugar$7 is error
+    %35 ? bb15 : bb16;
+  }
+  bb15 {
+    %0 = $desugar$7;
+    return;
+  }
+  bb16 {
+    r2 = $desugar$7;
+    %38 = ConstantLoad statusCode
+    %37 = r2[%38];
+    %39 = %37;
+    %40 = println(%39) -> bb17;
+  }
+  bb17 {
+    %41 = ConstantLoad /post
+    $desugar$8 = %41;
+    %43 = ConstantLoad name
+    %44 = ConstantLoad test
+    %45 = ConstantLoad count
+    %46 = ConstantLoad 1
+    %47 = newMap mapping{%43=%44, %45=%46}
+    $desugar$9 = %47;
+    %49 = $Client.post$default$2($desugar$8,$desugar$9) -> bb18;
+  }
+  bb18 {
+    $desugar$10 = %49;
+    %51 = $Client.post$default$3($desugar$8,$desugar$9,$desugar$10) -> bb19;
+  }
+  bb19 {
+    $desugar$11 = %51;
+    %53 = $remote$post(c,$desugar$8,$desugar$9,$desugar$10,$desugar$11) -> bb20;
+  }
+  bb20 {
+    $desugar$12 = %53;
+    %55 = $desugar$12 is error
+    %55 ? bb21 : bb22;
+  }
+  bb21 {
+    %0 = $desugar$12;
+    return;
+  }
+  bb22 {
+    r3 = $desugar$12;
+    %58 = ConstantLoad statusCode
+    %57 = r3[%58];
+    %59 = %57;
+    %60 = println(%59) -> bb23;
+  }
+  bb23 {
+    %61 = ConstantLoad <nil>
+    %0 = %61;
+    return;
+  }
+}

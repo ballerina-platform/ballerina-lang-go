@@ -1,0 +1,60 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina http (as http))
+  (import-package ballerina io (as io))
+  (function main () (
+    (union-type
+      (error-type)
+      (value-type null)))
+    (block-function-body
+      (var-def
+        (variable c1 (type
+          (user-defined-type http Client)) (expr
+          (checked-expr
+            (new (
+              (literal https://example.com)
+              (mapping-constructor-expr
+                (key-value
+                  (simple-var-ref secureSocket)
+                  (mapping-constructor-expr
+                    (key-value
+                      (simple-var-ref enable)
+                      (literal false)))))))))))
+      (var-def
+        (variable r1 (expr
+          (checked-expr
+            (remote-method-call get expr:
+              (simple-var-ref c1) (
+              (literal /path)))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access statusCode
+            (simple-var-ref r1)))))
+      (var-def
+        (variable c2 (type
+          (user-defined-type http Client)) (expr
+          (checked-expr
+            (new (
+              (literal https://example.com)
+              (mapping-constructor-expr
+                (key-value
+                  (simple-var-ref secureSocket)
+                  (mapping-constructor-expr
+                    (key-value
+                      (simple-var-ref verifyHostName)
+                      (literal false))
+                    (key-value
+                      (simple-var-ref shareSession)
+                      (literal false)))))))))))
+      (var-def
+        (variable r2 (expr
+          (checked-expr
+            (remote-method-call get expr:
+              (simple-var-ref c2) (
+              (literal /path)))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access statusCode
+            (simple-var-ref r2)))))
+      (return
+        (literal <nil>)))))
