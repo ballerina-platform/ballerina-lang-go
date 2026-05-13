@@ -4945,7 +4945,7 @@ func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMa
 	var acceptedTy semtypes.SemType = semtypes.NEVER
 	patternRemaining := remainingType
 	for i, pattern := range clause.Patterns {
-		patternTy, ok := resolveMatchPattern(t, chain, pattern)
+		patternTy, ok := resolveMatchPattern(t, chain, pattern, remainingType)
 		if !ok {
 			return nil, nil, false
 		}
@@ -4956,7 +4956,7 @@ func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMa
 		acceptedTy = semtypes.Union(acceptedTy, patternTy)
 	}
 	if clause.Guard != nil {
-		_, guardEffect, ok := resolveActionOrExpression(t, chain, clause.Guard, nil)
+		_, guardEffect, ok := resolveActionOrExpression(t, chain, clause.Guard, remainingType)
 		if !ok {
 			return nil, nil, false
 		}
@@ -4994,11 +4994,29 @@ func resolveMatchClause(t typeResolver, chain *binding, clause *ast.BLangMatchCl
 	return bodyEffect, true
 }
 
-func resolveMatchPattern(t typeResolver, chain *binding, pattern ast.BLangMatchPattern) (semtypes.SemType, bool) {
+func isValidConstPatternExpr(t typeResolver, expr ast.BLangExpression) bool {
+	var ref model.SymbolRef
+	switch e := expr.(type) {
+	case *ast.BLangSimpleVarRef:
+		ref = e.Symbol()
+	case *ast.BLangConstRef:
+		ref = e.Symbol()
+	default:
+		return true
+	}
+	sym := t.getSymbol(ref)
+	return sym != nil && sym.Kind() == model.SymbolKindConstant
+}
+
+func resolveMatchPattern(t typeResolver, chain *binding, pattern ast.BLangMatchPattern, expectedTy semtypes.SemType) (semtypes.SemType, bool) {
 	switch p := pattern.(type) {
 	case *ast.BLangConstPattern:
-		ty, _, ok := resolveActionOrExpression(t, chain, p.Expr, nil)
+		ty, _, ok := resolveActionOrExpression(t, chain, p.Expr, expectedTy)
 		if !ok {
+			return nil, false
+		}
+		if !isValidConstPatternExpr(t, p.Expr) {
+			t.semanticError("match pattern variable reference must refer to a constant", p.Expr.GetPosition())
 			return nil, false
 		}
 		p.SetAcceptedType(ty)

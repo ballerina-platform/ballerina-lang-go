@@ -34,7 +34,6 @@ import (
 // "subset8/08-foo/bar-v.bal"). They are matched as suffixes against either a
 // relative test name or an absolute path.
 var UnsupportedTests = []string{
-	// Tests that cause unrecoverable Go runtime errors.
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
 	"subset8/08-comparable/order5-v.bal",
 	"subset8/08-const/const3-v.bal",
@@ -182,9 +181,6 @@ var UnsupportedTests = []string{
 	"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
 
 	// Match patterns:
-	//  const-reference patterns and int-literal-as-float patterns unsupported.
-	"subset8/08-match/2-v.bal",
-	"subset8/08-match/float3-v.bal",
 	//  Unsupported match pattern diagnostics for list/mapping patterns.
 	// 	https://github.com/ballerina-platform/ballerina-lang-go/issues/162
 	"subset8/08-list/10-e.bal",

@@ -3552,23 +3552,27 @@ func (n *NodeBuilder) transformMatchPattern(matchPattern tree.Node, matchStmtExp
 	switch kind {
 	case common.SIMPLE_NAME_REFERENCE:
 		nameRef := matchPattern.(*tree.SimpleNameReferenceNode)
-		if nameRef.Name().Text() != "_" {
-			n.cx.SemanticError("expected wildcard '_' but got: "+nameRef.Name().Text(), matchPatternPos)
-			return nil
+		if nameRef.Name().Text() == "_" {
+			bLangWildCard := &BLangWildCardMatchPattern{}
+			bLangWildCard.pos = matchPatternPos
+			return bLangWildCard
 		}
-		bLangWildCard := &BLangWildCardMatchPattern{}
-		bLangWildCard.pos = matchPatternPos
-		return bLangWildCard
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
 
 	case common.IDENTIFIER_TOKEN:
 		idToken := matchPattern.(tree.Token)
-		if idToken.Text() != "_" {
-			n.cx.SemanticError("expected wildcard '_' but got: "+idToken.Text(), matchPatternPos)
-			return nil
+		if idToken.Text() == "_" {
+			bLangWildCard := &BLangWildCardMatchPattern{}
+			bLangWildCard.pos = matchPatternPos
+			return bLangWildCard
 		}
-		bLangWildCard := &BLangWildCardMatchPattern{}
-		bLangWildCard.pos = matchPatternPos
-		return bLangWildCard
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
 
 	case common.NUMERIC_LITERAL,
 		common.STRING_LITERAL,
