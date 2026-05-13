@@ -181,9 +181,6 @@ var UnsupportedTests = []string{
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/288
 	"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
 
-	// Do we need to support this technically else if is not reachable?
-	"subset8/08-ifelse/ifelse4-v.bal",
-
 	// Match patterns:
 	//  const-reference patterns and int-literal-as-float patterns unsupported.
 	"subset8/08-match/2-v.bal",

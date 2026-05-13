@@ -19,7 +19,7 @@ import ballerina/io;
 public function main() {
     if true {
     }
-    else if true {
+    else if true { // @error unreachable else if
     }
-    io:println("hello"); // @output hello
+    io:println("hello");
 }
