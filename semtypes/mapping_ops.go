@@ -103,7 +103,7 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHan
 				if fieldPair.Index1 < 0 {
 					mt = insertField(*pos, fieldPair.Name, d)
 				} else {
-					posTypes := pos.Types
+					posTypes := append([]ComplexSemType(nil), pos.Types...)
 					posTypes[fieldPair.Index1] = *d
 					mt = mappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}

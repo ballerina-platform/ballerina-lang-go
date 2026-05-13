@@ -764,10 +764,58 @@ func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desuga
 		expr.ArgsExprs[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
+	// Fill in any defaultable init params the caller omitted. This mirrors what
+	// walkDirectCallArgs does for regular function calls via walkInvocation.
+	initStmts = append(initStmts, fillNewExprInitDefaults(cx, expr)...)
+
 	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: expr,
 	}
+}
+
+func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []model.StatementNode {
+	classSym, ok := cx.getSymbol(expr.ClassSymbol).(*model.ClassSymbol)
+	if !ok {
+		return nil
+	}
+	initRef, ok := classSym.MethodSymbol("init")
+	if !ok {
+		return nil
+	}
+	initFnSym, ok := cx.getSymbol(initRef).(model.FunctionSymbol)
+	if !ok {
+		return nil
+	}
+	sig := initFnSym.Signature()
+	defaultableParams := initFnSym.DefaultableParams()
+	if defaultableParams == nil {
+		return nil
+	}
+	totalParams := len(sig.ParamTypes)
+	if totalParams <= len(expr.ArgsExprs) {
+		return nil
+	}
+
+	pos := expr.GetPosition()
+	var initStmts []model.StatementNode
+	for i := len(expr.ArgsExprs); i < totalParams; i++ {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			break
+		}
+		defaultInv := &ast.BLangInvocation{}
+		defaultInv.Name = &ast.BLangIdentifier{Value: cx.getSymbol(dp.Symbol).Name()}
+		defaultInv.ArgExprs = append([]ast.BLangExpression(nil), expr.ArgsExprs[:i]...)
+		defaultInv.SetSymbol(dp.Symbol)
+		defaultInv.SetDeterminedType(sig.ParamTypes[i])
+		setPositionIfMissing(defaultInv, pos)
+
+		varDef, varRef := assignToLocal(cx, defaultInv, pos)
+		initStmts = append(initStmts, varDef)
+		expr.ArgsExprs = append(expr.ArgsExprs, varRef)
+	}
+	return initStmts
 }
 
 func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConstructorExpr) desugaredNode[ast.BLangActionOrExpression] {

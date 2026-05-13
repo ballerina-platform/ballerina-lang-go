@@ -1954,7 +1954,7 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
 	pos := getPosition(n.de(), checkExpressionNode)
-	expr := n.createExpression(checkExpressionNode.Expression())
+	expr := n.createActionOrExpression(checkExpressionNode.Expression())
 	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos

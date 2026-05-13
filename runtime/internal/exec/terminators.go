@@ -40,7 +40,19 @@ func execCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock
 func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
 	if callInfo.IsMethodCall {
 		fn := resolveObjectMethod(ctx, callInfo, args)
-		return executeFunction(ctx, *fn, args, nil)
+		if fn != nil {
+			return executeFunction(ctx, *fn, args, nil)
+		}
+		externFn := ctx.GetNativeFunction(callInfo.CachedMethodLookupKey)
+		if externFn != nil {
+			callInfo.CachedNativeFunc = externFn.Impl
+			result, err := externFn.Impl(args)
+			if err != nil {
+				panic(err)
+			}
+			return result
+		}
+		panic(values.NewErrorWithMessage("method not found: " + callInfo.Name.Value()))
 	}
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)

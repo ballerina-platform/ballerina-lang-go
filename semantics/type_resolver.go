@@ -604,6 +604,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		}
 	}
 	populateClassSymbolByType(t, pkg)
+	populateMappingAtomMaps(t, pkg, t.importedSymbols)
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		if _, ok := resolveFunctionSignature(t, fn); !ok {
@@ -1775,9 +1776,9 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangTypeTestExpr:
 		return resolveTypeTestExpr(t, chain, e)
 	case *ast.BLangCheckedExpr:
-		return resolveCheckedExpr(t, chain, e)
+		return resolveCheckedExpr(t, chain, e, expectedType)
 	case *ast.BLangCheckPanickedExpr:
-		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr)
+		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr, expectedType)
 	case *ast.BLangTrapExpr:
 		return resolveTrapExpr(t, chain, e)
 	case *ast.BLangNamedArgsExpression:
@@ -1842,7 +1843,13 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 		}
 	}
 
+	// If fewer args were provided than the init expects, check whether the missing
+	// params are all defaultable. If so, pad ArgsExprs with typed placeholders so that
+	// determineObjectType can match the init signature. The desugar fills the actual
+	// default values later; these placeholders are removed after the call.
+	padded := padMissingDefaultArgs(t, e, determinedTy)
 	objTy, ok := determineObjectType(t, e, determinedTy)
+	e.ArgsExprs = e.ArgsExprs[:len(e.ArgsExprs)-padded]
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1862,6 +1869,51 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 	e.ClassSymbol = classSymbol
 
 	return e.GetDeterminedType(), defaultExpressionEffect(chain), true
+}
+
+// padMissingDefaultArgs adds typed placeholder expressions to e.ArgsExprs for each missing
+// param that is declared defaultable on the class's init method. It returns the count added
+// so the caller can remove them after determineObjectType runs.
+func padMissingDefaultArgs(t typeResolver, e *ast.BLangNewExpression, objectTy semtypes.SemType) int {
+	// Use classAtomSymbols (keyed by MappingAtomicType pointer) rather than classSymbolByType
+	// (keyed by SemType) because objectTy may not be pointer-equal to the registered SemType
+	// even when they are mathematically equivalent (e.g. after Intersect on implicit new).
+	oat := semtypes.ToObjectAtomicType(t.typeContext(), objectTy)
+	if oat == nil {
+		return 0
+	}
+	classRef, ok := t.getClassAtomSymbol(oat)
+	if !ok {
+		return 0
+	}
+	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	if !ok {
+		return 0
+	}
+	initRef, ok := classSym.MethodSymbol("init")
+	if !ok {
+		return 0
+	}
+	initFnSym, ok := t.getSymbol(initRef).(model.FunctionSymbol)
+	if !ok {
+		return 0
+	}
+	sig := initFnSym.Signature()
+	defaultableParams := initFnSym.DefaultableParams()
+	if defaultableParams == nil {
+		return 0
+	}
+	padded := 0
+	for i := len(e.ArgsExprs); i < len(sig.ParamTypes); i++ {
+		if _, isDefaultable := defaultableParams.Get(i); !isDefaultable {
+			break
+		}
+		placeholder := &ast.BLangSimpleVarRef{}
+		placeholder.SetDeterminedType(sig.ParamTypes[i])
+		e.ArgsExprs = append(e.ArgsExprs, placeholder)
+		padded++
+	}
+	return padded
 }
 
 func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
@@ -1951,8 +2003,14 @@ func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semt
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
+func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	// Propagate expected type into the inner expression as T|error so that
+	// constructs like `T f = check new (args)` can infer the class from the LHS.
+	var innerExpectedType semtypes.SemType
+	if expectedType != nil {
+		innerExpectedType = semtypes.Union(expectedType, semtypes.ERROR)
+	}
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, innerExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3703,6 +3761,17 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		switch ty.TypeKind {
 		case model.TypeKind_MAP:
 			return semtypes.MAPPING, true
+		case model.TypeKind_JSON, model.TypeKind_ANYDATA:
+			// json / anydata ≈ NIL|BOOLEAN|INT|FLOAT|DECIMAL|STRING|list|map
+			// (xml excluded — not representable at runtime)
+			return semtypes.Union(semtypes.SIMPLE_OR_STRING, semtypes.Union(semtypes.LIST, semtypes.MAPPING)), true
+		case model.TypeKind_ANY:
+			return semtypes.ANY, true
+		case model.TypeKind_XML:
+			return semtypes.XML, true
+		case model.TypeKind_STREAM, model.TypeKind_TABLE, model.TypeKind_FUTURE:
+			t.unimplemented("unsupported builtin type kind: "+string(ty.TypeKind), ty.GetPosition())
+			return nil, false
 		default:
 			t.internalError("Unexpected builtin type kind", ty.GetPosition())
 		}
