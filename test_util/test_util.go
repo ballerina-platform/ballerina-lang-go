@@ -157,11 +157,22 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	return filepath.Join(outputBaseDir, relPath)
 }
 
+type stubHTTPClient struct{}
+
+func (c *stubHTTPClient) Execute(_, _ string, _ []byte, _ string, _ map[string][]string) (int, map[string][]string, []byte, error) {
+	return 200, map[string][]string{}, []byte("test body"), nil
+}
+
 func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: stdout.Write,
 			Stderr: stderr.Write,
+		},
+		HTTP: pal.HTTP{
+			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
+				return &stubHTTPClient{}
+			},
 		},
 	}
 }

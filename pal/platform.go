@@ -23,12 +23,37 @@
 // implementation of PAL to the runtime.
 package pal
 
+import "time"
+
 type (
 	Platform struct {
-		IO IO
+		IO   IO
+		HTTP HTTP
 	}
 	IO struct {
 		Stdout func(p []byte) (n int, err error)
 		Stderr func(p []byte) (n int, err error)
+	}
+	// TLSConfig carries TLS settings derived from Ballerina's secureSocket config.
+	TLSConfig struct {
+		InsecureSkipVerify bool   // secureSocket.enable=false OR verifyHostName=false
+		CACertPEM          []byte // secureSocket.cert (string PEM file path) → file contents
+		ClientCertPEM      []byte // secureSocket.key.certFile → file contents
+		ClientKeyPEM       []byte // secureSocket.key.keyFile  → file contents
+	}
+	// ClientConfig bundles all static options for a new HTTP client instance.
+	ClientConfig struct {
+		Timeout         time.Duration
+		FollowRedirects bool
+		HTTPVersion     string // "1.1" or "2.0"; defaults to "2.0"
+		TLS             TLSConfig
+	}
+	HTTP struct {
+		NewClient func(cfg ClientConfig) HTTPClient
+	}
+	// HTTPClient is an opaque handle to an HTTP client created by the platform.
+	// It is created once per Ballerina http:Client init and reused across requests.
+	HTTPClient interface {
+		Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (statusCode int, respHeaders map[string][]string, respBody []byte, err error)
 	}
 )
