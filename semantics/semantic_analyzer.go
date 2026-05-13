@@ -417,6 +417,12 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+	if depSym, ok := fnSymbol.(model.DependentlyTypedFunctionSymbol); ok {
+		validateDependentFunction(parent, function, depSym)
+		validateDefaultParamTypes(parent, function)
+		return fa
+	}
+	rejectInferredTypedescOnNonDependent(parent, function)
 	fa.retTy = fnSymbol.Signature().ReturnType
 	validateDefaultParamTypes(parent, function)
 	if function.IsIsolated() && !function.IsNative() {
@@ -436,10 +442,94 @@ func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction)
 	}
 }
 
+// rejectInferredTypedescOnNonDependent emits an error for any `<>` default on a function
+// whose return type does not depend on that parameter.
+func rejectInferredTypedescOnNonDependent(a analyzer, fn *ast.BLangFunction) {
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if !param.IsDefaultableParam() {
+			continue
+		}
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); !ok {
+			continue
+		}
+		a.semanticErr("inferred typedesc default '<>' requires the return type to depend on this parameter", param.GetPosition())
+	}
+}
+
+// validateDependentFunction enforces the rules around dependently-typed functions:
+//  1. The function body must be external. Otherwise: "dependently-typed function must be external".
+//  2. A parameter with inferred-typedesc default '<>' must be the parameter the return type
+//     depends on. Otherwise: "inferred typedesc default '<>' requires the return type to depend on this parameter".
+//  3. A union of dependent and defined return parts must be disjoint.
+func validateDependentFunction(a analyzer, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) {
+	if _, ok := fn.Body.(*ast.BLangExternFunctionBody); !ok {
+		a.semanticErr("dependently-typed function must be external", fn.GetPosition())
+	}
+	retType := sym.ReturnType()
+	if _, disjoint := checkDependentReturnParts(a, a.tyCtx(), retType, sym.ParamTypes(), fn.GetPosition()); !disjoint {
+		a.semanticErr("dependently-typed function return type dependent and defined parts must be disjoint", fn.GetPosition())
+	}
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if !param.IsDefaultableParam() {
+			continue
+		}
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); !ok {
+			continue
+		}
+		if !typeOpReferencesIndex(retType, i) {
+			a.semanticErr("inferred typedesc default '<>' requires the return type to depend on this parameter", param.GetPosition())
+		}
+	}
+}
+
+func typeOpReferencesIndex(op model.TypeOp, i int) bool {
+	switch o := op.(type) {
+	case *model.RefTypeOp:
+		return o.Index == i
+	case *model.BinaryTypeOp:
+		return typeOpReferencesIndex(o.Lhs, i) || typeOpReferencesIndex(o.Rhs, i)
+	}
+	return false
+}
+
+func checkDependentReturnParts(a analyzer, ctx semtypes.Context, op model.TypeOp, paramTypes []semtypes.SemType, loc diagnostics.Location) (bool, bool) {
+	switch o := op.(type) {
+	case *model.RefTypeOp:
+		// RefTypeOp is the dependent part: it references a typedesc parameter.
+		// A single part has no sibling to overlap with, so it is disjoint by itself.
+		return true, true
+	case *model.IdentityTypeOp:
+		// IdentityTypeOp is a defined/concrete return part, e.g. error or int.
+		// A single part has no sibling to overlap with, so it is disjoint by itself.
+		return false, true
+	case *model.BinaryTypeOp:
+		lhsDepends, lhsDisjoint := checkDependentReturnParts(a, ctx, o.Lhs, paramTypes, loc)
+		rhsDepends, rhsDisjoint := checkDependentReturnParts(a, ctx, o.Rhs, paramTypes, loc)
+		depends := lhsDepends || rhsDepends
+		if !lhsDisjoint || !rhsDisjoint {
+			return depends, false
+		}
+		// By definition not disjoint but could be NEVER
+		if o.Kind != model.TypeOpUnion || lhsDepends == rhsDepends {
+			return depends, true
+		}
+		intersection := semtypes.Intersect(o.Lhs.Apply(ctx, paramTypes), o.Rhs.Apply(ctx, paramTypes))
+		return depends, semtypes.IsEmpty(ctx, intersection)
+	default:
+		a.internalErr(fmt.Sprintf("unknown dependent return type op: %T", op), loc)
+		return false, false
+	}
+}
+
 func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
 		if !param.IsDefaultableParam() {
+			continue
+		}
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); ok {
 			continue
 		}
 		paramTy := param.GetDeterminedType()
@@ -640,6 +730,10 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return analyzeLambdaFunction(a, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return analyzeInvocation(a, expr, expectedType)
+	case *ast.BLangInferredTypedescDefault:
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangTypedescExpr:
+		return validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -679,24 +773,74 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 	return validateResolvedType(a, expr, expectedType)
 }
 
+type queryExprAnalysisClauses struct {
+	fromClause       *ast.BLangFromClause
+	selectClause     *ast.BLangSelectClause
+	onConflictClause *ast.BLangOnConflictClause
+	lastClauseIndex  int
+}
+
+func queryExprClausesForAnalysis[A analyzer](
+	a A,
+	queryExpr *ast.BLangQueryExpr,
+) (queryExprAnalysisClauses, bool) {
+	if len(queryExpr.QueryClauseList) < 2 {
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return queryExprAnalysisClauses{}, false
+	}
+
+	fromClause := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
+	lastClauseIndex := len(queryExpr.QueryClauseList) - 1
+	var onConflictClause *ast.BLangOnConflictClause
+	if clause, isOnConflict := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
+		onConflictClause = clause
+		lastClauseIndex--
+	}
+	if lastClauseIndex < 1 {
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return queryExprAnalysisClauses{}, false
+	}
+
+	selectClause, ok := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
+	if !ok {
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return queryExprAnalysisClauses{}, false
+	}
+	return queryExprAnalysisClauses{
+		fromClause:       fromClause,
+		selectClause:     selectClause,
+		onConflictClause: onConflictClause,
+		lastClauseIndex:  lastClauseIndex,
+	}, true
+}
+
 func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
-	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
+	// Query clause ordering and shape are validated during type resolution.
+	clauses, ok := queryExprClausesForAnalysis(a, queryExpr)
 	if !ok {
-		a.semanticErr("query expression must start with a from clause", queryExpr.GetPosition())
 		return false
 	}
-	if !analyzeActionOrExpression(a, fromClause.Collection, nil) {
+	if !analyzeActionOrExpression(a, clauses.fromClause.Collection, nil) {
 		return false
 	}
+	orderedTy := semtypes.CreateOrdered(a.tyCtx())
 
-	selectClause, ok := queryExpr.QueryClauseList[len(queryExpr.QueryClauseList)-1].(*ast.BLangSelectClause)
-	if !ok {
-		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
-		return false
-	}
-
-	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+	for i := 1; i < clauses.lastClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangJoinClause:
+			if !analyzeActionOrExpression(a, clause.Collection, nil) {
+				return false
+			}
+			if clause.OnClause.OnExpr == nil || clause.OnClause.EqualsExpr == nil {
+				a.internalErr("join clause shape should have been validated during type resolution", clause.GetPosition())
+				return false
+			}
+			if !analyzeActionOrExpression(a, clause.OnClause.OnExpr, nil) {
+				return false
+			}
+			if !analyzeActionOrExpression(a, clause.OnClause.EqualsExpr, nil) {
+				return false
+			}
 		case *ast.BLangLetClause:
 			for _, variableDef := range clause.LetVarDeclarations {
 				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
@@ -714,9 +858,13 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			}
 		case *ast.BLangWhereClause, *ast.BLangLimitClause:
 			// Query clause type and shape validation already happen in type resolution.
-		default:
-			a.unimplementedErr("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
-			return false
+		case *ast.BLangOrderByClause:
+			for j := range clause.OrderByKeyList {
+				orderKey := &clause.OrderByKeyList[j]
+				if !analyzeActionOrExpression(a, orderKey.Expression, orderedTy) {
+					return false
+				}
+			}
 		}
 	}
 
@@ -725,9 +873,20 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
 	}
 
-	if !analyzeActionOrExpression(a, selectClause.Expression, selectExpectedTy) {
+	if !analyzeActionOrExpression(a, clauses.selectClause.Expression, selectExpectedTy) {
 		return false
 	}
+
+	if clauses.onConflictClause != nil {
+		if queryExpr.QueryConstructType != model.TypeKind_MAP {
+			a.semanticErr("on conflict clause is supported only for map query construct type", clauses.onConflictClause.GetPosition())
+			return false
+		}
+		if !analyzeActionOrExpression(a, clauses.onConflictClause.Expression, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+			return false
+		}
+	}
+
 	return validateResolvedType(a, queryExpr, expectedType)
 }
 
@@ -1014,12 +1173,18 @@ type invocable interface {
 	ResolvedSymbol() model.SymbolRef
 	SetResolvedSymbol(model.SymbolRef)
 	CallArgs() []ast.BLangExpression
+	SetCallArgs([]ast.BLangExpression)
 	GetName() model.IdentifierNode
 	SetRawSymbol(model.Symbol)
 }
 
 func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.SemType) bool {
 	symbol := inv.ResolvedSymbol()
+	// Skip invocations that failed type resolution — an unresolved dependently-typed
+	// symbol still sits in the invocation, but has no usable semtype.
+	if _, isDep := a.ctx().GetSymbol(symbol).(model.DependentlyTypedFunctionSymbol); isDep {
+		return false
+	}
 	fnTy := a.ctx().SymbolType(symbol)
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 
@@ -1102,6 +1267,10 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangFunction:
+		if _, isDep := a.ctx().GetSymbol(n.Symbol()).(model.DependentlyTypedFunctionSymbol); isDep {
+			initializeFunctionAnalyzer(a, n)
+			return nil
+		}
 		return initializeFunctionAnalyzer(a, n)
 	case *ast.BLangWhile:
 		if !analyzeWhile(a, n) {

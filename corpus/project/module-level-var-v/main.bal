@@ -23,8 +23,10 @@ import testorg/modulelevelvar.constants;
 const APP_VERSION = 1;
 
 public function main() {
-    io:println(APP_VERSION);
-    io:println(constants:MAX_SIZE);
-    io:println(constants:MIN_SIZE);
+    io:println(APP_VERSION); // @output 1
+    io:println(constants:MAX_SIZE); // @output 100
+    io:println(constants:MIN_SIZE); // @output 10
     math:printScaledRange();
+    // @output 20
+    // @output 200
 }

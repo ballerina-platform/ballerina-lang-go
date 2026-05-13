@@ -32,52 +32,52 @@ main() -> nil{
     %7 = newMap {| int... |}{%1=%2, %3=%4, %5=%6}
     xs = %7;
     $desugar$0 = xs;
-    %10 = newMap {| int... |}{}
-    $desugar$1 = %10;
-    %12 = ConstantLoad 0
-    $desugar$2 = %12;
-    %14 = keys($desugar$0) -> bb1;
+    %10 = keys($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$3 = %14;
-    %16 = length($desugar$3) -> bb2;
+    $desugar$1 = %10;
+    %12 = length($desugar$1) -> bb2;
   }
   bb2 {
-    $desugar$4 = %16;
+    $desugar$2 = %12;
+    %14 = newMap {| int... |}{}
+    $desugar$3 = %14;
+    %17 = ConstantLoad 0
+    $desugar$4 = %17;
     GOTO bb3;
   }
   bb3 {
-    %19 = $desugar$2;
     %20 = $desugar$4;
-    %18 = < %19 %20;
-    %18 ? bb4 : bb5;
+    %21 = $desugar$2;
+    %19 = < %20 %21;
+    %19 ? bb4 : bb5;
   }
   bb4 {
-    PushScopeFrame 16
-    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    PushScopeFrame 15
+    %1 = (1, $desugar$1)[(1, $desugar$4)];
     %0 = (1, $desugar$0)[%1];
-    x = %0;
-    %3 = x;
-    %4 = keyFor(%3) -> bb6;
+    (1, x) = %0;
+    %2 = (1, x);
+    %3 = keyFor(%2) -> bb6;
   }
   bb5 {
-    out = $desugar$1;
-    %22 = println(out) -> bb7;
+    out = $desugar$3;
+    %23 = println(out) -> bb7;
   }
   bb6 {
-    %5 = ConstantLoad 2
-    %6 = newArray [string, int, never...][%5]{%4, x}
-    $desugar$5 = %6;
-    %9 = ConstantLoad 1
-    %8 = $desugar$5[%9];
-    %11 = ConstantLoad 0
-    %10 = $desugar$5[%11];
-    (1, $desugar$1)[%10] = %8;
-    %13 = (1, $desugar$2);
-    %14 = ConstantLoad 1
-    %15 = %14;
-    %12 = + %13 %15;
-    (1, $desugar$2) = %12;
+    %4 = ConstantLoad 2
+    %5 = newArray [string, int, never...][%4]{%3, (1, x)}
+    $desugar$5 = %5;
+    %8 = ConstantLoad 1
+    %7 = $desugar$5[%8];
+    %10 = ConstantLoad 0
+    %9 = $desugar$5[%10];
+    (1, $desugar$3)[%9] = %7;
+    %12 = (1, $desugar$4);
+    %13 = ConstantLoad 1
+    %14 = %13;
+    %11 = + %12 %14;
+    (1, $desugar$4) = %11;
     PopScopeFrame
     GOTO bb3;
   }

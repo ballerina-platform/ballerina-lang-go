@@ -282,6 +282,7 @@ const (
 	NodeKind_RESOURCE_PATH_PARAM_SEGMENT
 	NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT
 	NodeKind_RESOURCE_ROOT_PATH_SEGMENT
+	NodeKind_INFERRED_TYPEDESC_DEFAULT
 )
 
 type Flag uint
@@ -1257,6 +1258,20 @@ type InputClauseNode interface {
 
 type FromClauseNode interface {
 	InputClauseNode
+}
+
+type JoinClauseNode interface {
+	InputClauseNode
+	GetOnClause() OnClauseNode
+	IsOuterJoin() bool
+}
+
+type OnClauseNode interface {
+	Node
+	GetOnExpression() ExpressionNode
+	SetOnExpression(expression ExpressionNode)
+	GetEqualsExpression() ExpressionNode
+	SetEqualsExpression(expression ExpressionNode)
 }
 
 type SelectClauseNode interface {

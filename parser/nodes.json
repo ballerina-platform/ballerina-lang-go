@@ -259,7 +259,7 @@
     "kind": "COMPOUND_ASSIGNMENT_STATEMENT",
     "attributes": [
       {
-        "name": "lhsExpression",
+        "name": "onExpression",
         "type": "ExpressionNode"
       },
       {
@@ -2192,7 +2192,7 @@
         "occurrences": "MULTIPLE"
       },
       {
-        "name": "getToken",
+        "name": "gtToken",
         "type": "Token"
       }
     ]
@@ -2215,7 +2215,7 @@
         "type": "XMLNameNode"
       },
       {
-        "name": "getToken",
+        "name": "gtToken",
         "type": "Token"
       }
     ]
@@ -2278,7 +2278,7 @@
         "type": "Token"
       },
       {
-        "name": "getToken",
+        "name": "gtToken",
         "type": "Token"
       }
     ]
@@ -2804,7 +2804,7 @@
         "type": "Token"
       },
       {
-        "name": "rhsExpression",
+        "name": "equalsExpression",
         "type": "ExpressionNode"
       }
     ]

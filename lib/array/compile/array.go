@@ -50,6 +50,7 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space.AddSymbol("length", lengthSymbol)
 	lengthRef, _ := space.GetSymbol("length")
 	ctx.SetSymbolType(lengthRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
+
 	return model.NewExportedSymbolSpace(space, nil)
 }
 

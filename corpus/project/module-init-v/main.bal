@@ -25,6 +25,6 @@ function init() {
 }
 
 public function main() {
-    io:println(count);
-    io:println(utils:getCount());
+    io:println(count); // @output 42
+    io:println(utils:getCount()); // @output 100
 }

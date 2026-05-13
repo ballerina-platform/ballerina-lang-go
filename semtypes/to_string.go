@@ -117,6 +117,8 @@ func (s *toStringState) subtypeToString(sub basicSubtype) string {
 			return s.bddFunctionToString(st)
 		case BTObject:
 			return s.bddObjectToString(st)
+		case BTTypeDesc:
+			return s.bddTypedescToString(st)
 		default:
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
@@ -259,6 +261,15 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 		return strings.Join(parts, ", ")
 	}
 	return s.semTypeToString(paramType)
+}
+
+func (s *toStringState) bddTypedescToString(bdd Bdd) string {
+	mappingTy := createBasicSemType(BTMapping, bdd)
+	constraint := MappingMemberTypeInnerVal(s.cx, mappingTy, STRING)
+	if IsSameType(s.cx, constraint, VAL) {
+		return "typedesc"
+	}
+	return "typedesc<" + s.semTypeToString(constraint) + ">"
 }
 
 func (s *toStringState) bddMappingToString(bdd Bdd) string {

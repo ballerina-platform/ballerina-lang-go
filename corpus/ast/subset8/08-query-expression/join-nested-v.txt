@@ -1,0 +1,114 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Person
+    (record-type
+      (field id
+        (value-type int))
+      (field name
+        (value-type string))))
+  (type-definition Department
+    (record-type
+      (field id
+        (value-type int))
+      (field ownerId
+        (value-type int))
+      (field name
+        (value-type string))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable people (type
+          (array-type
+            (user-defined-type Person) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal Alex)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal Ranjan)))))))
+      (var-def
+        (variable departments (type
+          (array-type
+            (user-defined-type Department) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 10))
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal HR)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 20))
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 1))
+              (key-value
+                (simple-var-ref name)
+                (literal Ops)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref id)
+                (literal 30))
+              (key-value
+                (simple-var-ref ownerId)
+                (literal 2))
+              (key-value
+                (simple-var-ref name)
+                (literal QA)))))))
+      (var-def
+        (variable result (type
+          (array-type
+            (value-type string) dimensions: 2 ([][]))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable person))
+              (simple-var-ref people))
+            (select-clause
+              (query-expr
+                (from-clause
+                  (var-def
+                    (variable dept))
+                  (simple-var-ref departments))
+                (join-clause
+                  (var-def
+                    (variable owner))
+                  (simple-var-ref people)
+                  (on-clause
+                    (field-based-access ownerId
+                      (simple-var-ref dept))
+                    (field-based-access id
+                      (simple-var-ref owner))))
+                (where-clause
+                  (binary-expr ==
+                    (field-based-access id
+                      (simple-var-ref owner))
+                    (field-based-access id
+                      (simple-var-ref person))))
+                (order-by-clause
+                  (order-key ascending
+                    (field-based-access id
+                      (simple-var-ref dept))))
+                (select-clause
+                  (field-based-access name
+                    (simple-var-ref dept)))))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result)))))))

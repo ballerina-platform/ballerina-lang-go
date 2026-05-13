@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
 	"flag"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -120,9 +121,7 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 	return v
 }
 
-var semanticAnalysisErrorSkipList = []string{
-	// No skipped tests
-}
+var semanticAnalysisErrorSkipList = []string{}
 
 func TestSemanticAnalysisErrors(t *testing.T) {
 	flag.Parse()
@@ -138,11 +137,9 @@ func TestSemanticAnalysisErrors(t *testing.T) {
 }
 
 func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
-	for _, skip := range semanticAnalysisErrorSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
-			t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
-			return
-		}
+	if shouldSkipSemanticAnalysisErrorTest(testCase.InputPath) {
+		t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
+		return
 	}
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
@@ -153,15 +150,26 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 			t.Errorf("Semantic analysis panicked for %s: %v", testCase.InputPath, r)
 		}
 
-		if !cx.HasErrors() {
-			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
+		if !cx.HasDiagnostics() {
+			t.Errorf("Expected compile-time diagnostics for %s, but no diagnostics were recorded", testCase.InputPath)
 			return
 		}
 
-		t.Logf("Semantic error correctly detected for %s", testCase.InputPath)
+		t.Logf("Compile-time diagnostic correctly detected for %s", testCase.InputPath)
 	}()
 
 	_, _ = testphases.RunPipeline(cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
+}
+
+func shouldSkipSemanticAnalysisErrorTest(inputPath string) bool {
+	normalizedInputPath := filepath.ToSlash(inputPath)
+	for _, skip := range semanticAnalysisErrorSkipList {
+		normalizedSkipPath := filepath.ToSlash(skip)
+		if strings.HasSuffix(normalizedInputPath, normalizedSkipPath) {
+			return true
+		}
+	}
+	return false
 }

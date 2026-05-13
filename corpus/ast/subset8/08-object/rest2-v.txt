@@ -1,0 +1,72 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition Joiner
+    (variable sep (type
+      (value-type string)))
+    (function init (
+      (variable sep (type
+        (value-type string)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access sep
+            (simple-var-ref self))
+          (simple-var-ref sep))))
+    (function glue (
+      (variable head (type
+        (value-type string)))) (
+      (value-type string))
+      (block-function-body
+        (var-def
+          (variable result (type
+            (value-type string)) (expr
+            (simple-var-ref head))))
+        (foreach
+          (var-def
+            (variable i (type
+              (value-type int))))
+          (binary-expr ..<
+            (literal 0)
+            (invocation length expr:
+              (simple-var-ref rest) ()))
+          (block-stmt
+            (assignment
+              (simple-var-ref result)
+              (binary-expr +
+                (binary-expr +
+                  (simple-var-ref result)
+                  (field-based-access sep
+                    (simple-var-ref self)))
+                (index-based-access
+                  (simple-var-ref rest)
+                  (simple-var-ref i))))))
+        (return
+          (simple-var-ref result)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable j (type
+          (user-defined-type Joiner)) (expr
+          (new (
+            (literal -))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation glue expr:
+            (simple-var-ref j) (
+            (literal a))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation glue expr:
+            (simple-var-ref j) (
+            (literal a)
+            (literal b))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation glue expr:
+            (simple-var-ref j) (
+            (literal a)
+            (literal b)
+            (literal c)
+            (literal d)))))))))

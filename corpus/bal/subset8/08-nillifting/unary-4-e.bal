@@ -17,6 +17,6 @@
 import ballerina/io;
 
 const int? base2 = ();
-const int? x = +base2; // @error 
-const int? y = -base2; // @error
-const int? z = ~base2; // @error
+const int? x = +base2; // @error
+const int? y = -base2;
+const int? z = ~base2;

@@ -29,8 +29,8 @@ client class MyClient {
 public function main() {
     MyClient c = new ();
     string res = c->get("foo");
-    io:println(res); // @output "fooremote get"
+    io:println(res); // @output fooremote get
 
     string res2 = c.get("foo");
-    io:println(res2); // @output "fooget"
+    io:println(res2); // @output fooget
 }

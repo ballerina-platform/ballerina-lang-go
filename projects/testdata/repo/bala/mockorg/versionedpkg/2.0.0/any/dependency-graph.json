@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "org": "mockorg",
+      "name": "versionedpkg",
+      "version": "2.0.0",
+      "transitive": false,
+      "dependencies": [],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

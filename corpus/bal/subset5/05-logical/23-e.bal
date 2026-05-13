@@ -19,5 +19,5 @@ public function main() {
     boolean b = false;
     if true || x == 0.1 && a && b { // @error
     }
-    unused1 = x;
+    var unused1 = x;
 }

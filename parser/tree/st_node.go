@@ -3098,16 +3098,16 @@ func CreateJoinClauseNode(outerKeyword STNode, joinKeyword STNode, typedBindingP
 }
 
 // From STNodeFactory.java:1524-1535
-func CreateOnClauseNode(onKeyword STNode, lhsExpression STNode, equalsKeyword STNode, rhsExpression STNode) STNode {
+func CreateOnClauseNode(onKeyword STNode, onExpression STNode, equalsKeyword STNode, equalsExpression STNode) STNode {
 	return createNodeAndAddChildren(&STOnClauseNode{
 		STClauseNode: &STNodeBase{
 			kind: common.ON_CLAUSE,
 		},
-		OnKeyword:     onKeyword,
-		LhsExpression: lhsExpression,
-		EqualsKeyword: equalsKeyword,
-		RhsExpression: rhsExpression,
-	}, onKeyword, lhsExpression, equalsKeyword, rhsExpression)
+		OnKeyword:        onKeyword,
+		OnExpression:     onExpression,
+		EqualsKeyword:    equalsKeyword,
+		EqualsExpression: equalsExpression,
+	}, onKeyword, onExpression, equalsKeyword, equalsExpression)
 }
 
 // From STNodeFactory.java:1537-1544
@@ -3721,6 +3721,141 @@ func CreateInterpolationNode(interpolationStartToken STNode, expression STNode, 
 		Expression:              expression,
 		InterpolationEndToken:   interpolationEndToken,
 	}, interpolationStartToken, expression, interpolationEndToken)
+}
+
+// ========== XML Template Factories (STNodeFactory XML element/attribute/text/comment/PI/CDATA) ==========
+
+func CreateXMLElementNode(startTag STNode, content STNode, endTag STNode) STNode {
+	return createNodeAndAddChildren(&STXMLElementNode{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_ELEMENT,
+		},
+		StartTag: startTag,
+		Content:  content,
+		EndTag:   endTag,
+	}, startTag, content, endTag)
+}
+
+func CreateXMLStartTagNode(ltToken STNode, name STNode, attributes STNode, gtToken STNode) STNode {
+	return createNodeAndAddChildren(&STXMLStartTagNode{
+		STXMLElementTagNode: &STNodeBase{
+			kind: common.XML_ELEMENT_START_TAG,
+		},
+		LtToken:    ltToken,
+		Name:       name,
+		Attributes: attributes,
+		GtToken:    gtToken,
+	}, ltToken, name, attributes, gtToken)
+}
+
+func CreateXMLEndTagNode(ltToken STNode, slashToken STNode, name STNode, gtToken STNode) STNode {
+	return createNodeAndAddChildren(&STXMLEndTagNode{
+		STXMLElementTagNode: &STNodeBase{
+			kind: common.XML_ELEMENT_END_TAG,
+		},
+		LtToken:    ltToken,
+		SlashToken: slashToken,
+		Name:       name,
+		GtToken:    gtToken,
+	}, ltToken, slashToken, name, gtToken)
+}
+
+func CreateXMLEmptyElementNode(ltToken STNode, name STNode, attributes STNode, slashToken STNode, gtToken STNode) STNode {
+	return createNodeAndAddChildren(&STXMLEmptyElementNode{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_EMPTY_ELEMENT,
+		},
+		LtToken:    ltToken,
+		Name:       name,
+		Attributes: attributes,
+		SlashToken: slashToken,
+		GtToken:    gtToken,
+	}, ltToken, name, attributes, slashToken, gtToken)
+}
+
+func CreateXMLSimpleNameNode(name STNode) STNode {
+	return createNodeAndAddChildren(&STXMLSimpleNameNode{
+		STXMLNameNode: &STNodeBase{
+			kind: common.XML_SIMPLE_NAME,
+		},
+		Name: name,
+	}, name)
+}
+
+func CreateXMLQualifiedNameNode(prefix STNode, colon STNode, name STNode) STNode {
+	return createNodeAndAddChildren(&STXMLQualifiedNameNode{
+		STXMLNameNode: &STNodeBase{
+			kind: common.XML_QUALIFIED_NAME,
+		},
+		Prefix: prefix,
+		Colon:  colon,
+		Name:   name,
+	}, prefix, colon, name)
+}
+
+func CreateXMLAttributeNode(attributeName STNode, equalToken STNode, value STNode) STNode {
+	return createNodeAndAddChildren(&STXMLAttributeNode{
+		STNode: &STNodeBase{
+			kind: common.XML_ATTRIBUTE,
+		},
+		AttributeName: attributeName,
+		EqualToken:    equalToken,
+		Value:         value,
+	}, attributeName, equalToken, value)
+}
+
+func CreateXMLAttributeValue(startQuote STNode, value STNode, endQuote STNode) STNode {
+	return createNodeAndAddChildren(&STXMLAttributeValue{
+		STNode: &STNodeBase{
+			kind: common.XML_ATTRIBUTE_VALUE,
+		},
+		StartQuote: startQuote,
+		Value:      value,
+		EndQuote:   endQuote,
+	}, startQuote, value, endQuote)
+}
+
+func CreateXMLTextNode(content STNode) STNode {
+	return createNodeAndAddChildren(&STXMLTextNode{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_TEXT,
+		},
+		Content: content,
+	}, content)
+}
+
+func CreateXMLComment(commentStart STNode, content STNode, commentEnd STNode) STNode {
+	return createNodeAndAddChildren(&STXMLComment{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_COMMENT,
+		},
+		CommentStart: commentStart,
+		Content:      content,
+		CommentEnd:   commentEnd,
+	}, commentStart, content, commentEnd)
+}
+
+func CreateXMLProcessingInstruction(piStart STNode, target STNode, data STNode, piEnd STNode) STNode {
+	return createNodeAndAddChildren(&STXMLProcessingInstruction{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_PI,
+		},
+		PiStart: piStart,
+		Target:  target,
+		Data:    data,
+		PiEnd:   piEnd,
+	}, piStart, target, data, piEnd)
+}
+
+func CreateXMLCDATANode(cdataStart STNode, content STNode, cdataEnd STNode) STNode {
+	return createNodeAndAddChildren(&STXMLCDATANode{
+		STXMLItemNode: &STNodeBase{
+			kind: common.XML_CDATA,
+		},
+		CdataStart: cdataStart,
+		Content:    content,
+		CdataEnd:   cdataEnd,
+	}, cdataStart, content, cdataEnd)
 }
 
 // ========== Binding Pattern Methods (STNodeFactory.java:1705-1710) ==========

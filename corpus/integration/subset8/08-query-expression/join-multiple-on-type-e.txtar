@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected string, got int
+  --> join-multiple-on-type-e.bal:47:35
+   |
+47 |         on dept.locationId equals loc.name // @error
+   |                                   ^^^^^^^^

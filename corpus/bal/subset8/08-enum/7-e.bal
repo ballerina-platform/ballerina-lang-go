@@ -16,7 +16,7 @@
 // @productions module-enum-decl
 import ballerina/io;
 
-string Color = "RED";
+string Color = "RED"; // @error
 
 public enum Color { // @error
     RED,

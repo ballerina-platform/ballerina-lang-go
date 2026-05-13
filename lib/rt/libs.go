@@ -21,5 +21,6 @@ import (
 	_ "ballerina-lang-go/lib/http/runtime"
 	_ "ballerina-lang-go/lib/int/runtime"
 	_ "ballerina-lang-go/lib/io/runtime"
+	_ "ballerina-lang-go/lib/langinternal/runtime"
 	_ "ballerina-lang-go/lib/map/runtime"
 )

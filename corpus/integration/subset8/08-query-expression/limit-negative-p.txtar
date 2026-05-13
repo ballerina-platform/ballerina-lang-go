@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: limit cannot be negative
+        at main(limit-negative-p.bal:20)

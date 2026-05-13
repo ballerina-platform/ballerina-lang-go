@@ -18,6 +18,7 @@ package values
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 )
 
@@ -95,6 +96,68 @@ func Compare(x, y BalValue) CompareResult {
 	}
 }
 
+func CompareA(x, y BalValue) CompareResult {
+	return compareForSort(x, y, true)
+}
+
+func CompareD(x, y BalValue) CompareResult {
+	return compareForSort(x, y, false)
+}
+
+func CompareK(x, y BalValue, ascending bool) CompareResult {
+	if ascending {
+		return CompareA(x, y)
+	}
+	return reverseCompareResult(CompareD(x, y))
+}
+
+func compareForSort(x, y BalValue, ascending bool) CompareResult {
+	if x == nil {
+		if y == nil {
+			return CmpEQ
+		}
+		if ascending {
+			return CmpGT
+		}
+		return CmpLT
+	}
+	if y == nil {
+		if ascending {
+			return CmpLT
+		}
+		return CmpGT
+	}
+	if xList, ok := x.(*List); ok {
+		yList := y.(*List)
+		return compareListForSort(xList, yList, ascending)
+	}
+	if xFloat, ok := x.(float64); ok {
+		yFloat := y.(float64)
+		xNaN := math.IsNaN(xFloat)
+		yNaN := math.IsNaN(yFloat)
+		switch {
+		case xNaN && yNaN:
+			return CmpEQ
+		case xNaN:
+			if ascending {
+				return CmpGT
+			}
+			return CmpLT
+		case yNaN:
+			if ascending {
+				return CmpLT
+			}
+			return CmpGT
+		}
+	}
+
+	r := Compare(x, y)
+	if r == CmpUN {
+		panic(NewErrorWithMessage(fmt.Sprintf("unsupported type for comparison: %T and %T", x, y)))
+	}
+	return r
+}
+
 func compareList(x, y *List) CompareResult {
 	xLen := x.Len()
 	yLen := y.Len()
@@ -112,4 +175,34 @@ func compareList(x, y *List) CompareResult {
 		return CmpGT
 	}
 	return CmpEQ
+}
+
+func compareListForSort(x, y *List, ascending bool) CompareResult {
+	xLen := x.Len()
+	yLen := y.Len()
+	minLen := min(yLen, xLen)
+	for i := range minLen {
+		r := compareForSort(x.Get(i), y.Get(i), ascending)
+		if r != CmpEQ {
+			return r
+		}
+	}
+	if xLen < yLen {
+		return CmpLT
+	}
+	if xLen > yLen {
+		return CmpGT
+	}
+	return CmpEQ
+}
+
+func reverseCompareResult(cmp CompareResult) CompareResult {
+	switch cmp {
+	case CmpLT:
+		return CmpGT
+	case CmpGT:
+		return CmpLT
+	default:
+		return cmp
+	}
 }

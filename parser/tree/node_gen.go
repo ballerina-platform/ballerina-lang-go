@@ -3207,7 +3207,7 @@ func (n XMLStartTagNode) Attributes() NodeList[*XMLAttributeNode] {
 	return nodeListFrom[*XMLAttributeNode](into[NonTerminalNode](n.ChildInBucket(2)))
 }
 
-func (n XMLStartTagNode) GetToken() Token {
+func (n XMLStartTagNode) GtToken() Token {
 	val, ok := n.ChildInBucket(3).(Token)
 	if !ok {
 		return nil
@@ -3247,7 +3247,7 @@ func (n XMLEndTagNode) Name() XMLNameNode {
 	return val
 }
 
-func (n XMLEndTagNode) GetToken() Token {
+func (n XMLEndTagNode) GtToken() Token {
 	val, ok := n.ChildInBucket(3).(Token)
 	if !ok {
 		return nil
@@ -3341,7 +3341,7 @@ func (n XMLEmptyElementNode) SlashToken() Token {
 	return val
 }
 
-func (n XMLEmptyElementNode) GetToken() Token {
+func (n XMLEmptyElementNode) GtToken() Token {
 	val, ok := n.ChildInBucket(4).(Token)
 	if !ok {
 		return nil
@@ -4095,7 +4095,7 @@ func (n OnClauseNode) OnKeyword() Token {
 	return val
 }
 
-func (n OnClauseNode) LhsExpression() ExpressionNode {
+func (n OnClauseNode) OnExpression() ExpressionNode {
 	val, ok := n.ChildInBucket(1).(ExpressionNode)
 	if !ok {
 		return nil
@@ -4111,7 +4111,7 @@ func (n OnClauseNode) EqualsKeyword() Token {
 	return val
 }
 
-func (n OnClauseNode) RhsExpression() ExpressionNode {
+func (n OnClauseNode) EqualsExpression() ExpressionNode {
 	val, ok := n.ChildInBucket(3).(ExpressionNode)
 	if !ok {
 		return nil

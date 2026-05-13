@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: cannot infer maximal type such that it is a subtype of both int and string
+  --> dependent-fn-7-e.bal:20:16
+   |
+20 |     string s = ofInt(1); // @error
+   |                ^^^^^^^^

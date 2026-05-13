@@ -23,7 +23,7 @@ public function main() {
 }
 
 function bar(int... vals) returns int {
-    return checkpanic foo(vals[0], vals[1]);
+    return checkpanic foo(vals[0], vals[1]); // @panic negative value
 }
 
 function foo(int... vals) returns int|error {
@@ -31,7 +31,7 @@ function foo(int... vals) returns int|error {
     foreach int i in 0 ..< vals.length() {
         int val = vals[i];
         if val < 0 {
-            return error("negative value"); // @panic negative value
+            return error("negative value");
         }
         sum += val;
     }

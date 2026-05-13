@@ -104,7 +104,7 @@ func (r *defaultPackageResolver) resolvePackage(
 		default:
 		}
 
-		pkg, err := repo.GetPackage(ctx, org, name, version)
+		pkg, err := repo.GetPackage(ctx, org, name, version, options)
 		if err != nil {
 			continue // Try next repository
 		}
@@ -124,62 +124,87 @@ func (r *defaultPackageResolver) resolvePackage(
 	return NewUnresolvedResponse(request)
 }
 
-// ResolveByName resolves packages by org and name without requiring a specific version.
-// It first checks the cache, then tries repositories to find all available versions.
+// ResolveByName resolves a package by org+name to its latest version.
+// Returns a single-element slice on success, or an empty slice if no
+// repository knows the package.
+//
+// On a cache miss, the resolver iterates the configured Repository chain
+// and asks each one for its known versions via Repository.GetPackageVersions.
+// The highest of those (selected by pickLatestVersion) is loaded with
+// Repository.GetPackage and cached for subsequent lookups. The first
+// repository that lists at least one version wins; older versions from
+// that repository are not loaded — callers are expected to import a
+// package that exists at the repository's latest version.
 func (r *defaultPackageResolver) ResolveByName(
 	ctx context.Context,
 	org, name string,
 	options ResolutionOptions,
 ) []*Package {
-	// 1. Check cache first
+	// 1. Check cache first; pick the highest cached version.
 	if !options.DisableCache() {
-		packages := r.cache.GetPackages(org, name)
-		if len(packages) > 0 {
-			return packages
+		if pkg, ok := pickLatest(r.cache.GetPackages(org, name), packageVersion); ok {
+			return []*Package{pkg}
 		}
 	}
 
-	// 2. Try repositories in order to find available versions
-	var result []*Package
+	// 2. Try repositories in order; first repo that owns the package wins.
 	for _, repo := range r.repositories {
 		select {
 		case <-ctx.Done():
-			return result
+			return nil
 		default:
 		}
 
-		// Get all available versions from this repository
-		versions, err := repo.GetPackageVersions(ctx, org, name)
+		versions, err := repo.GetPackageVersions(ctx, org, name, options)
 		if err != nil {
-			continue // Try next repository
+			continue
+		}
+		latest, ok := pickLatest(versions, identityVersion)
+		if !ok {
+			// Repository listed no versions for this org+name.
+			continue
 		}
 
-		// Load each version
-		for _, version := range versions {
-			select {
-			case <-ctx.Done():
-				return result
-			default:
-			}
-
-			pkg, err := repo.GetPackage(ctx, org, name, version.String())
-			if err != nil || pkg == nil {
-				continue
-			}
-
-			// Cache the loaded package
-			if !options.DisableCache() {
-				r.cache.Cache(pkg)
-			}
-
-			result = append(result, pkg)
+		pkg, err := repo.GetPackage(ctx, org, name, latest.String(), options)
+		if err != nil || pkg == nil {
+			continue
 		}
 
-		// If we found packages in this repository, stop searching
-		if len(result) > 0 {
-			break
+		if !options.DisableCache() {
+			r.cache.Cache(pkg)
 		}
+		return []*Package{pkg}
 	}
 
-	return result
+	return nil
 }
+
+// pickLatest returns the element of items whose extracted PackageVersion is
+// the highest, plus ok=true. For an empty slice it returns the zero value of
+// T and ok=false, letting the caller handle absence explicitly.
+//
+// Used both for picking the latest already-loaded package out of the cache
+// (T = *Package) and for picking the latest version a repository advertised
+// before loading (T = PackageVersion).
+func pickLatest[T any](items []T, version func(T) PackageVersion) (T, bool) {
+	var zero T
+	if len(items) == 0 {
+		return zero, false
+	}
+	best := items[0]
+	for _, item := range items[1:] {
+		if version(item).Compare(version(best)) > 0 {
+			best = item
+		}
+	}
+	return best, true
+}
+
+// packageVersion is the version extractor used by pickLatest when picking
+// among already-loaded *Package instances.
+func packageVersion(p *Package) PackageVersion {
+	return p.Manifest().PackageDescriptor().Version()
+}
+
+// identityVersion is the trivial extractor for slices of PackageVersion.
+func identityVersion(v PackageVersion) PackageVersion { return v }
