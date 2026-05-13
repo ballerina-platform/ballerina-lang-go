@@ -216,12 +216,13 @@ var (
 		// Do we need to support this technically else if is not reachable?
 		"subset8/08-ifelse/ifelse4-v.bal",
 
-		// Match patterns: const-reference patterns and int-literal-as-float patterns unsupported.
+		// Match patterns:
+		// 		const-reference patterns and int-literal-as-float patterns unsupported.
 		"subset8/08-match/2-v.bal",
 		"subset8/08-match/float3-v.bal",
-
-		// list constructor inherent type
-		"subset8/08-tuple/tupleunion1-v.bal",
+		//    Unsupported match pattern diagnostics for list/mapping patterns.
+		"subset8/08-list/10-e.bal",
+		"subset8/08-mapping/9-e.bal",
 
 		// Runtime mutatation validation https://github.com/ballerina-platform/ballerina-lang-go/issues/176 and https://github.com/ballerina-platform/ballerina-lang-go/issues/177
 		"subset8/08-bytearr/2-p.bal",
@@ -257,10 +258,6 @@ var (
 
 		// rest param not supported in dependently typed functions
 		"subset8/08-function/dependent-fn-5-e.bal",
-
-		// Unsupported match pattern diagnostics for list/mapping patterns.
-		"subset8/08-list/10-e.bal",
-		"subset8/08-mapping/9-e.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.

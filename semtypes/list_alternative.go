@@ -94,7 +94,9 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 }
 
 // ListAlternativeAllowsMembers checks if a list alternative allows the given members
-// by validating both the length and the type of each member.
+// by validating both the length and the type of each member. Note in nballerina this was determined purely by length
+// ignoring the type. Taking type into account brings the same problem as maps where if one expression is a number
+// we can't deside it's contextually expected type without deciding the lhs. We use the same workaround here as well
 func ListAlternativeAllowsMembers(cx Context, alt ListAlternative, members []ListMemberInfo) bool {
 	pos := alt.Pos
 	length := len(members)
@@ -117,6 +119,9 @@ func ListAlternativeAllowsMembers(cx Context, alt ListAlternative, members []Lis
 
 		for _, m := range members {
 			ty := pos.MemberAtInnerVal(m.Index)
+			if IsSubtype(cx, m.ValType, NUMBER) && IsSubtype(cx, ty, NUMBER) {
+				continue
+			}
 			if IsNever(ty) || !IsSubtype(cx, m.ValType, ty) {
 				return false
 			}

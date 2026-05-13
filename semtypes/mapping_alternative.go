@@ -74,7 +74,9 @@ func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *Mappi
 
 // NOTE: selection is not affected by default values according to the spec, it is purely by field names
 // But we are checking the type as well to allow things like map<int>|map<string> given jballerina already allow this
-// and it's straightforward to support it.
+// and it's (mostly) straightforward to support it. Edge case is when we have numeric types, we can't
+// determine a literal in rhs to be which numeric type without deciding the type in lhs. We currently work around this
+// by widening both to numeric
 func MappingAlternativeAllowsFields(cx Context, alt MappingAlternative, fields []MappingFieldInfo) bool {
 	pos := alt.Pos
 	if pos != nil {
@@ -101,7 +103,7 @@ func MappingAlternativeAllowsFields(cx Context, alt MappingAlternative, fields [
 					fieldName := fields[i].Name
 					fieldTy := fields[i].Ty
 					expectedTy := pos.FieldInnerVal(fieldName)
-					if IsSubtype(cx, expectedTy, NUMBER) {
+					if IsSubtype(cx, expectedTy, NUMBER) && IsSubtype(cx, fieldTy, NUMBER) {
 						expectedTy = NUMBER
 					}
 					if IsNever(expectedTy) || !IsSubtype(cx, fieldTy, expectedTy) {
