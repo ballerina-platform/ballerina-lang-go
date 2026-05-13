@@ -39,6 +39,9 @@ var birSerializationRoundtripSkipList = []string{}
 
 func TestBIRSerializationRoundtrip(t *testing.T) {
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
+		if test_util.IsFutureTest(path) {
+			return false
+		}
 		return strings.HasSuffix(path, "-v.bal") || strings.HasSuffix(path, "-p.bal")
 	})
 

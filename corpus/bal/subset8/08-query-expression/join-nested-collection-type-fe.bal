@@ -34,7 +34,7 @@ public function main() {
 
     string[][] result = from var person in people
         select from var dept in departments
-            join var owner in person.id // @error
+            join var owner in person.id
             on dept.ownerId equals owner.id
             select dept.name;
 }

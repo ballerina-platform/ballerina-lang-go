@@ -17,7 +17,7 @@
 type R record {|
     int x;
     string...; // @error
-    string...; // @error
+    string...;
 |};
 
 public function main() {

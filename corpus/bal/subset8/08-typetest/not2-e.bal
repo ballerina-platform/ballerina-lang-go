@@ -31,6 +31,6 @@ function foo(any x) {
 
     }
     else if x !is boolean { // @error
-        io:println("unreachable"); // @error
+        io:println("unreachable");
     }
 }

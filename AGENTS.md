@@ -61,6 +61,8 @@ Stages 5–10 then run concurrently per module, with no cross-module dependencie
      These have errors that should be detected before interpreter (error lines are marked with `@error` comments)
   3. panic tests (`*-p.bal`)
      These would trigger runtime panics in the interpreter
+  4. future tests (*-f{v|e|p}.bal)
+     These are valid tests within the current scope but we have decided not to support. These will trigger unimplemented error at places marked with error markers.
 
 - Name corpus `.bal` files without leading zeros in numeric parts (e.g. `1-e.bal`, `call2-v.bal`, `div1-p.bal`; not `01-e.bal` or `call02-v.bal`). When you add or rename a test, update the matching expected files under `./corpus/$stage` and any `corpus/integration` `.txtar` lines that cite the file name.
 

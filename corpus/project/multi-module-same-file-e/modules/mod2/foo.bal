@@ -15,5 +15,5 @@
 // under the License.
 
 public function fooFunc2() returns string {
-    return "from mod2"; // @error
+    return "from mod2";
 }

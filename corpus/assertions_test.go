@@ -62,13 +62,27 @@ func assertAnnotations(t *testing.T, sources []annSourceFile, name, stdout, stde
 	}
 
 	switch {
-	case strings.HasSuffix(name, "-v.bal") || strings.HasSuffix(name, "-v"):
+	case hasAnySuffix(name, "-fv.bal", "-fe.bal", "-fp.bal", "-fv", "-fe", "-fp"):
+		// Future tests document a current `fatal[...]` bailout from the
+		// front-end. The exact diagnostics are not annotation-checked because
+		// the compiler hasn't reached the point where it can attribute the
+		// failure to a specific source location.
+	case hasAnySuffix(name, "-v.bal", "-v"):
 		assertOutputAnnotations(t, anns, stdout, stderr)
-	case strings.HasSuffix(name, "-e.bal") || strings.HasSuffix(name, "-e"):
+	case hasAnySuffix(name, "-e.bal", "-e"):
 		assertErrorAnnotations(t, anns, diags)
-	case strings.HasSuffix(name, "-p.bal") || strings.HasSuffix(name, "-p"):
+	case hasAnySuffix(name, "-p.bal", "-p"):
 		assertPanicAnnotations(t, anns, stdout, stderr)
 	}
+}
+
+func hasAnySuffix(name string, suffixes ...string) bool {
+	for _, s := range suffixes {
+		if strings.HasSuffix(name, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func assertOutputAnnotations(t *testing.T, anns annotations, stdout, stderr string) {

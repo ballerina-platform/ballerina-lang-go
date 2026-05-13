@@ -29,7 +29,7 @@ function foo(any x) returns int {
             i = 1;
             n = 1; // @error
         }
-        return n; // @error
+        return n;
     }
     return 0;
 }

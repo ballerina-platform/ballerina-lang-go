@@ -232,13 +232,15 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	t.Errorf("%s", msg.String())
 }
 
-// suffixOf returns the trailing -v / -e / -p marker on a test name (file or project dir),
-// or "" when no recognized marker is present.
+// suffixOf returns the trailing -v / -e / -p / -fv / -fe / -fp marker on a
+// test name (file or project dir), or "" when no recognized marker is
+// present.
 func suffixOf(name string) string {
 	base := strings.TrimSuffix(filepath.Base(name), ".bal")
 	if i := strings.LastIndex(base, "-"); i >= 0 {
 		s := base[i+1:]
-		if s == "v" || s == "e" || s == "p" {
+		switch s {
+		case "v", "e", "p", "fv", "fe", "fp":
 			return s
 		}
 	}
@@ -251,6 +253,8 @@ func suffixOf(name string) string {
 //	-v tests must have empty stderr and must not panic in stdout.
 //	-e tests must have non-empty stderr.
 //	-p tests must have non-empty stderr containing a runtime panic, not a compile error.
+//	-fv/-fe/-fp (future) tests must have non-empty stderr beginning with a
+//	`fatal[...]` bailout from the compiler/runtime.
 //
 // Violations must be added to the appropriate skip list (the message points to which one).
 func checkExpectedOutputInvariants(t *testing.T, name, stdout, stderr string, projectScope bool) {
@@ -298,6 +302,17 @@ func checkExpectedOutputInvariants(t *testing.T, name, stdout, stderr string, pr
 				" (%d errors, %d `-->` lines). Add it to %s under the"+
 				" \"missing error location\" group, or fix the test.\nstderr:\n%s",
 				name, numErr, numLoc, listName, stderr)
+		}
+	case "fv", "fe", "fp":
+		if !stderrNonEmpty {
+			t.Fatalf("-%s test %q has empty expected stderr; future tests must surface"+
+				" a `fatal[...]` bailout. Add it to %s under the \"future\" group, or"+
+				" fix the test.", suffixOf(name), name, listName)
+		}
+		if !strings.HasPrefix(strings.TrimSpace(stderr), "fatal[") {
+			t.Fatalf("future test %q expected stderr is not a `fatal[...]` bailout;"+
+				" future tests document cases the front-end currently cannot handle."+
+				" Promote the test to -v/-e/-p or fix it.\nstderr:\n%s", name, stderr)
 		}
 	case "p":
 		if !stderrNonEmpty {
@@ -467,7 +482,7 @@ func findProjectDirs(dir string) []string {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasSuffix(name, "-v") || strings.HasSuffix(name, "-e") || strings.HasSuffix(name, "-p") {
+		if suffixOf(name) != "" {
 			dirs = append(dirs, filepath.Join(dir, name))
 		}
 	}

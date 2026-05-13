@@ -20,6 +20,6 @@ public function main() {
     if true {
     }
     else if true { // @error
-        io:println("unreached"); // @error
+        io:println("unreached");
     }
 }

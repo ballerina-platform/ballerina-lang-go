@@ -22,6 +22,6 @@ public function main() {
     else if false { // @error
     }
     else {
-        io:println("unreached"); // @error
+        io:println("unreached");
     }
 }

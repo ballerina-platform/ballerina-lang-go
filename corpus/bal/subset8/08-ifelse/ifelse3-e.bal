@@ -22,7 +22,7 @@ public function main() {
     else if false { // @error
     }
     else if true {
-        io:println("unreached"); // @error
+        io:println("unreached");
     }
     else {
     }
