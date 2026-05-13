@@ -17,7 +17,6 @@
 import ballerina/http;
 
 public function main() returns error? {
-    // @error incompatible types: expected 'boolean', found 'string'
-    http:Client _ = check new ("https://example.com", {secureSocket: {enable: "yes"}});
+    http:Client _ = check new ("https://example.com", {secureSocket: {enable: "yes"}}); // @error incompatible types: expected 'boolean', found 'string'
     return;
 }
