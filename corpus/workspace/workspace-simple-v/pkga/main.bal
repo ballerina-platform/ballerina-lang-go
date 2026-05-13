@@ -18,5 +18,5 @@ import ballerina/io;
 import testorg/pkgb;
 
 public function main() {
-    io:println(pkgb:greet("workspace"));
+    io:println(pkgb:greet("workspace")); // @output Hello, workspace!
 }

@@ -63,6 +63,17 @@ var (
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
 		"subset8/08-comparable/order5-v.bal",
 		"subset8/08-const/const3-v.bal",
+
+		// Workspace tests whose errors are at the project-loading level
+		// (Ballerina.toml issues — missing package, TOML parse error). These
+		// diagnostics have no source location in any .bal file, so they're
+		// filtered out by resolveErrorDiagnostics. The annotation validator
+		// requires source-located diagnostics for -e tests, so these can't be
+		// satisfied today. Skip until the validator handles loader-level errors
+		// (or until the diagnostics are re-routed to Ballerina.toml's text doc
+		// once that's registered in DiagnosticEnv).
+		"project/missing-package-e",
+		"project/parse-error-e",
 	}
 )
 

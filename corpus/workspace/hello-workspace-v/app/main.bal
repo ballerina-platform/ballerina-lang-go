@@ -18,5 +18,5 @@ import ballerina/io;
 import testorg/lib;
 
 public function main() {
-    io:println(lib:greet("World"));
+    io:println(lib:greet("World")); // @output Hello, World!
 }
