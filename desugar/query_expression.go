@@ -1165,9 +1165,7 @@ func appendQueryRowsCollectResultStmts(
 	assignResult.SetDeterminedType(semtypes.NEVER)
 	setPositionIfMissing(assignResult, collectClause.GetPosition())
 	bodyStmts = append(bodyStmts, assignResult)
-	for _, stmt := range bodyStmts {
-		*initStmts = append(*initStmts, stmt)
-	}
+	*initStmts = append(*initStmts, bodyStmts...)
 	return true
 }
 
