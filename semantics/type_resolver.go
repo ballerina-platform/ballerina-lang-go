@@ -1100,7 +1100,71 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 
 	setDefaultableParamFnSignatures(t, fnSymbol.DefaultableParams(), paramTypes)
 
+	if !validateIncludedRecordParams(t, fn, fnSymbol) {
+		return nil, false
+	}
+
 	return fnType, true
+}
+
+func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbol model.FunctionSymbol) bool {
+	info := fnSymbol.IncludedRecordParams()
+	if info.Len() == 0 {
+		return true
+	}
+	paramNames := fnSymbol.ParamNames()
+	fieldOrigin := make(map[string]int)
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if !info.IsIncluded(i) {
+			continue
+		}
+		udt, ok := param.TypeNode().(*ast.BLangUserDefinedType)
+		if !ok {
+			t.semanticError("included record parameter must be a record type", param.GetPosition())
+			return false
+		}
+		recRef := udt.Symbol()
+		t.ensureResolved(recRef, 0)
+		recSym, ok := t.getSymbol(recRef).(*model.RecordSymbol)
+		if !ok {
+			t.semanticError("included record parameter must be a record type", param.GetPosition())
+			return false
+		}
+		var fieldNames []string
+		for name := range recSym.Fields() {
+			for j, pname := range paramNames {
+				if j == i {
+					continue
+				}
+				if pname == name {
+					t.semanticError(
+						fmt.Sprintf("parameter '%s' conflicts with field of included record parameter '%s'", name, paramNames[i]),
+						param.GetPosition())
+					return false
+				}
+			}
+			if fn.RestParam != nil {
+				restParam := fn.RestParam.(*ast.BLangSimpleVariable)
+				if restParam.GetName().GetValue() == name {
+					t.semanticError(
+						fmt.Sprintf("parameter '%s' conflicts with field of included record parameter '%s'", name, paramNames[i]),
+						param.GetPosition())
+					return false
+				}
+			}
+			if prev, seen := fieldOrigin[name]; seen {
+				t.semanticError(
+					fmt.Sprintf("duplicate field '%s' in included record parameters '%s' and '%s'", name, paramNames[prev], paramNames[i]),
+					param.GetPosition())
+				return false
+			}
+			fieldOrigin[name] = i
+			fieldNames = append(fieldNames, name)
+		}
+		info.SetFields(i, fieldNames)
+	}
+	return true
 }
 
 func resolveDependentlyTypedFunctionSignature(t typeResolver, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) (semtypes.SemType, bool) {
@@ -1126,6 +1190,9 @@ func resolveDependentlyTypedFunctionSignature(t typeResolver, fn *ast.BLangFunct
 	sym.SetParamTypes(paramTypes)
 	sym.SetReturnType(retOp)
 	setDefaultableParamFnSignatures(t, sym.DefaultableParams(), paramTypes)
+	if !validateIncludedRecordParams(t, fn, sym) {
+		return nil, false
+	}
 	setOtherNodesAsNever(fn)
 	return semtypes.NEVER, true
 }
@@ -1356,7 +1423,6 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 // addInclusionsToTypeSymbol addes all the inclusions (both transitive and direct) to the type symbol
 // This should be called only after resolving the underlying type
 func addInclusionsToTypeSymbol(t typeResolver, defn model.TypeDefinition) {
-	typeSym := getTypeSymFromDefn(t, defn)
 	var members []model.InclusionMember
 	switch d := defn.(type) {
 	case *ast.BLangTypeDefinition:
@@ -1366,36 +1432,47 @@ func addInclusionsToTypeSymbol(t typeResolver, defn model.TypeDefinition) {
 			members = recordTypeMembers(t, td)
 		case *ast.BLangObjectType:
 			members = objectTypeMembers(t, td)
+		default:
+			return
 		}
 	case *ast.BLangClassDefinition:
 		members = classMembers(t, d)
 	}
+	carrier := getMemberCarrierFromDefn(t, defn)
+	if carrier == nil {
+		return
+	}
 	for _, m := range members {
-		typeSym.AddInclusionMember(m)
+		carrier.AddMember(m)
 	}
 }
 
-func getTypeSymFromDefn(t typeResolver, defn model.TypeDefinition) *model.TypeSymbol {
+func getMemberCarrierFromDefn(t typeResolver, defn model.TypeDefinition) model.MemberCarrier {
 	sym := t.getSymbol(defn.Symbol())
 	switch s := sym.(type) {
-	case *model.TypeSymbol:
+	case *model.RecordSymbol:
+		return s
+	case *model.ObjectTypeSymbol:
 		return s
 	case *model.ClassSymbol:
-		return &s.TypeSymbol
+		return s
 	default:
-		t.internalError("Unexpected type defintion", defn.GetPosition())
+		t.internalError("unexpected type definition", defn.GetPosition())
 		return nil
 	}
 }
 
-func getTypeSymbol(t typeResolver, ref model.SymbolRef) *model.TypeSymbol {
+func getMemberCarrier(t typeResolver, ref model.SymbolRef) model.MemberCarrier {
 	sym := t.getSymbol(ref)
 	switch s := sym.(type) {
-	case *model.TypeSymbol:
+	case *model.RecordSymbol:
+		return s
+	case *model.ObjectTypeSymbol:
 		return s
 	case *model.ClassSymbol:
-		return &s.TypeSymbol
+		return s
 	default:
+		t.internalError("symbol is not a member carrier", diagnostics.NewBuiltinLocation())
 		return nil
 	}
 }
@@ -1416,12 +1493,12 @@ func recordTypeMembers(t typeResolver, td *ast.BLangRecordType) []model.Inclusio
 
 	// Collect transitive members from included types
 	for _, symRef := range td.Inclusions {
-		incSym := getTypeSymbol(t, symRef)
+		incSym := getMemberCarrier(t, symRef)
 		if incSym == nil {
 			t.internalError("failed to find included symbol", td.GetPosition())
 			continue
 		}
-		for _, m := range incSym.InclusionMembers() {
+		for _, m := range incSym.Members() {
 			switch member := m.(type) {
 			case *model.FieldDescriptor:
 				if directFields[member.MemberName()] {
@@ -1450,12 +1527,12 @@ func objectTypeMembers(t typeResolver, td *ast.BLangObjectType) []model.Inclusio
 	var members []model.InclusionMember
 	// Collect transitive members from included types
 	for _, symRef := range td.Inclusions {
-		incSym := getTypeSymbol(t, symRef)
+		incSym := getMemberCarrier(t, symRef)
 		if incSym == nil {
 			t.internalError("failed to find included symbol", td.GetPosition())
 			return nil
 		}
-		members = append(members, incSym.InclusionMembers()...)
+		members = append(members, incSym.Members()...)
 	}
 	// Add direct members
 	for m := range td.Members() {
@@ -1476,12 +1553,12 @@ func classMembers(t typeResolver, classDef *ast.BLangClassDefinition) []model.In
 	var members []model.InclusionMember
 	// Collect transitive members from included types
 	for _, symRef := range classDef.Inclusions {
-		incSym := getTypeSymbol(t, symRef)
+		incSym := getMemberCarrier(t, symRef)
 		if incSym == nil {
 			t.internalError("failed to find included symbol", classDef.GetPosition())
 			return nil
 		}
-		members = append(members, incSym.InclusionMembers()...)
+		members = append(members, incSym.Members()...)
 	}
 	// Add direct members
 	for _, f := range classDef.Fields {
@@ -2538,8 +2615,9 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 
 	e.AtomicType = *mat
 	if ref, ok := t.getMappingAtomSymRef(mat); ok {
-		typeSym := t.getSymbol(ref).(*model.TypeSymbol)
-		e.FieldDefaults = typeSym.FieldDefaults()
+		if carrier, ok := t.getSymbol(ref).(model.MemberCarrier); ok {
+			e.FieldDefaults = carrier.FieldDefaults()
+		}
 	} else if bType, ok := t.getMappingAtomBType(mat); ok {
 		// This happens for inline record type definitions given they don't have type symbol. Need to think of a way
 		// to properly handle this
@@ -3625,7 +3703,7 @@ func resolveEqualityExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 		return nil, expressionEffect{}, false
 	}
 	var effect expressionEffect
-	// PR-TODO: pass in lhs and rhs types instead
+	// TODO: pass in lhs and rhs types instead
 	if expr.OpKind == model.OperatorKind_EQUAL || expr.OpKind == model.OperatorKind_NOT_EQUAL {
 		effect = equalityNarrowingEffect(t, chain, expr)
 	} else {
@@ -3843,42 +3921,69 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	keyTy := semtypes.StringConst(expr.Field.Value)
+	key := expr.Field.Value
+	tyCtx := t.typeContext()
 
-	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT) {
-		memberTy := semtypes.ObjectMemberType(t.typeContext(), keyTy, containerExprTy)
+	var memberTy semtypes.SemType
+	switch {
+	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT):
+		memberTy = semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(key), containerExprTy)
 		if memberTy == nil {
 			t.semanticError("field not found in object type", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		setExpectedType(expr, memberTy)
-		expr.Field.SetDeterminedType(semtypes.NEVER)
-		return memberTy, defaultExpressionEffect(chain), true
-	}
-
-	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL) {
+	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL):
+		containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+		mappingTy := containerExprTy
+		if containerNilable {
+			mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
+		}
+		var ok bool
+		memberTy, ok = fieldBaseAccessMappingType(tyCtx, mappingTy, key, expr.IsLexpr)
+		if !ok {
+			t.semanticError("field base access is only possible for declared fields", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		if expr.IsCompoundAssignmentLValue {
+			readTy, readOk := fieldBaseAccessMappingType(tyCtx, mappingTy, key, false)
+			writeTy, writeOk := fieldBaseAccessMappingType(tyCtx, mappingTy, key, true)
+			if readOk && writeOk && !semtypes.IsSubtype(tyCtx, readTy, writeTy) {
+				t.semanticError(fmt.Sprintf("incompatible type: expected %s, got %s", semtypes.ToString(tyCtx, writeTy), semtypes.ToString(tyCtx, readTy)), expr.GetPosition())
+				return nil, expressionEffect{}, false
+			}
+		}
+		if containerNilable {
+			memberTy = semtypes.Union(memberTy, semtypes.NIL)
+		}
+	default:
 		t.semanticError("unsupported container type for field access", expr.GetPosition())
 		return nil, expressionEffect{}, false
-	}
-
-	containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
-	mappingTy := containerExprTy
-	if containerNilable {
-		mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
-	}
-	memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), mappingTy, keyTy)
-	maybeMissing := semtypes.ContainsUndef(memberTy)
-	if maybeMissing {
-		t.semanticError("field base access is only possible for required fields", expr.GetPosition())
-		return nil, expressionEffect{}, false
-	}
-	if containerNilable {
-		memberTy = semtypes.Union(memberTy, semtypes.NIL)
 	}
 
 	setExpectedType(expr, memberTy)
 	expr.Field.SetDeterminedType(semtypes.NEVER)
 	return memberTy, defaultExpressionEffect(chain), true
+}
+
+func fieldBaseAccessMappingType(tyCtx semtypes.Context, containerExprTy semtypes.SemType, key string, isLexpr bool) (semtypes.SemType, bool) {
+	keyTy := semtypes.StringConst(key)
+	memberTy := semtypes.MappingMemberTypeInner(tyCtx, containerExprTy, keyTy)
+	if !semtypes.ContainsUndef(memberTy) {
+		return memberTy, true
+	}
+	// I think the correct thing to check is if any has an "optional" field by the name but spec if very specific in
+	// same any declared feild (without optional qualifier)
+	if !isLexpr && semtypes.AnyMappingAtomHasFieldByName(tyCtx, containerExprTy, key) {
+		return semtypes.Union(semtypes.Diff(memberTy, semtypes.UNDEF), semtypes.NIL), true
+	}
+	if isLexpr && semtypes.AllMappingAtomHasFieldByName(tyCtx, containerExprTy, key) {
+		result := semtypes.Diff(memberTy, semtypes.UNDEF)
+		if semtypes.AllMappingAtomsHaveOptionalFieldByName(tyCtx, containerExprTy, key) {
+			result = semtypes.Union(result, semtypes.NIL)
+		}
+		return result, true
+	}
+	return nil, false
 }
 
 func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
@@ -4074,7 +4179,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 	baseSymbol := t.getSymbol(fnSymbol)
 	switch sym := baseSymbol.(type) {
 	case model.DependentlyTypedFunctionSymbol:
-		_, argTys, chain, ok := argArray(t, sym, sym.ParamTypes(), nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		argTys, chain, ok := argArray(t, sym, sym.ParamTypes(), nil, chain, inv, expectedType)
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
@@ -4109,7 +4214,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 			return nil, fnSymbol, chain, false
 		}
 		sig := fnSym.Signature()
-		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		argTys, chain, ok := argArray(t, fnSym, sig.ParamTypes, sig.RestParamType, chain, inv, expectedType)
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
@@ -4120,7 +4225,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 			return nil, fnSymbol, chain, false
 		}
 		sig := sym.Signature()
-		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv, expectedType)
 		return argTys, fnSymbol, chain, ok
 	case *model.ValueSymbol:
 		narrowedSymbol := lookupSymbol(chain, fnSymbol)
@@ -4163,95 +4268,278 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 	}
 }
 
-func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location, C semtypes.SemType) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
+type mappingField struct {
+	name string
+	expr ast.BLangExpression
+}
+
+type valueSlot struct {
+	expr ast.BLangExpression
+}
+
+type mappingSlot struct {
+	recordTy    semtypes.SemType
+	fields      []mappingField
+	synthesized *ast.BLangMappingConstructorExpr
+}
+
+// marker interface for slots
+type argSlot interface{ isArgSlot() }
+
+func (*valueSlot) isArgSlot()   {}
+func (*mappingSlot) isArgSlot() {}
+
+func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, inv invocable, callExpectedType semtypes.SemType) ([]semtypes.SemType, *binding, bool) {
+	args := inv.CallArgs()
+	loc := inv.GetPosition()
 	paramNames := sym.ParamNames()
-	nRequired := len(paramTypes)
-	reorderdArgs := make([]ast.BLangExpression, nRequired)
+	nRequired := len(paramNames)
+
+	var inclInfo *model.IncludedRecordParamInfo
+	if supportsIncludedRecords(sym) {
+		info := sym.IncludedRecordParams()
+		if info.Len() > 0 {
+			inclInfo = info
+		}
+	}
+
+	slots := make([]argSlot, nRequired)
 	namedArgsByIndex := make(map[int]*ast.BLangNamedArgsExpression)
-	tys := make([]semtypes.SemType, 0, nRequired)
-	seen := make(map[string]bool, 0)
+	seen := make(map[string]bool)
+	var restArgs []ast.BLangExpression
+
 	for i, arg := range args {
-		switch arg := arg.(type) {
+		switch a := arg.(type) {
 		case *ast.BLangNamedArgsExpression:
-			name := arg.Name.Value
+			name := a.Name.Value
 			if seen[name] {
-				t.semanticError(fmt.Sprintf("duplicate arguments for %s", name), arg.GetPosition())
-				return nil, nil, chain, false
+				t.semanticError(fmt.Sprintf("duplicate arguments for %s", name), a.GetPosition())
+				return nil, chain, false
 			}
 			seen[name] = true
-			targetIndex := -1
-			for j, each := range paramNames {
-				if each == name {
-					targetIndex = j
-					break
+
+			if idx := paramIndexOf(paramNames, name); idx >= 0 {
+				switch slots[idx].(type) {
+				case nil:
+					// ok
+				case *valueSlot:
+					t.semanticError(fmt.Sprintf("repeated values for parameter %s", name), a.GetPosition())
+					return nil, chain, false
+				case *mappingSlot:
+					t.semanticError(
+						fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
+						a.GetPosition())
+					return nil, chain, false
+				}
+				slots[idx] = &valueSlot{expr: a.Expr}
+				namedArgsByIndex[idx] = a
+				a.Name.DeterminedType = semtypes.NEVER
+				continue
+			}
+
+			if inclInfo != nil {
+				if idx, ok := inclInfo.LookupField(name); ok {
+					switch s := slots[idx].(type) {
+					case nil:
+						slots[idx] = &mappingSlot{
+							recordTy: paramTypes[idx],
+							fields:   []mappingField{{name: name, expr: a.Expr}},
+						}
+					case *valueSlot:
+						t.semanticError(
+							fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
+							a.GetPosition())
+						return nil, chain, false
+					case *mappingSlot:
+						s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
+					}
+					a.Name.DeterminedType = semtypes.NEVER
+					continue
 				}
 			}
-			if targetIndex == -1 {
-				t.semanticError(fmt.Sprintf("no such parameter %s", name), arg.GetPosition())
-				return nil, nil, chain, false
-			}
-			if reorderdArgs[targetIndex] != nil {
-				t.semanticError(fmt.Sprintf("repeated values for parameter %s", name), arg.GetPosition())
-				return nil, nil, chain, false
-			}
-			reorderdArgs[targetIndex] = arg.Expr
-			namedArgsByIndex[targetIndex] = arg
-			arg.Name.DeterminedType = semtypes.NEVER
+
+			t.semanticError(fmt.Sprintf("no such parameter %s", name), a.GetPosition())
+			return nil, chain, false
+
 		default:
-			if i < nRequired {
-				if reorderdArgs[i] != nil {
-					// Not sure if there is a way to do this, in the language
-					t.semanticError(fmt.Sprintf("repeated values for parameter %s", paramNames[i]), arg.GetPosition())
-					return nil, nil, chain, false
-				}
-				reorderdArgs[i] = arg
-			} else {
-				reorderdArgs = append(reorderdArgs, arg)
+			if i >= nRequired {
+				restArgs = append(restArgs, arg)
+				continue
+			}
+			switch slots[i].(type) {
+			case nil:
+				slots[i] = &valueSlot{expr: arg}
+			case *valueSlot:
+				t.semanticError(fmt.Sprintf("repeated values for parameter %s", paramNames[i]), arg.GetPosition())
+				return nil, chain, false
+			case *mappingSlot:
+				t.semanticError(
+					fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[i]),
+					arg.GetPosition())
+				return nil, chain, false
 			}
 		}
 	}
-	for i, each := range reorderdArgs {
-		if each == nil {
+
+	if inclInfo != nil {
+		for i := 0; i < inclInfo.Len(); i++ {
+			if !inclInfo.IsIncluded(i) {
+				continue
+			}
+			if slots[i] == nil {
+				slots[i] = &mappingSlot{recordTy: paramTypes[i]}
+			}
+		}
+	}
+
+	tys := make([]semtypes.SemType, 0, nRequired+len(restArgs))
+	for i := range nRequired {
+		switch s := slots[i].(type) {
+		case nil:
 			dp, isDefaultable := sym.DefaultableParams().Get(i)
 			if !isDefaultable {
 				t.semanticError(fmt.Sprintf("missing required parameter '%s'", paramNames[i]), loc)
-				return nil, nil, chain, false
+				return nil, chain, false
 			}
 			if dp.Kind == model.DefaultableParamKindInferredTypedesc {
-				if C == nil {
+				if callExpectedType == nil {
 					t.semanticError(fmt.Sprintf("cannot infer typedesc argument for parameter '%s': no contextually expected type", paramNames[i]), loc)
-					return nil, nil, chain, false
+					return nil, chain, false
 				}
 				ctx := t.typeContext()
 				T := semtypes.TypedescConstraint(ctx, paramTypes[i])
-				S := semtypes.Intersect(T, C)
+				S := semtypes.Intersect(T, callExpectedType)
 				if semtypes.IsEmpty(ctx, S) {
-					t.semanticError(fmt.Sprintf("cannot infer maximal type such that it is a subtype of both %s and %s", semtypes.ToString(ctx, T), semtypes.ToString(ctx, C)), loc)
-					return nil, nil, chain, false
+					t.semanticError(fmt.Sprintf("cannot infer maximal type such that it is a subtype of both %s and %s", semtypes.ToString(ctx, T), semtypes.ToString(ctx, callExpectedType)), loc)
+					return nil, chain, false
 				}
 				tys = append(tys, semtypes.TypedescContaining(t.typeEnv(), S))
-			} else {
-				tys = append(tys, paramTypes[i])
+				continue
 			}
+			tys = append(tys, paramTypes[i])
+
+		case *valueSlot:
+			ty, effect, ok := resolveActionOrExpression(t, chain, s.expr, paramTypes[i])
+			if !ok {
+				return nil, chain, false
+			}
+			if n, has := namedArgsByIndex[i]; has {
+				n.DeterminedType = ty
+			}
+			// parameters have narrowing effects like capture
+			chain = effect.ifTrue
+			tys = append(tys, ty)
+
+		case *mappingSlot:
+			mc, effect, ok := resolveIncludedRecordSlot(t, chain, s, loc)
+			if !ok {
+				return nil, chain, false
+			}
+			chain = effect.ifTrue
+			s.synthesized = mc
+			tys = append(tys, paramTypes[i])
+		}
+	}
+
+	for _, arg := range restArgs {
+		ty, effect, ok := resolveActionOrExpression(t, chain, arg, restParamTy)
+		if !ok {
+			return nil, chain, false
+		}
+		chain = effect.ifTrue
+		tys = append(tys, ty)
+	}
+
+	if inclInfo != nil {
+		rewriteCallArgsForIncludedRecords(inv, args, slots, paramNames, inclInfo)
+	}
+	return tys, chain, true
+}
+
+func paramIndexOf(paramNames []string, name string) int {
+	for i, each := range paramNames {
+		if each == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func resolveIncludedRecordSlot(t typeResolver, chain *binding, s *mappingSlot, loc diagnostics.Location) (*ast.BLangMappingConstructorExpr, expressionEffect, bool) {
+	mat := semtypes.ToMappingAtomicType(t.typeContext(), s.recordTy)
+	if mat == nil {
+		t.semanticError("included record parameter is not an atomic mapping type", loc)
+		return nil, expressionEffect{}, false
+	}
+	mc := &ast.BLangMappingConstructorExpr{}
+	mc.SetPosition(loc)
+	fields := make([]model.MappingField, 0, len(s.fields))
+	effect := defaultExpressionEffect(chain)
+	for _, f := range s.fields {
+		fieldTy := mat.FieldInnerVal(f.name)
+		_, fe, ok := resolveActionOrExpression(t, chain, f.expr, fieldTy)
+		if !ok {
+			return nil, expressionEffect{}, false
+		}
+		chain = fe.ifTrue
+		effect = fe
+		keyLit := &ast.BLangLiteral{Value: f.name, OriginalValue: f.name}
+		keyLit.SetPosition(f.expr.GetPosition())
+		keyLit.SetValueType(ast.NewBType(model.TypeTags_STRING, model.Name(""), 0))
+		keyLit.SetDeterminedType(semtypes.STRING)
+		kv := &ast.BLangMappingKeyValueField{
+			Key:       &ast.BLangMappingKey{Expr: keyLit},
+			ValueExpr: f.expr,
+		}
+		kv.Key.SetPosition(f.expr.GetPosition())
+		kv.SetPosition(f.expr.GetPosition())
+		kv.Key.SetDeterminedType(semtypes.NEVER)
+		kv.SetDeterminedType(semtypes.NEVER)
+		fields = append(fields, kv)
+	}
+	mc.Fields = fields
+	mc.AtomicType = *mat
+	if ref, ok := t.getMappingAtomSymRef(mat); ok {
+		if carrier, ok := t.getSymbol(ref).(model.MemberCarrier); ok {
+			mc.FieldDefaults = carrier.FieldDefaults()
+		}
+	}
+	mc.SetDeterminedType(s.recordTy)
+	return mc, effect, true
+}
+
+func supportsIncludedRecords(sym model.FunctionSymbol) bool {
+	_, isGeneric := sym.(model.ContainerGenericFunctionSymbol)
+	return !isGeneric
+}
+
+// I don't like this. But we are doing this to avoid having to do this in both desugar and semantic analysis. Ideally this should be in the desugar
+func rewriteCallArgsForIncludedRecords(inv invocable, origArgs []ast.BLangExpression, slots []argSlot, paramNames []string, inclInfo *model.IncludedRecordParamInfo) {
+	newArgs := make([]ast.BLangExpression, 0, len(origArgs))
+	for _, arg := range origArgs {
+		if named, ok := arg.(*ast.BLangNamedArgsExpression); ok {
+			if _, isField := inclInfo.LookupField(named.Name.Value); isField {
+				continue
+			}
+		}
+		newArgs = append(newArgs, arg)
+	}
+	for i := 0; i < inclInfo.Len(); i++ {
+		ms, ok := slots[i].(*mappingSlot)
+		if !ok || ms.synthesized == nil {
 			continue
 		}
-		var paramExpectedTy semtypes.SemType
-		if i < nRequired {
-			paramExpectedTy = paramTypes[i]
-		} else {
-			paramExpectedTy = restParamTy
+		mc := ms.synthesized
+		named := &ast.BLangNamedArgsExpression{
+			Name: ast.BLangIdentifier{Value: paramNames[i]},
+			Expr: mc,
 		}
-		ty, effect, ok := resolveActionOrExpression(t, chain, each, paramExpectedTy)
-		if !ok {
-			return nil, nil, chain, false
-		}
-		if namedArg, ok := namedArgsByIndex[i]; ok {
-			namedArg.DeterminedType = ty
-		}
-		tys = append(tys, ty)
-		chain = effect.ifTrue
+		named.SetPosition(mc.GetPosition())
+		named.Name.SetDeterminedType(semtypes.NEVER)
+		named.SetDeterminedType(mc.GetDeterminedType())
+		newArgs = append(newArgs, named)
 	}
-	return reorderdArgs, tys, chain, true
+	inv.SetCallArgs(newArgs)
 }
 
 func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRef model.SymbolRef, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {

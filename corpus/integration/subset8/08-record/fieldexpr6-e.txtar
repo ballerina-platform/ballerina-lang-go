@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: field base access is only possible for required fields
+error[SEMANTIC_ERROR]: field base access is only possible for declared fields
   --> fieldexpr6-e.bal:21:13
    |
 21 |     int z = m.zero; // @error

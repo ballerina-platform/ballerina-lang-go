@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: field base access is only possible for required fields
+error[SEMANTIC_ERROR]: field base access is only possible for declared fields
   --> fieldexpr3-e.bal:25:14
    |
 25 |     int? z = origin().z; // @error
