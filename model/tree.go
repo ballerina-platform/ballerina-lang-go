@@ -877,7 +877,6 @@ type FieldBasedAccessNode interface {
 	VariableReferenceNode
 	GetExpression() ExpressionNode
 	GetFieldName() IdentifierNode
-	IsOptionalFieldAccess() bool
 }
 
 type ListConstructorExprNode interface {

@@ -1,0 +1,68 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad foo
+    %2 = ConstantLoad 7
+    %3 = newMap {| foo: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%1=%2}
+    r = %3;
+    %6 = ConstantLoad foo
+    %5 = r[%6];
+    before = %5;
+    %8 = before;
+    %9 = println(%8) -> bb1;
+  }
+  bb1 {
+    %10 = before is nil
+    %10 ? bb2 : bb4;
+  }
+  bb2 {
+    %11 = ConstantLoad before missing
+    %12 = println(%11) -> bb3;
+  }
+  bb3 {
+    GOTO bb6;
+  }
+  bb4 {
+    %14 = before;
+    %15 = ConstantLoad 1
+    %16 = %15;
+    %13 = + %14 %16;
+    %17 = %13;
+    %18 = println(%17) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    %19 = ConstantLoad <nil>
+    %20 = ConstantLoad foo
+    r[%20] = %19;
+    %22 = ConstantLoad foo
+    %21 = r[%22];
+    after = %21;
+    %24 = after is nil
+    %24 ? bb7 : bb9;
+  }
+  bb7 {
+    %25 = ConstantLoad after missing
+    %26 = println(%25) -> bb8;
+  }
+  bb8 {
+    GOTO bb11;
+  }
+  bb9 {
+    %28 = after;
+    %29 = ConstantLoad 1
+    %30 = %29;
+    %27 = + %28 %30;
+    %31 = %27;
+    %32 = println(%31) -> bb10;
+  }
+  bb10 {
+    GOTO bb11;
+  }
+  bb11 {
+    return;
+  }
+}

@@ -3679,7 +3679,7 @@ func resolveEqualityExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 		return nil, expressionEffect{}, false
 	}
 	var effect expressionEffect
-	// PR-TODO: pass in lhs and rhs types instead
+	// TODO: pass in lhs and rhs types instead
 	if expr.OpKind == model.OperatorKind_EQUAL || expr.OpKind == model.OperatorKind_NOT_EQUAL {
 		effect = equalityNarrowingEffect(t, chain, expr)
 	} else {
@@ -3897,42 +3897,69 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	keyTy := semtypes.StringConst(expr.Field.Value)
+	key := expr.Field.Value
+	tyCtx := t.typeContext()
 
-	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT) {
-		memberTy := semtypes.ObjectMemberType(t.typeContext(), keyTy, containerExprTy)
+	var memberTy semtypes.SemType
+	switch {
+	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT):
+		memberTy = semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(key), containerExprTy)
 		if memberTy == nil {
 			t.semanticError("field not found in object type", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		setExpectedType(expr, memberTy)
-		expr.Field.SetDeterminedType(semtypes.NEVER)
-		return memberTy, defaultExpressionEffect(chain), true
-	}
-
-	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL) {
+	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL):
+		containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+		mappingTy := containerExprTy
+		if containerNilable {
+			mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
+		}
+		var ok bool
+		memberTy, ok = fieldBaseAccessMappingType(tyCtx, mappingTy, key, expr.IsLexpr)
+		if !ok {
+			t.semanticError("field base access is only possible for declared fields", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		if expr.IsCompoundAssignmentLValue {
+			readTy, readOk := fieldBaseAccessMappingType(tyCtx, mappingTy, key, false)
+			writeTy, writeOk := fieldBaseAccessMappingType(tyCtx, mappingTy, key, true)
+			if readOk && writeOk && !semtypes.IsSubtype(tyCtx, readTy, writeTy) {
+				t.semanticError(fmt.Sprintf("incompatible type: expected %s, got %s", semtypes.ToString(tyCtx, writeTy), semtypes.ToString(tyCtx, readTy)), expr.GetPosition())
+				return nil, expressionEffect{}, false
+			}
+		}
+		if containerNilable {
+			memberTy = semtypes.Union(memberTy, semtypes.NIL)
+		}
+	default:
 		t.semanticError("unsupported container type for field access", expr.GetPosition())
 		return nil, expressionEffect{}, false
-	}
-
-	containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
-	mappingTy := containerExprTy
-	if containerNilable {
-		mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
-	}
-	memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), mappingTy, keyTy)
-	maybeMissing := semtypes.ContainsUndef(memberTy)
-	if maybeMissing {
-		t.semanticError("field base access is only possible for required fields", expr.GetPosition())
-		return nil, expressionEffect{}, false
-	}
-	if containerNilable {
-		memberTy = semtypes.Union(memberTy, semtypes.NIL)
 	}
 
 	setExpectedType(expr, memberTy)
 	expr.Field.SetDeterminedType(semtypes.NEVER)
 	return memberTy, defaultExpressionEffect(chain), true
+}
+
+func fieldBaseAccessMappingType(tyCtx semtypes.Context, containerExprTy semtypes.SemType, key string, isLexpr bool) (semtypes.SemType, bool) {
+	keyTy := semtypes.StringConst(key)
+	memberTy := semtypes.MappingMemberTypeInner(tyCtx, containerExprTy, keyTy)
+	if !semtypes.ContainsUndef(memberTy) {
+		return memberTy, true
+	}
+	// I think the correct thing to check is if any has an "optional" field by the name but spec if very specific in
+	// same any declared feild (without optional qualifier)
+	if !isLexpr && semtypes.AnyMappingAtomHasFieldByName(tyCtx, containerExprTy, key) {
+		return semtypes.Union(semtypes.Diff(memberTy, semtypes.UNDEF), semtypes.NIL), true
+	}
+	if isLexpr && semtypes.AllMappingAtomHasFieldByName(tyCtx, containerExprTy, key) {
+		result := semtypes.Diff(memberTy, semtypes.UNDEF)
+		if semtypes.AllMappingAtomsHaveOptionalFieldByName(tyCtx, containerExprTy, key) {
+			result = semtypes.Union(result, semtypes.NIL)
+		}
+		return result, true
+	}
+	return nil, false
 }
 
 func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
