@@ -30,7 +30,7 @@ import (
 type documentContext struct {
 	documentConfig    DocumentConfig
 	name              string
-	diagKeyPrefix         string // composes with name to produce a unique DiagnosticEnv key
+	diagKeyPrefix     string // composes with name to produce a unique DiagnosticEnv key
 	disableSyntaxTree bool
 
 	// Lazy-loaded with sync.Once
@@ -47,7 +47,7 @@ func newDocumentContext(documentConfig DocumentConfig, disableSyntaxTree bool, d
 	return &documentContext{
 		documentConfig:    documentConfig,
 		name:              documentConfig.Name(),
-		diagKeyPrefix:         diagKeyPrefix,
+		diagKeyPrefix:     diagKeyPrefix,
 		disableSyntaxTree: disableSyntaxTree,
 	}
 }
