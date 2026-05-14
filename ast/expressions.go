@@ -89,7 +89,6 @@ type (
 	}
 	bLangExpressionBase struct {
 		bLangNodeBase
-		ExpectedType BType
 	}
 )
 
@@ -127,12 +126,9 @@ type (
 
 	bLangAccessExpressionBase struct {
 		BLangValueExpressionBase
-		Expr                BLangExpression
-		OriginalType        BType
-		OptionalFieldAccess bool
-		ErrorSafeNavigation bool
-		NilSafeNavigation   bool
-		LeafNode            bool
+		Expr         BLangExpression
+		OriginalType BType
+		IsLexpr      bool
 	}
 
 	BLangFieldBaseAccess struct {
@@ -319,8 +315,7 @@ type (
 
 	BLangIndexBasedAccess struct {
 		bLangAccessExpressionBase
-		IndexExpr         BLangExpression
-		IsStoreOnCreation bool
+		IndexExpr BLangExpression
 	}
 
 	BLangListConstructorExpr struct {
@@ -1032,10 +1027,6 @@ func (b *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
 
 func (b *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
 	return &b.Field
-}
-
-func (b *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
-	return b.OptionalFieldAccess
 }
 
 func (b *BLangListConstructorExpr) GetKind() model.NodeKind {

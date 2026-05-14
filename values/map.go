@@ -17,10 +17,11 @@
 package values
 
 import (
-	"ballerina-lang-go/semtypes"
 	"fmt"
 	"strings"
 	"unsafe"
+
+	"ballerina-lang-go/semtypes"
 )
 
 type mapEntry struct {
@@ -41,6 +42,18 @@ func NewMap(t semtypes.SemType) *Map {
 		Type: t,
 		data: make(map[string]*mapEntry),
 	}
+}
+
+// ShouldDeleteOnNilStore reports whether assigning nil to the given key
+// should delete the entry. True iff the key names a declared optional
+// field whose declared value type does not contain nil.
+func (m *Map) ShouldDeleteOnNilStore(cx semtypes.Context, key string) bool {
+	keyTy := semtypes.StringConst(key)
+	fieldTy := semtypes.MappingMemberTypeInner(cx, m.Type, keyTy)
+	if semtypes.ContainsBasicType(fieldTy, semtypes.NIL) {
+		return false
+	}
+	return semtypes.AllMappingAtomsHaveOptionalFieldByName(cx, m.Type, key)
 }
 
 func (m *Map) Get(key string) (BalValue, bool) {

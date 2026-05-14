@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: field base access is only possible for required fields
+error[SEMANTIC_ERROR]: field base access is only possible for declared fields
   --> fieldlvalue3-e.bal:19:5
    |
 19 |     p.x = 22; // @error

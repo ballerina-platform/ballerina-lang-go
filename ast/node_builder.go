@@ -1626,7 +1626,12 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 
 	bLAssignment := &BLangAssignment{}
 	lhsExpr := n.createExpression(assignmentStatementNode.VarRef())
-	// TODO: validate lhsExpr
+	switch lhsExpr := lhsExpr.(type) {
+	case *BLangFieldBaseAccess:
+		lhsExpr.IsLexpr = true
+	case *BLangIndexBasedAccess:
+		lhsExpr.IsLexpr = true
+	}
 	bLAssignment.SetActionOrExpression(n.createActionOrExpression(assignmentStatementNode.Expression()))
 	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr
@@ -1636,7 +1641,16 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStmtNode *tree.CompoundAssignmentStatementNode) BLangNode {
 	bLCompAssignment := &BLangCompoundAssignment{}
 	bLCompAssignment.SetActionOrExpression(n.createActionOrExpression(compoundAssignmentStmtNode.RhsExpression()))
-	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
+	lhsExpr := n.createExpression(compoundAssignmentStmtNode.LhsExpression())
+	switch lhsExpr := lhsExpr.(type) {
+	case *BLangFieldBaseAccess:
+		lhsExpr.IsLexpr = true
+		lhsExpr.IsCompoundAssignmentLValue = true
+	case *BLangIndexBasedAccess:
+		lhsExpr.IsLexpr = true
+		lhsExpr.IsCompoundAssignmentLValue = true
+	}
+	bLCompAssignment.SetVariable(lhsExpr)
 	BLangNode(bLCompAssignment).SetPosition(getPosition(n.de(), compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
 	return bLCompAssignment
@@ -2009,7 +2023,6 @@ func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *
 	}
 
 	bLFieldBasedAccess.pos = getPosition(n.de(), fieldAccessExpressionNode)
-	bLFieldBasedAccess.OptionalFieldAccess = false
 	return bLFieldBasedAccess
 }
 
