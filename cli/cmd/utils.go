@@ -49,9 +49,6 @@ func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType 
 		return 0, nil, nil, err
 	}
 	req.Header.Set("User-Agent", "ballerina")
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
 	for k, vals := range reqHeaders {
 		if len(vals) == 0 {
 			continue
@@ -60,6 +57,11 @@ func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType 
 		for _, v := range vals[1:] {
 			req.Header.Add(k, v)
 		}
+	}
+	// Apply contentType (derived from mediaType) after caller headers so it
+	// always takes priority over any Content-Type supplied in reqHeaders.
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -137,7 +139,7 @@ var nativePal = pal.Platform{
 				}
 				allowAuth := cfg.FollowRedirects.AllowAuthHeaders
 				c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-					if len(via) >= maxCount {
+					if len(via) > maxCount {
 						return http.ErrUseLastResponse
 					}
 					if allowAuth && len(via) > 0 {
@@ -405,13 +407,17 @@ func tlsVerifyConnectionWithCNFallback(rootCAs *x509.CertPool) func(tls.Connecti
 		if _, err := cs.PeerCertificates[0].Verify(opts); err != nil {
 			return err
 		}
-		// cs.ServerName is the SNI hostname (no port). Try SAN-based verification first;
-		// fall back to CN matching for legacy certificates.
+		// cs.ServerName is the SNI hostname (no port). Try SAN-based verification first.
+		// Only fall back to CN matching for certs that genuinely have no SANs — when SANs
+		// are present but don't match, that is a real mismatch and must not be bypassed.
 		leaf := cs.PeerCertificates[0]
-		if err := leaf.VerifyHostname(cs.ServerName); err == nil {
-			return nil
+		if err := leaf.VerifyHostname(cs.ServerName); err != nil {
+			if len(leaf.DNSNames) > 0 || len(leaf.IPAddresses) > 0 {
+				return err
+			}
+			return tlsMatchCN(leaf.Subject.CommonName, cs.ServerName)
 		}
-		return tlsMatchCN(leaf.Subject.CommonName, cs.ServerName)
+		return nil
 	}
 }
 

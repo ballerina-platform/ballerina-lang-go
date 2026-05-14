@@ -832,6 +832,14 @@ func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) 
 		if !ok {
 			break
 		}
+		if dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			tdExpr := synthesizeInferredTypedescArg(cx, sig.ParamTypes[i], pos)
+			setPositionIfMissing(tdExpr, pos)
+			varDef, varRef := assignToLocal(cx, tdExpr, pos)
+			initStmts = append(initStmts, varDef)
+			expr.ArgsExprs = append(expr.ArgsExprs, varRef)
+			continue
+		}
 		defaultInv := &ast.BLangInvocation{}
 		defaultInv.Name = &ast.BLangIdentifier{Value: cx.getSymbol(dp.Symbol).Name()}
 		defaultInv.ArgExprs = append([]ast.BLangExpression(nil), expr.ArgsExprs[:i]...)
