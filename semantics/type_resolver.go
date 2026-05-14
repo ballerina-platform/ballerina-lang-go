@@ -2033,6 +2033,11 @@ func padMissingDefaultArgs(t typeResolver, e *ast.BLangNewExpression, objectTy s
 		if _, isDefaultable := defaultableParams.Get(i); !isDefaultable {
 			break
 		}
+		// These placeholder nodes have no VariableName or symbol. They exist only so
+		// determineObjectType can call GetDeterminedType() on each arg slot and infer
+		// the object's class. The caller removes them from e.ArgsExprs immediately
+		// after determineObjectType returns — no other visitor or downstream pass
+		// should observe them.
 		placeholder := &ast.BLangSimpleVarRef{}
 		placeholder.SetDeterminedType(sig.ParamTypes[i])
 		e.ArgsExprs = append(e.ArgsExprs, placeholder)

@@ -500,7 +500,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			if !ok {
 				return values.NewErrorWithMessage("header not found: " + name), nil
 			}
-			return v.(*values.List).Get(0), nil
+			list := v.(*values.List)
+			if list.Len() == 0 {
+				return values.NewErrorWithMessage("header has no values: " + name), nil
+			}
+			return list.Get(0), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getHeaders",
@@ -554,15 +558,19 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 	return result
 }
 
-// listToBytes converts a Ballerina byte[] (List of int64) to []byte.
-func listToBytes(list *values.List) []byte {
+// listToBytes converts a Ballerina byte[] (List of int64 in 0–255) to []byte.
+// Returns (nil, false) if any element is not an integer in the byte range,
+// indicating the list should be treated as a JSON array instead.
+func listToBytes(list *values.List) ([]byte, bool) {
 	b := make([]byte, list.Len())
 	for i := range list.Len() {
-		if n, ok := list.Get(i).(int64); ok {
-			b[i] = byte(n)
+		n, ok := list.Get(i).(int64)
+		if !ok || n < 0 || n > 255 {
+			return nil, false
 		}
+		b[i] = byte(n)
 	}
-	return b
+	return b, true
 }
 
 // goToBalValue converts a Go value (from json.Decoder with UseNumber) to a Ballerina BalValue.
@@ -642,7 +650,15 @@ func messageToBody(msg values.BalValue) ([]byte, string) {
 	case string:
 		return []byte(v), "text/plain"
 	case *values.List:
-		return listToBytes(v), "application/octet-stream"
+		if b, ok := listToBytes(v); ok {
+			return b, "application/octet-stream"
+		}
+		// Non-byte list (e.g. JSON array) — serialize as JSON.
+		b, err := toJSONBytes(v)
+		if err != nil {
+			return nil, "json_error"
+		}
+		return b, "application/json"
 	default:
 		b, err := toJSONBytes(v)
 		if err != nil {

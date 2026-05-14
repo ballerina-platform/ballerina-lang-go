@@ -4,20 +4,20 @@ import ballerina.io v 0.0.0;
 main() -> nil|error{
   bb0 {
     %1 = ConstantLoad https://example.com
-    %2 = $Client.init$default$1(%1) -> bb1;
+    $desugar$0 = %1;
+    %3 = $Client.init$default$1($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$0 = %2;
-    %4 = newObject ballerina/http:Client
-    %5 = ConstantLoad https://example.com
-    %6 = init(%4,%5,$desugar$0) -> bb2;
+    $desugar$1 = %3;
+    %5 = newObject ballerina/http:Client
+    %6 = init(%5,$desugar$0,$desugar$1) -> bb2;
   }
   bb2 {
     %8 = %6 is nil
     %8 ? bb3 : bb4;
   }
   bb3 {
-    %7 = %4;
+    %7 = %5;
     GOTO bb5;
   }
   bb4 {
@@ -25,41 +25,41 @@ main() -> nil|error{
     GOTO bb5;
   }
   bb5 {
-    $desugar$1 = %7;
-    %10 = $desugar$1 is error
+    $desugar$2 = %7;
+    %10 = $desugar$2 is error
     %10 ? bb6 : bb7;
   }
   bb6 {
-    %0 = $desugar$1;
+    %0 = $desugar$2;
     return;
   }
   bb7 {
-    c = $desugar$1;
+    c = $desugar$2;
     %12 = ConstantLoad /put
-    $desugar$2 = %12;
+    $desugar$3 = %12;
     %14 = ConstantLoad body
-    $desugar$3 = %14;
-    %16 = $Client.put$default$2($desugar$2,$desugar$3) -> bb8;
+    $desugar$4 = %14;
+    %16 = $Client.put$default$2($desugar$3,$desugar$4) -> bb8;
   }
   bb8 {
-    $desugar$4 = %16;
-    %18 = $Client.put$default$3($desugar$2,$desugar$3,$desugar$4) -> bb9;
+    $desugar$5 = %16;
+    %18 = $Client.put$default$3($desugar$3,$desugar$4,$desugar$5) -> bb9;
   }
   bb9 {
-    $desugar$5 = %18;
-    %20 = $remote$put(c,$desugar$2,$desugar$3,$desugar$4,$desugar$5) -> bb10;
+    $desugar$6 = %18;
+    %20 = $remote$put(c,$desugar$3,$desugar$4,$desugar$5,$desugar$6) -> bb10;
   }
   bb10 {
-    $desugar$6 = %20;
-    %22 = $desugar$6 is error
+    $desugar$7 = %20;
+    %22 = $desugar$7 is error
     %22 ? bb11 : bb12;
   }
   bb11 {
-    %0 = $desugar$6;
+    %0 = $desugar$7;
     return;
   }
   bb12 {
-    r1 = $desugar$6;
+    r1 = $desugar$7;
     %25 = ConstantLoad statusCode
     %24 = r1[%25];
     %26 = %24;
@@ -67,32 +67,32 @@ main() -> nil|error{
   }
   bb13 {
     %28 = ConstantLoad /patch
-    $desugar$7 = %28;
+    $desugar$8 = %28;
     %30 = ConstantLoad key
     %31 = ConstantLoad val
     %32 = newMap mapping{%30=%31}
-    $desugar$8 = %32;
-    %34 = $Client.patch$default$2($desugar$7,$desugar$8) -> bb14;
+    $desugar$9 = %32;
+    %34 = $Client.patch$default$2($desugar$8,$desugar$9) -> bb14;
   }
   bb14 {
-    $desugar$9 = %34;
-    %36 = $Client.patch$default$3($desugar$7,$desugar$8,$desugar$9) -> bb15;
+    $desugar$10 = %34;
+    %36 = $Client.patch$default$3($desugar$8,$desugar$9,$desugar$10) -> bb15;
   }
   bb15 {
-    $desugar$10 = %36;
-    %38 = $remote$patch(c,$desugar$7,$desugar$8,$desugar$9,$desugar$10) -> bb16;
+    $desugar$11 = %36;
+    %38 = $remote$patch(c,$desugar$8,$desugar$9,$desugar$10,$desugar$11) -> bb16;
   }
   bb16 {
-    $desugar$11 = %38;
-    %40 = $desugar$11 is error
+    $desugar$12 = %38;
+    %40 = $desugar$12 is error
     %40 ? bb17 : bb18;
   }
   bb17 {
-    %0 = $desugar$11;
+    %0 = $desugar$12;
     return;
   }
   bb18 {
-    r2 = $desugar$11;
+    r2 = $desugar$12;
     %43 = ConstantLoad statusCode
     %42 = r2[%43];
     %44 = %42;
@@ -100,32 +100,32 @@ main() -> nil|error{
   }
   bb19 {
     %46 = ConstantLoad /delete
-    $desugar$12 = %46;
-    %48 = $Client.delete$default$1($desugar$12) -> bb20;
+    $desugar$13 = %46;
+    %48 = $Client.delete$default$1($desugar$13) -> bb20;
   }
   bb20 {
-    $desugar$13 = %48;
-    %50 = $Client.delete$default$2($desugar$12,$desugar$13) -> bb21;
+    $desugar$14 = %48;
+    %50 = $Client.delete$default$2($desugar$13,$desugar$14) -> bb21;
   }
   bb21 {
-    $desugar$14 = %50;
-    %52 = $Client.delete$default$3($desugar$12,$desugar$13,$desugar$14) -> bb22;
+    $desugar$15 = %50;
+    %52 = $Client.delete$default$3($desugar$13,$desugar$14,$desugar$15) -> bb22;
   }
   bb22 {
-    $desugar$15 = %52;
-    %54 = $remote$delete(c,$desugar$12,$desugar$13,$desugar$14,$desugar$15) -> bb23;
+    $desugar$16 = %52;
+    %54 = $remote$delete(c,$desugar$13,$desugar$14,$desugar$15,$desugar$16) -> bb23;
   }
   bb23 {
-    $desugar$16 = %54;
-    %56 = $desugar$16 is error
+    $desugar$17 = %54;
+    %56 = $desugar$17 is error
     %56 ? bb24 : bb25;
   }
   bb24 {
-    %0 = $desugar$16;
+    %0 = $desugar$17;
     return;
   }
   bb25 {
-    r3 = $desugar$16;
+    r3 = $desugar$17;
     %59 = ConstantLoad statusCode
     %58 = r3[%59];
     %60 = %58;
@@ -133,24 +133,24 @@ main() -> nil|error{
   }
   bb26 {
     %62 = ConstantLoad /head
-    $desugar$17 = %62;
-    %64 = $Client.head$default$1($desugar$17) -> bb27;
+    $desugar$18 = %62;
+    %64 = $Client.head$default$1($desugar$18) -> bb27;
   }
   bb27 {
-    $desugar$18 = %64;
-    %66 = $remote$head(c,$desugar$17,$desugar$18) -> bb28;
+    $desugar$19 = %64;
+    %66 = $remote$head(c,$desugar$18,$desugar$19) -> bb28;
   }
   bb28 {
-    $desugar$19 = %66;
-    %68 = $desugar$19 is error
+    $desugar$20 = %66;
+    %68 = $desugar$20 is error
     %68 ? bb29 : bb30;
   }
   bb29 {
-    %0 = $desugar$19;
+    %0 = $desugar$20;
     return;
   }
   bb30 {
-    r4 = $desugar$19;
+    r4 = $desugar$20;
     %71 = ConstantLoad statusCode
     %70 = r4[%71];
     %72 = %70;
@@ -158,24 +158,24 @@ main() -> nil|error{
   }
   bb31 {
     %74 = ConstantLoad /options
-    $desugar$20 = %74;
-    %76 = $Client.options$default$1($desugar$20) -> bb32;
+    $desugar$21 = %74;
+    %76 = $Client.options$default$1($desugar$21) -> bb32;
   }
   bb32 {
-    $desugar$21 = %76;
-    %78 = $remote$options(c,$desugar$20,$desugar$21) -> bb33;
+    $desugar$22 = %76;
+    %78 = $remote$options(c,$desugar$21,$desugar$22) -> bb33;
   }
   bb33 {
-    $desugar$22 = %78;
-    %80 = $desugar$22 is error
+    $desugar$23 = %78;
+    %80 = $desugar$23 is error
     %80 ? bb34 : bb35;
   }
   bb34 {
-    %0 = $desugar$22;
+    %0 = $desugar$23;
     return;
   }
   bb35 {
-    r5 = $desugar$22;
+    r5 = $desugar$23;
     %83 = ConstantLoad statusCode
     %82 = r5[%83];
     %84 = %82;
@@ -183,32 +183,32 @@ main() -> nil|error{
   }
   bb36 {
     %86 = ConstantLoad PATCH
-    $desugar$23 = %86;
+    $desugar$24 = %86;
     %88 = ConstantLoad /execute
-    $desugar$24 = %88;
+    $desugar$25 = %88;
     %90 = ConstantLoad exec body
-    $desugar$25 = %90;
-    %92 = $Client.execute$default$3($desugar$23,$desugar$24,$desugar$25) -> bb37;
+    $desugar$26 = %90;
+    %92 = $Client.execute$default$3($desugar$24,$desugar$25,$desugar$26) -> bb37;
   }
   bb37 {
-    $desugar$26 = %92;
-    %94 = $Client.execute$default$4($desugar$23,$desugar$24,$desugar$25,$desugar$26) -> bb38;
+    $desugar$27 = %92;
+    %94 = $Client.execute$default$4($desugar$24,$desugar$25,$desugar$26,$desugar$27) -> bb38;
   }
   bb38 {
-    $desugar$27 = %94;
-    %96 = $remote$execute(c,$desugar$23,$desugar$24,$desugar$25,$desugar$26,$desugar$27) -> bb39;
+    $desugar$28 = %94;
+    %96 = $remote$execute(c,$desugar$24,$desugar$25,$desugar$26,$desugar$27,$desugar$28) -> bb39;
   }
   bb39 {
-    $desugar$28 = %96;
-    %98 = $desugar$28 is error
+    $desugar$29 = %96;
+    %98 = $desugar$29 is error
     %98 ? bb40 : bb41;
   }
   bb40 {
-    %0 = $desugar$28;
+    %0 = $desugar$29;
     return;
   }
   bb41 {
-    r6 = $desugar$28;
+    r6 = $desugar$29;
     %101 = ConstantLoad statusCode
     %100 = r6[%101];
     %102 = %100;

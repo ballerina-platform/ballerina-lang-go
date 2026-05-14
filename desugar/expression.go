@@ -815,7 +815,19 @@ func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) 
 
 	pos := expr.GetPosition()
 	var initStmts []model.StatementNode
-	for i := len(expr.ArgsExprs); i < totalParams; i++ {
+
+	// Materialize original args into locals so the same node is not aliased into
+	// multiple default-lambda invocations. Mirrors walkDirectCallArgs behaviour.
+	originalLen := len(expr.ArgsExprs)
+	for j := 0; j < originalLen; j++ {
+		if _, ok := expr.ArgsExprs[j].(*ast.BLangSimpleVarRef); !ok {
+			varDef, varRef := assignToLocal(cx, expr.ArgsExprs[j], pos)
+			initStmts = append(initStmts, varDef)
+			expr.ArgsExprs[j] = varRef
+		}
+	}
+
+	for i := originalLen; i < totalParams; i++ {
 		dp, ok := defaultableParams.Get(i)
 		if !ok {
 			break

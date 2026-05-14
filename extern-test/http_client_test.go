@@ -39,7 +39,11 @@ type rewritingHTTPClient struct {
 }
 
 func (c *rewritingHTTPClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
-	realURL := c.serverURL + url[len("http://testserver"):]
+	const prefix = "http://testserver"
+	if !strings.HasPrefix(url, prefix) {
+		return 0, nil, nil, fmt.Errorf("rewritingHTTPClient: expected URL with prefix %q, got %q", prefix, url)
+	}
+	realURL := c.serverURL + url[len(prefix):]
 	var bodyReader io.Reader
 	if body != nil {
 		bodyReader = bytes.NewReader(body)

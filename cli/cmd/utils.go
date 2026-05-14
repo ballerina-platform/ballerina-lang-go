@@ -95,12 +95,15 @@ var nativePal = pal.Platform{
 				}
 			}
 			if len(cfg.TLS.ClientCertPEM) > 0 && len(cfg.TLS.ClientKeyPEM) > 0 {
-				if cert, err := tls.X509KeyPair(cfg.TLS.ClientCertPEM, cfg.TLS.ClientKeyPEM); err == nil {
+				if cert, err := tls.X509KeyPair(cfg.TLS.ClientCertPEM, cfg.TLS.ClientKeyPEM); err != nil {
+					_, _ = fmt.Fprintf(os.Stderr, "ballerina: tls.X509KeyPair failed (client certificate not loaded): %v\n", err)
+				} else {
 					tlsConfig.Certificates = []tls.Certificate{cert}
 				}
 			}
 			tlsConfig.ServerName = cfg.TLS.ServerName
 			tlsConfig.SessionTicketsDisabled = cfg.TLS.DisableSessionTickets
+			tlsConfig.MinVersion = tls.VersionTLS12 // secure default; overridden below if configured
 			if cfg.TLS.MinVersion != 0 {
 				tlsConfig.MinVersion = cfg.TLS.MinVersion
 			}

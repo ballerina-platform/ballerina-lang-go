@@ -156,6 +156,16 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	return configSemType
 }
 
+// registerDefaultLambda registers a default-parameter lambda function symbol and returns its ref.
+// All default lambdas are internal (public=false) and isolated.
+func registerDefaultLambda(ctx *context.CompilerContext, space *model.SymbolSpace, name string, sig model.FunctionSignature) model.SymbolRef {
+	sym := model.NewFunctionSymbol(name, sig, false)
+	space.AddSymbol(name, sym)
+	ref, _ := space.GetSymbol(name)
+	ctx.SetSymbolType(ref, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &sig))
+	return ref
+}
+
 func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSemType semtypes.SemType) {
 	env := ctx.GetTypeEnv()
 
@@ -273,17 +283,11 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	gbpRef, _ := space.GetSymbol("$Response.getBinaryPayload")
 	ctx.SetSymbolType(gbpRef, gbpFnSemType)
 
-	// hasHeader default lambda: position (index 1) → "LEADING"
-	hasHeaderDefaultSig := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{semtypes.STRING},
-		ReturnType: headerPositionSemType,
-		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	hasHeaderDefaultSym := model.NewFunctionSymbol("$Response.hasHeader$default$1", hasHeaderDefaultSig, false)
-	space.AddSymbol("$Response.hasHeader$default$1", hasHeaderDefaultSym)
-	hasHeaderDefaultRef, _ := space.GetSymbol("$Response.hasHeader$default$1")
-	ctx.SetSymbolType(hasHeaderDefaultRef, libcommon.FunctionSignatureToSemType(env, &hasHeaderDefaultSig))
+	// Response header method default lambdas: position param → "LEADING"
+	posDefault1 := model.FunctionSignature{ParamTypes: []semtypes.SemType{semtypes.STRING}, ReturnType: headerPositionSemType, Flags: model.FuncSymbolFlagIsolated}
+	posDefault0 := model.FunctionSignature{ParamTypes: []semtypes.SemType{}, ReturnType: headerPositionSemType, Flags: model.FuncSymbolFlagIsolated}
 
+	hasHeaderDefaultRef := registerDefaultLambda(ctx, space, "$Response.hasHeader$default$1", posDefault1)
 	hasHeaderSym := model.NewFunctionSymbol("$Response.hasHeader", hasHeaderSig, false)
 	space.AddSymbol("$Response.hasHeader", hasHeaderSym)
 	hasHeaderRef, _ := space.GetSymbol("$Response.hasHeader")
@@ -292,17 +296,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	hasHeaderDefaultable.SetDefaultable(1, hasHeaderDefaultRef)
 	hasHeaderSym.SetDefaultableParams(hasHeaderDefaultable)
 
-	// getHeader default lambda: position (index 1) → "LEADING"
-	getHeaderDefaultSig := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{semtypes.STRING},
-		ReturnType: headerPositionSemType,
-		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	getHeaderDefaultSym := model.NewFunctionSymbol("$Response.getHeader$default$1", getHeaderDefaultSig, false)
-	space.AddSymbol("$Response.getHeader$default$1", getHeaderDefaultSym)
-	getHeaderDefaultRef, _ := space.GetSymbol("$Response.getHeader$default$1")
-	ctx.SetSymbolType(getHeaderDefaultRef, libcommon.FunctionSignatureToSemType(env, &getHeaderDefaultSig))
-
+	getHeaderDefaultRef := registerDefaultLambda(ctx, space, "$Response.getHeader$default$1", posDefault1)
 	getHeaderSym := model.NewFunctionSymbol("$Response.getHeader", getHeaderSig, false)
 	space.AddSymbol("$Response.getHeader", getHeaderSym)
 	getHeaderRef, _ := space.GetSymbol("$Response.getHeader")
@@ -311,17 +305,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	getHeaderDefaultable.SetDefaultable(1, getHeaderDefaultRef)
 	getHeaderSym.SetDefaultableParams(getHeaderDefaultable)
 
-	// getHeaders default lambda: position (index 1) → "LEADING"
-	getHeadersDefaultSig := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{semtypes.STRING},
-		ReturnType: headerPositionSemType,
-		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	getHeadersDefaultSym := model.NewFunctionSymbol("$Response.getHeaders$default$1", getHeadersDefaultSig, false)
-	space.AddSymbol("$Response.getHeaders$default$1", getHeadersDefaultSym)
-	getHeadersDefaultRef, _ := space.GetSymbol("$Response.getHeaders$default$1")
-	ctx.SetSymbolType(getHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &getHeadersDefaultSig))
-
+	getHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Response.getHeaders$default$1", posDefault1)
 	getHeadersSym := model.NewFunctionSymbol("$Response.getHeaders", getHeadersSig, false)
 	space.AddSymbol("$Response.getHeaders", getHeadersSym)
 	getHeadersRef, _ := space.GetSymbol("$Response.getHeaders")
@@ -330,17 +314,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	getHeadersDefaultable.SetDefaultable(1, getHeadersDefaultRef)
 	getHeadersSym.SetDefaultableParams(getHeadersDefaultable)
 
-	// getHeaderNames default lambda: position (index 0) → "LEADING"
-	getHeaderNamesDefaultSig := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{},
-		ReturnType: headerPositionSemType,
-		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	getHeaderNamesDefaultSym := model.NewFunctionSymbol("$Response.getHeaderNames$default$0", getHeaderNamesDefaultSig, false)
-	space.AddSymbol("$Response.getHeaderNames$default$0", getHeaderNamesDefaultSym)
-	getHeaderNamesDefaultRef, _ := space.GetSymbol("$Response.getHeaderNames$default$0")
-	ctx.SetSymbolType(getHeaderNamesDefaultRef, libcommon.FunctionSignatureToSemType(env, &getHeaderNamesDefaultSig))
-
+	getHeaderNamesDefaultRef := registerDefaultLambda(ctx, space, "$Response.getHeaderNames$default$0", posDefault0)
 	getHeaderNamesSym := model.NewFunctionSymbol("$Response.getHeaderNames", getHeaderNamesSig, false)
 	space.AddSymbol("$Response.getHeaderNames", getHeaderNamesSym)
 	getHeaderNamesRef, _ := space.GetSymbol("$Response.getHeaderNames")
@@ -460,89 +434,59 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 		})
 
 	// Default lambda for the config param (index 1): $Client.init$default$1(url) → {}
-	// Signature: preceding params only (url: string), return type = configSemType.
-	defaultLambdaSig := model.FunctionSignature{
+	initDefaultRef := registerDefaultLambda(ctx, space, "$Client.init$default$1", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
 		ReturnType: configSemType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	defaultLambdaSym := model.NewFunctionSymbol("$Client.init$default$1", defaultLambdaSig, false)
-	space.AddSymbol("$Client.init$default$1", defaultLambdaSym)
-	defaultLambdaRef, _ := space.GetSymbol("$Client.init$default$1")
-	ctx.SetSymbolType(defaultLambdaRef, libcommon.FunctionSignatureToSemType(env, &defaultLambdaSig))
-
+	})
 	initSym := model.NewFunctionSymbol("$Client.init", initSig, false)
 	space.AddSymbol("$Client.init", initSym)
 	initRef, _ := space.GetSymbol("$Client.init")
 	ctx.SetSymbolType(initRef, initFnSemType)
+	initDefaultableInfo := model.NewDefaultableParamInfo(len(initSig.ParamTypes))
+	initDefaultableInfo.SetDefaultable(1, initDefaultRef)
+	initSym.SetDefaultableParams(initDefaultableInfo)
 
-	// Mark config (param index 1) as defaultable.
-	defaultableInfo := model.NewDefaultableParamInfo(len(initSig.ParamTypes))
-	defaultableInfo.SetDefaultable(1, defaultLambdaRef)
-	initSym.SetDefaultableParams(defaultableInfo)
-
-	// Default lambda for headers param (index 1): $Client.get$default$1(path) → ()
-	getDefaultLambdaSig := model.FunctionSignature{
+	// get: headers at index 1
+	getDefaultRef := registerDefaultLambda(ctx, space, "$Client.get$default$1", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	getDefaultLambdaSym := model.NewFunctionSymbol("$Client.get$default$1", getDefaultLambdaSig, false)
-	space.AddSymbol("$Client.get$default$1", getDefaultLambdaSym)
-	getDefaultLambdaRef, _ := space.GetSymbol("$Client.get$default$1")
-	ctx.SetSymbolType(getDefaultLambdaRef, libcommon.FunctionSignatureToSemType(env, &getDefaultLambdaSig))
-
+	})
 	getSym := model.NewFunctionSymbol("$Client.get", getSig, false)
 	space.AddSymbol("$Client.get", getSym)
 	getRef, _ := space.GetSymbol("$Client.get")
 	ctx.SetSymbolType(getRef, getFnSemType)
-
 	getDefaultableInfo := model.NewDefaultableParamInfo(len(getSig.ParamTypes))
-	getDefaultableInfo.SetDefaultable(1, getDefaultLambdaRef)
+	getDefaultableInfo.SetDefaultable(1, getDefaultRef)
 	getSym.SetDefaultableParams(getDefaultableInfo)
 
-	// post default lambdas: headers at index 2, mediaType at index 3
-	postHeadersDefaultSig := model.FunctionSignature{
+	// post: headers at index 2, mediaType at index 3
+	postHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Client.post$default$2", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	postHeadersDefaultSym := model.NewFunctionSymbol("$Client.post$default$2", postHeadersDefaultSig, false)
-	space.AddSymbol("$Client.post$default$2", postHeadersDefaultSym)
-	postHeadersDefaultRef, _ := space.GetSymbol("$Client.post$default$2")
-	ctx.SetSymbolType(postHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &postHeadersDefaultSig))
-
-	postMediaTypeDefaultSig := model.FunctionSignature{
+	})
+	postMediaTypeDefaultRef := registerDefaultLambda(ctx, space, "$Client.post$default$3", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType, headersOptType},
 		ReturnType: mediaTypeOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	postMediaTypeDefaultSym := model.NewFunctionSymbol("$Client.post$default$3", postMediaTypeDefaultSig, false)
-	space.AddSymbol("$Client.post$default$3", postMediaTypeDefaultSym)
-	postMediaTypeDefaultRef, _ := space.GetSymbol("$Client.post$default$3")
-	ctx.SetSymbolType(postMediaTypeDefaultRef, libcommon.FunctionSignatureToSemType(env, &postMediaTypeDefaultSig))
-
+	})
 	postSym := model.NewFunctionSymbol("$Client.post", postSig, false)
 	space.AddSymbol("$Client.post", postSym)
 	postRef, _ := space.GetSymbol("$Client.post")
 	ctx.SetSymbolType(postRef, postFnSemType)
-
 	postDefaultableInfo := model.NewDefaultableParamInfo(len(postSig.ParamTypes))
 	postDefaultableInfo.SetDefaultable(2, postHeadersDefaultRef)
 	postDefaultableInfo.SetDefaultable(3, postMediaTypeDefaultRef)
 	postSym.SetDefaultableParams(postDefaultableInfo)
 
 	// head: headers at index 1
-	headDefaultSig := model.FunctionSignature{
+	headDefaultRef := registerDefaultLambda(ctx, space, "$Client.head$default$1", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	headDefaultSym := model.NewFunctionSymbol("$Client.head$default$1", headDefaultSig, false)
-	space.AddSymbol("$Client.head$default$1", headDefaultSym)
-	headDefaultRef, _ := space.GetSymbol("$Client.head$default$1")
-	ctx.SetSymbolType(headDefaultRef, libcommon.FunctionSignatureToSemType(env, &headDefaultSig))
-
+	})
 	headSym := model.NewFunctionSymbol("$Client.head", headSig, false)
 	space.AddSymbol("$Client.head", headSym)
 	headRef, _ := space.GetSymbol("$Client.head")
@@ -552,16 +496,11 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	headSym.SetDefaultableParams(headDefaultableInfo)
 
 	// options: headers at index 1
-	optionsDefaultSig := model.FunctionSignature{
+	optionsDefaultRef := registerDefaultLambda(ctx, space, "$Client.options$default$1", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	optionsDefaultSym := model.NewFunctionSymbol("$Client.options$default$1", optionsDefaultSig, false)
-	space.AddSymbol("$Client.options$default$1", optionsDefaultSym)
-	optionsDefaultRef, _ := space.GetSymbol("$Client.options$default$1")
-	ctx.SetSymbolType(optionsDefaultRef, libcommon.FunctionSignatureToSemType(env, &optionsDefaultSig))
-
+	})
 	optionsSym := model.NewFunctionSymbol("$Client.options", optionsSig, false)
 	space.AddSymbol("$Client.options", optionsSym)
 	optionsRef, _ := space.GetSymbol("$Client.options")
@@ -571,26 +510,16 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	optionsSym.SetDefaultableParams(optionsDefaultableInfo)
 
 	// put: headers at index 2, mediaType at index 3
-	putHeadersDefaultSig := model.FunctionSignature{
+	putHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Client.put$default$2", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	putHeadersDefaultSym := model.NewFunctionSymbol("$Client.put$default$2", putHeadersDefaultSig, false)
-	space.AddSymbol("$Client.put$default$2", putHeadersDefaultSym)
-	putHeadersDefaultRef, _ := space.GetSymbol("$Client.put$default$2")
-	ctx.SetSymbolType(putHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &putHeadersDefaultSig))
-
-	putMediaTypeDefaultSig := model.FunctionSignature{
+	})
+	putMediaTypeDefaultRef := registerDefaultLambda(ctx, space, "$Client.put$default$3", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType, headersOptType},
 		ReturnType: mediaTypeOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	putMediaTypeDefaultSym := model.NewFunctionSymbol("$Client.put$default$3", putMediaTypeDefaultSig, false)
-	space.AddSymbol("$Client.put$default$3", putMediaTypeDefaultSym)
-	putMediaTypeDefaultRef, _ := space.GetSymbol("$Client.put$default$3")
-	ctx.SetSymbolType(putMediaTypeDefaultRef, libcommon.FunctionSignatureToSemType(env, &putMediaTypeDefaultSig))
-
+	})
 	putSym := model.NewFunctionSymbol("$Client.put", putSig, false)
 	space.AddSymbol("$Client.put", putSym)
 	putRef, _ := space.GetSymbol("$Client.put")
@@ -601,26 +530,16 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	putSym.SetDefaultableParams(putDefaultableInfo)
 
 	// patch: headers at index 2, mediaType at index 3
-	patchHeadersDefaultSig := model.FunctionSignature{
+	patchHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Client.patch$default$2", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	patchHeadersDefaultSym := model.NewFunctionSymbol("$Client.patch$default$2", patchHeadersDefaultSig, false)
-	space.AddSymbol("$Client.patch$default$2", patchHeadersDefaultSym)
-	patchHeadersDefaultRef, _ := space.GetSymbol("$Client.patch$default$2")
-	ctx.SetSymbolType(patchHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &patchHeadersDefaultSig))
-
-	patchMediaTypeDefaultSig := model.FunctionSignature{
+	})
+	patchMediaTypeDefaultRef := registerDefaultLambda(ctx, space, "$Client.patch$default$3", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, jsonType, headersOptType},
 		ReturnType: mediaTypeOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	patchMediaTypeDefaultSym := model.NewFunctionSymbol("$Client.patch$default$3", patchMediaTypeDefaultSig, false)
-	space.AddSymbol("$Client.patch$default$3", patchMediaTypeDefaultSym)
-	patchMediaTypeDefaultRef, _ := space.GetSymbol("$Client.patch$default$3")
-	ctx.SetSymbolType(patchMediaTypeDefaultRef, libcommon.FunctionSignatureToSemType(env, &patchMediaTypeDefaultSig))
-
+	})
 	patchSym := model.NewFunctionSymbol("$Client.patch", patchSig, false)
 	space.AddSymbol("$Client.patch", patchSym)
 	patchRef, _ := space.GetSymbol("$Client.patch")
@@ -631,36 +550,21 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	patchSym.SetDefaultableParams(patchDefaultableInfo)
 
 	// delete: message at index 1, headers at index 2, mediaType at index 3
-	deleteMessageDefaultSig := model.FunctionSignature{
+	deleteMessageDefaultRef := registerDefaultLambda(ctx, space, "$Client.delete$default$1", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
 		ReturnType: deleteMessageType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	deleteMessageDefaultSym := model.NewFunctionSymbol("$Client.delete$default$1", deleteMessageDefaultSig, false)
-	space.AddSymbol("$Client.delete$default$1", deleteMessageDefaultSym)
-	deleteMessageDefaultRef, _ := space.GetSymbol("$Client.delete$default$1")
-	ctx.SetSymbolType(deleteMessageDefaultRef, libcommon.FunctionSignatureToSemType(env, &deleteMessageDefaultSig))
-
-	deleteHeadersDefaultSig := model.FunctionSignature{
+	})
+	deleteHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Client.delete$default$2", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, deleteMessageType},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	deleteHeadersDefaultSym := model.NewFunctionSymbol("$Client.delete$default$2", deleteHeadersDefaultSig, false)
-	space.AddSymbol("$Client.delete$default$2", deleteHeadersDefaultSym)
-	deleteHeadersDefaultRef, _ := space.GetSymbol("$Client.delete$default$2")
-	ctx.SetSymbolType(deleteHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &deleteHeadersDefaultSig))
-
-	deleteMediaTypeDefaultSig := model.FunctionSignature{
+	})
+	deleteMediaTypeDefaultRef := registerDefaultLambda(ctx, space, "$Client.delete$default$3", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, deleteMessageType, headersOptType},
 		ReturnType: mediaTypeOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	deleteMediaTypeDefaultSym := model.NewFunctionSymbol("$Client.delete$default$3", deleteMediaTypeDefaultSig, false)
-	space.AddSymbol("$Client.delete$default$3", deleteMediaTypeDefaultSym)
-	deleteMediaTypeDefaultRef, _ := space.GetSymbol("$Client.delete$default$3")
-	ctx.SetSymbolType(deleteMediaTypeDefaultRef, libcommon.FunctionSignatureToSemType(env, &deleteMediaTypeDefaultSig))
-
+	})
 	deleteSym := model.NewFunctionSymbol("$Client.delete", deleteSig, false)
 	space.AddSymbol("$Client.delete", deleteSym)
 	deleteRef, _ := space.GetSymbol("$Client.delete")
@@ -672,26 +576,16 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	deleteSym.SetDefaultableParams(deleteDefaultableInfo)
 
 	// execute: headers at index 3, mediaType at index 4
-	executeHeadersDefaultSig := model.FunctionSignature{
+	executeHeadersDefaultRef := registerDefaultLambda(ctx, space, "$Client.execute$default$3", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, semtypes.STRING, jsonType},
 		ReturnType: headersOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	executeHeadersDefaultSym := model.NewFunctionSymbol("$Client.execute$default$3", executeHeadersDefaultSig, false)
-	space.AddSymbol("$Client.execute$default$3", executeHeadersDefaultSym)
-	executeHeadersDefaultRef, _ := space.GetSymbol("$Client.execute$default$3")
-	ctx.SetSymbolType(executeHeadersDefaultRef, libcommon.FunctionSignatureToSemType(env, &executeHeadersDefaultSig))
-
-	executeMediaTypeDefaultSig := model.FunctionSignature{
+	})
+	executeMediaTypeDefaultRef := registerDefaultLambda(ctx, space, "$Client.execute$default$4", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, semtypes.STRING, jsonType, headersOptType},
 		ReturnType: mediaTypeOptType,
 		Flags:      model.FuncSymbolFlagIsolated,
-	}
-	executeMediaTypeDefaultSym := model.NewFunctionSymbol("$Client.execute$default$4", executeMediaTypeDefaultSig, false)
-	space.AddSymbol("$Client.execute$default$4", executeMediaTypeDefaultSym)
-	executeMediaTypeDefaultRef, _ := space.GetSymbol("$Client.execute$default$4")
-	ctx.SetSymbolType(executeMediaTypeDefaultRef, libcommon.FunctionSignatureToSemType(env, &executeMediaTypeDefaultSig))
-
+	})
 	executeSym := model.NewFunctionSymbol("$Client.execute", executeSig, false)
 	space.AddSymbol("$Client.execute", executeSym)
 	executeRef, _ := space.GetSymbol("$Client.execute")

@@ -146,7 +146,7 @@ public isolated function parseHeader(string headerValue) returns string[]|error 
 
 ### Client — remote methods
 
-All nine remote methods are supported: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, and `execute`. Each method accepts optional request headers as a `map<string|string[]>`. Methods that carry a body (`post`, `put`, `patch`, `delete`, `execute`) additionally accept an optional media type override.
+All eight remote methods are supported: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, and `execute`. Each method accepts optional request headers as a `map<string|string[]>`. Methods that carry a body (`post`, `put`, `patch`, `delete`, `execute`) additionally accept an optional media type override.
 
 ### Client — initialisation
 
@@ -161,11 +161,11 @@ The client can be initialised with a URL and an optional `ClientConfiguration` r
 
 ### Request message body
 
-The `message` parameter for body-carrying methods accepts:
+The `message` parameter is typed as `json`, which in Ballerina includes `string`, `byte[]`, and all JSON-compatible values. The runtime infers `Content-Type` from the value:
 
 - `string` — sent as `text/plain`
-- `byte[]` — sent as `application/octet-stream`
-- `json`-compatible values (`nil`, `boolean`, `int`, `float`, `decimal`, nested maps and lists) — serialised and sent as `application/json`
+- `byte[]` (a list where every element is an integer in 0–255) — sent as `application/octet-stream`
+- All other `json`-compatible values (`nil`, `boolean`, `int`, `float`, `decimal`, nested maps and lists, JSON arrays) — serialised and sent as `application/json`
 
 The `mediaType` parameter overrides the inferred `Content-Type` in all cases.
 

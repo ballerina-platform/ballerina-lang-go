@@ -93,6 +93,9 @@ func RegisterExternClassDef(rt *Runtime, def *bir.BIRClassDef) {
 // registration, GetModule returns nil and causes a nil dereference panic.
 func RegisterModuleGlobals(rt *Runtime, pkgId *model.PackageID, globals map[string]values.BalValue) {
 	if existing := rt.registry.GetModule(pkgId); existing != nil {
+		if existing.Globals == nil {
+			existing.Globals = make(map[string]values.BalValue)
+		}
 		for k, v := range globals {
 			existing.Globals[k] = v
 		}
