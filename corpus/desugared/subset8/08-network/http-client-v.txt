@@ -55,7 +55,7 @@
             (mapping-constructor-expr
               (key-value
                 (literal timeout)
-                (literal 30/1))
+                (literal 30))
               (key-value
                 (literal followRedirects)
                 (mapping-constructor-expr

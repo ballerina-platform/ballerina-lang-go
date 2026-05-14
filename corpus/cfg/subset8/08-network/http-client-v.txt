@@ -25,13 +25,13 @@
             (literal https://example.com)
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref timeout)
-                (literal 30/1))
+                (literal timeout)
+                (literal 30))
               (key-value
-                (simple-var-ref followRedirects)
+                (literal followRedirects)
                 (mapping-constructor-expr
                   (key-value
-                    (simple-var-ref enabled)
+                    (literal enabled)
                     (literal false)))))))))))
     (var-def
       (variable r2 (expr
@@ -91,7 +91,7 @@
             (literal https://example.com)
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref httpVersion)
+                (literal httpVersion)
                 (literal 1.1)))))))))
     (var-def
       (variable r5 (expr
@@ -111,7 +111,7 @@
             (literal https://example.com)
             (mapping-constructor-expr
               (key-value
-                (simple-var-ref httpVersion)
+                (literal httpVersion)
                 (literal 2.0)))))))))
     (var-def
       (variable r6 (expr

@@ -59,7 +59,7 @@ main() -> nil|error{
     %22 = newObject ballerina/http:Client
     %23 = ConstantLoad https://example.com
     %24 = ConstantLoad timeout
-    %25 = ConstantLoad 30/1
+    %25 = ConstantLoad 30
     %26 = ConstantLoad followRedirects
     %27 = ConstantLoad enabled
     %28 = ConstantLoad false

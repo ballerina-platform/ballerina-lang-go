@@ -80,7 +80,7 @@
                       (literal TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)))
                   (key-value
                     (literal handshakeTimeout)
-                    (literal 10/1))))))))))
+                    (literal 10))))))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$4))
