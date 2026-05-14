@@ -45,7 +45,7 @@ func builtinUnion(cx Context, ty SemType) (string, bool) {
 	if IsSameType(cx, ty, CreateAnydata(cx)) {
 		return "anydata", true
 	}
-	if IsSameType(cx, ty, createJson(cx)) {
+	if IsSameType(cx, ty, CreateJSON(cx)) {
 		return "json", true
 	}
 	return "", false

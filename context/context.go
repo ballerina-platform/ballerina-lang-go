@@ -62,6 +62,7 @@ type CompilerContext struct {
 	diagnostics []diagnostics.Diagnostic
 	moduleStats *ModuleStats
 	stage       activeStage
+	tyCtx       semtypes.Context
 }
 
 func (c *CompilerContext) DiagnosticEnv() *diagnostics.DiagnosticEnv {
@@ -180,6 +181,18 @@ func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 // GetTypeEnv returns the type environment for this context
 func (c *CompilerContext) GetTypeEnv() semtypes.Env {
 	return c.env.GetTypeEnv()
+}
+
+// GetTypeContext returns a semtypes.Context backed by this compiler's type env.
+// The same Context instance is reused across calls so that memoized types (e.g.
+// CreateJSON, CreateAnydata) are shared between the compile and type-resolution phases.
+func (c *CompilerContext) GetTypeContext() semtypes.Context {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.tyCtx == nil {
+		c.tyCtx = semtypes.ContextFrom(c.env.GetTypeEnv())
+	}
+	return c.tyCtx
 }
 
 func (c *CompilerContext) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {

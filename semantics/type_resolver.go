@@ -458,7 +458,7 @@ func (f *functionTypeResolver) nextMonoFnName(origName string) string {
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
 		ctx:                    ctx,
-		tyCtx:                  semtypes.ContextFrom(ctx.GetTypeEnv()),
+		tyCtx:                  ctx.GetTypeContext(),
 		importedSymbols:        importedSymbols,
 		pkg:                    pkg,
 		implicitImports:        make(map[string]ast.BLangImportPackage),
@@ -2314,13 +2314,12 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 		}
 	}
 
-	// If fewer args were provided than the init expects, check whether the missing
-	// params are all defaultable. If so, pad ArgsExprs with typed placeholders so that
-	// determineObjectType can match the init signature. The desugar fills the actual
-	// default values later; these placeholders are removed after the call.
-	padded := padMissingDefaultArgs(t, e, determinedTy)
-	objTy, ok := determineObjectType(t, e, determinedTy)
-	e.ArgsExprs = e.ArgsExprs[:len(e.ArgsExprs)-padded]
+	argTys := make([]semtypes.SemType, len(e.ArgsExprs))
+	for i, arg := range e.ArgsExprs {
+		argTys[i] = arg.GetDeterminedType()
+	}
+	paddedArgTys, _ := padNewExprArgTypesForDefaults(t, determinedTy, argTys, e.GetPosition())
+	objTy, ok := determineObjectType(t, e, paddedArgTys, determinedTy)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2342,64 +2341,32 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 	return e.GetDeterminedType(), defaultExpressionEffect(chain), true
 }
 
-// padMissingDefaultArgs adds typed placeholder expressions to e.ArgsExprs for each missing
-// param that is declared defaultable on the class's init method. It returns the count added
-// so the caller can remove them after determineObjectType runs.
-func padMissingDefaultArgs(t typeResolver, e *ast.BLangNewExpression, objectTy semtypes.SemType) int {
-	// Use classAtomSymbols (keyed by MappingAtomicType pointer) rather than classSymbolByType
-	// (keyed by SemType) because objectTy may not be pointer-equal to the registered SemType
-	// even when they are mathematically equivalent (e.g. after Intersect on implicit new).
+// padNewExprArgTypesForDefaults pads argTys with the init method's default param types for
+// any trailing params omitted by the caller. Returns the padded slice and true when the init
+// was resolved; returns (argTys, false) unchanged when the class or init cannot be found.
+func padNewExprArgTypesForDefaults(t typeResolver, objectTy semtypes.SemType, argTys []semtypes.SemType, loc diagnostics.Location) ([]semtypes.SemType, bool) {
 	oat := semtypes.ToObjectAtomicType(t.typeContext(), objectTy)
 	if oat == nil {
-		return 0
+		return argTys, false
 	}
 	classRef, ok := t.getClassAtomSymbol(oat)
 	if !ok {
-		return 0
+		return argTys, false
 	}
 	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
 	if !ok {
-		return 0
+		return argTys, false
 	}
 	initRef, ok := classSym.MethodSymbol("init")
 	if !ok {
-		return 0
+		return argTys, false
 	}
-	initFnSym, ok := t.getSymbol(initRef).(model.FunctionSymbol)
-	if !ok {
-		return 0
-	}
-	sig := initFnSym.Signature()
-	defaultableParams := initFnSym.DefaultableParams()
-	if defaultableParams == nil {
-		return 0
-	}
-	padded := 0
-	for i := len(e.ArgsExprs); i < len(sig.ParamTypes); i++ {
-		if _, isDefaultable := defaultableParams.Get(i); !isDefaultable {
-			break
-		}
-		// These placeholder nodes have no VariableName or symbol. They exist only so
-		// determineObjectType can call GetDeterminedType() on each arg slot and infer
-		// the object's class. The caller removes them from e.ArgsExprs immediately
-		// after determineObjectType returns — no other visitor or downstream pass
-		// should observe them.
-		placeholder := &ast.BLangSimpleVarRef{}
-		placeholder.SetDeterminedType(sig.ParamTypes[i])
-		e.ArgsExprs = append(e.ArgsExprs, placeholder)
-		padded++
-	}
-	return padded
+	return padArgTypesForDefaults(t, initRef, argTys, loc), true
 }
 
-func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
+func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, argTys []semtypes.SemType, objectTy semtypes.SemType) (semtypes.SemType, bool) {
 	cx := t.typeContext()
 	alts := semtypes.ObjectAlternatives(cx, objectTy)
-
-	argTys := make([]semtypes.SemType, len(expr.ArgsExprs))
-	for i, arg := range expr.ArgsExprs {
-		argTys[i] = arg.GetDeterminedType()
-	}
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
@@ -4547,10 +4514,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		switch ty.TypeKind {
 		case model.TypeKind_MAP:
 			return semtypes.MAPPING, true
-		case model.TypeKind_JSON, model.TypeKind_ANYDATA:
-			// json / anydata ≈ NIL|BOOLEAN|INT|FLOAT|DECIMAL|STRING|list|map
-			// (xml excluded — not representable at runtime)
-			return semtypes.Union(semtypes.SIMPLE_OR_STRING, semtypes.Union(semtypes.LIST, semtypes.MAPPING)), true
+		case model.TypeKind_JSON:
+			return semtypes.CreateJSON(t.typeContext()), true
+		case model.TypeKind_ANYDATA:
+			return semtypes.CreateAnydata(t.typeContext()), true
 		case model.TypeKind_ANY:
 			return semtypes.ANY, true
 		case model.TypeKind_XML:

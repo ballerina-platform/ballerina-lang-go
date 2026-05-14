@@ -19,12 +19,12 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"strings"
 	"time"
 
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/lib/http/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/pal"
@@ -77,9 +77,8 @@ func parseHeader(input string) (*values.List, error) {
 	return list, nil
 }
 
-func ratToDuration(r *big.Rat) time.Duration {
-	f, _ := r.Float64()
-	return time.Duration(f * float64(time.Second))
+func decimalToDuration(d *decimal.Decimal) time.Duration {
+	return time.Duration(d.Float64() * float64(time.Second))
 }
 
 func initHttpModule(rt *runtime.Runtime) {
@@ -100,7 +99,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		Fields: []bir.ObjectField{
 			{Name: "url", Ty: semtypes.STRING},
 			{Name: "timeout", Ty: semtypes.DECIMAL},
-			{Name: "followRedirects", Ty: semtypes.MAPPING},
+			{Name: "followRedirects", Ty: semtypes.Union(semtypes.MAPPING, semtypes.NIL)},
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
@@ -148,7 +147,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			self := args[0].(*values.Object)
 			url := args[1].(string)
 
-			timeout := big.NewRat(30, 1)
+			timeout := decimal.FromInt64(30)
 			var followRedirects pal.FollowRedirects // Enabled=false by default (Ballerina spec)
 			httpVersion := "2.0"
 
@@ -156,8 +155,8 @@ func initHttpModule(rt *runtime.Runtime) {
 			if len(args) > 2 {
 				if cfg, ok := args[2].(*values.Map); ok {
 					if v, ok := cfg.Get("timeout"); ok {
-						if rat, ok := v.(*big.Rat); ok {
-							timeout = rat
+						if d, ok := v.(*decimal.Decimal); ok {
+							timeout = d
 						}
 					}
 					if v, ok := cfg.Get("followRedirects"); ok {
@@ -239,8 +238,8 @@ func initHttpModule(rt *runtime.Runtime) {
 								}
 							}
 							if v, ok := ssMap.Get("handshakeTimeout"); ok {
-								if rat, ok := v.(*big.Rat); ok {
-									tlsCfg.HandshakeTimeout = ratToDuration(rat)
+								if d, ok := v.(*decimal.Decimal); ok {
+									tlsCfg.HandshakeTimeout = decimalToDuration(d)
 								}
 							}
 							if v, ok := ssMap.Get("ciphers"); ok {
@@ -284,7 +283,7 @@ func initHttpModule(rt *runtime.Runtime) {
 				}
 			}
 			httpClient := rt.Platform().HTTP.NewClient(pal.ClientConfig{
-				Timeout:         ratToDuration(timeout),
+				Timeout:         decimalToDuration(timeout),
 				FollowRedirects: followRedirects,
 				HTTPVersion:     httpVersion,
 				TLS:             tlsCfg,
@@ -686,6 +685,14 @@ func execBodyMethod(verb string, args []values.BalValue) (values.BalValue, error
 	var reqHeaders map[string][]string
 	if len(args) > 3 {
 		reqHeaders = extractHeaders(args[3])
+		// If the caller supplied a Content-Type header, let it override the
+		// body-serialisation default. The explicit mediaType arg (args[4]) wins.
+		for hdrKey, hdrVals := range reqHeaders {
+			if strings.EqualFold(hdrKey, "content-type") && len(hdrVals) > 0 {
+				contentType = hdrVals[0]
+				break
+			}
+		}
 	}
 	if len(args) > 4 {
 		if mt, ok := args[4].(string); ok && mt != "" {
@@ -714,9 +721,8 @@ func balToGoJSON(v values.BalValue) any {
 		return t
 	case float64:
 		return t
-	case *big.Rat:
-		f, _ := t.Float64()
-		return f
+	case *decimal.Decimal:
+		return t.Float64()
 	case string:
 		return t
 	case *values.Map:

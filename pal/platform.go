@@ -34,6 +34,13 @@ type (
 		Stdout func(p []byte) (n int, err error)
 		Stderr func(p []byte) (n int, err error)
 	}
+	HTTP struct {
+		NewClient func(cfg ClientConfig) HTTPClient
+	}
+)
+
+// HTTP config types.
+type (
 	// TLSConfig carries TLS settings derived from Ballerina's secureSocket config.
 	TLSConfig struct {
 		InsecureSkipVerify    bool          // secureSocket.enable=false OR verifyHostName=false
@@ -59,9 +66,6 @@ type (
 		FollowRedirects FollowRedirects
 		HTTPVersion     string // "1.1" or "2.0"; defaults to "2.0"
 		TLS             TLSConfig
-	}
-	HTTP struct {
-		NewClient func(cfg ClientConfig) HTTPClient
 	}
 	// HTTPClient is an opaque handle to an HTTP client created by the platform.
 	// It is created once per Ballerina http:Client init and reused across requests.

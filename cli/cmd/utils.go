@@ -48,6 +48,7 @@ func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType 
 	if err != nil {
 		return 0, nil, nil, err
 	}
+	// Set default User-Agent before caller headers so caller can override it if needed
 	req.Header.Set("User-Agent", "ballerina")
 	for k, vals := range reqHeaders {
 		if len(vals) == 0 {
