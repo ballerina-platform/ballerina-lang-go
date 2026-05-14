@@ -165,7 +165,7 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 		scalarSlots[slot] = isScalar
 	}
 
-	result := values.NewList(0, semtypes.LIST, values.NeverValue)
+	result := values.NewList(0, semtypes.LIST, nil)
 	groups := make([]queryGroupState, 0)
 	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
 		sourceRow, ok := rows.Get(rowIndex).(*values.List)
@@ -193,7 +193,7 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 
 func findQueryGroup(groups []queryGroupState, keyRow *values.List) int {
 	for i := range groups {
-		if values.DeepEqual(groups[i].key, keyRow) {
+		if values.DeepEquals(groups[i].key, keyRow) {
 			return i
 		}
 	}
@@ -201,14 +201,14 @@ func findQueryGroup(groups []queryGroupState, keyRow *values.List) int {
 }
 
 func createQueryGroupRow(sourceRow *values.List, scalarSlots []bool) *values.List {
-	groupRow := values.NewList(0, semtypes.LIST, values.NeverValue)
+	groupRow := values.NewList(0, semtypes.LIST, nil)
 	for slot, isScalar := range scalarSlots {
 		value := sourceRow.Get(slot)
 		if isScalar {
 			groupRow.Append(value)
 			continue
 		}
-		valuesForGroup := values.NewList(0, semtypes.LIST, values.NeverValue)
+		valuesForGroup := values.NewList(0, semtypes.LIST, nil)
 		valuesForGroup.Append(value)
 		groupRow.Append(valuesForGroup)
 	}
@@ -229,9 +229,9 @@ func queryCollect(rows *values.List, slotCount int) (*values.List, error) {
 	if slotCount < 0 {
 		return nil, fmt.Errorf("slot count cannot be negative")
 	}
-	resultRow := values.NewList(0, semtypes.LIST, values.NeverValue)
+	resultRow := values.NewList(0, semtypes.LIST, nil)
 	for slot := 0; slot < slotCount; slot++ {
-		resultRow.Append(values.NewList(0, semtypes.LIST, values.NeverValue))
+		resultRow.Append(values.NewList(0, semtypes.LIST, nil))
 	}
 	for rowIndex := 0; rowIndex < rows.Len(); rowIndex++ {
 		row, ok := rows.Get(rowIndex).(*values.List)
