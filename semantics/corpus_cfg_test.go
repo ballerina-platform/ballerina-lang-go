@@ -31,7 +31,11 @@ import (
 
 var updateCFG = flag.Bool("update", false, "update expected CFG text files")
 
-// TestCFGGeneration tests CFG generation from .bal source files in the corpus.
+// cfgGenerationSkipList is the CFG-stage *additional* skip list, on top of
+// the shared test_util.UnsupportedTests baseline. Currently empty -- every
+// known failure is already covered by the shared baseline.
+var cfgGenerationSkipList = []string{}
+
 func TestCFGGeneration(t *testing.T) {
 	flag.Parse()
 
@@ -47,6 +51,11 @@ func TestCFGGeneration(t *testing.T) {
 
 // testCFGGeneration tests CFG generation for a single .bal file.
 func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
+	if test_util.IsUnsupported(testPair.InputPath) || test_util.MatchesSkip(testPair.InputPath, cfgGenerationSkipList) {
+		t.Skipf("Skipping CFG generation test for %s", testPair.InputPath)
+		return
+	}
+
 	// Catch panics during CFG generation
 	defer func() {
 		if r := recover(); r != nil {

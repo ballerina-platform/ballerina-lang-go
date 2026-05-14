@@ -1,0 +1,37 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad true
+    x = %1;
+    %3 = <nil|boolean>(x)
+    %4 = %3;
+    %5 = println(%4) -> bb1;
+  }
+  bb1 {
+    %6 = ConstantLoad <nil>
+    x = %6;
+    %8 = <nil|boolean>(x)
+    %9 = %8;
+    %10 = ConstantLoad <nil>
+    %11 = %10;
+    %7 = == %9 %11;
+    %7 ? bb2 : bb4;
+  }
+  bb2 {
+    %12 = ConstantLoad nil
+    %13 = println(%12) -> bb3;
+  }
+  bb3 {
+    GOTO bb4;
+  }
+  bb4 {
+    %14 = ConstantLoad hello
+    x = %14;
+    %15 = <boolean|string>(x)
+    %16 = println(%15) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

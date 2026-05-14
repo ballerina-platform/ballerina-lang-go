@@ -50,6 +50,21 @@ func (m *Map) Get(key string) (BalValue, bool) {
 	return nil, false
 }
 
+// FillingGet returns the value at key, inserting a fresh filler value when
+// the key is absent. Used to support nested member lvalue assignments like
+// `m[k1][k2] = v`, where intermediate containers must be auto-created.
+func (m *Map) FillingGet(key string, filler FillerFactory) BalValue {
+	if e, ok := m.data[key]; ok {
+		return e.value
+	}
+	if filler == nil {
+		panic(NewErrorWithMessage("no filler value"))
+	}
+	v := filler()
+	m.Put(key, v)
+	return v
+}
+
 func (m *Map) Put(key string, value BalValue) {
 	if e, ok := m.data[key]; ok {
 		e.value = value

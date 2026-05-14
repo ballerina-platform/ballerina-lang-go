@@ -860,7 +860,7 @@ func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConst
 	for _, field := range expr.Fields {
 		kv := field.(*ast.BLangMappingKeyValueField)
 
-		if !kv.Key.ComputedKey {
+		if kv.Key.Kind != ast.MappingKeyComputed {
 			if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
 				name := varRef.VariableName.Value
 				lit := &ast.BLangLiteral{

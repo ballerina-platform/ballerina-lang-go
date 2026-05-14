@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type birReader struct {
@@ -532,27 +533,38 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		}
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD,
 		bir.INSTRUCTION_KIND_ARRAY_STORE, bir.INSTRUCTION_KIND_ARRAY_LOAD,
+		bir.INSTRUCTION_KIND_ARRAY_FILLING_LOAD,
+		bir.INSTRUCTION_KIND_MAP_FILLING_LOAD,
 		bir.INSTRUCTION_KIND_OBJECT_STORE, bir.INSTRUCTION_KIND_OBJECT_LOAD:
 		lhsOp := br.readOperand(varMap)
 		keyOp := br.readOperand(varMap)
 		rhsOp := br.readOperand(varMap)
+		var filler values.FillerFactory
+		if instructionKind == bir.INSTRUCTION_KIND_MAP_FILLING_LOAD && lhsOp != nil && lhsOp.VariableDcl != nil {
+			// After filling, the loaded value is guaranteed non-nil, so strip NIL
+			// from the operand type before looking up the filler factory.
+			tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+			valueType := semtypes.Diff(lhsOp.VariableDcl.GetType(), semtypes.NIL)
+			filler, _ = values.FillerFactoryFor(tyCx, valueType)
+		}
 		return &bir.FieldAccess{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Kind:  instructionKind,
-			KeyOp: keyOp,
-			RhsOp: rhsOp,
+			Kind:   instructionKind,
+			KeyOp:  keyOp,
+			RhsOp:  rhsOp,
+			Filler: filler,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
 		valuesCount := br.readLength()
-		values := make([]*bir.BIROperand, valuesCount)
+		arrayValues := make([]*bir.BIROperand, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
-			values[k] = br.readOperand(varMap)
+			arrayValues[k] = br.readOperand(varMap)
 		}
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
@@ -561,7 +573,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			},
 			Type:   ty,
 			SizeOp: sizeOp,
-			Values: values,
+			Values: arrayValues,
+			Filler: br.restFillerFactoryForListType(ty),
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
@@ -896,9 +909,9 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		var idx int32
 		br.read(&idx)
 		str := br.getStringFromCP(int(idx))
-		r := new(big.Rat)
-		if _, ok := r.SetString(str); !ok {
-			panic(fmt.Sprintf("invalid decimal value: %s", str))
+		r, err := decimal.FromString(str)
+		if err != nil {
+			panic(fmt.Sprintf("invalid decimal value %q: %v", str, err))
 		}
 		return r
 	case model.TypeTags_NIL:
@@ -914,6 +927,19 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		}
 		return br.getFromCP(int(idx))
 	}
+}
+
+func (br *birReader) restFillerFactoryForListType(ty semtypes.SemType) values.FillerFactory {
+	if ty == nil {
+		return nil
+	}
+	tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+	lat := semtypes.ToListAtomicType(tyCx, ty)
+	if lat == nil {
+		return nil
+	}
+	factory, _ := values.FillerFactoryFor(tyCx, lat.Rest())
+	return factory
 }
 
 func (br *birReader) read(v any) {

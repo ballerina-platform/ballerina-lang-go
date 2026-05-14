@@ -42,17 +42,16 @@ class NumberIterator {
       %12 = self[%13];
       %9 = %12[%10];
       val = %9;
-      %17 = ConstantLoad idx
-      %16 = self[%17];
-      %18 = %16;
-      %19 = ConstantLoad 1
-      %20 = %19;
-      %15 = + %18 %20;
-      %21 = ConstantLoad idx
-      self[%21] = %15;
-      %22 = ConstantLoad value
-      %23 = newMap {| value: int, never... |}{%22=val}
-      %0 = %23;
+      %15 = ConstantLoad idx
+      %16 = self[%15];
+      %17 = %16;
+      %18 = ConstantLoad 1
+      %19 = %18;
+      %20 = + %17 %19;
+      self[%15] = %20;
+      %21 = ConstantLoad value
+      %22 = newMap {| value: int, never... |}{%21=val}
+      %0 = %22;
       return;
     }
   }

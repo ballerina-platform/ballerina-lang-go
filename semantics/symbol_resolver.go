@@ -28,11 +28,14 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 
 	array "ballerina-lang-go/lib/array/compile"
+	bError "ballerina-lang-go/lib/error/compile"
 	bHttp "ballerina-lang-go/lib/http/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
+	bString "ballerina-lang-go/lib/string/compile"
+	bValue "ballerina-lang-go/lib/value/compile"
 )
 
 type scopeKind int
@@ -486,6 +489,24 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 					key = imp.Alias.Value
 				}
 				result[key] = bMap.GetMapSymbols(ctx)
+			} else if isLangImport(&imp, "error") {
+				key := "error"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bError.GetErrorSymbols(ctx)
+			} else if isLangImport(&imp, "string") {
+				key := "string"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bString.GetStringSymbols(ctx)
+			} else if isLangImport(&imp, "value") {
+				key := "value"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bValue.GetValueSymbols(ctx)
 			} else if isHttpImport(&imp) {
 				key := "http"
 				if imp.Alias != nil {
@@ -542,8 +563,11 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
+	result[bError.PackageName] = bError.GetErrorSymbols(ctx)
 	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
+	result[bString.PackageName] = bString.GetStringSymbols(ctx)
+	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
 	return result
 }
 
@@ -624,19 +648,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 }
 
 func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMappingConstructorExpr) ast.Visitor {
-	blockResolver := newBlockSymbolResolverWithBlockScope(resolver, n)
-	for _, field := range n.Fields {
-		if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
-			if !kv.Key.ComputedKey {
-				if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
-					name := varRef.VariableName.Value
-					symbol := model.NewValueSymbol(name, false, false, false)
-					addSymbolAndSetOnNode(blockResolver, name, &symbol, varRef)
-				}
-			}
-		}
-	}
-	return blockResolver
+	return newBlockSymbolResolverWithBlockScope(resolver, n)
 }
 
 // since we don't have type information we can't determine if this is an actual method call or need to be converted

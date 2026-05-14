@@ -19,10 +19,9 @@ package exec
 import (
 	"fmt"
 	"math"
-	"math/big"
-	"strconv"
 
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
@@ -87,7 +86,8 @@ func execNewObject(ctx *Context, newObject *bir.NewObject, frame *Frame) {
 	classDef := ctx.GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
 	for _, field := range classDef.Fields {
-		fieldValues[field.Name] = values.DefaultValueForType(field.Ty)
+		fv, _ := values.FillerValue(ctx.TypeCheckContext(), field.Ty)
+		fieldValues[field.Name] = fv
 	}
 	methodKeys := make(map[string]string, len(classDef.VTable))
 	for methodName, method := range classDef.VTable {
@@ -116,18 +116,43 @@ func execArrayLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	setOperandValue(ctx, access.LhsOp, frame, list.Get(idx))
 }
 
+func execArrayFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	list := getOperandValue(ctx, access.RhsOp, frame).(*values.List)
+	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
+	if idx < 0 {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
+	}
+	setOperandValue(ctx, access.LhsOp, frame, list.FillingGet(idx))
+}
+
 func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
-	m := getOperandValue(ctx, access.LhsOp, frame).(*values.Map)
-	keyVal := getOperandValue(ctx, access.KeyOp, frame)
-	keyStr := keyVal.(string)
+	container := getOperandValue(ctx, access.LhsOp, frame)
+	keyStr := getOperandValue(ctx, access.KeyOp, frame).(string)
+	if container == nil {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", keyStr)))
+	}
+	m := container.(*values.Map)
 	valueVal := getOperandValue(ctx, access.RhsOp, frame)
 	m.Put(keyStr, valueVal)
 }
 
-func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
-	m := getOperandValue(ctx, access.RhsOp, frame).(*values.Map)
+func execMapFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	container := getOperandValue(ctx, access.RhsOp, frame)
 	key := getOperandValue(ctx, access.KeyOp, frame).(string)
-	value, _ := m.Get(key)
+	if container == nil {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", key)))
+	}
+	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(key, access.Filler))
+}
+
+func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	container := getOperandValue(ctx, access.RhsOp, frame)
+	key := getOperandValue(ctx, access.KeyOp, frame).(string)
+	if container == nil {
+		setOperandValue(ctx, access.LhsOp, frame, nil)
+		return
+	}
+	value, _ := container.(*values.Map).Get(key)
 	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 
@@ -199,29 +224,23 @@ func toInt(value any) int64 {
 		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
 			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast out-of-range value %v to int", v)))
 		}
-		return int64(v)
-	case *big.Rat:
+		return int64(math.RoundToEven(v))
+	case *decimal.Decimal:
 		return decimalToInt(v)
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", value)))
 	}
 }
 
-func decimalToInt(v *big.Rat) int64 {
-	num := v.Num()
-	denom := v.Denom()
-	q, r := new(big.Int).QuoRem(num, denom, new(big.Int))
-	if r.Sign() != 0 && new(big.Int).Mul(new(big.Int).Abs(r), big.NewInt(2)).Cmp(denom) >= 0 {
-		if num.Sign() >= 0 {
-			q.Add(q, big.NewInt(1))
-		} else {
-			q.Sub(q, big.NewInt(1))
-		}
+func decimalToInt(v *decimal.Decimal) int64 {
+	n, ok, err := v.Int64()
+	if err != nil {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("cannot convert %v to int: %v", v, err)))
 	}
-	if !q.IsInt64() {
+	if !ok {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("cannot convert %v to int64: value out of range", v)))
 	}
-	return q.Int64()
+	return n
 }
 
 func toFloat(value any) float64 {
@@ -230,24 +249,31 @@ func toFloat(value any) float64 {
 		return float64(v)
 	case float64:
 		return v
-	case *big.Rat:
-		f, _ := v.Float64()
-		return f
+	case *decimal.Decimal:
+		return v.Float64()
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to float", value)))
 	}
 }
 
-func toDecimal(value any) *big.Rat {
+// floatToDecimal converts an IEEE 754 float64 into a Ballerina decimal.
+// Ballerina decimals do not support NaN, infinities, or subnormals, so any
+// such input triggers a runtime panic with the spec-mandated message.
+func floatToDecimal(v float64) *decimal.Decimal {
+	d, err := decimal.FromFloat64(v)
+	if err != nil {
+		panic(values.NewErrorWithMessage(err.Error()))
+	}
+	return d
+}
+
+func toDecimal(value any) *decimal.Decimal {
 	switch v := value.(type) {
 	case int64:
-		return big.NewRat(v, 1)
+		return decimal.FromInt64(v)
 	case float64:
-		r := new(big.Rat)
-		s := strconv.FormatFloat(v, 'g', -1, 64)
-		r.SetString(s)
-		return r
-	case *big.Rat:
+		return floatToDecimal(v)
+	case *decimal.Decimal:
 		return v
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))

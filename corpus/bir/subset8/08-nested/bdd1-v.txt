@@ -1,0 +1,803 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %3 = bddAtom(%2) -> bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %6 = bddAtom(%5) -> bb2;
+  }
+  bb2 {
+    %7 = bddUnion(%3,%6) -> bb3;
+  }
+  bb3 {
+    b1 = %7;
+    %9 = ConstantLoad 2
+    %10 = %9;
+    %11 = bddAtom(%10) -> bb4;
+  }
+  bb4 {
+    %12 = ConstantLoad 1
+    %13 = %12;
+    %14 = bddAtom(%13) -> bb5;
+  }
+  bb5 {
+    %15 = bddUnion(%11,%14) -> bb6;
+  }
+  bb6 {
+    b2 = %15;
+    %17 = == b1 b2;
+    %18 = %17;
+    %19 = println(%18) -> bb7;
+  }
+  bb7 {
+    %20 = ConstantLoad 1
+    %21 = %20;
+    %22 = bddAtom(%21) -> bb8;
+  }
+  bb8 {
+    %23 = ConstantLoad 2
+    %24 = %23;
+    %25 = bddAtom(%24) -> bb9;
+  }
+  bb9 {
+    %26 = bddIntersect(%22,%25) -> bb10;
+  }
+  bb10 {
+    b3 = %26;
+    %28 = == b1 b3;
+    %29 = %28;
+    %30 = println(%29) -> bb11;
+  }
+  bb11 {
+    return;
+  }
+}
+bddAtom(int) -> {| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %2 = ConstantLoad atom
+    %3 = ConstantLoad left
+    %4 = ConstantLoad true
+    %5 = ConstantLoad middle
+    %6 = ConstantLoad false
+    %7 = ConstantLoad right
+    %8 = ConstantLoad false
+    %9 = newMap {| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{%2=atom, %3=%4, %5=%6, %7=%8}
+    %0 = %9;
+    return;
+  }
+}
+bddUnion(boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |},boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}) -> boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %3 = unknown b1 b2;
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = b1;
+    return;
+  }
+  bb2 {
+    %4 = b1 is boolean
+    %4 ? bb3 : bb6;
+  }
+  bb3 {
+    %6 = ConstantLoad true
+    %7 = %6;
+    %5 = == b1 %7;
+    %5 ? bb4 : bb5;
+  }
+  bb4 {
+    %8 = ConstantLoad true
+    %0 = %8;
+    return;
+  }
+  bb5 {
+    %0 = b2;
+    return;
+  }
+  bb6 {
+    %9 = b2 is boolean
+    %9 ? bb7 : bb10;
+  }
+  bb7 {
+    %11 = ConstantLoad true
+    %12 = %11;
+    %10 = == b2 %12;
+    %10 ? bb8 : bb9;
+  }
+  bb8 {
+    %13 = ConstantLoad true
+    %0 = %13;
+    return;
+  }
+  bb9 {
+    %0 = b1;
+    return;
+  }
+  bb10 {
+    %15 = ConstantLoad atom
+    %14 = b1[%15];
+    %16 = %14;
+    %18 = ConstantLoad atom
+    %17 = b2[%18];
+    %19 = %17;
+    %20 = atomCmp(%16,%19) -> bb11;
+  }
+  bb11 {
+    cmp = %20;
+    %23 = cmp;
+    %24 = ConstantLoad 0
+    %25 = %24;
+    %22 = < %23 %25;
+    %22 ? bb12 : bb15;
+  }
+  bb12 {
+    %27 = ConstantLoad atom
+    %26 = b1[%27];
+    %28 = %26;
+    %30 = ConstantLoad left
+    %29 = b1[%30];
+    %32 = ConstantLoad middle
+    %31 = b1[%32];
+    %33 = bddUnion(%31,b2) -> bb13;
+  }
+  bb13 {
+    %35 = ConstantLoad right
+    %34 = b1[%35];
+    %36 = bddCreate(%28,%29,%33,%34) -> bb14;
+  }
+  bb14 {
+    %0 = %36;
+    return;
+  }
+  bb15 {
+    %38 = cmp;
+    %39 = ConstantLoad 0
+    %40 = %39;
+    %37 = > %38 %40;
+    %37 ? bb16 : bb19;
+  }
+  bb16 {
+    %42 = ConstantLoad atom
+    %41 = b2[%42];
+    %43 = %41;
+    %45 = ConstantLoad left
+    %44 = b2[%45];
+    %47 = ConstantLoad middle
+    %46 = b2[%47];
+    %48 = bddUnion(b1,%46) -> bb17;
+  }
+  bb17 {
+    %50 = ConstantLoad right
+    %49 = b2[%50];
+    %51 = bddCreate(%43,%44,%48,%49) -> bb18;
+  }
+  bb18 {
+    %0 = %51;
+    return;
+  }
+  bb19 {
+    %53 = ConstantLoad atom
+    %52 = b1[%53];
+    %54 = %52;
+    %56 = ConstantLoad left
+    %55 = b1[%56];
+    %58 = ConstantLoad left
+    %57 = b2[%58];
+    %59 = bddUnion(%55,%57) -> bb20;
+  }
+  bb20 {
+    %61 = ConstantLoad middle
+    %60 = b1[%61];
+    %63 = ConstantLoad middle
+    %62 = b2[%63];
+    %64 = bddUnion(%60,%62) -> bb21;
+  }
+  bb21 {
+    %66 = ConstantLoad right
+    %65 = b1[%66];
+    %68 = ConstantLoad right
+    %67 = b2[%68];
+    %69 = bddUnion(%65,%67) -> bb22;
+  }
+  bb22 {
+    %70 = bddCreate(%54,%59,%64,%69) -> bb23;
+  }
+  bb23 {
+    %0 = %70;
+    return;
+  }
+  bb24 {
+    GOTO bb25;
+  }
+  bb25 {
+    GOTO bb26;
+  }
+  bb26 {
+    GOTO bb27;
+  }
+  bb27 {
+    GOTO bb28;
+  }
+  bb28 {
+    return;
+  }
+}
+bddIntersect(boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |},boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}) -> boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %3 = unknown b1 b2;
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = b1;
+    return;
+  }
+  bb2 {
+    %4 = b1 is boolean
+    %4 ? bb3 : bb6;
+  }
+  bb3 {
+    %6 = ConstantLoad true
+    %7 = %6;
+    %5 = == b1 %7;
+    %5 ? bb4 : bb5;
+  }
+  bb4 {
+    %0 = b2;
+    return;
+  }
+  bb5 {
+    %8 = ConstantLoad false
+    %0 = %8;
+    return;
+  }
+  bb6 {
+    %9 = b2 is boolean
+    %9 ? bb7 : bb10;
+  }
+  bb7 {
+    %11 = ConstantLoad true
+    %12 = %11;
+    %10 = == b2 %12;
+    %10 ? bb8 : bb9;
+  }
+  bb8 {
+    %0 = b1;
+    return;
+  }
+  bb9 {
+    %13 = ConstantLoad false
+    %0 = %13;
+    return;
+  }
+  bb10 {
+    %15 = ConstantLoad atom
+    %14 = b1[%15];
+    %16 = %14;
+    %18 = ConstantLoad atom
+    %17 = b2[%18];
+    %19 = %17;
+    %20 = atomCmp(%16,%19) -> bb11;
+  }
+  bb11 {
+    cmp = %20;
+    %23 = cmp;
+    %24 = ConstantLoad 0
+    %25 = %24;
+    %22 = < %23 %25;
+    %22 ? bb12 : bb17;
+  }
+  bb12 {
+    %27 = ConstantLoad atom
+    %26 = b1[%27];
+    %28 = %26;
+    %30 = ConstantLoad left
+    %29 = b1[%30];
+    %31 = bddIntersect(%29,b2) -> bb13;
+  }
+  bb13 {
+    %33 = ConstantLoad middle
+    %32 = b1[%33];
+    %34 = bddIntersect(%32,b2) -> bb14;
+  }
+  bb14 {
+    %36 = ConstantLoad right
+    %35 = b1[%36];
+    %37 = bddIntersect(%35,b2) -> bb15;
+  }
+  bb15 {
+    %38 = bddCreate(%28,%31,%34,%37) -> bb16;
+  }
+  bb16 {
+    %0 = %38;
+    return;
+  }
+  bb17 {
+    %40 = cmp;
+    %41 = ConstantLoad 0
+    %42 = %41;
+    %39 = > %40 %42;
+    %39 ? bb18 : bb23;
+  }
+  bb18 {
+    %44 = ConstantLoad atom
+    %43 = b2[%44];
+    %45 = %43;
+    %47 = ConstantLoad left
+    %46 = b2[%47];
+    %48 = bddIntersect(b1,%46) -> bb19;
+  }
+  bb19 {
+    %50 = ConstantLoad middle
+    %49 = b2[%50];
+    %51 = bddIntersect(b1,%49) -> bb20;
+  }
+  bb20 {
+    %53 = ConstantLoad right
+    %52 = b2[%53];
+    %54 = bddIntersect(b1,%52) -> bb21;
+  }
+  bb21 {
+    %55 = bddCreate(%45,%48,%51,%54) -> bb22;
+  }
+  bb22 {
+    %0 = %55;
+    return;
+  }
+  bb23 {
+    %57 = ConstantLoad atom
+    %56 = b1[%57];
+    %58 = %56;
+    %60 = ConstantLoad left
+    %59 = b1[%60];
+    %62 = ConstantLoad middle
+    %61 = b1[%62];
+    %63 = bddUnion(%59,%61) -> bb24;
+  }
+  bb24 {
+    %65 = ConstantLoad left
+    %64 = b2[%65];
+    %67 = ConstantLoad middle
+    %66 = b2[%67];
+    %68 = bddUnion(%64,%66) -> bb25;
+  }
+  bb25 {
+    %69 = bddIntersect(%63,%68) -> bb26;
+  }
+  bb26 {
+    %70 = ConstantLoad false
+    %71 = %70;
+    %73 = ConstantLoad right
+    %72 = b1[%73];
+    %75 = ConstantLoad middle
+    %74 = b1[%75];
+    %76 = bddUnion(%72,%74) -> bb27;
+  }
+  bb27 {
+    %78 = ConstantLoad right
+    %77 = b2[%78];
+    %80 = ConstantLoad middle
+    %79 = b2[%80];
+    %81 = bddUnion(%77,%79) -> bb28;
+  }
+  bb28 {
+    %82 = bddIntersect(%76,%81) -> bb29;
+  }
+  bb29 {
+    %83 = bddCreate(%58,%69,%71,%82) -> bb30;
+  }
+  bb30 {
+    %0 = %83;
+    return;
+  }
+  bb31 {
+    GOTO bb32;
+  }
+  bb32 {
+    GOTO bb33;
+  }
+  bb33 {
+    GOTO bb34;
+  }
+  bb34 {
+    GOTO bb35;
+  }
+  bb35 {
+    return;
+  }
+}
+bddDiff(boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |},boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}) -> boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %3 = unknown b1 b2;
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad false
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %5 = b2 is boolean
+    %5 ? bb3 : bb6;
+  }
+  bb3 {
+    %7 = ConstantLoad true
+    %8 = %7;
+    %6 = == b2 %8;
+    %6 ? bb4 : bb5;
+  }
+  bb4 {
+    %9 = ConstantLoad false
+    %0 = %9;
+    return;
+  }
+  bb5 {
+    %0 = b1;
+    return;
+  }
+  bb6 {
+    %10 = b1 is boolean
+    %10 ? bb7 : bb11;
+  }
+  bb7 {
+    %12 = ConstantLoad true
+    %13 = %12;
+    %11 = == b1 %13;
+    %11 ? bb8 : bb10;
+  }
+  bb8 {
+    %14 = bddComplement(b2) -> bb9;
+  }
+  bb9 {
+    %0 = %14;
+    return;
+  }
+  bb10 {
+    %15 = ConstantLoad false
+    %0 = %15;
+    return;
+  }
+  bb11 {
+    %17 = ConstantLoad atom
+    %16 = b1[%17];
+    %18 = %16;
+    %20 = ConstantLoad atom
+    %19 = b2[%20];
+    %21 = %19;
+    %22 = atomCmp(%18,%21) -> bb12;
+  }
+  bb12 {
+    cmp = %22;
+    %25 = cmp;
+    %26 = ConstantLoad 0
+    %27 = %26;
+    %24 = < %25 %27;
+    %24 ? bb13 : bb19;
+  }
+  bb13 {
+    %29 = ConstantLoad atom
+    %28 = b1[%29];
+    %30 = %28;
+    %32 = ConstantLoad left
+    %31 = b1[%32];
+    %34 = ConstantLoad middle
+    %33 = b1[%34];
+    %35 = bddUnion(%31,%33) -> bb14;
+  }
+  bb14 {
+    %36 = bddDiff(%35,b2) -> bb15;
+  }
+  bb15 {
+    %37 = ConstantLoad false
+    %38 = %37;
+    %40 = ConstantLoad right
+    %39 = b1[%40];
+    %42 = ConstantLoad middle
+    %41 = b1[%42];
+    %43 = bddUnion(%39,%41) -> bb16;
+  }
+  bb16 {
+    %44 = bddDiff(%43,b2) -> bb17;
+  }
+  bb17 {
+    %45 = bddCreate(%30,%36,%38,%44) -> bb18;
+  }
+  bb18 {
+    %0 = %45;
+    return;
+  }
+  bb19 {
+    %47 = cmp;
+    %48 = ConstantLoad 0
+    %49 = %48;
+    %46 = > %47 %49;
+    %46 ? bb20 : bb26;
+  }
+  bb20 {
+    %51 = ConstantLoad atom
+    %50 = b2[%51];
+    %52 = %50;
+    %54 = ConstantLoad left
+    %53 = b2[%54];
+    %56 = ConstantLoad middle
+    %55 = b2[%56];
+    %57 = bddUnion(%53,%55) -> bb21;
+  }
+  bb21 {
+    %58 = bddDiff(b1,%57) -> bb22;
+  }
+  bb22 {
+    %59 = ConstantLoad false
+    %60 = %59;
+    %62 = ConstantLoad right
+    %61 = b2[%62];
+    %64 = ConstantLoad middle
+    %63 = b2[%64];
+    %65 = bddUnion(%61,%63) -> bb23;
+  }
+  bb23 {
+    %66 = bddDiff(b1,%65) -> bb24;
+  }
+  bb24 {
+    %67 = bddCreate(%52,%58,%60,%66) -> bb25;
+  }
+  bb25 {
+    %0 = %67;
+    return;
+  }
+  bb26 {
+    %69 = ConstantLoad atom
+    %68 = b1[%69];
+    %70 = %68;
+    %72 = ConstantLoad left
+    %71 = b1[%72];
+    %74 = ConstantLoad left
+    %73 = b2[%74];
+    %75 = bddDiff(%71,%73) -> bb27;
+  }
+  bb27 {
+    %77 = ConstantLoad middle
+    %76 = b1[%77];
+    %79 = ConstantLoad middle
+    %78 = b2[%79];
+    %80 = bddDiff(%76,%78) -> bb28;
+  }
+  bb28 {
+    %82 = ConstantLoad right
+    %81 = b1[%82];
+    %84 = ConstantLoad right
+    %83 = b2[%84];
+    %85 = bddDiff(%81,%83) -> bb29;
+  }
+  bb29 {
+    %86 = bddCreate(%70,%75,%80,%85) -> bb30;
+  }
+  bb30 {
+    %0 = %86;
+    return;
+  }
+  bb31 {
+    GOTO bb32;
+  }
+  bb32 {
+    GOTO bb33;
+  }
+  bb33 {
+    GOTO bb34;
+  }
+  bb34 {
+    GOTO bb35;
+  }
+  bb35 {
+    return;
+  }
+}
+bddComplement(boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}) -> boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %2 = b is boolean
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %3 = ! b;
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %6 = ConstantLoad right
+    %5 = b[%6];
+    %7 = ConstantLoad false
+    %8 = %7;
+    %4 = unknown %5 %8;
+    %4 ? bb3 : bb8;
+  }
+  bb3 {
+    %10 = ConstantLoad atom
+    %9 = b[%10];
+    %11 = %9;
+    %12 = ConstantLoad false
+    %13 = %12;
+    %15 = ConstantLoad left
+    %14 = b[%15];
+    %17 = ConstantLoad middle
+    %16 = b[%17];
+    %18 = bddUnion(%14,%16) -> bb4;
+  }
+  bb4 {
+    %19 = bddComplement(%18) -> bb5;
+  }
+  bb5 {
+    %21 = ConstantLoad middle
+    %20 = b[%21];
+    %22 = bddComplement(%20) -> bb6;
+  }
+  bb6 {
+    %23 = bddCreate(%11,%13,%19,%22) -> bb7;
+  }
+  bb7 {
+    %0 = %23;
+    return;
+  }
+  bb8 {
+    %26 = ConstantLoad left
+    %25 = b[%26];
+    %27 = ConstantLoad false
+    %28 = %27;
+    %24 = unknown %25 %28;
+    %24 ? bb9 : bb14;
+  }
+  bb9 {
+    %30 = ConstantLoad atom
+    %29 = b[%30];
+    %31 = %29;
+    %33 = ConstantLoad middle
+    %32 = b[%33];
+    %34 = bddComplement(%32) -> bb10;
+  }
+  bb10 {
+    %36 = ConstantLoad right
+    %35 = b[%36];
+    %38 = ConstantLoad middle
+    %37 = b[%38];
+    %39 = bddUnion(%35,%37) -> bb11;
+  }
+  bb11 {
+    %40 = bddComplement(%39) -> bb12;
+  }
+  bb12 {
+    %41 = ConstantLoad false
+    %42 = %41;
+    %43 = bddCreate(%31,%34,%40,%42) -> bb13;
+  }
+  bb13 {
+    %0 = %43;
+    return;
+  }
+  bb14 {
+    %46 = ConstantLoad middle
+    %45 = b[%46];
+    %47 = ConstantLoad false
+    %48 = %47;
+    %44 = unknown %45 %48;
+    %44 ? bb15 : bb21;
+  }
+  bb15 {
+    %50 = ConstantLoad atom
+    %49 = b[%50];
+    %51 = %49;
+    %53 = ConstantLoad left
+    %52 = b[%53];
+    %54 = bddComplement(%52) -> bb16;
+  }
+  bb16 {
+    %56 = ConstantLoad left
+    %55 = b[%56];
+    %58 = ConstantLoad right
+    %57 = b[%58];
+    %59 = bddUnion(%55,%57) -> bb17;
+  }
+  bb17 {
+    %60 = bddComplement(%59) -> bb18;
+  }
+  bb18 {
+    %62 = ConstantLoad right
+    %61 = b[%62];
+    %63 = bddComplement(%61) -> bb19;
+  }
+  bb19 {
+    %64 = bddCreate(%51,%54,%60,%63) -> bb20;
+  }
+  bb20 {
+    %0 = %64;
+    return;
+  }
+  bb21 {
+    %66 = ConstantLoad atom
+    %65 = b[%66];
+    %67 = %65;
+    %69 = ConstantLoad left
+    %68 = b[%69];
+    %71 = ConstantLoad middle
+    %70 = b[%71];
+    %72 = bddUnion(%68,%70) -> bb22;
+  }
+  bb22 {
+    %73 = bddComplement(%72) -> bb23;
+  }
+  bb23 {
+    %74 = ConstantLoad false
+    %75 = %74;
+    %77 = ConstantLoad right
+    %76 = b[%77];
+    %79 = ConstantLoad middle
+    %78 = b[%79];
+    %80 = bddUnion(%76,%78) -> bb24;
+  }
+  bb24 {
+    %81 = bddComplement(%80) -> bb25;
+  }
+  bb25 {
+    %82 = bddCreate(%67,%73,%75,%81) -> bb26;
+  }
+  bb26 {
+    %0 = %82;
+    return;
+  }
+  bb27 {
+    GOTO bb28;
+  }
+  bb28 {
+    GOTO bb29;
+  }
+  bb29 {
+    GOTO bb30;
+  }
+  bb30 {
+    return;
+  }
+}
+bddCreate(int,boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |},boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |},boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}) -> boolean|{| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{
+  bb0 {
+    %6 = ConstantLoad true
+    %7 = %6;
+    %5 = == middle %7;
+    %5 ? bb1 : bb2;
+  }
+  bb1 {
+    %8 = ConstantLoad true
+    %0 = %8;
+    return;
+  }
+  bb2 {
+    %9 = == left right;
+    %9 ? bb3 : bb5;
+  }
+  bb3 {
+    %10 = bddUnion(left,middle) -> bb4;
+  }
+  bb4 {
+    %0 = %10;
+    return;
+  }
+  bb5 {
+    %11 = ConstantLoad atom
+    %12 = ConstantLoad left
+    %13 = ConstantLoad middle
+    %14 = ConstantLoad right
+    %15 = newMap {| atom: int, left: boolean|..., middle: boolean|..., right: boolean|..., never... |}{%11=atom, %12=left, %13=middle, %14=right}
+    %0 = %15;
+    return;
+  }
+}
+atomCmp(int,int) -> int{
+  bb0 {
+    %4 = a1;
+    %5 = a2;
+    %3 = - %4 %5;
+    %0 = %3;
+    return;
+  }
+}
