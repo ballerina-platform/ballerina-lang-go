@@ -171,9 +171,6 @@ var UnsupportedTests = []string{
 	"subset8/08-list/10-e.bal",
 	"subset8/08-mapping/9-e.bal",
 
-	// Numeric type cast does not re-check membership for narrow subtypes (e.g. `<2|3|4>5`).
-	"subset8/08-inttest/typecast1-p.bal",
-
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/441
 	"subset8/08-bug/unusedimport-e.bal",
 

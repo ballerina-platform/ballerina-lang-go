@@ -219,16 +219,28 @@ func castValue(ctx *extern.Context, value values.BalValue, targetType semtypes.S
 	if semtypes.IsSubtype(typeCtx, valueType, targetType) {
 		return value
 	}
+	var converted values.BalValue
 	switch {
 	case semtypes.IsSubtypeSimple(targetType, semtypes.INT):
-		return toInt(value)
+		converted = toInt(value)
 	case semtypes.IsSubtypeSimple(targetType, semtypes.FLOAT):
-		return toFloat(value)
+		converted = toFloat(value)
 	case semtypes.IsSubtypeSimple(targetType, semtypes.DECIMAL):
-		return toDecimal(value)
+		converted = toDecimal(value)
+	default:
+		panic(badTypeCastError(typeCtx, valueType, targetType))
 	}
-	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
-		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType))))
+	// Numeric conversion only guarantees the basic type; narrow subtypes
+	// (e.g. `2|3|4`, `int:Signed8`, `byte`) still require a membership check.
+	if !semtypes.IsSubtype(typeCtx, values.SemTypeForValue(converted), targetType) {
+		panic(badTypeCastError(typeCtx, valueType, targetType))
+	}
+	return converted
+}
+
+func badTypeCastError(typeCtx semtypes.Context, valueType, targetType semtypes.SemType) *values.Error {
+	return values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
+		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType)))
 }
 
 func toInt(value any) int64 {
