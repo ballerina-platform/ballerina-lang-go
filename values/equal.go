@@ -27,7 +27,7 @@ type refPair struct {
 	a, b unsafe.Pointer
 }
 
-// DeepEquals implementes DeepEquals abstract operation [https://ballerina.io/spec/lang/master/#DeepEquals].
+// DeepEquals implements DeepEquals abstract operation [https://ballerina.io/spec/lang/master/#DeepEquals].
 func DeepEquals(v1, v2 BalValue) bool {
 	return deepEqual(v1, v2, nil)
 }
@@ -42,7 +42,7 @@ func deepEqual(v1, v2 BalValue, visited map[refPair]struct{}) bool {
 		return ok && a == b
 	case float64:
 		b, ok := v2.(float64)
-		return ok && a == b
+		return ok && FloatDeepEqual(a, b)
 	case string:
 		b, ok := v2.(string)
 		return ok && a == b
