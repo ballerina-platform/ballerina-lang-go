@@ -100,7 +100,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		Fields: []bir.ObjectField{
 			{Name: "url", Ty: semtypes.STRING},
 			{Name: "timeout", Ty: semtypes.DECIMAL},
-			{Name: "followRedirects", Ty: semtypes.BOOLEAN},
+			{Name: "followRedirects", Ty: semtypes.MAPPING},
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
@@ -149,7 +149,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			url := args[1].(string)
 
 			timeout := big.NewRat(30, 1)
-			followRedirects := true
+			var followRedirects pal.FollowRedirects // Enabled=false by default (Ballerina spec)
 			httpVersion := "2.0"
 
 			var tlsCfg pal.TLSConfig
@@ -161,8 +161,22 @@ func initHttpModule(rt *runtime.Runtime) {
 						}
 					}
 					if v, ok := cfg.Get("followRedirects"); ok {
-						if b, ok := v.(bool); ok {
-							followRedirects = b
+						if frMap, ok := v.(*values.Map); ok {
+							if ev, ok := frMap.Get("enabled"); ok {
+								if b, ok := ev.(bool); ok {
+									followRedirects.Enabled = b
+								}
+							}
+							if mv, ok := frMap.Get("maxCount"); ok {
+								if n, ok := mv.(int64); ok {
+									followRedirects.MaxCount = int(n)
+								}
+							}
+							if av, ok := frMap.Get("allowAuthHeaders"); ok {
+								if b, ok := av.(bool); ok {
+									followRedirects.AllowAuthHeaders = b
+								}
+							}
 						}
 					}
 					if v, ok := cfg.Get("httpVersion"); ok {
@@ -214,7 +228,57 @@ func initHttpModule(rt *runtime.Runtime) {
 									// keyPassword: accepted at compile time, ignored at runtime
 								}
 							}
-							// ciphers/shareSession/handshakeTimeout/sessionTimeout/serverName: accepted, ignored
+							if v, ok := ssMap.Get("serverName"); ok {
+								if s, ok := v.(string); ok && s != "" {
+									tlsCfg.ServerName = s
+								}
+							}
+							if v, ok := ssMap.Get("shareSession"); ok {
+								if b, ok := v.(bool); ok && !b {
+									tlsCfg.DisableSessionTickets = true
+								}
+							}
+							if v, ok := ssMap.Get("handshakeTimeout"); ok {
+								if rat, ok := v.(*big.Rat); ok {
+									tlsCfg.HandshakeTimeout = ratToDuration(rat)
+								}
+							}
+							if v, ok := ssMap.Get("ciphers"); ok {
+								if list, ok := v.(*values.List); ok {
+									for i := 0; i < list.Len(); i++ {
+										if name, ok := list.Get(i).(string); ok {
+											tlsCfg.CipherSuiteNames = append(tlsCfg.CipherSuiteNames, name)
+										}
+									}
+								}
+							}
+							if v, ok := ssMap.Get("protocol"); ok {
+								if protoMap, ok := v.(*values.Map); ok {
+									if vv, ok := protoMap.Get("versions"); ok {
+										if list, ok := vv.(*values.List); ok {
+											tlsVersionMap := map[string]uint16{
+												"TLSv1.0": 0x0301,
+												"TLSv1.1": 0x0302,
+												"TLSv1.2": 0x0303,
+												"TLSv1.3": 0x0304,
+											}
+											for i := 0; i < list.Len(); i++ {
+												if s, ok := list.Get(i).(string); ok {
+													if ver, found := tlsVersionMap[s]; found {
+														if tlsCfg.MinVersion == 0 || ver < tlsCfg.MinVersion {
+															tlsCfg.MinVersion = ver
+														}
+														if ver > tlsCfg.MaxVersion {
+															tlsCfg.MaxVersion = ver
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+							// certValidation/sessionTimeout: accepted at compile time, not supported at runtime
 						}
 					}
 				}
@@ -227,7 +291,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			})
 			self.Put("url", url)
 			self.Put("timeout", timeout)
-			self.Put("followRedirects", followRedirects)
+			self.Put("followRedirects", nil)
 			self.Put("httpVersion", httpVersion)
 			self.Put("$httpClient", httpClient)
 			return nil, nil

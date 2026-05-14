@@ -5,7 +5,7 @@ main() -> nil|error{
   bb0 {
     %1 = newObject ballerina/http:Client
     %2 = ConstantLoad https://example.com
-    %3 = newMap {| followRedirects: boolean, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{}
+    %3 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{}
     %4 = init(%1,%2,%3) -> bb1;
   }
   bb1 {
@@ -61,26 +61,28 @@ main() -> nil|error{
     %24 = ConstantLoad timeout
     %25 = ConstantLoad 30/1
     %26 = ConstantLoad followRedirects
-    %27 = ConstantLoad false
-    %28 = newMap {| followRedirects: boolean, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%24=%25, %26=%27}
-    %29 = init(%22,%23,%28) -> bb12;
+    %27 = ConstantLoad enabled
+    %28 = ConstantLoad false
+    %29 = newMap {| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}{%27=%28}
+    %30 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%24=%25, %26=%29}
+    %31 = init(%22,%23,%30) -> bb12;
   }
   bb12 {
-    %31 = %29 is nil
-    %31 ? bb13 : bb14;
+    %33 = %31 is nil
+    %33 ? bb13 : bb14;
   }
   bb13 {
-    %30 = %22;
+    %32 = %22;
     GOTO bb15;
   }
   bb14 {
-    %30 = %29;
+    %32 = %31;
     GOTO bb15;
   }
   bb15 {
-    $desugar$4 = %30;
-    %33 = $desugar$4 is error
-    %33 ? bb16 : bb17;
+    $desugar$4 = %32;
+    %35 = $desugar$4 is error
+    %35 ? bb16 : bb17;
   }
   bb16 {
     %0 = $desugar$4;
@@ -88,18 +90,18 @@ main() -> nil|error{
   }
   bb17 {
     c2 = $desugar$4;
-    %35 = ConstantLoad /path
-    $desugar$5 = %35;
-    %37 = $Client.get$default$1($desugar$5) -> bb18;
+    %37 = ConstantLoad /path
+    $desugar$5 = %37;
+    %39 = $Client.get$default$1($desugar$5) -> bb18;
   }
   bb18 {
-    $desugar$6 = %37;
-    %39 = $remote$get(c2,$desugar$5,$desugar$6) -> bb19;
+    $desugar$6 = %39;
+    %41 = $remote$get(c2,$desugar$5,$desugar$6) -> bb19;
   }
   bb19 {
-    $desugar$7 = %39;
-    %41 = $desugar$7 is error
-    %41 ? bb20 : bb21;
+    $desugar$7 = %41;
+    %43 = $desugar$7 is error
+    %43 ? bb20 : bb21;
   }
   bb20 {
     %0 = $desugar$7;
@@ -107,43 +109,43 @@ main() -> nil|error{
   }
   bb21 {
     r2 = $desugar$7;
-    %44 = ConstantLoad statusCode
-    %43 = r2[%44];
-    %45 = %43;
-    %46 = println(%45) -> bb22;
+    %46 = ConstantLoad statusCode
+    %45 = r2[%46];
+    %47 = %45;
+    %48 = println(%47) -> bb22;
   }
   bb22 {
-    %47 = getTextPayload(r2) -> bb23;
+    %49 = getTextPayload(r2) -> bb23;
   }
   bb23 {
-    %48 = println(%47) -> bb24;
+    %50 = println(%49) -> bb24;
   }
   bb24 {
-    %49 = ConstantLoad https://example.com
-    %50 = $Client.init$default$1(%49) -> bb25;
+    %51 = ConstantLoad https://example.com
+    %52 = $Client.init$default$1(%51) -> bb25;
   }
   bb25 {
-    $desugar$8 = %50;
-    %52 = newObject ballerina/http:Client
-    %53 = ConstantLoad https://example.com
-    %54 = init(%52,%53,$desugar$8) -> bb26;
+    $desugar$8 = %52;
+    %54 = newObject ballerina/http:Client
+    %55 = ConstantLoad https://example.com
+    %56 = init(%54,%55,$desugar$8) -> bb26;
   }
   bb26 {
-    %56 = %54 is nil
-    %56 ? bb27 : bb28;
+    %58 = %56 is nil
+    %58 ? bb27 : bb28;
   }
   bb27 {
-    %55 = %52;
+    %57 = %54;
     GOTO bb29;
   }
   bb28 {
-    %55 = %54;
+    %57 = %56;
     GOTO bb29;
   }
   bb29 {
-    $desugar$9 = %55;
-    %58 = $desugar$9 is error
-    %58 ? bb30 : bb31;
+    $desugar$9 = %57;
+    %60 = $desugar$9 is error
+    %60 ? bb30 : bb31;
   }
   bb30 {
     %0 = $desugar$9;
@@ -151,18 +153,18 @@ main() -> nil|error{
   }
   bb31 {
     c3 = $desugar$9;
-    %60 = ConstantLoad /path
-    $desugar$10 = %60;
-    %62 = $Client.get$default$1($desugar$10) -> bb32;
+    %62 = ConstantLoad /path
+    $desugar$10 = %62;
+    %64 = $Client.get$default$1($desugar$10) -> bb32;
   }
   bb32 {
-    $desugar$11 = %62;
-    %64 = $remote$get(c3,$desugar$10,$desugar$11) -> bb33;
+    $desugar$11 = %64;
+    %66 = $remote$get(c3,$desugar$10,$desugar$11) -> bb33;
   }
   bb33 {
-    $desugar$12 = %64;
-    %66 = $desugar$12 is error
-    %66 ? bb34 : bb35;
+    $desugar$12 = %66;
+    %68 = $desugar$12 is error
+    %68 ? bb34 : bb35;
   }
   bb34 {
     %0 = $desugar$12;
@@ -170,37 +172,37 @@ main() -> nil|error{
   }
   bb35 {
     r3 = $desugar$12;
-    %69 = ConstantLoad statusCode
-    %68 = r3[%69];
-    %70 = %68;
-    %71 = println(%70) -> bb36;
+    %71 = ConstantLoad statusCode
+    %70 = r3[%71];
+    %72 = %70;
+    %73 = println(%72) -> bb36;
   }
   bb36 {
-    %72 = ConstantLoad https://example.com
-    %73 = $Client.init$default$1(%72) -> bb37;
+    %74 = ConstantLoad https://example.com
+    %75 = $Client.init$default$1(%74) -> bb37;
   }
   bb37 {
-    $desugar$13 = %73;
-    %75 = newObject ballerina/http:Client
-    %76 = ConstantLoad https://example.com
-    %77 = init(%75,%76,$desugar$13) -> bb38;
+    $desugar$13 = %75;
+    %77 = newObject ballerina/http:Client
+    %78 = ConstantLoad https://example.com
+    %79 = init(%77,%78,$desugar$13) -> bb38;
   }
   bb38 {
-    %79 = %77 is nil
-    %79 ? bb39 : bb40;
+    %81 = %79 is nil
+    %81 ? bb39 : bb40;
   }
   bb39 {
-    %78 = %75;
+    %80 = %77;
     GOTO bb41;
   }
   bb40 {
-    %78 = %77;
+    %80 = %79;
     GOTO bb41;
   }
   bb41 {
-    $desugar$14 = %78;
-    %81 = $desugar$14 is error
-    %81 ? bb42 : bb43;
+    $desugar$14 = %80;
+    %83 = $desugar$14 is error
+    %83 ? bb42 : bb43;
   }
   bb42 {
     %0 = $desugar$14;
@@ -208,16 +210,16 @@ main() -> nil|error{
   }
   bb43 {
     c4 = $desugar$14;
-    %83 = ConstantLoad /path
-    %84 = ConstantLoad X-Custom
-    %85 = ConstantLoad value
-    %86 = newMap {| string|list... |}{%84=%85}
-    %87 = $remote$get(c4,%83,%86) -> bb44;
+    %85 = ConstantLoad /path
+    %86 = ConstantLoad X-Custom
+    %87 = ConstantLoad value
+    %88 = newMap {| string|list... |}{%86=%87}
+    %89 = $remote$get(c4,%85,%88) -> bb44;
   }
   bb44 {
-    $desugar$15 = %87;
-    %89 = $desugar$15 is error
-    %89 ? bb45 : bb46;
+    $desugar$15 = %89;
+    %91 = $desugar$15 is error
+    %91 ? bb45 : bb46;
   }
   bb45 {
     %0 = $desugar$15;
@@ -225,35 +227,35 @@ main() -> nil|error{
   }
   bb46 {
     r4 = $desugar$15;
-    %92 = ConstantLoad statusCode
-    %91 = r4[%92];
-    %93 = %91;
-    %94 = println(%93) -> bb47;
+    %94 = ConstantLoad statusCode
+    %93 = r4[%94];
+    %95 = %93;
+    %96 = println(%95) -> bb47;
   }
   bb47 {
-    %95 = newObject ballerina/http:Client
-    %96 = ConstantLoad https://example.com
-    %97 = ConstantLoad httpVersion
-    %98 = ConstantLoad 1.1
-    %99 = newMap {| followRedirects: boolean, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%97=%98}
-    %100 = init(%95,%96,%99) -> bb48;
+    %97 = newObject ballerina/http:Client
+    %98 = ConstantLoad https://example.com
+    %99 = ConstantLoad httpVersion
+    %100 = ConstantLoad 1.1
+    %101 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%99=%100}
+    %102 = init(%97,%98,%101) -> bb48;
   }
   bb48 {
-    %102 = %100 is nil
-    %102 ? bb49 : bb50;
+    %104 = %102 is nil
+    %104 ? bb49 : bb50;
   }
   bb49 {
-    %101 = %95;
+    %103 = %97;
     GOTO bb51;
   }
   bb50 {
-    %101 = %100;
+    %103 = %102;
     GOTO bb51;
   }
   bb51 {
-    $desugar$16 = %101;
-    %104 = $desugar$16 is error
-    %104 ? bb52 : bb53;
+    $desugar$16 = %103;
+    %106 = $desugar$16 is error
+    %106 ? bb52 : bb53;
   }
   bb52 {
     %0 = $desugar$16;
@@ -261,18 +263,18 @@ main() -> nil|error{
   }
   bb53 {
     c5 = $desugar$16;
-    %106 = ConstantLoad /path
-    $desugar$17 = %106;
-    %108 = $Client.get$default$1($desugar$17) -> bb54;
+    %108 = ConstantLoad /path
+    $desugar$17 = %108;
+    %110 = $Client.get$default$1($desugar$17) -> bb54;
   }
   bb54 {
-    $desugar$18 = %108;
-    %110 = $remote$get(c5,$desugar$17,$desugar$18) -> bb55;
+    $desugar$18 = %110;
+    %112 = $remote$get(c5,$desugar$17,$desugar$18) -> bb55;
   }
   bb55 {
-    $desugar$19 = %110;
-    %112 = $desugar$19 is error
-    %112 ? bb56 : bb57;
+    $desugar$19 = %112;
+    %114 = $desugar$19 is error
+    %114 ? bb56 : bb57;
   }
   bb56 {
     %0 = $desugar$19;
@@ -280,35 +282,35 @@ main() -> nil|error{
   }
   bb57 {
     r5 = $desugar$19;
-    %115 = ConstantLoad statusCode
-    %114 = r5[%115];
-    %116 = %114;
-    %117 = println(%116) -> bb58;
+    %117 = ConstantLoad statusCode
+    %116 = r5[%117];
+    %118 = %116;
+    %119 = println(%118) -> bb58;
   }
   bb58 {
-    %118 = newObject ballerina/http:Client
-    %119 = ConstantLoad https://example.com
-    %120 = ConstantLoad httpVersion
-    %121 = ConstantLoad 2.0
-    %122 = newMap {| followRedirects: boolean, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%120=%121}
-    %123 = init(%118,%119,%122) -> bb59;
+    %120 = newObject ballerina/http:Client
+    %121 = ConstantLoad https://example.com
+    %122 = ConstantLoad httpVersion
+    %123 = ConstantLoad 2.0
+    %124 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%122=%123}
+    %125 = init(%120,%121,%124) -> bb59;
   }
   bb59 {
-    %125 = %123 is nil
-    %125 ? bb60 : bb61;
+    %127 = %125 is nil
+    %127 ? bb60 : bb61;
   }
   bb60 {
-    %124 = %118;
+    %126 = %120;
     GOTO bb62;
   }
   bb61 {
-    %124 = %123;
+    %126 = %125;
     GOTO bb62;
   }
   bb62 {
-    $desugar$20 = %124;
-    %127 = $desugar$20 is error
-    %127 ? bb63 : bb64;
+    $desugar$20 = %126;
+    %129 = $desugar$20 is error
+    %129 ? bb63 : bb64;
   }
   bb63 {
     %0 = $desugar$20;
@@ -316,18 +318,18 @@ main() -> nil|error{
   }
   bb64 {
     c6 = $desugar$20;
-    %129 = ConstantLoad /path
-    $desugar$21 = %129;
-    %131 = $Client.get$default$1($desugar$21) -> bb65;
+    %131 = ConstantLoad /path
+    $desugar$21 = %131;
+    %133 = $Client.get$default$1($desugar$21) -> bb65;
   }
   bb65 {
-    $desugar$22 = %131;
-    %133 = $remote$get(c6,$desugar$21,$desugar$22) -> bb66;
+    $desugar$22 = %133;
+    %135 = $remote$get(c6,$desugar$21,$desugar$22) -> bb66;
   }
   bb66 {
-    $desugar$23 = %133;
-    %135 = $desugar$23 is error
-    %135 ? bb67 : bb68;
+    $desugar$23 = %135;
+    %137 = $desugar$23 is error
+    %137 ? bb67 : bb68;
   }
   bb67 {
     %0 = $desugar$23;
@@ -335,14 +337,14 @@ main() -> nil|error{
   }
   bb68 {
     r6 = $desugar$23;
-    %138 = ConstantLoad statusCode
-    %137 = r6[%138];
-    %139 = %137;
-    %140 = println(%139) -> bb69;
+    %140 = ConstantLoad statusCode
+    %139 = r6[%140];
+    %141 = %139;
+    %142 = println(%141) -> bb69;
   }
   bb69 {
-    %141 = ConstantLoad <nil>
-    %0 = %141;
+    %143 = ConstantLoad <nil>
+    %0 = %143;
     return;
   }
 }

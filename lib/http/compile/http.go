@@ -68,26 +68,73 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	certKeySym.SetType(certKeySemType)
 	space.AddSymbol("CertKey", &certKeySym)
 
+	// Protocol: SSL|TLS|DTLS. Go only supports TLS; SSL and DTLS are compile-time-only.
+	protocolSemType := semtypes.Union(
+		semtypes.Union(semtypes.StringConst("SSL"), semtypes.StringConst("TLS")),
+		semtypes.StringConst("DTLS"),
+	)
+	protocolSym := model.NewTypeSymbol("Protocol", true)
+	protocolSym.SetType(protocolSemType)
+	space.AddSymbol("Protocol", &protocolSym)
+
+	// protocol record: {| Protocol name; string[] versions; |}
+	protocolRecordMd := semtypes.NewMappingDefinition()
+	protocolRecordSemType := protocolRecordMd.DefineMappingTypeWrapped(env, []semtypes.Field{
+		semtypes.FieldFrom("name",     protocolSemType, false, false),
+		semtypes.FieldFrom("versions", semtypes.LIST,   false, false),
+	}, semtypes.NEVER)
+
+	// CertValidationType: OCSP_CRL|OCSP_STAPLING — accepted at compile time, not implemented.
+	certValidTypeSemType := semtypes.Union(
+		semtypes.StringConst("OCSP_CRL"), semtypes.StringConst("OCSP_STAPLING"),
+	)
+	certValidTypeSym := model.NewTypeSymbol("CertValidationType", true)
+	certValidTypeSym.SetType(certValidTypeSemType)
+	space.AddSymbol("CertValidationType", &certValidTypeSym)
+
+	// certValidation record: {| CertValidationType 'type; int cacheSize; int cacheValidityPeriod; |}
+	certValidRecordMd := semtypes.NewMappingDefinition()
+	certValidRecordSemType := certValidRecordMd.DefineMappingTypeWrapped(env, []semtypes.Field{
+		semtypes.FieldFrom("type",                certValidTypeSemType, false, false),
+		semtypes.FieldFrom("cacheSize",           semtypes.INT,         false, false),
+		semtypes.FieldFrom("cacheValidityPeriod", semtypes.INT,         false, false),
+	}, semtypes.NEVER)
+
 	// ClientSecureSocket: matches upstream http:ClientSecureSocket field names.
 	// cert accepts string only (not crypto:TrustStore).
 	// key accepts CertKey only (not crypto:KeyStore).
-	// Fields ciphers/shareSession/handshakeTimeout/sessionTimeout/serverName are
-	// accepted at compile time but silently ignored at runtime.
+	// Implemented: enable, verifyHostName, cert, key, serverName, ciphers, handshakeTimeout, shareSession, protocol.versions.
+	// Accepted but not implemented: sessionTimeout, keyPassword, certValidation, protocol.name.
 	secureSocketMd := semtypes.NewMappingDefinition()
 	secureSocketSemType := secureSocketMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("enable",           semtypes.BOOLEAN, false, true),
-		semtypes.FieldFrom("cert",             semtypes.STRING,  false, true),
-		semtypes.FieldFrom("key",              certKeySemType,   false, true),
-		semtypes.FieldFrom("verifyHostName",   semtypes.BOOLEAN, false, true),
-		semtypes.FieldFrom("shareSession",     semtypes.BOOLEAN, false, true),
-		semtypes.FieldFrom("handshakeTimeout", semtypes.DECIMAL, false, true),
-		semtypes.FieldFrom("sessionTimeout",   semtypes.DECIMAL, false, true),
-		semtypes.FieldFrom("serverName",       semtypes.STRING,  false, true),
-		semtypes.FieldFrom("ciphers",          semtypes.LIST,    false, true),
+		semtypes.FieldFrom("enable",           semtypes.BOOLEAN,                                        false, true),
+		semtypes.FieldFrom("cert",             semtypes.STRING,                                         false, true),
+		semtypes.FieldFrom("key",              certKeySemType,                                          false, true),
+		semtypes.FieldFrom("protocol",         semtypes.Union(protocolRecordSemType, semtypes.NIL),     false, true),
+		semtypes.FieldFrom("certValidation",   semtypes.Union(certValidRecordSemType, semtypes.NIL),    false, true),
+		semtypes.FieldFrom("ciphers",          semtypes.LIST,                                           false, true),
+		semtypes.FieldFrom("verifyHostName",   semtypes.BOOLEAN,                                        false, true),
+		semtypes.FieldFrom("shareSession",     semtypes.BOOLEAN,                                        false, true),
+		semtypes.FieldFrom("handshakeTimeout", semtypes.DECIMAL,                                        false, true),
+		semtypes.FieldFrom("sessionTimeout",   semtypes.DECIMAL,                                        false, true),
+		semtypes.FieldFrom("serverName",       semtypes.STRING,                                         false, true),
 	}, semtypes.NEVER)
 	secureSocketSym := model.NewTypeSymbol("ClientSecureSocket", true)
 	secureSocketSym.SetType(secureSocketSemType)
 	space.AddSymbol("ClientSecureSocket", &secureSocketSym)
+
+	// FollowRedirects: matches upstream http:FollowRedirects field names.
+	// enabled defaults to false (no redirects by default), maxCount defaults to 5,
+	// allowAuthHeaders defaults to false (auth headers stripped on redirect).
+	followRedirectsMd := semtypes.NewMappingDefinition()
+	followRedirectsSemType := followRedirectsMd.DefineMappingTypeWrapped(env, []semtypes.Field{
+		semtypes.FieldFrom("enabled",          semtypes.BOOLEAN, false, true),
+		semtypes.FieldFrom("maxCount",         semtypes.INT,     false, true),
+		semtypes.FieldFrom("allowAuthHeaders", semtypes.BOOLEAN, false, true),
+	}, semtypes.NEVER)
+	followRedirectsSym := model.NewTypeSymbol("FollowRedirects", true)
+	followRedirectsSym.SetType(followRedirectsSemType)
+	space.AddSymbol("FollowRedirects", &followRedirectsSym)
 
 	// HttpVersion: "1.1"|"2.0". "1.0" is omitted — Go's net/http client cannot send HTTP/1.0.
 	httpVersionSemType := semtypes.Union(semtypes.StringConst("1.1"), semtypes.StringConst("2.0"))
@@ -95,13 +142,13 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	httpVersionSym.SetType(httpVersionSemType)
 	space.AddSymbol("HttpVersion", &httpVersionSym)
 
-	// ClientConfiguration: existing fields + secureSocket?: ClientSecureSocket?
+	// ClientConfiguration: matching upstream http:ClientConfiguration field names.
 	md := semtypes.NewMappingDefinition()
 	configSemType := md.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("timeout",         semtypes.DECIMAL,                                    false, true),
-		semtypes.FieldFrom("followRedirects",  semtypes.BOOLEAN,                                   false, true),
-		semtypes.FieldFrom("httpVersion",     httpVersionSemType,                                  false, true),
-		semtypes.FieldFrom("secureSocket",    semtypes.Union(secureSocketSemType, semtypes.NIL),   false, true),
+		semtypes.FieldFrom("timeout",         semtypes.DECIMAL,                                              false, true),
+		semtypes.FieldFrom("followRedirects",  semtypes.Union(followRedirectsSemType, semtypes.NIL),         false, true),
+		semtypes.FieldFrom("httpVersion",     httpVersionSemType,                                            false, true),
+		semtypes.FieldFrom("secureSocket",    semtypes.Union(secureSocketSemType, semtypes.NIL),             false, true),
 	}, semtypes.NEVER)
 	configSym := model.NewTypeSymbol("ClientConfiguration", true)
 	configSym.SetType(configSemType)

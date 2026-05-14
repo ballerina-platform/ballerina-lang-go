@@ -23,12 +23,29 @@ public function main() returns error? {
     var r1 = check c1->get("/path");
     io:println(r1.statusCode);      // @output 200
 
-    // Compile-time-accepted fields (ignored at runtime)
+    // shareSession, serverName, ciphers, handshakeTimeout — compile-time shape check
     http:Client c2 = check new ("https://example.com", {
-        secureSocket: {verifyHostName: false, shareSession: false}
+        secureSocket: {
+            enable: false,
+            verifyHostName: false,
+            shareSession: false,
+            serverName: "example.com",
+            ciphers: ["TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"],
+            handshakeTimeout: 10.0
+        }
     });
     var r2 = check c2->get("/path");
     io:println(r2.statusCode);      // @output 200
+
+    // protocol field — compile-time shape check
+    http:Client c3 = check new ("https://example.com", {
+        secureSocket: {
+            enable: false,
+            protocol: {name: "TLS", versions: ["TLSv1.2", "TLSv1.3"]}
+        }
+    });
+    var r3 = check c3->get("/path");
+    io:println(r3.statusCode);      // @output 200
 
     return;
 }

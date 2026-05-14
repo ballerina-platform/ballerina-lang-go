@@ -99,7 +99,21 @@ var nativePal = pal.Platform{
 					tlsConfig.Certificates = []tls.Certificate{cert}
 				}
 			}
-			transport := &http.Transport{TLSClientConfig: tlsConfig}
+			tlsConfig.ServerName = cfg.TLS.ServerName
+			tlsConfig.SessionTicketsDisabled = cfg.TLS.DisableSessionTickets
+			if cfg.TLS.MinVersion != 0 {
+				tlsConfig.MinVersion = cfg.TLS.MinVersion
+			}
+			if cfg.TLS.MaxVersion != 0 {
+				tlsConfig.MaxVersion = cfg.TLS.MaxVersion
+			}
+			if len(cfg.TLS.CipherSuiteNames) > 0 {
+				tlsConfig.CipherSuites = resolveCipherSuites(cfg.TLS.CipherSuiteNames)
+			}
+			transport := &http.Transport{
+				TLSClientConfig:     tlsConfig,
+				TLSHandshakeTimeout: cfg.TLS.HandshakeTimeout,
+			}
 			protocols := new(http.Protocols)
 			if cfg.HTTPVersion == "2.0" {
 				protocols.SetHTTP2(true)
@@ -109,9 +123,29 @@ var nativePal = pal.Platform{
 			}
 			transport.Protocols = protocols
 			c := &http.Client{Timeout: cfg.Timeout, Transport: transport}
-			if !cfg.FollowRedirects {
+			if !cfg.FollowRedirects.Enabled {
 				c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 					return http.ErrUseLastResponse
+				}
+			} else {
+				maxCount := cfg.FollowRedirects.MaxCount
+				if maxCount <= 0 {
+					maxCount = 5 // Ballerina default
+				}
+				allowAuth := cfg.FollowRedirects.AllowAuthHeaders
+				c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+					if len(via) >= maxCount {
+						return http.ErrUseLastResponse
+					}
+					if allowAuth && len(via) > 0 {
+						if auth := via[0].Header.Get("Authorization"); auth != "" {
+							req.Header.Set("Authorization", auth)
+						}
+						if proxy := via[0].Header.Get("Proxy-Authorization"); proxy != "" {
+							req.Header.Set("Proxy-Authorization", proxy)
+						}
+					}
+					return nil
 				}
 			}
 			return &nativeHTTPClient{client: c}
@@ -331,6 +365,25 @@ func buildPointer(lineContent string, startCol, highlightLen int) string {
 		b.WriteByte('^')
 	}
 	return b.String()
+}
+
+// resolveCipherSuites maps IANA TLS 1.2 cipher suite names to Go uint16 IDs.
+// Unknown names are silently skipped; TLS 1.3 ciphers are unaffected regardless.
+func resolveCipherSuites(names []string) []uint16 {
+	m := make(map[string]uint16, len(tls.CipherSuites())+len(tls.InsecureCipherSuites()))
+	for _, c := range tls.CipherSuites() {
+		m[c.Name] = c.ID
+	}
+	for _, c := range tls.InsecureCipherSuites() {
+		m[c.Name] = c.ID
+	}
+	ids := make([]uint16, 0, len(names))
+	for _, name := range names {
+		if id, ok := m[name]; ok {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // tlsVerifyConnectionWithCNFallback returns a VerifyConnection callback that verifies the

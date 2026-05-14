@@ -22,7 +22,7 @@ public function main() returns error? {
     var r1 = check c1->get("/path");
     io:println(r1.statusCode);        // @output 200
 
-    http:Client c2 = check new ("https://example.com", {timeout: 30d, followRedirects: false});
+    http:Client c2 = check new ("https://example.com", {timeout: 30d, followRedirects: {enabled: false}});
     var r2 = check c2->get("/path");
     io:println(r2.statusCode);        // @output 200
     io:println(r2.getTextPayload());  // @output test body

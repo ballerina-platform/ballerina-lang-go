@@ -29,7 +29,10 @@
                 (literal 30/1))
               (key-value
                 (simple-var-ref followRedirects)
-                (literal false)))))))))
+                (mapping-constructor-expr
+                  (key-value
+                    (simple-var-ref enabled)
+                    (literal false)))))))))))
     (var-def
       (variable r2 (expr
         (checked-expr

@@ -63,11 +63,24 @@
                 (literal secureSocket)
                 (mapping-constructor-expr
                   (key-value
+                    (literal enable)
+                    (literal false))
+                  (key-value
                     (literal verifyHostName)
                     (literal false))
                   (key-value
                     (literal shareSession)
-                    (literal false))))))))))
+                    (literal false))
+                  (key-value
+                    (literal serverName)
+                    (literal example.com))
+                  (key-value
+                    (literal ciphers)
+                    (list-constructor-expr
+                      (literal TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)))
+                  (key-value
+                    (literal handshakeTimeout)
+                    (literal 10/1))))))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$4))
@@ -104,6 +117,65 @@
         (invocation io println (
           (index-based-access
             (simple-var-ref r2)
+            (literal statusCode)))))
+      (var-def
+        (variable $desugar$8 (expr
+          (new (
+            (literal https://example.com)
+            (mapping-constructor-expr
+              (key-value
+                (literal secureSocket)
+                (mapping-constructor-expr
+                  (key-value
+                    (literal enable)
+                    (literal false))
+                  (key-value
+                    (literal protocol)
+                    (mapping-constructor-expr
+                      (key-value
+                        (literal name)
+                        (literal TLS))
+                      (key-value
+                        (literal versions)
+                        (list-constructor-expr
+                          (literal TLSv1.2)
+                          (literal TLSv1.3)))))))))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$8))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$8))) ())
+      (var-def
+        (variable c3 (type
+          (user-defined-type http Client)) (expr
+          (simple-var-ref $desugar$8))))
+      (var-def
+        (variable $desugar$9 (expr
+          (literal /path))))
+      (var-def
+        (variable $desugar$10 (expr
+          (invocation $Client.get$default$1 (
+            (simple-var-ref $desugar$9))))))
+      (var-def
+        (variable $desugar$11 (expr
+          (remote-method-call get expr:
+            (simple-var-ref c3) (
+            (simple-var-ref $desugar$9)
+            (simple-var-ref $desugar$10))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$11))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$11))) ())
+      (var-def
+        (variable r3 (expr
+          (simple-var-ref $desugar$11))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r3)
             (literal statusCode)))))
       (return
         (literal <nil>)))))

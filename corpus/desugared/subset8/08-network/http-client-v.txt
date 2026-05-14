@@ -58,7 +58,10 @@
                 (literal 30/1))
               (key-value
                 (literal followRedirects)
-                (literal false))))))))
+                (mapping-constructor-expr
+                  (key-value
+                    (literal enabled)
+                    (literal false))))))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$4))

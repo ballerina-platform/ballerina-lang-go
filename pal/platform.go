@@ -36,15 +36,27 @@ type (
 	}
 	// TLSConfig carries TLS settings derived from Ballerina's secureSocket config.
 	TLSConfig struct {
-		InsecureSkipVerify bool   // secureSocket.enable=false OR verifyHostName=false
-		CACertPEM          []byte // secureSocket.cert (string PEM file path) → file contents
-		ClientCertPEM      []byte // secureSocket.key.certFile → file contents
-		ClientKeyPEM       []byte // secureSocket.key.keyFile  → file contents
+		InsecureSkipVerify    bool          // secureSocket.enable=false OR verifyHostName=false
+		CACertPEM             []byte        // secureSocket.cert (string PEM file path) → file contents
+		ClientCertPEM         []byte        // secureSocket.key.certFile → file contents
+		ClientKeyPEM          []byte        // secureSocket.key.keyFile  → file contents
+		ServerName            string        // secureSocket.serverName → tls.Config.ServerName (SNI)
+		CipherSuiteNames      []string      // secureSocket.ciphers → IANA names; platform resolves IDs
+		MinVersion            uint16        // secureSocket.protocol.versions min → tls.Config.MinVersion
+		MaxVersion            uint16        // secureSocket.protocol.versions max → tls.Config.MaxVersion
+		HandshakeTimeout      time.Duration // secureSocket.handshakeTimeout → transport.TLSHandshakeTimeout
+		DisableSessionTickets bool          // secureSocket.shareSession=false → tls.Config.SessionTicketsDisabled
+	}
+	// FollowRedirects controls HTTP redirect behaviour, matching Ballerina's http:FollowRedirects.
+	FollowRedirects struct {
+		Enabled          bool // default false — no redirects by default (Ballerina spec)
+		MaxCount         int  // 0 uses Ballerina default of 5; only used when Enabled=true
+		AllowAuthHeaders bool // if true, forward Authorization/Proxy-Authorization on redirect
 	}
 	// ClientConfig bundles all static options for a new HTTP client instance.
 	ClientConfig struct {
 		Timeout         time.Duration
-		FollowRedirects bool
+		FollowRedirects FollowRedirects
 		HTTPVersion     string // "1.1" or "2.0"; defaults to "2.0"
 		TLS             TLSConfig
 	}
