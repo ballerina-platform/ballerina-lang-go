@@ -18,6 +18,7 @@ package intruntime
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 	"fmt"
 	"math"
@@ -30,7 +31,7 @@ const (
 )
 
 func initIntModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "toHexString", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "toHexString", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		n, ok := args[0].(int64)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be an int")

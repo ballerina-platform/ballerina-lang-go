@@ -20,7 +20,12 @@ package extern
 import (
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
+
+// NativeFunc is the signature for extern (native) function implementations.
+// The first argument is the per-strand runtime context.
+type NativeFunc func(ctx *Context, args []values.BalValue) (values.BalValue, error)
 
 // Context represent per strand state
 type Context struct {

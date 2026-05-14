@@ -78,7 +78,7 @@ func (rt *Runtime) GetTypeEnv() semtypes.Env {
 
 // RegisterExternFunction registers a native (extern) function implementation in
 // the given runtime instance so it can be called from interpreted BIR code.
-func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
+func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl extern.NativeFunc) {
 	rt.registry().RegisterExternFunction(orgName, moduleName, funcName, impl)
 }
 

@@ -29,7 +29,7 @@ type BIRModule struct {
 
 type ExternFunction struct {
 	Name string
-	Impl func(args []values.BalValue) (values.BalValue, error)
+	Impl extern.NativeFunc
 }
 
 func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) *BIRModule {

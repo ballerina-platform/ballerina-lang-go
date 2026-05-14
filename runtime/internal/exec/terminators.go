@@ -47,7 +47,7 @@ func executeCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue
 		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
 	}
 	if callInfo.CachedNativeFunc != nil {
-		result, err := callInfo.CachedNativeFunc(args)
+		result, err := callInfo.CachedNativeFunc(ctx, args)
 		if err != nil {
 			panic(err)
 		}
@@ -70,7 +70,7 @@ func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.B
 			return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
 		}
 		if callInfo.CachedNativeFunc != nil {
-			result, err := callInfo.CachedNativeFunc(args)
+			result, err := callInfo.CachedNativeFunc(ctx, args)
 			if err != nil {
 				panic(err)
 			}
@@ -94,7 +94,7 @@ func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.Bal
 	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
 		callInfo.CachedNativeFunc = externFn.Impl
-		result, err := externFn.Impl(args)
+		result, err := externFn.Impl(ctx, args)
 		if err != nil {
 			panic(err)
 		}
@@ -120,7 +120,7 @@ func execFpCall(ctx *extern.Context, callInfo *bir.Call, frame *Frame) *bir.BIRB
 		externFn := reg.GetNativeFunction(lookupKey)
 		if externFn != nil {
 			var err error
-			result, err = externFn.Impl(args)
+			result, err = externFn.Impl(ctx, args)
 			if err != nil {
 				panic(err)
 			}

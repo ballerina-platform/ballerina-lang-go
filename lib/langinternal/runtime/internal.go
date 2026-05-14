@@ -18,6 +18,7 @@ package langinternalruntime
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 	"fmt"
 	"sort"
@@ -29,7 +30,7 @@ const (
 )
 
 func initInternalModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		sortKeyRows, ok := args[0].(*values.List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a list")

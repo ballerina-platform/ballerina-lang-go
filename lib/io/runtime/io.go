@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 )
 
@@ -53,15 +54,15 @@ func write(rt *runtime.Runtime, newline bool, vals []values.BalValue) {
 	_, _ = rt.Platform().IO.Stdout(out)
 }
 
-func printlnExtern(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue, error) {
-	return func(args []values.BalValue) (values.BalValue, error) {
+func printlnExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		Println(rt, args...)
 		return nil, nil
 	}
 }
 
-func printExtern(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue, error) {
-	return func(args []values.BalValue) (values.BalValue, error) {
+func printExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		Print(rt, args...)
 		return nil, nil
 	}
