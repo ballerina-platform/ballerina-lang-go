@@ -86,14 +86,17 @@ var nativePal = pal.Platform{
 			tlsConfig := &tls.Config{InsecureSkipVerify: cfg.TLS.InsecureSkipVerify} //nolint:gosec
 			if len(cfg.TLS.CACertPEM) > 0 {
 				pool := x509.NewCertPool()
-				pool.AppendCertsFromPEM(cfg.TLS.CACertPEM)
-				tlsConfig.RootCAs = pool
-				if !cfg.TLS.InsecureSkipVerify {
-					// Go 1.15+ requires SANs for hostname verification; many self-signed and
-					// Java-issued certs only set the CN field. When a custom CA is provided
-					// we do our own verification so CN-only certs are accepted as a fallback.
-					tlsConfig.InsecureSkipVerify = true //nolint:gosec
-					tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool)
+				if !pool.AppendCertsFromPEM(cfg.TLS.CACertPEM) {
+					_, _ = fmt.Fprintf(os.Stderr, "ballerina: failed to parse CA certificate PEM (no valid certificates found); custom CA not loaded\n")
+				} else {
+					tlsConfig.RootCAs = pool
+					if !cfg.TLS.InsecureSkipVerify {
+						// Go 1.15+ requires SANs for hostname verification; many self-signed and
+						// Java-issued certs only set the CN field. When a custom CA is provided
+						// we do our own verification so CN-only certs are accepted as a fallback.
+						tlsConfig.InsecureSkipVerify = true //nolint:gosec
+						tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool)
+					}
 				}
 			}
 			if len(cfg.TLS.ClientCertPEM) > 0 && len(cfg.TLS.ClientKeyPEM) > 0 {
