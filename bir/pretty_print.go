@@ -63,10 +63,10 @@ func (p *PrettyPrinter) decreaseIndent() {
 	p.indentLevel--
 }
 
-func (p *PrettyPrinter) Print(node BIRPackage) string {
+func (p *PrettyPrinter) Print(tyCtx semtypes.Context, node BIRPackage) string {
 	// Reset the builder
 	p.sb.Reset()
-	p.cx = semtypes.TypeCheckContext(node.TypeEnv)
+	p.cx = tyCtx
 
 	p.write("module ")
 	p.write(p.PrintPackageID(node.PackageID))

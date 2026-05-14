@@ -18,6 +18,9 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
@@ -49,19 +52,25 @@ func Store(frame *Frame, address bir.Address, value values.BalValue) {
 	resolveFrame(frame, address).locals[address.FrameIndex] = value
 }
 
-func getOperandValue(ctx *Context, op *bir.BIROperand, currentFrame *Frame) values.BalValue {
+func getOperandValue(ctx *extern.Context, op *bir.BIROperand, currentFrame *Frame) values.BalValue {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
-		module := ctx.GetModule(gv.PkgId)
+		module := getModule(ctx, gv.PkgId)
 		return module.Globals[gv.GlobalVarLookupKey]
 	}
 	return Load(currentFrame, op.Address)
 }
 
-func setOperandValue(ctx *Context, op *bir.BIROperand, currentFrame *Frame, value values.BalValue) {
+func setOperandValue(ctx *extern.Context, op *bir.BIROperand, currentFrame *Frame, value values.BalValue) {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
-		module := ctx.GetModule(gv.PkgId)
+		module := getModule(ctx, gv.PkgId)
 		module.Globals[gv.GlobalVarLookupKey] = value
 	} else {
 		Store(currentFrame, op.Address, value)
 	}
+}
+
+func getModule(ctx *extern.Context, pkgId *model.PackageID) *modules.BIRModule {
+	env := ctx.Env
+	registry := env.Registry.(*modules.Registry)
+	return registry.GetModule(pkgId)
 }

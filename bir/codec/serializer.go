@@ -39,11 +39,11 @@ type birWriter struct {
 	env semtypes.Env
 }
 
-func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
+func Marshal(tyEnv semtypes.Env, pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &birWriter{
 		cp:  NewConstantPool(),
 		tp:  semtypes.NewTypePool(),
-		env: pkg.TypeEnv,
+		env: tyEnv,
 	}
 	return writer.serialize(pkg)
 }
@@ -255,7 +255,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
-		var tagValue = instr.Value
+		tagValue := instr.Value
 		if cv, isConstValue := instr.Value.(bir.ConstValue); isConstValue {
 			isWrapped = true
 			tagValue = cv.Value
@@ -608,7 +608,7 @@ func (bw *birWriter) writePosition(buf *bytes.Buffer, pos bir.Location) {
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
 	var eCol int32 = math.MaxInt32
-	var sourceFileName = ""
+	sourceFileName := ""
 
 	if !bir.IsLocationEmpty(pos) {
 		sLine = int32(pos.StartLine())

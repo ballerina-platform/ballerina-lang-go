@@ -102,7 +102,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 
 	// Pretty print BIR output
 	prettyPrinter := bir.PrettyPrinter{}
-	actualBIR := prettyPrinter.Print(*result.BIRPackage)
+	actualBIR := prettyPrinter.Print(semtypes.ContextFrom(env.GetTypeEnv()), *result.BIRPackage)
 
 	// If update flag is set, update expected file
 	if *update {

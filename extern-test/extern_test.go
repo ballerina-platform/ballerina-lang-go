@@ -78,7 +78,7 @@ func TestExternValid(t *testing.T) {
 
 	stdoutBuf := &bytes.Buffer{}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
 
 	// Register foo() returns "$foo"
 	runtime.RegisterExternFunction(rt, "$anon", "1-v", "foo", func(args []values.BalValue) (values.BalValue, error) {
@@ -202,7 +202,7 @@ func TestDependentlyTyped(t *testing.T) {
 	birPkg := backend.BIR()
 
 	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
 	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
 
 	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "inferred", func(args []values.BalValue) (values.BalValue, error) {
@@ -323,7 +323,7 @@ func TestDependentlyTypedAlias(t *testing.T) {
 	birPkg := backend.BIR()
 
 	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
 	aliasImpl := func(args []values.BalValue) (values.BalValue, error) {
 		if _, ok := args[1].(*values.TypeDesc); !ok {
 			return nil, fmt.Errorf("expected typedesc argument, got %T", args[1])
@@ -376,7 +376,8 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 	birPkg := backend.BIR()
 
 	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	tyEnv := result.Project().Environment().TypeEnv()
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), tyEnv)
 
 	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-incl-record-v", "shift", func(args []values.BalValue) (values.BalValue, error) {
 		src, ok := args[0].(*values.Map)
@@ -437,7 +438,7 @@ func TestDependentlyTypedMethod(t *testing.T) {
 	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
 	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
 
 	runtime.RegisterExternFunction(rt, "testorg", "crossmoduledependentfn.http",
@@ -495,7 +496,7 @@ func TestExternHandle(t *testing.T) {
 
 	stdoutBuf := &bytes.Buffer{}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
 
 	type myHandle struct {
 		data string
@@ -562,11 +563,11 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	)
 
 	// Stage 2: serialize helper's exported symbols and BIR.
-	symBytes, err := symbolpool.Marshal(helperExported, helperBIR.TypeEnv)
+	symBytes, err := symbolpool.Marshal(helperExported, env1.GetTypeEnv())
 	if err != nil {
 		t.Fatalf("helper symbol Marshal: %v", err)
 	}
-	birBytes, err := bircodec.Marshal(helperBIR)
+	birBytes, err := bircodec.Marshal(env1.GetTypeEnv(), helperBIR)
 	if err != nil {
 		t.Fatalf("helper BIR Marshal: %v", err)
 	}
@@ -600,7 +601,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	// Stage 5: interpret [deserialized helper BIR, freshly compiled main BIR]
 	// with helper's native registered. Validate stdout.
 	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), env2.GetTypeEnv())
 	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
 	runtime.RegisterExternFunction(rt, org, helperMod, "inferred", func(args []values.BalValue) (values.BalValue, error) {
 		td, ok := args[1].(*values.TypeDesc)

@@ -67,13 +67,13 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 1: Compile .bal to BIR.
 	var stdoutBuf, stderrBuf bytes.Buffer
-	birPkg, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
+	birPkg, tyEnv, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
 	if birPkg == nil || compileErr != nil {
 		t.Fatalf("compilation failed for %s: %v", testPair.InputPath, compileErr)
 	}
 
 	// Step 2: Serialize BIR.
-	serialized, err := bircodec.Marshal(birPkg)
+	serialized, err := bircodec.Marshal(tyEnv, birPkg)
 	if err != nil {
 		t.Fatalf("BIR serialization failed for %s: %v", testPair.InputPath, err)
 	}
@@ -88,7 +88,7 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 4: Execute the deserialized BIR.
 	var rtStdoutBuf, rtStderrBuf bytes.Buffer
-	runInterpretPhase(deserialized, &rtStdoutBuf, &rtStderrBuf)
+	runInterpretPhase(deserialized, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
 
 	// Step 5: Compare against expected output.
 	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)

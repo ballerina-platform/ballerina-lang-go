@@ -100,7 +100,6 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		Functions:     functions,
 		InitFunction:  initFunction,
 		MainFunction:  mainFunction,
-		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
 }
 

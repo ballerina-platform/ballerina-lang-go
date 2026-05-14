@@ -74,7 +74,6 @@ type (
 		InitFunction  *BIRFunction
 		ClassDefs     []BIRClassDef
 		MainFunction  *BIRFunction
-		TypeEnv       semtypes.Env
 	}
 
 	ObjectField struct {
