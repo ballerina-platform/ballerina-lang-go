@@ -27,15 +27,15 @@ func collectIncludedMembers(t typeResolver, inclusions []model.SymbolRef, depth 
 	var result []model.InclusionMember
 	for _, symRef := range inclusions {
 		t.ensureResolved(symRef, depth)
-		incSym := getTypeSymbol(t, symRef)
+		incSym := getMemberCarrier(t, symRef)
 		if incSym == nil {
 			t.internalError("inclusion symbol is not a type symbol", diagnostics.Location{})
 			return nil, true
 		}
-		if incSym.Type() == nil {
+		if t.symbolType(symRef) == nil {
 			return nil, true
 		}
-		result = append(result, incSym.InclusionMembers()...)
+		result = append(result, incSym.Members()...)
 	}
 	return result, false
 }
