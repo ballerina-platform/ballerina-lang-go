@@ -106,6 +106,95 @@ func TestBalRunCorpus(t *testing.T) {
 	}
 }
 
+// TestBalRunWorkspaceCorpus tests the workspace branch in runBallerina (cli/cmd/run.go:206-229).
+// It covers three behaviours:
+//  1. workspace_root_rejected  — running the workspace root directly is rejected.
+//  2. member_resolves          — running a member package path succeeds.
+//  3. missing_member           — running a non-existent sub-path is rejected.
+//
+// Java equivalent: N/A — this is CLI-level integration coverage for the Go workspace branch.
+func TestBalRunWorkspaceCorpus(t *testing.T) {
+	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
+		t.Skip("skipping CLI integration test on WASM (js/wasm)")
+	}
+	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
+
+	wsRoot := filepath.Join(repoRoot, "corpus", "cli", "testdata", "run", "workspaces", "run-workspace-corpus")
+	outputsRoot := filepath.Join(repoRoot, "corpus", "cli", "output", "run", "workspaces")
+
+	t.Run("workspace_root_rejected", func(t *testing.T) {
+		assertBalCommandMatchesTxtarFragmentsForBinary(t, balBin, repoRoot, coverDir,
+			[]string{"run", wsRoot},
+			"run", "workspaces", "workspace-root-rejected.txtar")
+	})
+
+	t.Run("member_resolves", func(t *testing.T) {
+		assertBalCommandMatchesTxtarFragmentsForBinary(t, balBin, repoRoot, coverDir,
+			[]string{"run", filepath.Join(wsRoot, "pkgmain")},
+			"run", "workspaces", "member-resolves.txtar")
+	})
+
+	t.Run("missing_member", func(t *testing.T) {
+		// "notamember" is a real directory inside the workspace root but is NOT listed
+		// in the workspace Ballerina.toml packages array, so the CLI must reject it.
+		assertBalCommandMatchesTxtarFragmentsLoose(t, balBin, repoRoot, coverDir,
+			[]string{"run", filepath.Join(wsRoot, "notamember")},
+			filepath.Join(outputsRoot, "missing-member.txtar"))
+	})
+}
+
+// assertBalCommandMatchesTxtarFragmentsLoose is like assertBalCommandMatchesTxtarFragmentsForBinary
+// but uses fragment (substring) matching for both stdout and stderr. This is needed when stderr
+// contains machine-specific absolute paths that cannot be captured exactly in a txtar fixture.
+func assertBalCommandMatchesTxtarFragmentsLoose(t *testing.T, balBin, repoRoot, coverDir string, args []string, txtarPath string) {
+	t.Helper()
+	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
+		t.Skip("skipping CLI integration test on WASM (js/wasm)")
+	}
+
+	stdout, stderr, exitCode := runCLICommand(t, balBin, repoRoot, coverDir, args...)
+	stdout = test_util.NormalizeNewlines(stdout)
+	stderr = test_util.NormalizeNewlines(stderr)
+
+	if *update {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderrExitcode(stdout, stderr, strconv.Itoa(exitCode))) {
+			t.Fatalf("Updated expected file: %s", txtarPath)
+		}
+		return
+	}
+
+	expectedStdoutFragments, expectedStderrFragments, expectedExitCode, err := test_util.LoadTxtarStdoutStderrExitcode(txtarPath)
+	if err != nil {
+		t.Fatalf("failed to parse txtar file %s: %v", txtarPath, err)
+	}
+
+	if strconv.Itoa(exitCode) != expectedExitCode {
+		t.Fatalf("unexpected exit code for command %q with expected file %s\n%s",
+			strings.Join(args, " "), txtarPath,
+			test_util.FormatExpectedGot(expectedExitCode, strconv.Itoa(exitCode)))
+	}
+
+	combinedOut := stdout + "\n" + stderr
+	for _, fragment := range strings.Split(expectedStdoutFragments, "\n") {
+		if strings.TrimSpace(fragment) == "" {
+			continue
+		}
+		if !strings.Contains(combinedOut, fragment) {
+			t.Fatalf("output missing expected stdout fragment %q for command %q with expected file %s\nstdout:\n%s\nstderr:\n%s",
+				fragment, strings.Join(args, " "), txtarPath, stdout, stderr)
+		}
+	}
+	for _, fragment := range strings.Split(expectedStderrFragments, "\n") {
+		if strings.TrimSpace(fragment) == "" {
+			continue
+		}
+		if !strings.Contains(stderr, fragment) {
+			t.Fatalf("stderr missing expected fragment %q for command %q with expected file %s\nstdout:\n%s\nstderr:\n%s",
+				fragment, strings.Join(args, " "), txtarPath, stdout, stderr)
+		}
+	}
+}
+
 func assertBalCommandMatchesTxtarFragments(t *testing.T, args []string, txtarPathParts ...string) {
 	t.Helper()
 	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
