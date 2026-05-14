@@ -39,7 +39,7 @@ type (
 	}
 )
 
-// HTTP config types.
+// HTTP
 type (
 	// TLSConfig carries TLS settings derived from Ballerina's secureSocket config.
 	TLSConfig struct {
