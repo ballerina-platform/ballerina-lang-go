@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: can't fill values
+        at main(fill3-p.bal:21)

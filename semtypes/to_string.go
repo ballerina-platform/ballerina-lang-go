@@ -483,7 +483,7 @@ func floatSubtypeToString(st floatSubtype) string {
 func decimalSubtypeToString(st decimalSubtype) string {
 	var parts []string
 	for _, v := range st.values {
-		parts = append(parts, v.value.FloatString(1))
+		parts = append(parts, v.value.String())
 	}
 	return strings.Join(parts, "|")
 }

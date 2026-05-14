@@ -354,41 +354,41 @@ func isIoImport(importNode *ast.BLangImportPackage) bool {
 }
 
 func isImplicitImport(importNode *ast.BLangImportPackage) bool {
-	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map")
+	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map") || isLangImport(importNode, "string")
 }
 
 func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
+func validateInitFunction(a analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if function.IsPublic() {
-		parent.semanticErr("'init' function cannot be declared as public", pos)
+		a.semanticErr("'init' function cannot be declared as public", pos)
 	}
 
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'init' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'init' function must have return type '()' or  'error?'", pos)
+		}
 	}
 
 	if len(function.RequiredParams) > 0 || function.RestParam != nil {
-		parent.semanticErr("'init' function cannot have parameters", pos)
+		a.semanticErr("'init' function cannot have parameters", pos)
 	}
 }
 
-func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
-	// Check 1: Must be public
+func validateMainFunction(a analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if !fnSymbol.IsPublic() {
-		parent.semanticErr("'main' function must be public", pos)
+		a.semanticErr("'main' function must be public", pos)
 	}
 
-	// Check 2: Must return error?
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
 
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'main' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'main' function must have return type '()' or  'error?'", pos)
+		}
 	}
 }
 
@@ -609,6 +609,8 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		onNonConst(expr)
 	case *ast.BLangUnaryExpr:
 		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangTypeConversionExpr:
+		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangGroupExpr:
 		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangBinaryExpr:
@@ -915,7 +917,10 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 }
 
 func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent()
+	if !semtypes.SingleNumericType(targetType).IsPresent() {
+		return false
+	}
+	return semtypes.ContainsBasicType(exprTy, semtypes.INT|semtypes.FLOAT|semtypes.DECIMAL)
 }
 
 func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, expectedType semtypes.SemType) bool {
@@ -967,6 +972,13 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 			return false
 		}
 	}
+	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+		memberTy := lat.MemberAtInnerVal(i)
+		if _, ok := semtypes.FillerValue(a.tyCtx(), memberTy); !ok {
+			a.semanticErr(fmt.Sprintf("missing required member at index %d: type '%s' has no filler value", i, semtypes.ToString(a.tyCtx(), memberTy)), expr.GetPosition())
+			return false
+		}
+	}
 	return validateResolvedType(a, expr, expectedType)
 }
 
@@ -978,9 +990,25 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 	for _, fd := range expr.FieldDefaults {
 		hasValue[fd.FieldName] = true
 	}
+	seen := make(map[string]bool, len(expr.Fields))
+	namedFields := make(map[string]bool, len(mat.Names))
+	for _, n := range mat.Names {
+		namedFields[n] = true
+	}
 	for _, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
 		keyName := recordKeyName(kv.Key)
+		if seen[keyName] {
+			a.semanticErr(fmt.Sprintf("duplicate key '%s' in mapping constructor", keyName), kv.Key.GetPosition())
+			return false
+		}
+		seen[keyName] = true
+		// For record type desc (ie len(mat.Names) > 0) if the key is not a string literal it must be
+		// nameed field
+		if kv.Key.Kind == ast.MappingKeyIdentifier && len(mat.Names) > 0 && !namedFields[keyName] {
+			a.semanticErr(fmt.Sprintf("identifier '%s' cannot be used as a key for a rest field; use a string literal instead", keyName), kv.Key.GetPosition())
+			return false
+		}
 		hasValue[keyName] = true
 		fieldExpectedType := mat.FieldInnerVal(keyName)
 		if !analyzeActionOrExpression(a, kv.ValueExpr, fieldExpectedType) {
@@ -1298,7 +1326,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangCompoundAssignment:
-		if !analyzeAssignment(a, n) {
+		if !analyzeCompoundAssignment(a, n) {
 			return nil
 		}
 		return a
@@ -1392,6 +1420,19 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 	expectedType := variable.GetDeterminedType()
 	expression := assignment.GetExpression().(ast.BLangActionOrExpression)
 	return analyzeActionOrExpression(a, expression, expectedType)
+}
+
+func analyzeCompoundAssignment[A analyzer](a A, assignment *ast.BLangCompoundAssignment) bool {
+	if !analyzeAssignment(a, assignment) {
+		return false
+	}
+	lhsTy := assignment.GetVariable().(ast.BLangExpression).GetDeterminedType()
+	rhsTy := assignment.GetExpression().(ast.BLangActionOrExpression).GetDeterminedType()
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
+		a.semanticErr("compound assignment operands cannot be nilable", assignment.GetPosition())
+		return false
+	}
+	return true
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) bool {

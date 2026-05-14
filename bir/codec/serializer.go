@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"math/big"
 	"sort"
 
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -477,8 +477,8 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			} else {
 				val = ""
 			}
-		case *big.Rat:
-			val = v.RatString()
+		case *decimal.Decimal:
+			val = v.String()
 		default:
 			panic(fmt.Sprintf("expected string for tag %v, got %T", tag, value))
 		}
@@ -515,7 +515,7 @@ func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
 		return model.TypeTags_BOOLEAN, nil
 	case byte:
 		return model.TypeTags_BYTE, nil
-	case *big.Rat:
+	case *decimal.Decimal:
 		return model.TypeTags_DECIMAL, nil
 	case nil:
 		return model.TypeTags_NIL, nil

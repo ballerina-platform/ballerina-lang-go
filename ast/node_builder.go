@@ -1787,6 +1787,27 @@ func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.Exp
 	return &bLExpressionStmt
 }
 
+// createSpecificFieldNameLiteral builds a string-literal expression for a
+// non-computed mapping-constructor key. The field name is a static identifier
+// or string literal, not a runtime expression, so it must not be represented
+// as a var-ref.
+func (n *NodeBuilder) createSpecificFieldNameLiteral(fieldName tree.Node) BLangExpression {
+	if basicLit, ok := fieldName.(*tree.BasicLiteralNode); ok {
+		return n.createSimpleLiteral(basicLit).(BLangExpression)
+	}
+	nameRef := n.createBLangNameReference(fieldName)
+	name := nameRef[1].GetValue()
+	pos := getPosition(n.de(), fieldName)
+	lit := &BLangLiteral{}
+	lit.SetPosition(pos)
+	bType := &BTypeBasic{}
+	bType.BTypeSetTag(model.TypeTags_STRING)
+	lit.SetValueType(bType)
+	lit.SetValue(name)
+	lit.SetOriginalValue(name)
+	return lit
+}
+
 func (n *NodeBuilder) createExpression(expressionNode tree.Node) BLangExpression {
 	return n.createActionOrExpression(expressionNode).(BLangExpression) //nolint:forcetypeassert // only called where expressions are expected, not actions
 }
@@ -2030,8 +2051,8 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			computedNameField := field.(*tree.ComputedNameFieldNode)
 			keyExpr := n.createExpression(computedNameField.FieldNameExpr())
 			key := &BLangMappingKey{
-				Expr:        keyExpr,
-				ComputedKey: true,
+				Expr: keyExpr,
+				Kind: MappingKeyComputed,
 			}
 			key.SetPosition(getPosition(n.de(), computedNameField.FieldNameExpr()))
 			keyValueField := &BLangMappingKeyValueField{
@@ -2045,10 +2066,14 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			if specificField.ValueExpr() == nil {
 				panic("mapping constructor var-name field not implemented")
 			}
-			keyExpr := n.createExpression(specificField.FieldName())
+			_, isStringLit := specificField.FieldName().(*tree.BasicLiteralNode)
+			keyKind := MappingKeyIdentifier
+			if isStringLit {
+				keyKind = MappingKeyStringLiteral
+			}
 			key := &BLangMappingKey{
-				Expr:        keyExpr,
-				ComputedKey: false,
+				Expr: n.createSpecificFieldNameLiteral(specificField.FieldName()),
+				Kind: keyKind,
 			}
 			key.SetPosition(getPosition(n.de(), specificField.FieldName()))
 			keyValueField := &BLangMappingKeyValueField{
@@ -2097,7 +2122,40 @@ func (n *NodeBuilder) TransformUnaryExpression(unaryExpressionNode *tree.UnaryEx
 	pos := getPosition(n.de(), unaryExpressionNode)
 	operator := model.OperatorKindValueFrom(unaryExpressionNode.UnaryOperator().Text())
 	expr := n.createExpression(unaryExpressionNode.Expression())
+	if operator == model.OperatorKind_SUB {
+		if lit, ok := expr.(*BLangLiteral); ok && foldNegativeIntLiteral(lit) {
+			lit.SetPosition(pos)
+			return lit
+		}
+	}
 	return createBLangUnaryExpr(pos, operator, expr)
+}
+
+// foldNegativeIntLiteral folds `-N` into a single int literal when `N` is an
+// integer literal whose positive value overflows int64 but the negated value
+// fits (e.g. `-9223372036854775808`). Without this fold, `N` is parsed as a
+// float (losing precision) and later coerced back to int, corrupting the
+// value used at runtime (e.g. for `<decimal>-9223372036854775808`).
+func foldNegativeIntLiteral(lit *BLangLiteral) bool {
+	if lit.GetValueType().BTypeGetTag() != model.TypeTags_INT {
+		return false
+	}
+	if _, isFloat := lit.GetValue().(float64); !isFloat {
+		return false
+	}
+	raw := lit.OriginalValue
+	base := 10
+	if strings.HasPrefix(raw, "0x") || strings.HasPrefix(raw, "0X") {
+		raw = raw[2:]
+		base = 16
+	}
+	parsed, err := strconv.ParseInt("-"+raw, base, 64)
+	if err != nil {
+		return false
+	}
+	lit.SetValue(parsed)
+	lit.OriginalValue = "-" + lit.OriginalValue
+	return true
 }
 
 func (n *NodeBuilder) TransformComputedNameField(computedNameFieldNode *tree.ComputedNameFieldNode) BLangNode {
@@ -3376,12 +3434,12 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	dimensionSize := dimensionNodes.Size()
 	var sizes []BLangExpression
 
-	for i := dimensionSize - 1; i >= 0; i-- {
+	for i := 0; i < dimensionSize; i++ {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
 			sizes = append(sizes, nil)
 		} else {
-			panic("array length expression handling unimplemented")
+			sizes = append(sizes, n.createExpression(dimensionNode.ArrayLength()))
 		}
 	}
 	dimensionSize = len(sizes)
@@ -3494,23 +3552,27 @@ func (n *NodeBuilder) transformMatchPattern(matchPattern tree.Node, matchStmtExp
 	switch kind {
 	case common.SIMPLE_NAME_REFERENCE:
 		nameRef := matchPattern.(*tree.SimpleNameReferenceNode)
-		if nameRef.Name().Text() != "_" {
-			n.cx.SemanticError("expected wildcard '_' but got: "+nameRef.Name().Text(), matchPatternPos)
-			return nil
+		if nameRef.Name().Text() == "_" {
+			bLangWildCard := &BLangWildCardMatchPattern{}
+			bLangWildCard.pos = matchPatternPos
+			return bLangWildCard
 		}
-		bLangWildCard := &BLangWildCardMatchPattern{}
-		bLangWildCard.pos = matchPatternPos
-		return bLangWildCard
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
 
 	case common.IDENTIFIER_TOKEN:
 		idToken := matchPattern.(tree.Token)
-		if idToken.Text() != "_" {
-			n.cx.SemanticError("expected wildcard '_' but got: "+idToken.Text(), matchPatternPos)
-			return nil
+		if idToken.Text() == "_" {
+			bLangWildCard := &BLangWildCardMatchPattern{}
+			bLangWildCard.pos = matchPatternPos
+			return bLangWildCard
 		}
-		bLangWildCard := &BLangWildCardMatchPattern{}
-		bLangWildCard.pos = matchPatternPos
-		return bLangWildCard
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
 
 	case common.NUMERIC_LITERAL,
 		common.STRING_LITERAL,

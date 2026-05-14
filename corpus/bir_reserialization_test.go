@@ -31,8 +31,17 @@ import (
 // TestBIRSerializationRoundtrip compiles .bal files to BIR, serializes the BIR, deserializes it
 // with a fresh compiler context, executes the deserialized BIR, and validates the output matches
 // the expected integration test output.
+// birSerializationRoundtripSkipList is the BIR-roundtrip *additional* skip
+// list, on top of the shared test_util.UnsupportedTests baseline (which is
+// applied via isTestSkipped below). Currently empty -- every known failure
+// is already covered by the shared baseline.
+var birSerializationRoundtripSkipList = []string{}
+
 func TestBIRSerializationRoundtrip(t *testing.T) {
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
+		if test_util.IsFutureTest(path) {
+			return false
+		}
 		return strings.HasSuffix(path, "-v.bal") || strings.HasSuffix(path, "-p.bal")
 	})
 
@@ -45,8 +54,9 @@ func TestBIRSerializationRoundtrip(t *testing.T) {
 }
 
 func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
-	if isTestSkipped(testPair) {
+	if isTestSkipped(testPair) || test_util.MatchesSkip(testPair.InputPath, birSerializationRoundtripSkipList) {
 		t.Skipf("Skipping BIR serialization roundtrip test for %s", testPair.InputPath)
+		return
 	}
 
 	defer func() {

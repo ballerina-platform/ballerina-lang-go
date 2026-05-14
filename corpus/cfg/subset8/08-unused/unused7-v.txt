@@ -1,0 +1,19 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr *
+        (simple-var-ref i)
+        (literal 2)))
+  )
+)
+(foo
+  (bb0 () ())
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation foo (
+        (literal 6)
+        (literal str))))
+  )
+)

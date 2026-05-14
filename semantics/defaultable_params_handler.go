@@ -31,7 +31,7 @@ type symbolLookup interface {
 
 func padArgTypesForDefaults(lookup symbolLookup, symbolRef model.SymbolRef, argTys []semtypes.SemType, loc diagnostics.Location) []semtypes.SemType {
 	sym := lookup.getSymbol(symbolRef)
-	if _, ok := sym.(model.GenericFunctionSymbol); ok {
+	if _, ok := sym.(model.ContainerGenericFunctionSymbol); ok {
 		lookup.internalError("generic function should have been monomorphized", loc)
 		return argTys
 	}

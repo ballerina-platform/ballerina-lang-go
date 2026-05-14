@@ -21,6 +21,7 @@ import (
 	"math"
 
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/values"
 )
 
@@ -42,6 +43,9 @@ func execBinaryOpAdd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case string:
 		v2 := op2.(string)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1+v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Add, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2)))
 	}
@@ -62,6 +66,9 @@ func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1-v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Sub, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T - %T", op1, op2)))
 	}
@@ -69,6 +76,7 @@ func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, true)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -80,6 +88,9 @@ func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1*v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Mul, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T * %T", op1, op2)))
 	}
@@ -87,6 +98,7 @@ func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, false)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -99,10 +111,10 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Quo, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2)))
 	}
@@ -110,6 +122,7 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	op1, op2 = promoteMultiplicativeOperands(op1, op2, false)
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -119,10 +132,10 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1%v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, math.Mod(v1, v2))
+	case *decimal.Decimal:
+		v2 := op2.(*decimal.Decimal)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Rem, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2)))
 	}
@@ -130,50 +143,57 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, op1 == nil && op2 == nil)
-		return
-	}
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	default:
-		setOperandValue(ctx, binaryOp.LhsOp, frame, false)
-	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.DeepEquals(op1, op2))
 }
 
 func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, (op1 == nil) != (op2 == nil))
-		return
-	}
-	switch v1 := op1.(type) {
+	setOperandValue(ctx, binaryOp.LhsOp, frame, !values.DeepEquals(op1, op2))
+}
+
+// promoteMultiplicativeOperands implements the implicit numeric conversion permitted
+// for multiplicative expressions with mixed numeric operands: when the second operand
+// is int, it is converted to the type of the first operand; when the operation is
+// multiplication and the first operand is int, it is converted to the type of the
+// second operand. The conversion always succeeds for int -> float / decimal.
+func promoteMultiplicativeOperands(op1, op2 values.BalValue, isMul bool) (values.BalValue, values.BalValue) {
+	switch v2 := op2.(type) {
 	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	default:
-		setOperandValue(ctx, binaryOp.LhsOp, frame, true)
+		switch v1 := op1.(type) {
+		case int64:
+			return v1, v2
+		case float64:
+			return v1, float64(v2)
+		case *decimal.Decimal:
+			return v1, decimal.FromInt64(v2)
+		default:
+			panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported numeric type: %T", op1)))
+		}
 	}
+	if !isMul {
+		return op1, op2
+	}
+	if v1, ok := op1.(int64); ok {
+		switch op2.(type) {
+		case float64:
+			return float64(v1), op2
+		case *decimal.Decimal:
+			return decimal.FromInt64(v1), op2
+		default:
+			panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported numeric type: %T", op2)))
+		}
+	}
+	return op1, op2
+}
+
+// decimalArith invokes a decimal arithmetic method (Add/Sub/Mul/Quo/Rem) and
+// converts a typed decimal error into a Ballerina runtime error panic.
+func decimalArith(op func(*decimal.Decimal) (*decimal.Decimal, *decimal.Error), b *decimal.Decimal) *decimal.Decimal {
+	out, err := op(b)
+	if err != nil {
+		panic(values.NewErrorWithMessage(err.Error()))
+	}
+	return out
 }
 
 func execBinaryOpGT(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
@@ -233,32 +253,41 @@ func refEqual(op1, op2 values.BalValue) bool {
 		}
 		return false
 	}
+	if d1, ok := op1.(*decimal.Decimal); ok {
+		d2, ok := op2.(*decimal.Decimal)
+		if !ok {
+			return false
+		}
+		return d1.ExactEqual(d2)
+	}
 	return op1 == op2
 }
 
 func execBinaryOpBitwiseAnd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a & b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a & b })
 }
 
 func execBinaryOpBitwiseOr(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a | b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a | b })
 }
 
 func execBinaryOpBitwiseXor(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a ^ b }, false)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a ^ b })
 }
 
 func execBinaryOpBitwiseLeftShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a << uint(b) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a << uint(b&shiftAmountMask) })
 }
 
 func execBinaryOpBitwiseRightShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a >> uint(b) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return a >> uint(b&shiftAmountMask) })
 }
 
 func execBinaryOpBitwiseUnsignedRightShift(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
-	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return int64(uint64(a) >> uint(b)) }, true)
+	execBinaryOpBitwise(ctx, binaryOp, frame, func(a, b int64) int64 { return int64(uint64(a) >> uint(b&shiftAmountMask)) })
 }
+
+const shiftAmountMask = 0x3F
 
 func execUnaryOpNot(ctx *Context, unaryOp *bir.UnaryOp, frame *Frame) {
 	op := getOperandValue(ctx, unaryOp.RhsOp, frame)
@@ -275,8 +304,10 @@ func execUnaryOpNegate(ctx *Context, unaryOp *bir.UnaryOp, frame *Frame) {
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
 	case float64:
 		setOperandValue(ctx, unaryOp.LhsOp, frame, -v)
+	case *decimal.Decimal:
+		setOperandValue(ctx, unaryOp.LhsOp, frame, v.Neg())
 	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op)))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64, float64, or *decimal.Decimal)", op)))
 	}
 }
 
@@ -286,22 +317,13 @@ func execUnaryOpBitwiseComplement(ctx *Context, unaryOp *bir.UnaryOp, frame *Fra
 	setOperandValue(ctx, unaryOp.LhsOp, frame, ^v)
 }
 
-func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
+func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
 	v1 := op1.(int64)
 	v2 := op2.(int64)
-	if isShift {
-		validateShiftAmount(v2)
-	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, bitOp(v1, v2))
 }
 
 func getBinaryRhsValues(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue) {
 	return getOperandValue(ctx, &binaryOp.RhsOp1, frame), getOperandValue(ctx, &binaryOp.RhsOp2, frame)
-}
-
-func validateShiftAmount(amount int64) {
-	if amount < 0 || amount >= 64 {
-		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount)))
-	}
 }

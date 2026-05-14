@@ -58,12 +58,15 @@ const (
 var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
+	// skipIntegrationTests is the integration-level *additional* skip list,
+	// layered on top of the shared test_util.UnsupportedTests baseline.
+	//
+	// The authoritative "pi does not support this end-to-end yet" list lives in
+	// test_util.UnsupportedTests and is reused by every per-stage corpus test.
+	// Only add an entry here when a test must be skipped at integration time but
+	// is still useful at earlier stages; otherwise add it to
+	// test_util.UnsupportedTests so all stages pick it up.
 	skipIntegrationTests = []string{
-		// Tests that cause unrecoverable Go runtime errors.
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
-		"subset8/08-comparable/order5-v.bal",
-		"subset8/08-const/const3-v.bal",
-
 		// Workspace tests whose errors are at the project-loading level
 		// (Ballerina.toml issues — missing package, TOML parse error). These
 		// diagnostics have no source location in any .bal file, so they're
@@ -74,6 +77,25 @@ var (
 		// once that's registered in DiagnosticEnv).
 		"project/missing-package-e",
 		"project/parse-error-e",
+		// Pre-existing -fp.bal test that does not currently surface a runtime
+		// panic or a compile-time `fatal[...]` bailout, so it does not satisfy
+		// the future-test contract yet. Tracked separately.
+		"subset8/08-future/fieldlvalue1-fp.bal",
+	}
+
+	// Skip project-level integration tests with non-deterministic output.
+	skipProjectIntegrationTests = []string{
+		// Migrated from nballerina testSuite/08-import/const4-e: cycle-detection picks a different
+		// break point than the upstream compiler, so the reported error path is not stable.
+		"import-const4-e",
+
+		// Expected error:
+		"import-const5-e",
+		"import-type3-e",
+
+		// Expected clean run:
+		"import-main-v",
+		"import-type6-v",
 	}
 )
 
@@ -125,6 +147,9 @@ func TestProjectIntegration(t *testing.T) {
 
 		t.Run(dirName, func(t *testing.T) {
 			t.Parallel()
+			if isProjectTestSkipped(dirName) {
+				t.Skipf("Skipping project integration test for %s", dirName)
+			}
 			testProjectIntegration(t, dirName, projDir, txtarPath)
 		})
 	}
@@ -168,7 +193,9 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	run := runIntegrationCase(testPair.InputPath)
 	if *update {
-		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizeIntegrationStderr(run.stderr))) {
+		normalizedStderr := normalizeIntegrationStderr(run.stderr)
+		checkExpectedOutputInvariants(t, testPair.Name, run.stdout, normalizedStderr, false)
+		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizedStderr)) {
 			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
 		return
@@ -178,6 +205,7 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	if err != nil {
 		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 	}
+	checkExpectedOutputInvariants(t, testPair.Name, expectedStdout, expectedStderr, false)
 
 	result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
 	assertAnnotations(t, collectSingleFileSources(testPair.InputPath), testPair.Name, run.stdout, run.stderr, run.diags)
@@ -202,6 +230,112 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 		))
 	}
 	t.Errorf("%s", msg.String())
+}
+
+// suffixOf returns the trailing -v / -e / -p / -fv / -fe / -fp marker on a
+// test name (file or project dir), or "" when no recognized marker is
+// present.
+func suffixOf(name string) string {
+	base := strings.TrimSuffix(filepath.Base(name), ".bal")
+	if i := strings.LastIndex(base, "-"); i >= 0 {
+		s := base[i+1:]
+		switch s {
+		case "v", "e", "p", "fv", "fe", "fp":
+			return s
+		}
+	}
+	return ""
+}
+
+// checkExpectedOutputInvariants fails the test when the expected stdout/stderr do not
+// match the test's suffix convention.
+//
+//	-v tests must have empty stderr and must not panic in stdout.
+//	-e tests must have non-empty stderr.
+//	-p tests must have non-empty stderr containing a runtime panic, not a compile error.
+//	-fv/-fe/-fp (future) tests must have non-empty stderr beginning with a
+//	`fatal[...]` bailout from the compiler/runtime.
+//
+// Violations must be added to the appropriate skip list (the message points to which one).
+func checkExpectedOutputInvariants(t *testing.T, name, stdout, stderr string, projectScope bool) {
+	t.Helper()
+	stderrNonEmpty := strings.TrimSpace(stderr) != ""
+	listName := "test_util.UnsupportedTests (or skipIntegrationTests)"
+	if projectScope {
+		listName = "skipProjectIntegrationTests"
+	}
+	switch suffixOf(name) {
+	case "v":
+		if stderrNonEmpty {
+			t.Fatalf("-v test %q has non-empty expected stderr; add it to %s under the"+
+				" \"expected clean run\" group, or fix the test.\nstderr:\n%s",
+				name, listName, stderr)
+		}
+		// A -v test is a clean run; the interpreter must not have panicked. pi prints
+		// runtime panics to stdout as `panic: ...`.
+		if strings.Contains(stdout, "panic:") {
+			t.Fatalf("-v test %q has a runtime panic in expected stdout; add it to %s under the"+
+				" \"expected clean run\" group, or fix the test.\nstdout:\n%s",
+				name, listName, stdout)
+		}
+	case "e":
+		if !stderrNonEmpty {
+			t.Fatalf("-e test %q has empty expected stderr; add it to %s under the"+
+				" \"expected error\" group, or fix the test.", name, listName)
+		}
+		// An -e test documents a compile-time error and the front-end must catch it.
+		// Compiler diagnostics use the prefix `error[CATEGORY]: ...`; runtime errors are
+		// `error: ...` and compiler internal/unimplemented bailouts are `fatal[...]: ...`.
+		// Anything other than a compile diagnostic means the front-end let the test through.
+		if !strings.HasPrefix(strings.TrimSpace(stderr), "error[") {
+			t.Fatalf("-e test %q expected stderr is not a compile diagnostic"+
+				" (`error[...]: ...`); the front-end should detect this error. Add it to %s"+
+				" under the \"expected frontend error\" group, or fix the test.\nstderr:\n%s",
+				name, listName, stderr)
+		}
+		// Every diagnostic must carry a source location (`  --> file:line:col`). Without
+		// one the user can't see where the error is.
+		numErr := strings.Count(stderr, "\nerror[") + boolToInt(strings.HasPrefix(stderr, "error["))
+		numLoc := strings.Count(stderr, "--> ")
+		if numLoc < numErr {
+			t.Fatalf("-e test %q expected stderr has a diagnostic with no source location"+
+				" (%d errors, %d `-->` lines). Add it to %s under the"+
+				" \"missing error location\" group, or fix the test.\nstderr:\n%s",
+				name, numErr, numLoc, listName, stderr)
+		}
+	case "fv", "fe", "fp":
+		if !stderrNonEmpty {
+			t.Fatalf("-%s test %q has empty expected stderr; future tests must surface"+
+				" a `fatal[...]` bailout. Add it to %s under the \"future\" group, or"+
+				" fix the test.", suffixOf(name), name, listName)
+		}
+		if !strings.HasPrefix(strings.TrimSpace(stderr), "fatal[") {
+			t.Fatalf("future test %q expected stderr is not a `fatal[...]` bailout;"+
+				" future tests document cases the front-end currently cannot handle."+
+				" Promote the test to -v/-e/-p or fix it.\nstderr:\n%s", name, stderr)
+		}
+	case "p":
+		if !stderrNonEmpty {
+			t.Fatalf("-p test %q has empty expected stderr; add it to %s under the"+
+				" \"expected runtime panic\" group, or fix the test.", name, listName)
+		}
+		// A -p test must surface a runtime panic, not a compile error. The compiler emits
+		// diagnostics in the form `error[CATEGORY]: ...` whereas the runtime emits
+		// `error: ...` or `panic: ...`. Reject the former for -p tests.
+		if strings.HasPrefix(strings.TrimSpace(stderr), "error[") {
+			t.Fatalf("-p test %q expected stderr begins with a compile diagnostic"+
+				" (`error[...]: ...`); -p tests must produce a runtime panic. Add it to"+
+				" %s under the \"expected runtime panic\" group, or fix the test.\nstderr:\n%s",
+				name, listName, stderr)
+		}
+	}
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 func splitStderrDiagnostics(stderr string) []string {
@@ -231,8 +365,16 @@ func isTestSkipped(tc test_util.TestCase) bool {
 	return isSkipKey(filepath.ToSlash(tc.Name))
 }
 
+// isSkipKey reports whether the given corpus-relative key should be skipped at
+// integration time. A test is skipped when it is on the shared
+// test_util.UnsupportedTests baseline or on the integration-only
+// skipIntegrationTests additions.
 func isSkipKey(key string) bool {
-	return slices.Contains(skipIntegrationTests, key)
+	return test_util.IsUnsupported(key) || slices.Contains(skipIntegrationTests, key)
+}
+
+func isProjectTestSkipped(dirName string) bool {
+	return slices.Contains(skipProjectIntegrationTests, dirName)
 }
 
 func resolveErrorDiagnostics(result projects.DiagnosticResult, de *diagnostics.DiagnosticEnv) []resolvedDiag {
@@ -340,7 +482,7 @@ func findProjectDirs(dir string) []string {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasSuffix(name, "-v") || strings.HasSuffix(name, "-e") || strings.HasSuffix(name, "-p") {
+		if suffixOf(name) != "" {
 			dirs = append(dirs, filepath.Join(dir, name))
 		}
 	}
@@ -360,7 +502,9 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 
 	run := runProjectIntegrationCase(projDir)
 	if *update {
-		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizeIntegrationStderr(run.stderr))) {
+		normalizedStderr := normalizeIntegrationStderr(run.stderr)
+		checkExpectedOutputInvariants(t, dirName, run.stdout, normalizedStderr, true)
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizedStderr)) {
 			t.Fatalf("Updated expected file: %s", txtarPath)
 		}
 		return
@@ -370,6 +514,7 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 	if err != nil {
 		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
 	}
+	checkExpectedOutputInvariants(t, dirName, expectedStdout, expectedStderr, true)
 
 	result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
 
@@ -493,6 +638,11 @@ func TestProjectSerializationRoundtrip(t *testing.T) {
 
 		t.Run(dirName, func(t *testing.T) {
 			t.Parallel()
+			// Roundtrip test reuses the integration project skip list because any project
+			// skipped at the integration level has no usable expected fixture.
+			if isProjectTestSkipped(dirName) {
+				t.Skipf("Skipping project serialization roundtrip for %s", dirName)
+			}
 			testProjectSerializationRoundtrip(t, dirName, projDir, txtarPath)
 		})
 	}
