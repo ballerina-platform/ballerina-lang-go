@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
 
@@ -82,10 +83,13 @@ func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args [
 		restArgs := args[requiredCount+argOffset:]
 		restParamIdx := requiredCount + 1 + argOffset
 		restParamType := (*localVars)[restParamIdx].GetType()
-		list := values.NewList(len(restArgs), restParamType, nil)
-		for j, arg := range restArgs {
-			list.FillingSet(j, arg)
+		atomic := semtypes.ToListAtomicType(ctx.TypeCtx, restParamType)
+		if atomic == nil {
+			panic("rest parameter type has no list atomic representation")
 		}
+		initial := make([]values.BalValue, len(restArgs))
+		copy(initial, restArgs)
+		list := values.NewList(restParamType, atomic, true, nil, len(restArgs), initial)
 		locals[restParamIdx] = list
 	} else {
 		if len(args) > requiredCount+argOffset {

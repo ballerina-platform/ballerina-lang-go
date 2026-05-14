@@ -29,9 +29,9 @@ const (
 )
 
 func initArrayModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "push", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "push", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		if list, ok := args[0].(*values.List); ok {
-			list.Append(args[1:]...)
+			list.Append(ctx.TypeCtx, args[1:]...)
 			return nil, nil
 		}
 		return nil, fmt.Errorf("first argument must be an array")

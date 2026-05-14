@@ -251,7 +251,7 @@ func TestDependentlyTyped(t *testing.T) {
 		panic(values.NewErrorWithMessage("unsupported inferredPartially typedesc constraint"))
 	})
 
-	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "shiftBy", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "shiftBy", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		src, ok := args[0].(*values.Map)
 		if !ok {
 			return nil, fmt.Errorf("expected record argument, got %T", args[0])
@@ -264,9 +264,11 @@ func TestDependentlyTyped(t *testing.T) {
 		}
 		xVal, _ := src.Get("x")
 		yVal, _ := src.Get("y")
-		out := values.NewMap(td.Type)
-		out.Put("x", xVal.(int64)+dx)
-		out.Put("y", yVal.(int64)+dy)
+		atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, td.Type)
+		out := values.NewMap(td.Type, atomic, false, []values.MapEntry{
+			{Key: "x", Value: xVal.(int64) + dx},
+			{Key: "y", Value: yVal.(int64) + dy},
+		})
 		return out, nil
 	})
 
@@ -397,9 +399,9 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 		yVal, _ := src.Get("y")
 		dxVal, _ := opts.Get("dx")
 		dyVal, _ := opts.Get("dy")
-		out := values.NewMap(td.Type)
-		out.Put("x", xVal.(int64)+dxVal.(int64))
-		out.Put("y", yVal.(int64)+dyVal.(int64))
+		out := values.NewMap(td.Type, semtypes.ToMappingAtomicType(ctx.TypeCtx, td.Type), false, nil)
+		out.Put(ctx.TypeCtx, "x", xVal.(int64)+dxVal.(int64))
+		out.Put(ctx.TypeCtx, "y", yVal.(int64)+dyVal.(int64))
 		return out, nil
 	})
 

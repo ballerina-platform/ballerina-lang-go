@@ -41,29 +41,41 @@ func execNewArray(ctx *extern.Context, newArray *bir.NewArray, frame *Frame) {
 	if newArray.SizeOp != nil {
 		size = int(getOperandValue(ctx, newArray.SizeOp, frame).(int64))
 	}
-	list := values.NewList(size, newArray.Type, newArray.Filler)
+	initial := make([]values.BalValue, len(newArray.Values))
 	for i, value := range newArray.Values {
-		list.FillingSet(i, getOperandValue(ctx, value, frame))
+		initial[i] = getOperandValue(ctx, value, frame)
 	}
+	atomic := semtypes.ToListAtomicType(ctx.TypeCtx, newArray.Type)
+	if atomic == nil {
+		panic(fmt.Sprintf("list inherent type has no atomic representation: %s", semtypes.ToString(ctx.TypeCtx, newArray.Type)))
+	}
+	list := values.NewList(newArray.Type, atomic, newArray.IsReadonly, newArray.Filler, size, initial)
 	setOperandValue(ctx, newArray.LhsOp, frame, list)
 }
 
 func execNewMap(ctx *extern.Context, newMap *bir.NewMap, frame *Frame) {
-	m := values.NewMap(newMap.Type)
+	seen := make(map[string]struct{}, len(newMap.Values))
+	entries := make([]values.MapEntry, 0, len(newMap.Values)+len(newMap.Defaults))
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
-		keyVal := getOperandValue(ctx, kv.KeyOp(), frame)
-		keyStr := keyVal.(string)
+		keyStr := getOperandValue(ctx, kv.KeyOp(), frame).(string)
 		valueVal := getOperandValue(ctx, kv.ValueOp(), frame)
-		m.Put(keyStr, valueVal)
+		seen[keyStr] = struct{}{}
+		entries = append(entries, values.MapEntry{Key: keyStr, Value: valueVal})
 	}
 	for _, def := range newMap.Defaults {
-		if _, exists := m.Get(def.FieldName); !exists {
-			fn := ctx.Env.Registry.(*modules.Registry).GetBIRFunction(def.FunctionLookupKey)
-			val := executeFunction(ctx, *fn, nil, frame)
-			m.Put(def.FieldName, val)
+		if _, exists := seen[def.FieldName]; exists {
+			continue
 		}
+		fn := ctx.Env.Registry.(*modules.Registry).GetBIRFunction(def.FunctionLookupKey)
+		val := executeFunction(ctx, *fn, nil, frame)
+		entries = append(entries, values.MapEntry{Key: def.FieldName, Value: val})
 	}
+	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, newMap.Type)
+	if atomic == nil {
+		panic(fmt.Sprintf("mapping inherent type has no atomic representation: %s", semtypes.ToString(ctx.TypeCtx, newMap.Type)))
+	}
+	m := values.NewMap(newMap.Type, atomic, newMap.IsReadonly, entries)
 	setOperandValue(ctx, newMap.GetLhsOperand(), frame, m)
 }
 
@@ -106,7 +118,7 @@ func execArrayStore(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) 
 	if idx < 0 {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
-	list.FillingSet(idx, getOperandValue(ctx, access.RhsOp, frame))
+	list.FillingSet(ctx.TypeCtx, idx, getOperandValue(ctx, access.RhsOp, frame))
 }
 
 func execArrayLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
@@ -136,10 +148,10 @@ func execMapStore(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	m := container.(*values.Map)
 	valueVal := getOperandValue(ctx, access.RhsOp, frame)
 	if valueVal == nil && m.ShouldDeleteOnNilStore(ctx.TypeCtx, keyStr) {
-		m.Delete(keyStr)
+		m.Delete(ctx.TypeCtx, keyStr)
 		return
 	}
-	m.Put(keyStr, valueVal)
+	m.Put(ctx.TypeCtx, keyStr, valueVal)
 }
 
 func execMapFillingLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
@@ -148,7 +160,7 @@ func execMapFillingLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Fra
 	if container == nil {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", key)))
 	}
-	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(key, access.Filler))
+	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(ctx.TypeCtx, key, access.Filler))
 }
 
 func execMapLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {

@@ -278,6 +278,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
+		write(buf, instr.IsReadonly)
 		bw.writeLength(buf, len(instr.Values))
 		for _, v := range instr.Values {
 			bw.writeOperand(buf, v)
@@ -295,6 +296,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 	case *bir.NewMap:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
+		write(buf, instr.IsReadonly)
 		bw.writeLength(buf, len(instr.Values))
 		for _, entry := range instr.Values {
 			write(buf, entry.IsKeyValuePair())

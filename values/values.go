@@ -70,7 +70,9 @@ func fillerFactoryFromDesc(cx semtypes.Context, f semtypes.Filler) FillerFactory
 		return func() BalValue { return v }
 	case semtypes.MappingFiller:
 		ty := f.Type
-		return func() BalValue { return NewMap(ty) }
+		atomic := f.Atomic
+		readonly := semtypes.IsSubtype(cx, ty, semtypes.VAL_READONLY)
+		return func() BalValue { return NewMap(ty, atomic, readonly, nil) }
 	case semtypes.ListFiller:
 		return listFillerFactory(cx, f)
 	default:
@@ -84,6 +86,8 @@ func listFillerFactory(cx semtypes.Context, f semtypes.ListFiller) FillerFactory
 		memberFactories[i] = fillerFactoryFromDesc(cx, m)
 	}
 	ty := f.Type
+	atomic := f.Atomic
+	readonly := semtypes.IsSubtype(cx, ty, semtypes.VAL_READONLY)
 	restType := f.Atomic.Rest()
 	// Resolve the rest filler factory lazily so that recursive types (e.g.
 	// `type A A[]`) do not blow the stack while building the factory graph.
@@ -97,11 +101,11 @@ func listFillerFactory(cx semtypes.Context, f semtypes.ListFiller) FillerFactory
 		return restFactory
 	}
 	return func() BalValue {
-		list := NewList(len(memberFactories), ty, getRestFactory())
+		initial := make([]BalValue, len(memberFactories))
 		for i, mf := range memberFactories {
-			list.elems[i] = mf()
+			initial[i] = mf()
 		}
-		return list
+		return NewList(ty, atomic, readonly, getRestFactory(), len(memberFactories), initial)
 	}
 }
 

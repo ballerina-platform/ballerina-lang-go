@@ -68,18 +68,20 @@ type (
 
 	NewArray struct {
 		BIRInstructionBase
-		SizeOp *BIROperand
-		Type   semtypes.SemType
-		Values []*BIROperand
-		Filler values.FillerFactory
+		SizeOp     *BIROperand
+		Type       semtypes.SemType
+		Values     []*BIROperand
+		Filler     values.FillerFactory
+		IsReadonly bool
 	}
 
 	// JBallerina call this NewStruct but prints as NewMap
 	NewMap struct {
 		BIRInstructionBase
-		Type     semtypes.SemType
-		Values   []MappingConstructorEntry
-		Defaults []MappingConstructorDefaultEntry
+		Type       semtypes.SemType
+		Values     []MappingConstructorEntry
+		Defaults   []MappingConstructorDefaultEntry
+		IsReadonly bool
 	}
 
 	MappingConstructorDefaultEntry struct {
@@ -305,7 +307,7 @@ func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
 }
 
-func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.FillerFactory, pos Location) *NewArray {
+func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.FillerFactory, isReadonly bool, pos Location) *NewArray {
 	return &NewArray{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -313,10 +315,11 @@ func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values
 			},
 			LhsOp: lhsOp,
 		},
-		Type:   typ,
-		SizeOp: sizeOp,
-		Values: values,
-		Filler: filler,
+		Type:       typ,
+		SizeOp:     sizeOp,
+		Values:     values,
+		Filler:     filler,
+		IsReadonly: isReadonly,
 	}
 }
 
@@ -374,7 +377,7 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
-func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, pos Location) *NewMap {
+func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, isReadonly bool, pos Location) *NewMap {
 	return &NewMap{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -382,9 +385,10 @@ func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []Mapping
 			},
 			LhsOp: lhsOp,
 		},
-		Type:     typ,
-		Values:   values,
-		Defaults: defaults,
+		Type:       typ,
+		Values:     values,
+		Defaults:   defaults,
+		IsReadonly: isReadonly,
 	}
 }
 

@@ -44,6 +44,33 @@ func init() {
 	runtime.RegisterModuleInitializer(initHttpModule)
 }
 
+// httpTypes holds the lazily-built semtypes used by the http runtime.
+// All entries are computed once on first use (so concurrent reads shouldn't be a problem);
+type httpTypes struct {
+	byteArrTy  semtypes.SemType
+	strArrTy   semtypes.SemType
+	jsonListTy semtypes.SemType
+	jsonMapTy  semtypes.SemType
+}
+
+// newMappingValue builds a fresh open `map<anydata|error>` value.
+func newMappingValue(tc semtypes.Context) *values.Map {
+	return values.NewMap(semtypes.MAPPING, semtypes.ToMappingAtomicType(tc, semtypes.MAPPING), false, nil)
+}
+
+// newListValue builds a fresh open `(anydata|error)[]` value seeded with the
+// supplied items.
+func newListValue(tc semtypes.Context, items []values.BalValue) *values.List {
+	return values.NewList(semtypes.LIST, semtypes.ToListAtomicType(tc, semtypes.LIST), false, nil, 0, items)
+}
+
+// newTypedListValue builds a fresh list with the supplied inherent type seeded
+// with the supplied items. The atomic representation must exist; callers pass
+// concrete list types built via list defs.
+func newTypedListValue(tc semtypes.Context, ty semtypes.SemType, items []values.BalValue) *values.List {
+	return values.NewList(ty, semtypes.ToListAtomicType(tc, ty), false, nil, 0, items)
+}
+
 func initHttpModule(rt *runtime.Runtime) {
 	// Register module-level constants so BIR global-variable loads of http:LEADING
 	// and http:TRAILING resolve correctly. Keys use buildGlobalVarLookupKey format:
@@ -53,38 +80,33 @@ func initHttpModule(rt *runtime.Runtime) {
 		"ballerina/http:TRAILING": "TRAILING",
 	})
 
-	// msgToBody and execBody are per-runtime closures that lazily initialise the
-	// byte[] semtype on the first call (the TypeEnv isn't available until Interpret
-	// runs). Keeping all state local to initHttpModule eliminates the data race that
-	// arose from the previous package-level globals being written concurrently by
-	// parallel tests each calling NewRuntime.
 	var (
-		once       sync.Once
-		byteArrTy  semtypes.SemType
-		strArrTy   semtypes.SemType
-		jsonListTy semtypes.SemType
-		jsonMapTy  semtypes.SemType
-		typCtx     semtypes.Context
+		once  sync.Once
+		types httpTypes
 	)
-	msgToBody := func(msg values.BalValue) ([]byte, string) {
+	ensureTypes := func() {
 		once.Do(func() {
 			env := rt.GetTypeEnv()
 			bld := semtypes.NewListDefinition()
-			byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+			types.byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
 			sld := semtypes.NewListDefinition()
-			strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-			typCtx = semtypes.ContextFrom(env)
+			types.strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
+			typCtx := semtypes.ContextFrom(env)
 			jsonTy := semtypes.CreateJSON(typCtx)
 			jmd := semtypes.NewMappingDefinition()
-			jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
+			types.jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
 			jld := semtypes.NewListDefinition()
-			jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
+			types.jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
 		})
+	}
+
+	msgToBody := func(tc semtypes.Context, msg values.BalValue) ([]byte, string) {
+		ensureTypes()
 		switch v := msg.(type) {
 		case string:
 			return []byte(v), "text/plain"
 		case *values.List:
-			if v.Type != nil && semtypes.IsSubtype(typCtx, v.Type, byteArrTy) {
+			if v.Type != nil && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
 					return b, "application/octet-stream"
 				}
@@ -102,13 +124,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			return b, "application/json"
 		}
 	}
-	execBody := func(verb string, args []values.BalValue) (values.BalValue, error) {
+	execBody := func(ctx *extern.Context, verb string, args []values.BalValue) (values.BalValue, error) {
 		self := args[0].(*values.Object)
 		path := args[1].(string)
 		var body []byte
 		contentType := ""
 		if len(args) > 2 && args[2] != nil {
-			body, contentType = msgToBody(args[2])
+			body, contentType = msgToBody(ctx.TypeCtx, args[2])
 			if body == nil && contentType == "json_error" {
 				return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 			}
@@ -134,7 +156,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		if err != nil {
 			return values.NewErrorWithMessage(err.Error()), nil
 		}
-		return buildResponse(statusCode, respHeaders, respBody), nil
+		return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBody), nil
 	}
 
 	// Remote method name uses the "$remote$" prefix (model.RemoteMethodName).
@@ -167,7 +189,7 @@ func initHttpModule(rt *runtime.Runtime) {
 	// Receives [url] (the preceding arg) and ignores it; the default is always {}.
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.init$default$1",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return values.NewMap(semtypes.MAPPING), nil
+			return newMappingValue(ctx.TypeCtx), nil
 		})
 
 	// Default lambda for headers param: called as $Client.get$default$1(path) → returns () = nil.
@@ -182,7 +204,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("parseHeader: expected string argument")
 			}
-			result, err := parseHeader(input)
+			result, err := parseHeader(ctx.TypeCtx, input)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
@@ -360,7 +382,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
 		})
 
 	// Default lambdas for post optional params (both return nil = Ballerina ())
@@ -371,7 +393,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.post",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return execBody("POST", args)
+			return execBody(ctx, "POST", args)
 		})
 
 	// head: body-less, like get
@@ -391,7 +413,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
 		})
 
 	// options: body-less, like get
@@ -411,7 +433,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
 		})
 
 	// put: body required, like post
@@ -421,7 +443,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.put",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return execBody("PUT", args)
+			return execBody(ctx, "PUT", args)
 		})
 
 	// patch: body required, like post
@@ -431,7 +453,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.patch",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return execBody("PATCH", args)
+			return execBody(ctx, "PATCH", args)
 		})
 
 	// delete: message is optional (defaults to nil = empty body)
@@ -443,7 +465,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.delete",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return execBody("DELETE", args)
+			return execBody(ctx, "DELETE", args)
 		})
 
 	// execute: args = [self, httpVerb, path, message, headers?, mediaType?]
@@ -460,7 +482,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			var body []byte
 			contentType := ""
 			if len(args) > 3 && args[3] != nil {
-				body, contentType = msgToBody(args[3])
+				body, contentType = msgToBody(ctx.TypeCtx, args[3])
 				if body == nil && contentType == "json_error" {
 					return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 				}
@@ -488,7 +510,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(statusCode, respHeaders, respBody), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBody), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getTextPayload",
@@ -500,19 +522,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			once.Do(func() {
-				env := rt.GetTypeEnv()
-				bld := semtypes.NewListDefinition()
-				byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-				sld := semtypes.NewListDefinition()
-				strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-				typCtx = semtypes.ContextFrom(env)
-				jsonTy := semtypes.CreateJSON(typCtx)
-				jmd := semtypes.NewMappingDefinition()
-				jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-				jld := semtypes.NewListDefinition()
-				jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-			})
+			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			body := bodyVal.(string)
@@ -522,33 +532,21 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err := dec.Decode(&v); err != nil {
 				return values.NewErrorWithMessage("failed to parse JSON payload: " + err.Error()), nil
 			}
-			return goToBalValue(v, jsonListTy, jsonMapTy), nil
+			return goToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getBinaryPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			once.Do(func() {
-				env := rt.GetTypeEnv()
-				bld := semtypes.NewListDefinition()
-				byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-				sld := semtypes.NewListDefinition()
-				strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-				typCtx = semtypes.ContextFrom(env)
-				jsonTy := semtypes.CreateJSON(typCtx)
-				jmd := semtypes.NewMappingDefinition()
-				jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-				jld := semtypes.NewListDefinition()
-				jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-			})
+			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			body := bodyVal.(string)
 			raw := []byte(body)
-			list := values.NewList(len(raw), byteArrTy, nil)
+			items := make([]values.BalValue, len(raw))
 			for i, b := range raw {
-				list.FillingSet(i, int64(b))
+				items[i] = int64(b)
 			}
-			return list, nil
+			return newTypedListValue(ctx.TypeCtx, types.byteArrTy, items), nil
 		})
 
 	// Default lambdas for position param (all return "LEADING")
@@ -599,26 +597,14 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getHeaderNames",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			once.Do(func() {
-				env := rt.GetTypeEnv()
-				bld := semtypes.NewListDefinition()
-				byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-				sld := semtypes.NewListDefinition()
-				strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-				typCtx = semtypes.ContextFrom(env)
-				jsonTy := semtypes.CreateJSON(typCtx)
-				jmd := semtypes.NewMappingDefinition()
-				jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-				jld := semtypes.NewListDefinition()
-				jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-			})
+			ensureTypes()
 			self := args[0].(*values.Object)
 			keys := responseHeaders(self).Keys()
-			list := values.NewList(len(keys), strArrTy, nil)
+			items := make([]values.BalValue, len(keys))
 			for i, k := range keys {
-				list.FillingSet(i, k)
+				items[i] = k
 			}
-			return list, nil
+			return newTypedListValue(ctx.TypeCtx, types.strArrTy, items), nil
 		})
 }
 
@@ -643,9 +629,9 @@ func splitOutsideQuotes(s string, sep byte) []string {
 	return append(out, s[start:])
 }
 
-func parseHeader(input string) (*values.List, error) {
+func parseHeader(tc semtypes.Context, input string) (*values.List, error) {
 	segments := splitOutsideQuotes(input, ',')
-	list := values.NewList(0, semtypes.LIST, nil)
+	list := newListValue(tc, nil)
 	for _, seg := range segments {
 		seg = strings.TrimSpace(seg)
 		if seg == "" {
@@ -656,7 +642,7 @@ func parseHeader(input string) (*values.List, error) {
 		if headerVal == "" {
 			return nil, fmt.Errorf("invalid header value: missing value before parameters")
 		}
-		params := values.NewMap(semtypes.MAPPING)
+		params := newMappingValue(tc)
 		for _, param := range parts[1:] {
 			param = strings.TrimSpace(param)
 			if param == "" {
@@ -664,7 +650,7 @@ func parseHeader(input string) (*values.List, error) {
 			}
 			eqIdx := strings.IndexByte(param, '=')
 			if eqIdx < 0 {
-				params.Put(strings.ToLower(param), "")
+				params.Put(tc, strings.ToLower(param), "")
 				continue
 			}
 			key := strings.ToLower(strings.TrimSpace(param[:eqIdx]))
@@ -672,12 +658,12 @@ func parseHeader(input string) (*values.List, error) {
 			if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
 				val = val[1 : len(val)-1]
 			}
-			params.Put(key, val)
+			params.Put(tc, key, val)
 		}
-		entry := values.NewMap(semtypes.MAPPING)
-		entry.Put("value", headerVal)
-		entry.Put("params", params)
-		list.Append(entry)
+		entry := newMappingValue(tc)
+		entry.Put(tc, "value", headerVal)
+		entry.Put(tc, "params", params)
+		list.Append(tc, entry)
 	}
 	return list, nil
 }
@@ -716,14 +702,14 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 
 // buildResponse constructs a Ballerina Response object from HTTP response data.
 // All header values are stored as *values.List under the internal "$headers" key.
-func buildResponse(statusCode int, respHeaders map[string][]string, body []byte) *values.Object {
-	headersMap := values.NewMap(semtypes.MAPPING)
+func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][]string, body []byte) *values.Object {
+	headersMap := newMappingValue(tc)
 	for k, vals := range respHeaders {
-		list := values.NewList(len(vals), semtypes.LIST, nil)
+		items := make([]values.BalValue, len(vals))
 		for i, v := range vals {
-			list.FillingSet(i, v)
+			items[i] = v
 		}
-		headersMap.Put(strings.ToLower(k), list)
+		headersMap.Put(tc, strings.ToLower(k), newListValue(tc, items))
 	}
 	return values.NewObject(
 		semtypes.OBJECT,
@@ -812,7 +798,7 @@ func toJSONBytes(v values.BalValue) ([]byte, error) {
 // []interface{} → *values.List with json[] type, map[string]interface{} → *values.Map with map<json> type.
 // jsonListTy and jsonMapTy must be the structural json[] and map<json> semtypes so that
 // `value is json` type checks return true for the produced values.
-func goToBalValue(v interface{}, jsonListTy, jsonMapTy semtypes.SemType) values.BalValue {
+func goToBalValue(tc semtypes.Context, v interface{}, jsonListTy, jsonMapTy semtypes.SemType) values.BalValue {
 	switch v := v.(type) {
 	case nil:
 		return nil
@@ -827,15 +813,15 @@ func goToBalValue(v interface{}, jsonListTy, jsonMapTy semtypes.SemType) values.
 	case string:
 		return v
 	case []interface{}:
-		list := values.NewList(len(v), jsonListTy, nil)
+		items := make([]values.BalValue, len(v))
 		for i, elem := range v {
-			list.FillingSet(i, goToBalValue(elem, jsonListTy, jsonMapTy))
+			items[i] = goToBalValue(tc, elem, jsonListTy, jsonMapTy)
 		}
-		return list
+		return newTypedListValue(tc, jsonListTy, items)
 	case map[string]interface{}:
-		m := values.NewMap(jsonMapTy)
+		m := values.NewMap(jsonMapTy, semtypes.ToMappingAtomicType(tc, jsonMapTy), false, nil)
 		for k, val := range v {
-			m.Put(k, goToBalValue(val, jsonListTy, jsonMapTy))
+			m.Put(tc, k, goToBalValue(tc, val, jsonListTy, jsonMapTy))
 		}
 		return m
 	default:

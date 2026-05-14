@@ -37,7 +37,7 @@ func mapLength(_ *extern.Context, args []values.BalValue) (values.BalValue, erro
 func mapKeys(rt *runtime.Runtime) extern.NativeFunc {
 	var stringArrayTy semtypes.SemType
 	var stringArrayOnce sync.Once
-	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		stringArrayOnce.Do(func() {
 			env := rt.GetTypeEnv()
 			ld := semtypes.NewListDefinition()
@@ -49,17 +49,17 @@ func mapKeys(rt *runtime.Runtime) extern.NativeFunc {
 		for i, k := range keys {
 			items[i] = k
 		}
-		list := values.NewList(0, stringArrayTy, nil)
-		list.Append(items...)
+		atomic := semtypes.ToListAtomicType(ctx.TypeCtx, stringArrayTy)
+		list := values.NewList(stringArrayTy, atomic, false, nil, 0, items)
 		return list, nil
 	}
 }
 
-func mapRemove(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+func mapRemove(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	m := args[0].(*values.Map)
 	key := args[1].(string)
 	val, _ := m.Get(key)
-	m.Delete(key)
+	m.Delete(ctx.TypeCtx, key)
 	return val, nil
 }
 
