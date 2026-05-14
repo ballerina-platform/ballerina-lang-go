@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"unsafe"
 )
 
 type CompareResult int8
@@ -205,4 +206,102 @@ func reverseCompareResult(cmp CompareResult) CompareResult {
 	default:
 		return cmp
 	}
+}
+
+type deepEqualVisit struct {
+	left  uintptr
+	right uintptr
+}
+
+func DeepEqual(x, y BalValue) bool {
+	return deepEqual(x, y, make(map[deepEqualVisit]bool))
+}
+
+func deepEqual(x, y BalValue, visited map[deepEqualVisit]bool) bool {
+	if x == nil || y == nil {
+		return x == nil && y == nil
+	}
+	switch left := x.(type) {
+	case bool:
+		right, ok := y.(bool)
+		return ok && left == right
+	case int64:
+		right, ok := y.(int64)
+		return ok && left == right
+	case float64:
+		right, ok := y.(float64)
+		return ok && (left == right || (math.IsNaN(left) && math.IsNaN(right)))
+	case string:
+		right, ok := y.(string)
+		return ok && left == right
+	case *big.Rat:
+		right, ok := y.(*big.Rat)
+		return ok && left.Cmp(right) == 0
+	case *List:
+		right, ok := y.(*List)
+		if !ok {
+			return false
+		}
+		return deepEqualLists(left, right, visited)
+	case *Map:
+		right, ok := y.(*Map)
+		if !ok {
+			return false
+		}
+		return deepEqualMaps(left, right, visited)
+	default:
+		return false
+	}
+}
+
+func deepEqualLists(left, right *List, visited map[deepEqualVisit]bool) bool {
+	if left == right {
+		return true
+	}
+	visit := deepEqualVisit{
+		left:  uintptr(unsafe.Pointer(left)),
+		right: uintptr(unsafe.Pointer(right)),
+	}
+	if visited[visit] {
+		return true
+	}
+	visited[visit] = true
+	defer delete(visited, visit)
+
+	if left.Len() != right.Len() {
+		return false
+	}
+	for i := 0; i < left.Len(); i++ {
+		if !deepEqual(left.Get(i), right.Get(i), visited) {
+			return false
+		}
+	}
+	return true
+}
+
+func deepEqualMaps(left, right *Map, visited map[deepEqualVisit]bool) bool {
+	if left == right {
+		return true
+	}
+	visit := deepEqualVisit{
+		left:  uintptr(unsafe.Pointer(left)),
+		right: uintptr(unsafe.Pointer(right)),
+	}
+	if visited[visit] {
+		return true
+	}
+	visited[visit] = true
+	defer delete(visited, visit)
+
+	if left.Len() != right.Len() {
+		return false
+	}
+	for _, key := range left.Keys() {
+		leftValue, _ := left.Get(key)
+		rightValue, ok := right.Get(key)
+		if !ok || !deepEqual(leftValue, rightValue, visited) {
+			return false
+		}
+	}
+	return true
 }

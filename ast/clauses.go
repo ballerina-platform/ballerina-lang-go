@@ -54,6 +54,16 @@ type (
 		bLangNodeBase
 		Expression BLangExpression
 	}
+	BLangGroupByClause struct {
+		bLangNodeBase
+		GroupingKeyList []BLangGroupingKey
+		NonGroupingKeys common.Set[string]
+	}
+	BLangGroupingKey struct {
+		bLangNodeBase
+		VariableDef *BLangSimpleVariableDef
+		VariableRef *BLangSimpleVarRef
+	}
 	BLangLimitClause struct {
 		bLangNodeBase
 		Expression BLangExpression
@@ -101,6 +111,8 @@ var (
 	_ model.Node              = &BLangLetClause{}
 	_ model.OnClauseNode      = &BLangOnClause{}
 	_ model.Node              = &BLangWhereClause{}
+	_ model.GroupByClauseNode = &BLangGroupByClause{}
+	_ model.GroupingKeyNode   = &BLangGroupingKey{}
 	_ model.Node              = &BLangLimitClause{}
 	_ model.Node              = &BLangOrderByClause{}
 	_ model.Node              = &BLangOrderKey{}
@@ -117,6 +129,8 @@ var (
 	_ BLangNode = &BLangLetClause{}
 	_ BLangNode = &BLangOnClause{}
 	_ BLangNode = &BLangWhereClause{}
+	_ BLangNode = &BLangGroupByClause{}
+	_ BLangNode = &BLangGroupingKey{}
 	_ BLangNode = &BLangLimitClause{}
 	_ BLangNode = &BLangOrderByClause{}
 	_ BLangNode = &BLangOrderKey{}
@@ -228,6 +242,50 @@ func (b *BLangLetClause) GetKind() model.NodeKind {
 
 func (b *BLangWhereClause) GetKind() model.NodeKind {
 	return model.NodeKind_WHERE
+}
+
+func (b *BLangGroupByClause) GetKind() model.NodeKind {
+	return model.NodeKind_GROUP_BY
+}
+
+func (b *BLangGroupByClause) AddGroupingKey(groupingKey model.GroupingKeyNode) {
+	if key, ok := groupingKey.(*BLangGroupingKey); ok {
+		b.GroupingKeyList = append(b.GroupingKeyList, *key)
+		return
+	}
+	panic("groupingKey is not a BLangGroupingKey")
+}
+
+func (b *BLangGroupByClause) GetGroupingKeyList() []model.GroupingKeyNode {
+	result := make([]model.GroupingKeyNode, len(b.GroupingKeyList))
+	for i := range b.GroupingKeyList {
+		result[i] = &b.GroupingKeyList[i]
+	}
+	return result
+}
+
+func (b *BLangGroupingKey) GetKind() model.NodeKind {
+	return model.NodeKind_GROUPING_KEY
+}
+
+func (b *BLangGroupingKey) SetGroupingKey(groupingKey model.Node) {
+	switch key := groupingKey.(type) {
+	case *BLangSimpleVariableDef:
+		b.VariableDef = key
+		b.VariableRef = nil
+	case *BLangSimpleVarRef:
+		b.VariableRef = key
+		b.VariableDef = nil
+	default:
+		panic("groupingKey is neither a BLangSimpleVariableDef nor a BLangSimpleVarRef")
+	}
+}
+
+func (b *BLangGroupingKey) GetGroupingKey() model.Node {
+	if b.VariableRef != nil {
+		return b.VariableRef
+	}
+	return b.VariableDef
 }
 
 func (b *BLangLimitClause) GetKind() model.NodeKind {

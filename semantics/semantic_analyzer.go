@@ -772,6 +772,7 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 type queryExprAnalysisClauses struct {
 	fromClause       *ast.BLangFromClause
 	selectClause     *ast.BLangSelectClause
+	collectClause    *ast.BLangCollectClause
 	onConflictClause *ast.BLangOnConflictClause
 	lastClauseIndex  int
 }
@@ -797,7 +798,14 @@ func queryExprClausesForAnalysis[A analyzer](
 		return queryExprAnalysisClauses{}, false
 	}
 
-	selectClause, ok := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
+	var (
+		selectClause  *ast.BLangSelectClause
+		collectClause *ast.BLangCollectClause
+		ok            bool
+	)
+	if selectClause, ok = queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause); !ok {
+		collectClause, ok = queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangCollectClause)
+	}
 	if !ok {
 		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
 		return queryExprAnalysisClauses{}, false
@@ -805,6 +813,7 @@ func queryExprClausesForAnalysis[A analyzer](
 	return queryExprAnalysisClauses{
 		fromClause:       fromClause,
 		selectClause:     selectClause,
+		collectClause:    collectClause,
 		onConflictClause: onConflictClause,
 		lastClauseIndex:  lastClauseIndex,
 	}, true
@@ -854,6 +863,37 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			}
 		case *ast.BLangWhereClause, *ast.BLangLimitClause:
 			// Query clause type and shape validation already happen in type resolution.
+		case *ast.BLangGroupByClause:
+			anyData := semtypes.CreateAnydata(a.tyCtx())
+			for j := range clause.GroupingKeyList {
+				groupingKey := &clause.GroupingKeyList[j]
+				switch {
+				case groupingKey.VariableRef != nil:
+					if !analyzeActionOrExpression(a, groupingKey.VariableRef, anyData) {
+						return false
+					}
+				case groupingKey.VariableDef != nil:
+					varDef := groupingKey.VariableDef
+					if varDef.Var == nil || varDef.Var.Expr == nil {
+						a.semanticErr("group by clause supports only initialized simple variable declarations", clause.GetPosition())
+						return false
+					}
+					var expectedType semtypes.SemType
+					if ast.SymbolIsSet(varDef.Var) {
+						expectedType = a.ctx().SymbolType(varDef.Var.Symbol())
+					}
+					if !analyzeActionOrExpression(a, varDef.Var.Expr.(ast.BLangExpression), expectedType) {
+						return false
+					}
+					if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), expectedType, anyData) {
+						a.semanticErr("grouping key expression must be a subtype of anydata", groupingKey.GetPosition())
+						return false
+					}
+				default:
+					a.internalErr("group by clause shape should have been validated during type resolution", groupingKey.GetPosition())
+					return false
+				}
+			}
 		case *ast.BLangOrderByClause:
 			for j := range clause.OrderByKeyList {
 				orderKey := &clause.OrderByKeyList[j]
@@ -864,13 +904,22 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		}
 	}
 
-	var selectExpectedTy semtypes.SemType
-	if queryExpr.QueryConstructType == model.TypeKind_MAP {
-		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
-	}
-
-	if !analyzeActionOrExpression(a, clauses.selectClause.Expression, selectExpectedTy) {
-		return false
+	if clauses.selectClause != nil {
+		var selectExpectedTy semtypes.SemType
+		if queryExpr.QueryConstructType == model.TypeKind_MAP {
+			selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
+		}
+		if !analyzeActionOrExpression(a, clauses.selectClause.Expression, selectExpectedTy) {
+			return false
+		}
+	} else {
+		if queryExpr.QueryConstructType != model.TypeKind_NONE {
+			a.semanticErr("query construct types cannot be used with collect clause", clauses.collectClause.GetPosition())
+			return false
+		}
+		if !analyzeActionOrExpression(a, clauses.collectClause.Expression.(ast.BLangExpression), nil) {
+			return false
+		}
 	}
 
 	if clauses.onConflictClause != nil {

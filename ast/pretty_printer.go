@@ -159,6 +159,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printOnClause(t)
 	case *BLangWhereClause:
 		p.printWhereClause(t)
+	case *BLangGroupByClause:
+		p.printGroupByClause(t)
+	case *BLangGroupingKey:
+		p.printGroupingKey(t)
 	case *BLangLimitClause:
 		p.printLimitClause(t)
 	case *BLangOrderByClause:
@@ -169,6 +173,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSelectClause(t)
 	case *BLangOnConflictClause:
 		p.printOnConflictClause(t)
+	case *BLangCollectClause:
+		p.printCollectClause(t)
 	case *BLangCheckedExpr:
 		p.printCheckedExpr(t)
 	case *BLangCheckPanickedExpr:
@@ -752,6 +758,31 @@ func (p *PrettyPrinter) printWhereClause(node *BLangWhereClause) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printGroupByClause(node *BLangGroupByClause) {
+	p.startNode()
+	p.printString("group-by-clause")
+	p.indentLevel++
+	for i := range node.GroupingKeyList {
+		p.PrintInner(&node.GroupingKeyList[i])
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printGroupingKey(node *BLangGroupingKey) {
+	p.startNode()
+	p.printString("grouping-key")
+	p.indentLevel++
+	if node.VariableDef != nil {
+		p.PrintInner(node.VariableDef)
+	}
+	if node.VariableRef != nil {
+		p.PrintInner(node.VariableRef)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printLimitClause(node *BLangLimitClause) {
 	p.startNode()
 	p.printString("limit-clause")
@@ -807,6 +838,17 @@ func (p *PrettyPrinter) printOnConflictClause(node *BLangOnConflictClause) {
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printCollectClause(node *BLangCollectClause) {
+	p.startNode()
+	p.printString("collect-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()

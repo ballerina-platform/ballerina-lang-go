@@ -1280,6 +1280,18 @@ type SelectClauseNode interface {
 	SetExpression(expression ExpressionNode)
 }
 
+type GroupByClauseNode interface {
+	Node
+	AddGroupingKey(groupingKey GroupingKeyNode)
+	GetGroupingKeyList() []GroupingKeyNode
+}
+
+type GroupingKeyNode interface {
+	Node
+	GetGroupingKey() Node
+	SetGroupingKey(groupingKey Node)
+}
+
 type QueryExpressionNode interface {
 	ExpressionNode
 	GetQueryClauses() []Node

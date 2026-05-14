@@ -63,7 +63,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 				newFromClause(newIntListLiteral(1), nil, true),
 				newWhereClause(newIntLiteral(1)),
 			),
-			diagSub: "query expression requires a select clause",
+			diagSub: "query expression requires a select or collect clause",
 		},
 		{
 			name: "from collection resolution fails",
@@ -213,6 +213,41 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			diagSub: "order by key expression must have an ordered type",
 		},
 		{
+			name: "group by variable declaration has no initializer",
+			clause: newGroupByClause(
+				newGroupingKeyVarDef(newSimpleVarDef("g", nil, nil)),
+			),
+			diagSub: "group by variable declaration requires an initializer",
+		},
+		{
+			name: "group by initializer resolution fails",
+			clause: newGroupByClause(
+				newGroupingKeyVarDef(newSimpleVarDef("g", nil, newUnsupportedExprNode())),
+			),
+			diagSub: "unsupported expression type",
+		},
+		{
+			name: "group by declared type resolution fails",
+			clause: newGroupByClause(
+				newGroupingKeyVarDef(newSimpleVarDef("g", newUnsupportedTypeNode(), newIntLiteral(1))),
+			),
+			diagSub: "unsupported type",
+		},
+		{
+			name: "group by declared type incompatible",
+			clause: newGroupByClause(
+				newGroupingKeyVarDef(newSimpleVarDef("g", newValueType(model.TypeKind_STRING), newIntLiteral(1))),
+			),
+			diagSub: "group by variable type is incompatible with initializer expression",
+		},
+		{
+			name: "group by key non-anydata type",
+			clause: newGroupByClause(
+				newGroupingKeyVarDef(newSimpleVarDef("g", nil, newErrorConstructorExpr())),
+			),
+			diagSub: "grouping key expression must be a subtype of anydata",
+		},
+		{
 			name: "join collection non-list",
 			clause: newJoinClause(
 				newIntLiteral(1),
@@ -259,7 +294,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 		{
 			name:    "unsupported intermediate clause",
 			clause:  newCollectClause(),
-			diagSub: "only join + let + where + order by + limit clauses are supported as intermediate query clauses",
+			diagSub: "only join + let + where + group by + order by + limit clauses are supported as intermediate query clauses",
 		},
 	}
 
@@ -325,6 +360,141 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 	}
 	if !semtypes.IsSubtypeSimple(queryTy, semtypes.MAPPING) {
 		t.Fatalf("expected query result type to be mapping, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprCollectClause(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), nil, true),
+		newCollectClauseExpr(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for collect clause")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.INT) {
+		t.Fatalf("expected query result type to be int, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprCollectClauseRejectsConstructType(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), nil, true),
+		newCollectClauseExpr(newIntLiteral(1)),
+	)
+	query.QueryConstructType = model.TypeKind_MAP
+
+	_, _, ok := resolveQueryExpr(resolver, nil, query)
+	if ok {
+		t.Fatalf("expected resolveQueryExpr to fail for collect clause with query construct type")
+	}
+	assertDiagnosticContains(t, cx, "query construct types cannot be used with collect clause")
+}
+
+func TestResolveQueryExprCollectAggregatesVariables(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
+	xDef := newSimpleVarDef("x", nil, nil)
+	xDef.Var.SetSymbol(xSymbolRef)
+	collectXRef := newSimpleVarRef("x", xSymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), xDef, true),
+		newCollectClauseExpr(collectXRef),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for collect clause with query variable")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected collect result type to be a list, got %v", queryTy)
+	}
+	if !semtypes.IsSubtypeSimple(collectXRef.GetDeterminedType(), semtypes.LIST) {
+		t.Fatalf("expected collect variable reference to be aggregated as a list, got %v", collectXRef.GetDeterminedType())
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
+	ySymbolRef := addTestValueSymbol(cx, space, "y", nil)
+
+	xDef := newSimpleVarDef("x", nil, nil)
+	xDef.Var.SetSymbol(xSymbolRef)
+	yDef := newSimpleVarDef("y", nil, newIntLiteral(1))
+	yDef.Var.SetSymbol(ySymbolRef)
+	groupXRef := newSimpleVarRef("x", xSymbolRef)
+	selectYRef := newSimpleVarRef("y", ySymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), xDef, true),
+		newLetClause(yDef),
+		newGroupByClause(newGroupingKeyRef(groupXRef)),
+		newSelectClause(selectYRef),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for group by clause")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if !semtypes.IsSubtypeSimple(groupXRef.GetDeterminedType(), semtypes.INT) {
+		t.Fatalf("expected grouping key variable to remain int, got %v", groupXRef.GetDeterminedType())
+	}
+	if !semtypes.IsSubtypeSimple(selectYRef.GetDeterminedType(), semtypes.LIST) {
+		t.Fatalf("expected non-grouping variable to be aggregated as a non-empty list, got %v", selectYRef.GetDeterminedType())
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprGroupByVarDeclaration(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
+	nSymbolRef := addTestValueSymbol(cx, space, "n", nil)
+
+	xDef := newSimpleVarDef("x", nil, nil)
+	xDef.Var.SetSymbol(xSymbolRef)
+	nDef := newSimpleVarDef("n", nil, newIntLiteral(1))
+	nDef.Var.SetSymbol(nSymbolRef)
+	selectNRef := newSimpleVarRef("n", nSymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), xDef, true),
+		newGroupByClause(newGroupingKeyVarDef(nDef)),
+		newSelectClause(selectNRef),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for group by variable declaration")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if !semtypes.IsSubtypeSimple(selectNRef.GetDeterminedType(), semtypes.INT) {
+		t.Fatalf("expected grouping variable declaration to be int, got %v", selectNRef.GetDeterminedType())
 	}
 	if len(cx.Diagnostics()) > 0 {
 		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
@@ -650,10 +820,38 @@ func newLimitClause(expr ast.BLangExpression) *ast.BLangLimitClause {
 }
 
 func newCollectClause() *ast.BLangCollectClause {
+	return newCollectClauseExpr(newIntLiteral(1))
+}
+
+func newCollectClauseExpr(expr ast.BLangExpression) *ast.BLangCollectClause {
 	collectClause := &ast.BLangCollectClause{}
 	collectClause.SetPosition(queryTestPos)
-	collectClause.SetExpression(newIntLiteral(1))
+	collectClause.SetExpression(expr)
 	return collectClause
+}
+
+func newGroupByClause(keys ...ast.BLangGroupingKey) *ast.BLangGroupByClause {
+	groupByClause := &ast.BLangGroupByClause{
+		GroupingKeyList: keys,
+	}
+	groupByClause.SetPosition(queryTestPos)
+	return groupByClause
+}
+
+func newGroupingKeyRef(ref *ast.BLangSimpleVarRef) ast.BLangGroupingKey {
+	key := ast.BLangGroupingKey{
+		VariableRef: ref,
+	}
+	key.SetPosition(queryTestPos)
+	return key
+}
+
+func newGroupingKeyVarDef(varDef *ast.BLangSimpleVariableDef) ast.BLangGroupingKey {
+	key := ast.BLangGroupingKey{
+		VariableDef: varDef,
+	}
+	key.SetPosition(queryTestPos)
+	return key
 }
 
 func newOrderByClause(keys ...ast.BLangOrderKey) *ast.BLangOrderByClause {
@@ -708,6 +906,30 @@ func newSimpleVarDef(name string, typeNode ast.BType, expr ast.BLangExpression) 
 	}
 	varDef.SetPosition(queryTestPos)
 	return varDef
+}
+
+func addTestValueSymbol(cx *context.CompilerContext, space *model.SymbolSpace, name string, ty semtypes.SemType) model.SymbolRef {
+	valueSymbol := model.NewValueSymbol(name, false, false, false)
+	space.AddSymbol(name, &valueSymbol)
+	symbolRef, _ := space.GetSymbol(name)
+	if ty != nil {
+		cx.SetSymbolType(symbolRef, ty)
+	}
+	return symbolRef
+}
+
+func newSimpleVarRef(name string, symbol model.SymbolRef) *ast.BLangSimpleVarRef {
+	ident := &ast.BLangIdentifier{
+		Value:         name,
+		OriginalValue: name,
+	}
+	ident.SetPosition(queryTestPos)
+	ref := &ast.BLangSimpleVarRef{
+		VariableName: ident,
+	}
+	ref.SetPosition(queryTestPos)
+	ref.SetSymbol(symbol)
+	return ref
 }
 
 func newValueType(typeKind model.TypeKind) ast.BType {

@@ -29,13 +29,24 @@ const PackageName = "lang.__internal"
 
 func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*PackageID)
-	querySortSignature := model.FunctionSignature{
+	addInternalFunction(ctx, space, "querySort", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.LIST, semtypes.LIST, semtypes.LIST},
 		ReturnType: semtypes.NIL,
-	}
-	querySortSymbol := model.NewFunctionSymbol("querySort", querySortSignature, true)
-	space.AddSymbol("querySort", querySortSymbol)
-	querySortRef, _ := space.GetSymbol("querySort")
-	ctx.SetSymbolType(querySortRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &querySortSignature))
+	})
+	addInternalFunction(ctx, space, "queryGroup", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.LIST, semtypes.LIST},
+		ReturnType: semtypes.LIST,
+	})
+	addInternalFunction(ctx, space, "queryCollect", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.INT},
+		ReturnType: semtypes.LIST,
+	})
 	return model.NewExportedSymbolSpace(space, nil)
+}
+
+func addInternalFunction(ctx *context.CompilerContext, space *model.SymbolSpace, name string, sig model.FunctionSignature) {
+	symbol := model.NewFunctionSymbol(name, sig, true)
+	space.AddSymbol(name, symbol)
+	ref, _ := space.GetSymbol(name)
+	ctx.SetSymbolType(ref, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &sig))
 }

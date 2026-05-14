@@ -767,6 +767,19 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expression.(BLangNode))
 		}
 
+	case *BLangGroupByClause:
+		for i := range node.GroupingKeyList {
+			Walk(v, &node.GroupingKeyList[i])
+		}
+
+	case *BLangGroupingKey:
+		if node.VariableDef != nil {
+			Walk(v, node.VariableDef)
+		}
+		if node.VariableRef != nil {
+			Walk(v, node.VariableRef)
+		}
+
 	case *BLangOnClause:
 		if node.OnExpr != nil {
 			Walk(v, node.OnExpr.(BLangNode))

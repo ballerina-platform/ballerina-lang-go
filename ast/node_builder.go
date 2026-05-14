@@ -3067,7 +3067,12 @@ func (n *NodeBuilder) TransformSelectClause(selectClauseNode *tree.SelectClauseN
 }
 
 func (n *NodeBuilder) TransformCollectClause(collectClauseNode *tree.CollectClauseNode) BLangNode {
-	panic("TransformCollectClause unimplemented")
+	collectClause := &BLangCollectClause{
+		NonGroupingKeys: &balCommon.UnorderedSet[string]{},
+	}
+	collectClause.pos = getPosition(n.de(), collectClauseNode)
+	collectClause.SetExpression(n.createExpression(collectClauseNode.Expression()))
+	return collectClause
 }
 
 func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryExpressionNode) BLangNode {
@@ -3095,18 +3100,19 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
-		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
+		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE,
+			common.GROUP_BY_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
 			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
-			n.cx.Unimplemented("only from + join + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
+			n.cx.Unimplemented("only from + join + let + where + group by + order by + limit + select/collect query clauses are supported for now", getPosition(n.de(), clause))
 		}
 	}
 
 	resultClause := queryExpressionNode.ResultClause()
-	if resultClause != nil && resultClause.Kind() == common.SELECT_CLAUSE {
+	if resultClause != nil && (resultClause.Kind() == common.SELECT_CLAUSE || resultClause.Kind() == common.COLLECT_CLAUSE) {
 		queryExpr.AddQueryClause(n.TransformSyntaxNode(resultClause))
 	} else if resultClause != nil {
-		n.cx.Unimplemented("only select result clauses are supported for now", getPosition(n.de(), resultClause))
+		n.cx.Unimplemented("only select/collect result clauses are supported for now", getPosition(n.de(), resultClause))
 	}
 
 	if queryExpressionNode.OnConflictClause() != nil {
@@ -3827,11 +3833,61 @@ func (n *NodeBuilder) TransformOrderKey(orderKeyNode *tree.OrderKeyNode) BLangNo
 }
 
 func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClauseNode) BLangNode {
-	panic("TransformGroupByClause unimplemented")
+	groupByClause := &BLangGroupByClause{
+		NonGroupingKeys: &balCommon.UnorderedSet[string]{},
+	}
+	groupByClause.pos = getPosition(n.de(), groupByClauseNode)
+
+	groupingKeys := groupByClauseNode.GroupingKey()
+	for node := range groupingKeys.Iterator() {
+		if node.Kind() == common.COMMA_TOKEN {
+			continue
+		}
+		groupingKey := &BLangGroupingKey{}
+		groupingKey.pos = getPosition(n.de(), node)
+		if node.Kind() == common.SIMPLE_NAME_REFERENCE || node.Kind() == common.IDENTIFIER_TOKEN {
+			varRef, ok := n.createExpression(node).(*BLangSimpleVarRef)
+			if !ok {
+				panic("expected grouping key variable reference to be a simple variable reference")
+			}
+			groupingKey.VariableRef = varRef
+		} else {
+			keyNode, ok := n.TransformGroupingKeyVarDeclaration(node.(*tree.GroupingKeyVarDeclarationNode)).(*BLangGroupingKey)
+			if !ok {
+				panic("expected grouping key declaration to produce a BLangGroupingKey")
+			}
+			groupingKey = keyNode
+		}
+		groupByClause.GroupingKeyList = append(groupByClause.GroupingKeyList, *groupingKey)
+	}
+	return groupByClause
 }
 
 func (n *NodeBuilder) TransformGroupingKeyVarDeclaration(groupingKeyVarDeclarationNode *tree.GroupingKeyVarDeclarationNode) BLangNode {
-	panic("TransformGroupingKeyVarDeclaration unimplemented")
+	pos := getPosition(n.de(), groupingKeyVarDeclarationNode)
+	groupingKey := &BLangGroupingKey{}
+	groupingKey.pos = pos
+
+	variableNode := n.getBLangVariableNode(groupingKeyVarDeclarationNode.SimpleBindingPattern(), pos)
+	simpleVar, ok := variableNode.(*BLangSimpleVariable)
+	if !ok {
+		panic("expected grouping key declaration to create a simple variable reference")
+	}
+	simpleVar.SetPosition(pos)
+	simpleVar.SetInitialExpression(n.createExpression(groupingKeyVarDeclarationNode.Expression()))
+
+	typeDesc := groupingKeyVarDeclarationNode.TypeDescriptor()
+	if isDeclaredWithVar(typeDesc) {
+		simpleVar.SetIsDeclaredWithVar(true)
+	} else {
+		simpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+	}
+
+	varDef := &BLangSimpleVariableDef{}
+	varDef.pos = pos
+	varDef.SetVariable(simpleVar)
+	groupingKey.VariableDef = varDef
+	return groupingKey
 }
 
 func (n *NodeBuilder) TransformOnFailClause(onFailClauseNode *tree.OnFailClauseNode) BLangNode {

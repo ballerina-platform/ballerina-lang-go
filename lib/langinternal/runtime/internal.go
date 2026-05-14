@@ -18,6 +18,7 @@ package langinternalruntime
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
 	"sort"
@@ -116,6 +117,135 @@ func initInternalModule(rt *runtime.Runtime) {
 		}
 		return nil, nil
 	})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryGroup", func(args []values.BalValue) (values.BalValue, error) {
+		rows, ok := args[0].(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be a list")
+		}
+		keyRows, ok := args[1].(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be a list")
+		}
+		scalarFlags, ok := args[2].(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("third argument must be a list")
+		}
+		return queryGroup(rows, keyRows, scalarFlags)
+	})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(args []values.BalValue) (values.BalValue, error) {
+		rows, ok := args[0].(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be a list")
+		}
+		slotCount, ok := args[1].(int64)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be an int")
+		}
+		return queryCollect(rows, int(slotCount))
+	})
+}
+
+type queryGroupState struct {
+	key *values.List
+	row *values.List
+}
+
+func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
+	rowCount := rows.Len()
+	if keyRows.Len() != rowCount {
+		return nil, fmt.Errorf("group keys and rows length mismatch: keys=%d rows=%d", keyRows.Len(), rowCount)
+	}
+	slotCount := scalarFlags.Len()
+	scalarSlots := make([]bool, slotCount)
+	for slot := 0; slot < slotCount; slot++ {
+		isScalar, ok := scalarFlags.Get(slot).(bool)
+		if !ok {
+			return nil, fmt.Errorf("group scalar flag %d must be a bool", slot)
+		}
+		scalarSlots[slot] = isScalar
+	}
+
+	result := values.NewList(0, semtypes.LIST, values.NeverValue)
+	groups := make([]queryGroupState, 0)
+	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
+		sourceRow, ok := rows.Get(rowIndex).(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("query row %d must be a list", rowIndex)
+		}
+		if sourceRow.Len() != slotCount {
+			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, sourceRow.Len(), slotCount)
+		}
+		keyRow, ok := keyRows.Get(rowIndex).(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("group key row %d must be a list", rowIndex)
+		}
+		groupIndex := findQueryGroup(groups, keyRow)
+		if groupIndex == -1 {
+			groupRow := createQueryGroupRow(sourceRow, scalarSlots)
+			groups = append(groups, queryGroupState{key: keyRow, row: groupRow})
+			result.Append(groupRow)
+			continue
+		}
+		appendQueryGroupRow(groups[groupIndex].row, sourceRow, scalarSlots)
+	}
+	return result, nil
+}
+
+func findQueryGroup(groups []queryGroupState, keyRow *values.List) int {
+	for i := range groups {
+		if values.DeepEqual(groups[i].key, keyRow) {
+			return i
+		}
+	}
+	return -1
+}
+
+func createQueryGroupRow(sourceRow *values.List, scalarSlots []bool) *values.List {
+	groupRow := values.NewList(0, semtypes.LIST, values.NeverValue)
+	for slot, isScalar := range scalarSlots {
+		value := sourceRow.Get(slot)
+		if isScalar {
+			groupRow.Append(value)
+			continue
+		}
+		valuesForGroup := values.NewList(0, semtypes.LIST, values.NeverValue)
+		valuesForGroup.Append(value)
+		groupRow.Append(valuesForGroup)
+	}
+	return groupRow
+}
+
+func appendQueryGroupRow(groupRow *values.List, sourceRow *values.List, scalarSlots []bool) {
+	for slot, isScalar := range scalarSlots {
+		if isScalar {
+			continue
+		}
+		valuesForGroup := groupRow.Get(slot).(*values.List)
+		valuesForGroup.Append(sourceRow.Get(slot))
+	}
+}
+
+func queryCollect(rows *values.List, slotCount int) (*values.List, error) {
+	if slotCount < 0 {
+		return nil, fmt.Errorf("slot count cannot be negative")
+	}
+	resultRow := values.NewList(0, semtypes.LIST, values.NeverValue)
+	for slot := 0; slot < slotCount; slot++ {
+		resultRow.Append(values.NewList(0, semtypes.LIST, values.NeverValue))
+	}
+	for rowIndex := 0; rowIndex < rows.Len(); rowIndex++ {
+		row, ok := rows.Get(rowIndex).(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("query row %d must be a list", rowIndex)
+		}
+		if row.Len() != slotCount {
+			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, row.Len(), slotCount)
+		}
+		for slot := 0; slot < slotCount; slot++ {
+			resultRow.Get(slot).(*values.List).Append(row.Get(slot))
+		}
+	}
+	return resultRow, nil
 }
 
 func reorderListInPlace(list *values.List, order []int) {
