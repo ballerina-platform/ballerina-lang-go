@@ -104,7 +104,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"init":             {FunctionLookupKey: "ballerina/http:Client.init"},
+			"init":            {FunctionLookupKey: "ballerina/http:Client.init"},
 			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.get"},
 			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.post"},
 			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.head"},

@@ -60,8 +60,8 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// (tls.X509KeyPair requires unencrypted PEM files).
 	certKeyMd := semtypes.NewMappingDefinition()
 	certKeySemType := certKeyMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("certFile",    semtypes.STRING, false, false),
-		semtypes.FieldFrom("keyFile",     semtypes.STRING, false, false),
+		semtypes.FieldFrom("certFile", semtypes.STRING, false, false),
+		semtypes.FieldFrom("keyFile", semtypes.STRING, false, false),
 		semtypes.FieldFrom("keyPassword", semtypes.STRING, false, true),
 	}, semtypes.NEVER)
 	certKeySym := model.NewTypeSymbol("CertKey", true)
@@ -80,8 +80,8 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// protocol record: {| Protocol name; string[] versions; |}
 	protocolRecordMd := semtypes.NewMappingDefinition()
 	protocolRecordSemType := protocolRecordMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("name",     protocolSemType, false, false),
-		semtypes.FieldFrom("versions", semtypes.LIST,   false, false),
+		semtypes.FieldFrom("name", protocolSemType, false, false),
+		semtypes.FieldFrom("versions", semtypes.LIST, false, false),
 	}, semtypes.NEVER)
 
 	// CertValidationType: OCSP_CRL|OCSP_STAPLING — accepted at compile time, not implemented.
@@ -95,9 +95,9 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// certValidation record: {| CertValidationType 'type; int cacheSize; int cacheValidityPeriod; |}
 	certValidRecordMd := semtypes.NewMappingDefinition()
 	certValidRecordSemType := certValidRecordMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("type",                certValidTypeSemType, false, false),
-		semtypes.FieldFrom("cacheSize",           semtypes.INT,         false, false),
-		semtypes.FieldFrom("cacheValidityPeriod", semtypes.INT,         false, false),
+		semtypes.FieldFrom("type", certValidTypeSemType, false, false),
+		semtypes.FieldFrom("cacheSize", semtypes.INT, false, false),
+		semtypes.FieldFrom("cacheValidityPeriod", semtypes.INT, false, false),
 	}, semtypes.NEVER)
 
 	// ClientSecureSocket: matches upstream http:ClientSecureSocket field names.
@@ -107,17 +107,17 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// Accepted but not implemented: sessionTimeout, keyPassword, certValidation, protocol.name.
 	secureSocketMd := semtypes.NewMappingDefinition()
 	secureSocketSemType := secureSocketMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("enable",           semtypes.BOOLEAN,                                        false, true),
-		semtypes.FieldFrom("cert",             semtypes.STRING,                                         false, true),
-		semtypes.FieldFrom("key",              certKeySemType,                                          false, true),
-		semtypes.FieldFrom("protocol",         semtypes.Union(protocolRecordSemType, semtypes.NIL),     false, true),
-		semtypes.FieldFrom("certValidation",   semtypes.Union(certValidRecordSemType, semtypes.NIL),    false, true),
-		semtypes.FieldFrom("ciphers",          semtypes.LIST,                                           false, true),
-		semtypes.FieldFrom("verifyHostName",   semtypes.BOOLEAN,                                        false, true),
-		semtypes.FieldFrom("shareSession",     semtypes.BOOLEAN,                                        false, true),
-		semtypes.FieldFrom("handshakeTimeout", semtypes.DECIMAL,                                        false, true),
-		semtypes.FieldFrom("sessionTimeout",   semtypes.DECIMAL,                                        false, true),
-		semtypes.FieldFrom("serverName",       semtypes.STRING,                                         false, true),
+		semtypes.FieldFrom("enable", semtypes.BOOLEAN, false, true),
+		semtypes.FieldFrom("cert", semtypes.STRING, false, true),
+		semtypes.FieldFrom("key", certKeySemType, false, true),
+		semtypes.FieldFrom("protocol", semtypes.Union(protocolRecordSemType, semtypes.NIL), false, true),
+		semtypes.FieldFrom("certValidation", semtypes.Union(certValidRecordSemType, semtypes.NIL), false, true),
+		semtypes.FieldFrom("ciphers", semtypes.LIST, false, true),
+		semtypes.FieldFrom("verifyHostName", semtypes.BOOLEAN, false, true),
+		semtypes.FieldFrom("shareSession", semtypes.BOOLEAN, false, true),
+		semtypes.FieldFrom("handshakeTimeout", semtypes.DECIMAL, false, true),
+		semtypes.FieldFrom("sessionTimeout", semtypes.DECIMAL, false, true),
+		semtypes.FieldFrom("serverName", semtypes.STRING, false, true),
 	}, semtypes.NEVER)
 	secureSocketSym := model.NewTypeSymbol("ClientSecureSocket", true)
 	secureSocketSym.SetType(secureSocketSemType)
@@ -128,8 +128,8 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// allowAuthHeaders defaults to false (auth headers stripped on redirect).
 	followRedirectsMd := semtypes.NewMappingDefinition()
 	followRedirectsSemType := followRedirectsMd.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("enabled",          semtypes.BOOLEAN, false, true),
-		semtypes.FieldFrom("maxCount",         semtypes.INT,     false, true),
+		semtypes.FieldFrom("enabled", semtypes.BOOLEAN, false, true),
+		semtypes.FieldFrom("maxCount", semtypes.INT, false, true),
 		semtypes.FieldFrom("allowAuthHeaders", semtypes.BOOLEAN, false, true),
 	}, semtypes.NEVER)
 	followRedirectsSym := model.NewTypeSymbol("FollowRedirects", true)
@@ -145,10 +145,10 @@ func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpa
 	// ClientConfiguration: matching upstream http:ClientConfiguration field names.
 	md := semtypes.NewMappingDefinition()
 	configSemType := md.DefineMappingTypeWrapped(env, []semtypes.Field{
-		semtypes.FieldFrom("timeout",         semtypes.DECIMAL,                                              false, true),
-		semtypes.FieldFrom("followRedirects",  semtypes.Union(followRedirectsSemType, semtypes.NIL),         false, true),
-		semtypes.FieldFrom("httpVersion",     httpVersionSemType,                                            false, true),
-		semtypes.FieldFrom("secureSocket",    semtypes.Union(secureSocketSemType, semtypes.NIL),             false, true),
+		semtypes.FieldFrom("timeout", semtypes.DECIMAL, false, true),
+		semtypes.FieldFrom("followRedirects", semtypes.Union(followRedirectsSemType, semtypes.NIL), false, true),
+		semtypes.FieldFrom("httpVersion", httpVersionSemType, false, true),
+		semtypes.FieldFrom("secureSocket", semtypes.Union(secureSocketSemType, semtypes.NIL), false, true),
 	}, semtypes.NEVER)
 	configSym := model.NewTypeSymbol("ClientConfiguration", true)
 	configSym.SetType(configSemType)
@@ -248,14 +248,14 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	responseTy := responseOd.Define(env,
 		semtypes.ObjectQualifiersDEFAULT,
 		[]semtypes.Member{
-			{Name: "statusCode",      ValueTy: semtypes.INT,            Kind: semtypes.MemberKindField,  Visibility: semtypes.VisibilityPublic},
-			{Name: "getTextPayload",  ValueTy: gtpFnSemType,            Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "getJsonPayload",  ValueTy: gjpFnSemType,            Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "getBinaryPayload",ValueTy: gbpFnSemType,            Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "hasHeader",       ValueTy: hasHeaderFnSemType,      Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "getHeader",       ValueTy: getHeaderFnSemType,      Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "getHeaders",      ValueTy: getHeadersFnSemType,     Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
-			{Name: "getHeaderNames",  ValueTy: getHeaderNamesFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "statusCode", ValueTy: semtypes.INT, Kind: semtypes.MemberKindField, Visibility: semtypes.VisibilityPublic},
+			{Name: "getTextPayload", ValueTy: gtpFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "getJsonPayload", ValueTy: gjpFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "getBinaryPayload", ValueTy: gbpFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "hasHeader", ValueTy: hasHeaderFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "getHeader", ValueTy: getHeaderFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "getHeaders", ValueTy: getHeadersFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
+			{Name: "getHeaderNames", ValueTy: getHeaderNamesFnSemType, Kind: semtypes.MemberKindMethod, Visibility: semtypes.VisibilityPublic, Immutable: true},
 		})
 
 	gtpSym := model.NewFunctionSymbol("$Response.getTextPayload", gtpSig, false)
