@@ -71,17 +71,12 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	return model.NewExportedSymbolSpace(space, nil)
 }
 
-func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
+func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.ContainerGenericFunctionSymbol, containerTy semtypes.SemType) model.SymbolRef {
 	var mut sync.Mutex
 	monomorphized := make(map[semtypes.SemType]model.SymbolRef)
 	nextIndex := 0
 
-	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
-		if len(args) == 0 {
-			ctx.SemanticError("remove() requires at least 1 argument", diagnostics.Location{})
-			return model.SymbolRef{}
-		}
-		ty := args[0]
+	return func(s model.ContainerGenericFunctionSymbol, ty semtypes.SemType) model.SymbolRef {
 		mut.Lock()
 		defer mut.Unlock()
 		if ref, ok := monomorphized[ty]; ok {

@@ -1,0 +1,84 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad b
+    %2 = ConstantLoad true
+    %3 = newMap {| b: boolean, never... |}{%1=%2}
+    r = %3;
+    %5 = func(r) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+func({| b: boolean, never... |}) -> nil{
+  bb0 {
+    %2 = ConstantLoad 0.1
+    x = %2;
+    %4 = ConstantLoad true
+    y = %4;
+    %8 = ConstantLoad b
+    %7 = r[%8];
+    %9 = %7;
+    %10 = ConstantLoad true
+    %11 = %10;
+    %6 = == %9 %11;
+    %6 ? bb1 : bb6;
+  }
+  bb1 {
+    %12 = x is boolean|int
+    %12 ? bb2 : bb3;
+  }
+  bb2 {
+    %13 = ConstantLoad <nil>
+    %0 = %13;
+    return;
+  }
+  bb3 {
+    %14 = y is int|float
+    %14 ? bb4 : bb5;
+  }
+  bb4 {
+    %15 = ConstantLoad <nil>
+    %0 = %15;
+    return;
+  }
+  bb5 {
+    GOTO bb11;
+  }
+  bb6 {
+    %16 = x is boolean|float
+    %16 ? bb7 : bb8;
+  }
+  bb7 {
+    %17 = ConstantLoad <nil>
+    %0 = %17;
+    return;
+  }
+  bb8 {
+    %18 = y is boolean|int
+    %18 ? bb9 : bb10;
+  }
+  bb9 {
+    %19 = ConstantLoad <nil>
+    %0 = %19;
+    return;
+  }
+  bb10 {
+    GOTO bb11;
+  }
+  bb11 {
+    fi = x;
+    bi = y;
+    %22 = fi;
+    %23 = println(%22) -> bb12;
+  }
+  bb12 {
+    %24 = bi;
+    %25 = println(%24) -> bb13;
+  }
+  bb13 {
+    return;
+  }
+}

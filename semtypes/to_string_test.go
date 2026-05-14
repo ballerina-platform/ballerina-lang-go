@@ -17,8 +17,9 @@
 package semtypes
 
 import (
-	"math/big"
 	"testing"
+
+	"ballerina-lang-go/decimal"
 )
 
 func TestSimpleBasicType(t *testing.T) {
@@ -147,7 +148,10 @@ func TestFloatSingleton(t *testing.T) {
 func TestDecimalSingleton(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
-	val := big.NewRat(3, 2)
+	val, err := decimal.FromString("1.5")
+	if err != nil {
+		t.Fatalf("failed to parse decimal: %v", err)
+	}
 	actual := ToString(cx, DecimalConst(*val))
 	expected := "1.5"
 	if actual != expected {

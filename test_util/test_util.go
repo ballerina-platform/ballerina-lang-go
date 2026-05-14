@@ -47,27 +47,49 @@ type TestCase struct {
 	ExpectedPath string // Absolute path to expected output (.txt or .json)
 }
 
+// IsFutureTest reports whether the given file name belongs to the "future"
+// category (-fv.bal / -fe.bal / -fp.bal). Future tests document cases that
+// currently bail out with a `fatal[UNIMPLEMENTED_ERROR]` but are expected to
+// become regular -v / -e / -p tests once the missing feature is implemented.
+func IsFutureTest(path string) bool {
+	return strings.HasSuffix(path, "-fv.bal") ||
+		strings.HasSuffix(path, "-fe.bal") ||
+		strings.HasSuffix(path, "-fp.bal")
+}
+
 // GetValidTests returns all valid test pairs for the given test kind
 // It only returns test cases where the input file ends with "-v.bal"
+// (future tests `-fv.bal` are excluded).
 func GetValidTests(t testing.TB, kind TestKind) []TestCase {
 	return GetTests(t, kind, func(path string) bool {
-		return strings.HasSuffix(path, "-v.bal")
+		return strings.HasSuffix(path, "-v.bal") && !IsFutureTest(path)
 	})
 }
 
 // GetErrorTests returns all error test pairs for the given test kind
 // It only returns test cases where the input file ends with "-e.bal"
+// (future tests `-fe.bal` are excluded).
 func GetErrorTests(t testing.TB, kind TestKind) []TestCase {
 	return GetTests(t, kind, func(path string) bool {
-		return strings.HasSuffix(path, "-e.bal")
+		return strings.HasSuffix(path, "-e.bal") && !IsFutureTest(path)
 	})
 }
 
 // GetValidAndPanicTests returns all valid and panic test pairs for the given test kind
+// (future tests are excluded).
 func GetValidAndPanicTests(t testing.TB, kind TestKind) []TestCase {
 	return GetTests(t, kind, func(path string) bool {
+		if IsFutureTest(path) {
+			return false
+		}
 		return strings.HasSuffix(path, "-v.bal") || strings.HasSuffix(path, "-p.bal")
 	})
+}
+
+// GetFutureTests returns all future test pairs for the given test kind
+// (`-fv.bal`, `-fe.bal`, `-fp.bal`).
+func GetFutureTests(t testing.TB, kind TestKind) []TestCase {
+	return GetTests(t, kind, IsFutureTest)
 }
 
 // GetTests returns test pairs for the given test kind, filtered by the provided function

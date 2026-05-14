@@ -1,0 +1,172 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad string
+    %2 = isKeyword(%1) -> bb1;
+  }
+  bb1 {
+    %3 = %2;
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad hello
+    %6 = isKeyword(%5) -> bb3;
+  }
+  bb3 {
+    %7 = %6;
+    %8 = println(%7) -> bb4;
+  }
+  bb4 {
+    %9 = ConstantLoad if
+    %10 = isKeyword(%9) -> bb5;
+  }
+  bb5 {
+    %11 = %10;
+    %12 = println(%11) -> bb6;
+  }
+  bb6 {
+    %13 = ConstantLoad else
+    %14 = isKeyword(%13) -> bb7;
+  }
+  bb7 {
+    %15 = %14;
+    %16 = println(%15) -> bb8;
+  }
+  bb8 {
+    %17 = ConstantLoad false
+    %18 = isKeyword(%17) -> bb9;
+  }
+  bb9 {
+    %19 = %18;
+    %20 = println(%19) -> bb10;
+  }
+  bb10 {
+    %21 = ConstantLoad return
+    %22 = isKeyword(%21) -> bb11;
+  }
+  bb11 {
+    %23 = %22;
+    %24 = println(%23) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}
+isKeyword(string) -> boolean{
+  bb0 {
+    %3 = ConstantLoad return
+    %2 = == s %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad true
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %6 = ConstantLoad boolean
+    %5 = == s %6;
+    %5 ? bb3 : bb4;
+  }
+  bb3 {
+    %7 = ConstantLoad true
+    %0 = %7;
+    return;
+  }
+  bb4 {
+    %9 = ConstantLoad int
+    %8 = == s %9;
+    %8 ? bb5 : bb6;
+  }
+  bb5 {
+    %10 = ConstantLoad true
+    %0 = %10;
+    return;
+  }
+  bb6 {
+    %12 = ConstantLoad string
+    %11 = == s %12;
+    %11 ? bb7 : bb8;
+  }
+  bb7 {
+    %13 = ConstantLoad true
+    %0 = %13;
+    return;
+  }
+  bb8 {
+    %15 = ConstantLoad while
+    %14 = == s %15;
+    %14 ? bb9 : bb10;
+  }
+  bb9 {
+    %16 = ConstantLoad true
+    %0 = %16;
+    return;
+  }
+  bb10 {
+    %18 = ConstantLoad foreach
+    %17 = == s %18;
+    %17 ? bb11 : bb12;
+  }
+  bb11 {
+    %19 = ConstantLoad true
+    %0 = %19;
+    return;
+  }
+  bb12 {
+    %21 = ConstantLoad if
+    %20 = == s %21;
+    %20 ? bb13 : bb14;
+  }
+  bb13 {
+    %22 = ConstantLoad true
+    %0 = %22;
+    return;
+  }
+  bb14 {
+    %24 = ConstantLoad else
+    %23 = == s %24;
+    %23 ? bb15 : bb16;
+  }
+  bb15 {
+    %25 = ConstantLoad true
+    %0 = %25;
+    return;
+  }
+  bb16 {
+    %27 = ConstantLoad map
+    %26 = == s %27;
+    %26 ? bb17 : bb18;
+  }
+  bb17 {
+    %28 = ConstantLoad true
+    %0 = %28;
+    return;
+  }
+  bb18 {
+    %30 = ConstantLoad true
+    %29 = == s %30;
+    %29 ? bb19 : bb20;
+  }
+  bb19 {
+    %31 = ConstantLoad true
+    %0 = %31;
+    return;
+  }
+  bb20 {
+    %33 = ConstantLoad false
+    %32 = == s %33;
+    %32 ? bb21 : bb22;
+  }
+  bb21 {
+    %34 = ConstantLoad true
+    %0 = %34;
+    return;
+  }
+  bb22 {
+    %35 = ConstantLoad false
+    %0 = %35;
+    return;
+  }
+}

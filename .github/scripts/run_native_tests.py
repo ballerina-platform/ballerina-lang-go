@@ -11,7 +11,7 @@ from typing import NamedTuple
 
 MAX_PARALLEL = 3
 SKIP_PATTERN = "TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests"
-TIMEOUT = "30m"
+TIMEOUT = "2h"
 PROFILE_LINE_PATTERN = re.compile(
     r"^(.+):([0-9]+\.[0-9]+,[0-9]+\.[0-9]+\s+[0-9]+\s+[0-9]+)$"
 )

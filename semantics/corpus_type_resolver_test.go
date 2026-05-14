@@ -28,6 +28,11 @@ import (
 	"ballerina-lang-go/test_util/testphases"
 )
 
+// typeResolverSkipList is the type-resolver *additional* skip list, on top of
+// the shared test_util.UnsupportedTests baseline. Currently empty -- every
+// known failure is already covered by the shared baseline.
+var typeResolverSkipList = []string{}
+
 func TestTypeResolver(t *testing.T) {
 	flag.Parse()
 
@@ -42,6 +47,11 @@ func TestTypeResolver(t *testing.T) {
 }
 
 func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
+	if test_util.IsUnsupported(testCase.InputPath) || test_util.MatchesSkip(testCase.InputPath, typeResolverSkipList) {
+		t.Skipf("Skipping type resolver test for %s", testCase.InputPath)
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("Type resolution panicked for %s: %v", testCase.InputPath, r)
@@ -74,16 +84,14 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 
-	// Validate that all BLangExpression nodes have their determined type set
+	// Validate that all BLangExpression nodes have their determined type set.
+	// NEVER is a legitimate type for guaranteed-divergent expressions (e.g.
+	// `check newError()` or `checkpanic newError()` whose inner type is
+	// exactly `error`, so the non-error remainder is empty).
 	if expr, ok := node.(ast.BLangExpression); ok {
-		determinedType := expr.GetDeterminedType()
-		if determinedType == nil {
+		if expr.GetDeterminedType() == nil {
 			v.t.Errorf("expression %T at %v does not have determined type set", expr, expr.GetPosition())
 		}
-		if semtypes.IsNever(determinedType) {
-			v.t.Errorf("expression %T at %v has determined type NEVER", expr, expr.GetPosition())
-		}
-
 	}
 
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {

@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/cockroachdb/apd/v3 v3.2.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect

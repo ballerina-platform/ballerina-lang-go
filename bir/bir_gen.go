@@ -41,6 +41,11 @@ type Context struct {
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
 	birPkg          *BIRPackage
+	typeCtx         semtypes.Context
+}
+
+func (c *Context) TypeContext() semtypes.Context {
+	return c.typeCtx
 }
 
 type stmtContext struct {
@@ -206,6 +211,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		packageID:       ast.PackageID,
 		birPkg:          birPkg,
 	}
+	genCtx.typeCtx = semtypes.TypeCheckContext(ctx.GetTypeEnv())
 	birPkg.GlobalVars = make(map[string]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, globalVar := range ast.GlobalVars {
@@ -413,9 +419,56 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 }
 
 func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
+	pos := ctx.loc(stmt.GetPosition())
+	if indexRef, ok := stmt.VarRef.(*ast.BLangIndexBasedAccess); ok {
+		return compoundAssignmentToMember(ctx, curBB, stmt, indexRef, pos)
+	}
 	ref := stmt.VarRef.(ast.BLangExpression)
-	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), ctx.loc(stmt.GetPosition()))
-	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, ctx.loc(stmt.GetPosition()))
+	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), pos)
+	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, pos)
+}
+
+// compoundAssignmentToMember handles compound assignment with an index-based access LHS
+// (e.g. `x[i] += rhs`). The container reference and index expression must be evaluated
+// only once even though the LHS is conceptually both read and written.
+func compoundAssignmentToMember(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment, ref *ast.BLangIndexBasedAccess, pos Location) statementEffect {
+	containerEffect := assignmentContainerReference(ctx, curBB, ref.Expr)
+	indexEffect := handleActionOrExpression(ctx, containerEffect.block, ref.IndexExpr)
+	curBB = indexEffect.block
+
+	loadKind, storeKind := memberAccessInstructionKinds(ref.Expr.GetDeterminedType())
+
+	lhsValue := ctx.addTempVar(ref.GetDeterminedType())
+	load := NewFieldAccess(loadKind, lhsValue, indexEffect.result, containerEffect.result, pos)
+	curBB.Instructions = append(curBB.Instructions, load)
+	lhsEffect := snapshotIfNeeded(ctx, expressionEffect{result: lhsValue, block: curBB}, pos)
+	curBB = lhsEffect.block
+
+	rhsEffect := handleActionOrExpression(ctx, curBB, stmt.Expr)
+	rhsEffect = snapshotIfNeeded(ctx, rhsEffect, pos)
+	curBB = rhsEffect.block
+
+	resultOperand := ctx.addTempVar(ref.GetDeterminedType())
+	binaryOp := NewBinaryOp(operatorKindToBinaryInstructionKind(stmt.OpKind), resultOperand, lhsEffect.result, rhsEffect.result, pos)
+	curBB.Instructions = append(curBB.Instructions, binaryOp)
+
+	store := NewFieldAccess(storeKind, containerEffect.result, indexEffect.result, resultOperand, pos)
+	curBB.Instructions = append(curBB.Instructions, store)
+	return statementEffect{
+		block: curBB,
+	}
+}
+
+func memberAccessInstructionKinds(containerType semtypes.SemType) (loadKind, storeKind InstructionKind) {
+	containerType = semtypes.Diff(containerType, semtypes.NIL)
+	switch {
+	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+		return INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_ARRAY_STORE
+	case semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT):
+		return INSTRUCTION_KIND_OBJECT_LOAD, INSTRUCTION_KIND_OBJECT_STORE
+	default:
+		return INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_MAP_STORE
+	}
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
@@ -514,20 +567,12 @@ func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLa
 
 func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect, pos Location) statementEffect {
 	currBB := valueEffect.block
-	containerRefEffect := handleActionOrExpression(ctx, currBB, varRef.Expr)
+	containerRefEffect := assignmentContainerReference(ctx, currBB, varRef.Expr)
 	currBB = containerRefEffect.block
 	indexEffect := handleActionOrExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
-	containerType := varRef.Expr.GetDeterminedType()
-	var fieldAccessKind InstructionKind
-	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccessKind = INSTRUCTION_KIND_ARRAY_STORE
-	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
-		fieldAccessKind = INSTRUCTION_KIND_OBJECT_STORE
-	} else {
-		fieldAccessKind = INSTRUCTION_KIND_MAP_STORE
-	}
-	fieldAccess := NewFieldAccess(fieldAccessKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
+	_, storeKind := memberAccessInstructionKinds(varRef.Expr.GetDeterminedType())
+	fieldAccess := NewFieldAccess(storeKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return statementEffect{
 		block: currBB,
@@ -950,6 +995,35 @@ func typeTestExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangT
 	}
 }
 
+// materializeFiller emits BIR instructions that construct a fresh filler
+// value for ty at runtime.
+func materializeFiller(ctx *stmtContext, bb *BIRBasicBlock, ty semtypes.SemType, f semtypes.Filler, pos Location) (*BIROperand, *BIRBasicBlock) {
+	tyCx := ctx.birCx.typeCtx
+	switch f := f.(type) {
+	case semtypes.SingleValueFiller:
+		operand := ctx.addTempVar(ty)
+		bb.Instructions = append(bb.Instructions, NewConstantLoad(operand, f.Value, pos))
+		return operand, bb
+	case semtypes.MappingFiller:
+		operand := ctx.addTempVar(f.Type)
+		bb.Instructions = append(bb.Instructions, NewMapConstructor(f.Type, operand, nil, nil, pos))
+		return operand, bb
+	case semtypes.ListFiller:
+		memberOperands := make([]*BIROperand, len(f.Members))
+		for i, memberFiller := range f.Members {
+			memberOperands[i], bb = materializeFiller(ctx, bb, f.Atomic.MemberAtInnerVal(i), memberFiller, pos)
+		}
+		sizeOperand := ctx.addTempVar(semtypes.INT)
+		bb.Instructions = append(bb.Instructions, NewConstantLoad(sizeOperand, int64(len(memberOperands)), pos))
+		restFiller, _ := values.FillerFactoryFor(tyCx, f.Atomic.Rest())
+		operand := ctx.addTempVar(f.Type)
+		bb.Instructions = append(bb.Instructions, NewArrayConstructor(f.Type, operand, sizeOperand, memberOperands, restFiller, pos))
+		return operand, bb
+	default:
+		panic(fmt.Sprintf("unsupported filler kind %T in BIR generation", f))
+	}
+}
+
 func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangListConstructorExpr) expressionEffect {
 	initValues := make([]*BIROperand, len(expr.Exprs))
 	for i, expr := range expr.Exprs {
@@ -960,22 +1034,25 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 
 	lat := expr.AtomicType
 	exprPos := ctx.loc(expr.GetPosition())
+	tyCx := ctx.birCx.typeCtx
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
-		ty := lat.MemberAt(i)
-		fillerVal := values.DefaultValueForType(ty)
-		fillerOperand := ctx.addTempVar(ty)
-		fillerLoad := NewConstantLoad(fillerOperand, fillerVal, exprPos)
-		bb.Instructions = append(bb.Instructions, fillerLoad)
+		ty := lat.MemberAtInnerVal(i)
+		filler, ok := semtypes.FillerValue(tyCx, ty)
+		if !ok {
+			ctx.birCx.CompilerContext.InternalError("no filler value for list member type; semantic analysis should have rejected this", expr.GetPosition())
+		}
+		var fillerOperand *BIROperand
+		fillerOperand, bb = materializeFiller(ctx, bb, ty, filler, exprPos)
 		initValues = append(initValues, fillerOperand)
 	}
-	fillerVal := values.DefaultValueForType(lat.Rest())
+	restFiller, _ := values.FillerFactoryFor(tyCx, lat.Rest())
 
 	sizeOperand := ctx.addTempVar(semtypes.INT)
 	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(semtypes.LIST)
-	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, fillerVal, exprPos)
+	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, restFiller, exprPos)
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,
@@ -983,25 +1060,57 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	}
 }
 
+// assignmentContainerReference produces the container reference for an indexed assignment LHS.
+// When the container is itself an index-based access on a list or mapping, the inner read
+// must be a filling load so that intermediate arrays grow (and fill) and absent map keys
+// are populated with a filler value before storing.
+func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
+	inner, ok := expr.(*ast.BLangIndexBasedAccess)
+	if !ok {
+		return handleActionOrExpression(ctx, bb, expr)
+	}
+	// The container of an indexed lvalue access can show up as a nilable type
+	// when it itself comes from another map index (e.g. `m["a"]["b"]` where the
+	// inner lookup nominally yields `T?`). After filling, the container is
+	// guaranteed non-nil, so we strip `()` before classifying.
+	containerType := semtypes.Diff(inner.Expr.GetDeterminedType(), semtypes.NIL)
+	var fillingKind InstructionKind
+	var filler values.FillerFactory
+	switch {
+	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+		fillingKind = INSTRUCTION_KIND_ARRAY_FILLING_LOAD
+	case semtypes.IsSubtypeSimple(containerType, semtypes.MAPPING):
+		fillingKind = INSTRUCTION_KIND_MAP_FILLING_LOAD
+		tyCx := semtypes.TypeCheckContext(ctx.birCx.CompilerContext.GetTypeEnv())
+		valueType := semtypes.MappingMemberTypeInnerVal(tyCx, containerType, semtypes.STRING)
+		filler, _ = values.FillerFactoryFor(tyCx, valueType)
+	default:
+		return handleActionOrExpression(ctx, bb, expr)
+	}
+	resultOperand := ctx.addTempVar(inner.GetDeterminedType())
+	indexEffect := handleActionOrExpression(ctx, bb, inner.IndexExpr)
+	containerRefEffect := assignmentContainerReference(ctx, indexEffect.block, inner.Expr)
+	fieldAccess := NewFieldAccess(fillingKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(inner.GetPosition()))
+	fieldAccess.Filler = filler
+	containerRefEffect.block.Instructions = append(containerRefEffect.block.Instructions, fieldAccess)
+	return expressionEffect{
+		result: resultOperand,
+		block:  containerRefEffect.block,
+	}
+}
+
 func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
 	// Assignment is handled in assignmentStatement to this is always a load
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	containerType := expr.Expr.GetDeterminedType()
-	var fieldAccessKind InstructionKind
-	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccessKind = INSTRUCTION_KIND_ARRAY_LOAD
-	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
-		fieldAccessKind = INSTRUCTION_KIND_OBJECT_LOAD
-	} else {
-		fieldAccessKind = INSTRUCTION_KIND_MAP_LOAD
-	}
+	loadKind, _ := memberAccessInstructionKinds(expr.Expr.GetDeterminedType())
 	indexEffect := handleActionOrExpression(ctx, bb, expr.IndexExpr)
 	containerRefEffect := handleActionOrExpression(ctx, indexEffect.block, expr.Expr)
-	fieldAccess := NewFieldAccess(fieldAccessKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(expr.GetPosition()))
-	bb.Instructions = append(bb.Instructions, fieldAccess)
+	currBB := containerRefEffect.block
+	fieldAccess := NewFieldAccess(loadKind, resultOperand, indexEffect.result, containerRefEffect.result, ctx.loc(expr.GetPosition()))
+	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
-		block:  bb,
+		block:  currBB,
 	}
 }
 
@@ -1110,50 +1219,53 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr ast.BLangExpression, rhsExpr ast.BLangActionOrExpression, resultType semtypes.SemType, pos Location) expressionEffect {
-	var kind InstructionKind
+func operatorKindToBinaryInstructionKind(opKind model.OperatorKind) InstructionKind {
 	switch opKind {
 	case model.OperatorKind_ADD:
-		kind = INSTRUCTION_KIND_ADD
+		return INSTRUCTION_KIND_ADD
 	case model.OperatorKind_SUB:
-		kind = INSTRUCTION_KIND_SUB
+		return INSTRUCTION_KIND_SUB
 	case model.OperatorKind_MUL:
-		kind = INSTRUCTION_KIND_MUL
+		return INSTRUCTION_KIND_MUL
 	case model.OperatorKind_DIV:
-		kind = INSTRUCTION_KIND_DIV
+		return INSTRUCTION_KIND_DIV
 	case model.OperatorKind_MOD:
-		kind = INSTRUCTION_KIND_MOD
+		return INSTRUCTION_KIND_MOD
 	case model.OperatorKind_EQUAL:
-		kind = INSTRUCTION_KIND_EQUAL
+		return INSTRUCTION_KIND_EQUAL
 	case model.OperatorKind_NOT_EQUAL:
-		kind = INSTRUCTION_KIND_NOT_EQUAL
+		return INSTRUCTION_KIND_NOT_EQUAL
 	case model.OperatorKind_GREATER_THAN:
-		kind = INSTRUCTION_KIND_GREATER_THAN
+		return INSTRUCTION_KIND_GREATER_THAN
 	case model.OperatorKind_GREATER_EQUAL:
-		kind = INSTRUCTION_KIND_GREATER_EQUAL
+		return INSTRUCTION_KIND_GREATER_EQUAL
 	case model.OperatorKind_LESS_THAN:
-		kind = INSTRUCTION_KIND_LESS_THAN
+		return INSTRUCTION_KIND_LESS_THAN
 	case model.OperatorKind_LESS_EQUAL:
-		kind = INSTRUCTION_KIND_LESS_EQUAL
+		return INSTRUCTION_KIND_LESS_EQUAL
 	case model.OperatorKind_REF_EQUAL:
-		kind = INSTRUCTION_KIND_REF_EQUAL
+		return INSTRUCTION_KIND_REF_EQUAL
 	case model.OperatorKind_REF_NOT_EQUAL:
-		kind = INSTRUCTION_KIND_REF_NOT_EQUAL
+		return INSTRUCTION_KIND_REF_NOT_EQUAL
 	case model.OperatorKind_BITWISE_AND:
-		kind = INSTRUCTION_KIND_BITWISE_AND
+		return INSTRUCTION_KIND_BITWISE_AND
 	case model.OperatorKind_BITWISE_OR:
-		kind = INSTRUCTION_KIND_BITWISE_OR
+		return INSTRUCTION_KIND_BITWISE_OR
 	case model.OperatorKind_BITWISE_XOR:
-		kind = INSTRUCTION_KIND_BITWISE_XOR
+		return INSTRUCTION_KIND_BITWISE_XOR
 	case model.OperatorKind_BITWISE_LEFT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_LEFT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_LEFT_SHIFT
 	case model.OperatorKind_BITWISE_RIGHT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT
 	case model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
-		kind = INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT
+		return INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT
 	default:
 		panic("unexpected binary operator kind")
 	}
+}
+
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr ast.BLangExpression, rhsExpr ast.BLangActionOrExpression, resultType semtypes.SemType, pos Location) expressionEffect {
+	kind := operatorKindToBinaryInstructionKind(opKind)
 	resultOperand := ctx.addTempVar(resultType)
 	op1Effect := handleActionOrExpression(ctx, curBB, lhsExpr)
 	op1Effect = snapshotIfNeeded(ctx, op1Effect, pos)

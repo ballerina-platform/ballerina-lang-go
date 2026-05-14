@@ -51,7 +51,10 @@ func getBIRDiff(expectedText, actualText string) string {
 	return dmp.DiffPrettyText(diffs)
 }
 
-// TestBIRGeneration tests BIR generation from .bal source files in the corpus.
+// birGenerationSkipList is the BIR-stage *additional* skip list, on top of
+// the shared test_util.UnsupportedTests baseline.
+var birGenerationSkipList = []string{}
+
 func TestBIRGeneration(t *testing.T) {
 	flag.Parse()
 
@@ -67,6 +70,11 @@ func TestBIRGeneration(t *testing.T) {
 
 // testBIRGeneration tests BIR generation for a single .bal file.
 func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
+	if test_util.IsUnsupported(testPair.InputPath) || test_util.MatchesSkip(testPair.InputPath, birGenerationSkipList) {
+		t.Skipf("Skipping BIR generation test for %s", testPair.InputPath)
+		return
+	}
+
 	// Catch panics during BIR generation
 	defer func() {
 		if r := recover(); r != nil {

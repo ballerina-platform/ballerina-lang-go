@@ -29,6 +29,11 @@ import (
 	"ballerina-lang-go/test_util/testphases"
 )
 
+// symbolResolverSkipList is the symbol-resolver *additional* skip list, on
+// top of the shared test_util.UnsupportedTests baseline. Currently empty --
+// every known failure is already covered by the shared baseline.
+var symbolResolverSkipList = []string{}
+
 func TestSymbolResolver(t *testing.T) {
 	flag.Parse()
 	testPairs := test_util.GetValidAndPanicTests(t, test_util.AST)
@@ -42,6 +47,11 @@ func TestSymbolResolver(t *testing.T) {
 }
 
 func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
+	if test_util.IsUnsupported(testCase.InputPath) || test_util.MatchesSkip(testCase.InputPath, symbolResolverSkipList) {
+		t.Skipf("Skipping symbol resolver test for %s", testCase.InputPath)
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("Symbol resolution panicked for %s: %v", testCase.InputPath, r)

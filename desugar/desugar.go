@@ -262,54 +262,179 @@ func (ctx *functionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 	return name, ref
 }
 
+// moduleInitNode is a unified handle over either a module-level constant or a
+// module-level variable for the purpose of building the synthetic init function
+// in dependency order.
+type moduleInitNode struct {
+	sym  model.SymbolRef
+	expr ast.BLangExpression // nil if the declaration has no initializer
+	name *ast.BLangIdentifier
+}
+
+func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
+	nodes := make([]moduleInitNode, 0, len(pkg.GlobalVars)+len(pkg.Constants))
+	for i := range pkg.GlobalVars {
+		gv := &pkg.GlobalVars[i]
+		var expr ast.BLangExpression
+		if gv.Expr != nil {
+			expr = gv.Expr.(ast.BLangExpression)
+		}
+		nodes = append(nodes, moduleInitNode{
+			sym:  gv.Symbol(),
+			expr: expr,
+			name: gv.Name,
+		})
+	}
+	for i := range pkg.Constants {
+		c := &pkg.Constants[i]
+		var expr ast.BLangExpression
+		if c.Expr != nil {
+			expr = c.Expr.(ast.BLangExpression)
+		}
+		nodes = append(nodes, moduleInitNode{
+			sym:  c.Symbol(),
+			expr: expr,
+			name: c.Name,
+		})
+	}
+	return nodes
+}
+
+// We desugar by moving all these to the init function, so they should no longer be there
+func clearModuleInitExprs(pkg *ast.BLangPackage) {
+	for i := range pkg.GlobalVars {
+		pkg.GlobalVars[i].Expr = nil
+	}
+	for i := range pkg.Constants {
+		pkg.Constants[i].Expr = nil
+	}
+}
+
+// Accumulate all the nodes referred by a given node. Assume all references to be valid
+// (semantic analysis should have cought any invalid cases) and is agnostic towards the exact expression
+type dependencyVisitor struct {
+	compilerCtx *context.CompilerContext
+	nodeSet     map[model.SymbolRef]int // symbol → index into nodes slice
+	deps        map[int]struct{}
+}
+
+// mark current node depnds on on the given
+func (v *dependencyVisitor) depends(ref model.SymbolRef) {
+	unnarrowed := v.compilerCtx.UnnarrowedSymbol(ref)
+	if idx, ok := v.nodeSet[unnarrowed]; ok {
+		v.deps[idx] = struct{}{}
+	}
+}
+
+func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.BLangConstRef:
+		v.depends(n.Symbol())
+	case *ast.BLangSimpleVarRef:
+		v.depends(n.Symbol())
+	}
+	return v
+}
+
+func (v *dependencyVisitor) VisitTypeData(_ *model.TypeData) ast.Visitor { return v }
+
+func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleInitNode) ([]int, bool) {
+	nodeSet := make(map[model.SymbolRef]int, len(nodes))
+	for i, n := range nodes {
+		nodeSet[n.sym] = i
+	}
+
+	deps := make([][]int, len(nodes))
+	for i := range nodes {
+		if nodes[i].expr == nil {
+			continue
+		}
+		v := &dependencyVisitor{
+			compilerCtx: compilerCtx,
+			nodeSet:     nodeSet,
+			deps:        make(map[int]struct{}),
+		}
+		ast.Walk(v, nodes[i].expr)
+		for d := range v.deps {
+			deps[i] = append(deps[i], d)
+		}
+	}
+
+	// https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search
+	const (
+		unvisited = 0
+		inStack   = 1
+		done      = 2
+	)
+	state := make([]int, len(nodes))
+	order := make([]int, 0, len(nodes))
+
+	var visit func(i int) bool
+	visit = func(i int) bool {
+		switch state[i] {
+		case inStack:
+			compilerCtx.InternalError(
+				fmt.Sprintf("invalid cycle detected for %s", nodes[i].name.GetValue()),
+				nodes[i].name.GetPosition(),
+			)
+			return false
+		case done:
+			return true
+		default:
+			state[i] = inStack
+			for _, d := range deps[i] {
+				if !visit(d) {
+					return false
+				}
+			}
+			state[i] = done
+			order = append(order, i)
+			return true
+		}
+	}
+
+	for i := range nodes {
+		if !visit(i) {
+			return nil, false
+		}
+	}
+	return order, true
+}
+
+func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNode) ast.BLangStatement {
+	initExpr := node.expr
+	basePos := initExpr.GetPosition()
+	varRef := &ast.BLangSimpleVarRef{
+		VariableName: node.name,
+	}
+	varRef.SetSymbol(node.sym)
+	varRef.SetDeterminedType(compilerCtx.SymbolType(node.sym))
+	assignment := &ast.BLangAssignment{
+		VarRef: varRef,
+		Expr:   initExpr,
+	}
+	assignment.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(assignment, basePos)
+	return assignment
+}
+
 func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
 	var initStmts []ast.BLangStatement
 
-	for i := range pkg.GlobalVars {
-		globalVar := &pkg.GlobalVars[i]
-		if globalVar.Expr == nil {
+	nodes := collectModuleInitNodes(pkg)
+	order, ok := toplogicallySortInits(compilerCtx, nodes)
+	if !ok {
+		pkgCtx.internalError("module init dependency ordering failed")
+		return
+	}
+	for _, idx := range order {
+		node := nodes[idx]
+		if node.expr == nil {
 			continue
 		}
-		initExpr := globalVar.Expr.(ast.BLangExpression)
-		basePos := initExpr.GetPosition()
-		varRef := &ast.BLangSimpleVarRef{
-			VariableName: globalVar.Name,
-		}
-		varRef.SetSymbol(globalVar.Symbol())
-		varRef.SetDeterminedType(globalVar.GetDeterminedType())
-		assignment := &ast.BLangAssignment{
-			VarRef: varRef,
-			Expr:   initExpr,
-		}
-		assignment.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(assignment, basePos)
-
-		initStmts = append(initStmts, assignment)
-		globalVar.Expr = nil
+		initStmts = append(initStmts, buildInitAssignment(compilerCtx, node))
 	}
-
-	for i := range pkg.Constants {
-		constant := &pkg.Constants[i]
-		if constant.Expr == nil {
-			continue
-		}
-		initExpr := constant.Expr.(ast.BLangExpression)
-		basePos := initExpr.GetPosition()
-		varRef := &ast.BLangSimpleVarRef{
-			VariableName: constant.Name,
-		}
-		varRef.SetSymbol(constant.Symbol())
-		varRef.SetDeterminedType(constant.GetDeterminedType())
-		assignment := &ast.BLangAssignment{
-			VarRef: varRef,
-			Expr:   initExpr,
-		}
-		assignment.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(assignment, basePos)
-
-		initStmts = append(initStmts, assignment)
-		constant.Expr = nil
-	}
+	clearModuleInitExprs(pkg)
 
 	if len(initStmts) == 0 && pkg.InitFunction == nil {
 		return
