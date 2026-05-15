@@ -27,39 +27,53 @@ import (
 
 //go:generate go run -tags bootstrap ../../tools/gen-embedded-libs
 
-//go:embed gen/*.sym
+//go:embed gen/*.sym gen/*.bir
 var embeddedSyms embed.FS
 
 func init() {
-	registerEmbeddedModules()
+	forEachPlatformArtifact(".platform.sym", func(id ID, data []byte) {
+		RegisterEmbedded(id, data)
+	})
 }
 
-func registerEmbeddedModules() {
+// ForEachEmbeddedPlatformBIR calls fn for each embedded gen/*.platform.bir file.
+func ForEachEmbeddedPlatformBIR(fn func(birBytes []byte)) {
+	forEachPlatformArtifact(".platform.bir", func(_ ID, data []byte) {
+		fn(data)
+	})
+}
+
+func forEachPlatformArtifact(suffix string, fn func(id ID, data []byte)) {
 	entries, err := embeddedSyms.ReadDir("gen")
 	if err != nil {
 		panic("registry: read gen: " + err.Error())
 	}
 	for _, e := range entries {
-		name := e.Name()
-		if !strings.HasSuffix(name, ".platform.sym") {
+		id, ok := parsePlatformArtifactID(e.Name(), suffix)
+		if !ok {
 			continue
 		}
-		base := strings.TrimSuffix(name, ".platform.sym")
-		org, mod, ok := strings.Cut(base, ".")
-		if !ok || org == "" || mod == "" {
-			panic("registry: bad embedded sym name: " + name)
-		}
-		RegisterEmbedded(
-			ID{OrgName: org, ModuleName: mod},
-			mustReadEmbeddedSym(name),
-		)
+		fn(id, mustReadEmbeddedFile(e.Name()))
 	}
 }
 
-func mustReadEmbeddedSym(name string) []byte {
+// parsePlatformArtifactID extracts org/module from gen/<org>.<module>.platform.{sym,bir}.
+func parsePlatformArtifactID(fileName, suffix string) (ID, bool) {
+	if !strings.HasSuffix(fileName, suffix) {
+		return ID{}, false
+	}
+	base := strings.TrimSuffix(fileName, suffix)
+	org, mod, ok := strings.Cut(base, ".")
+	if !ok || org == "" || mod == "" {
+		panic("registry: bad embedded platform artifact name: " + fileName)
+	}
+	return ID{OrgName: org, ModuleName: mod}, true
+}
+
+func mustReadEmbeddedFile(name string) []byte {
 	b, err := embeddedSyms.ReadFile(path.Join("gen", name))
 	if err != nil {
-		panic("registry: embedded platform sym " + name + ": " + err.Error())
+		panic("registry: embedded " + name + ": " + err.Error())
 	}
 	return b
 }

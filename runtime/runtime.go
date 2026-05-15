@@ -78,3 +78,8 @@ func (rt *Runtime) GetTypeEnv() semtypes.Env {
 func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
 	rt.registry.RegisterExternFunction(orgName, moduleName, funcName, impl)
 }
+
+// LoadPlatformModule registers an embedded platform BIR package and runs its init.
+func LoadPlatformModule(rt *Runtime, pkg *bir.BIRPackage) {
+	exec.LoadPlatformModule(rt.registry, pkg)
+}
