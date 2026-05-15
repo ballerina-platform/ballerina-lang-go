@@ -57,11 +57,12 @@ type activeStage struct {
 }
 
 type CompilerContext struct {
-	env         *CompilerEnvironment
-	mu          sync.Mutex
-	diagnostics []diagnostics.Diagnostic
-	moduleStats *ModuleStats
-	stage       activeStage
+	env                        *CompilerEnvironment
+	mu                         sync.Mutex
+	diagnostics                []diagnostics.Diagnostic
+	moduleStats                *ModuleStats
+	stage                      activeStage
+	omitEmbeddedLanglibImports bool
 }
 
 func (c *CompilerContext) DiagnosticEnv() *diagnostics.DiagnosticEnv {
@@ -175,6 +176,18 @@ func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 	return &CompilerContext{
 		env: env,
 	}
+}
+
+func (c *CompilerContext) CompilerEnvironment() *CompilerEnvironment {
+	return c.env
+}
+
+func (c *CompilerContext) SetOmitEmbeddedLanglibImports(v bool) {
+	c.omitEmbeddedLanglibImports = v
+}
+
+func (c *CompilerContext) OmitEmbeddedLanglibImports() bool {
+	return c.omitEmbeddedLanglibImports
 }
 
 // GetTypeEnv returns the type environment for this context

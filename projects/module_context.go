@@ -87,6 +87,8 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	depsCopy := slices.Clone(moduleConfig.Dependencies())
 
 	env := project.Environment().compilerEnvironment()
+	cx := context.NewCompilerContext(env)
+	cx.SetOmitEmbeddedLanglibImports(project.BuildOptions().CompilationOptions().OmitEmbeddedLanglibImports())
 	return &moduleContext{
 		project:                project,
 		moduleID:               moduleConfig.ModuleID(),
@@ -97,7 +99,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: depsCopy,
-		compilerCtx:            context.NewCompilerContext(env),
+		compilerCtx:            cx,
 	}
 }
 
@@ -150,6 +152,8 @@ func newModuleContextFromMaps(
 	}
 
 	env := project.Environment().compilerEnvironment()
+	cx := context.NewCompilerContext(env)
+	cx.SetOmitEmbeddedLanglibImports(project.BuildOptions().CompilationOptions().OmitEmbeddedLanglibImports())
 	return &moduleContext{
 		project:                project,
 		moduleID:               moduleID,
@@ -160,7 +164,7 @@ func newModuleContextFromMaps(
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: slices.Clone(moduleDescDependencies),
-		compilerCtx:            context.NewCompilerContext(env),
+		compilerCtx:            cx,
 	}
 }
 

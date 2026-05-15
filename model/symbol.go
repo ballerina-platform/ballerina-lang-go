@@ -1040,6 +1040,18 @@ func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name
 
 func (m *monomorphicFunctionSymbol) PolymorphicSymbol() SymbolRef { return m.polymorhpicFn }
 
+// NewMonomorphicFromPolymorphic wraps a module-level polymorphic symbol (e.g. a wide langlib external)
+// with a call-site-specific signature. BIR dispatch uses the polymorphic symbol's package and name.
+func NewMonomorphicFromPolymorphic(polyRef SymbolRef, instanceName string, sig FunctionSignature, isPublic bool) MonomorphicFunctionSymbol {
+	return &monomorphicFunctionSymbol{
+		functionSymbol: functionSymbol{
+			symbolBase: symbolBase{name: instanceName, ty: nil, isPublic: isPublic},
+			signature:  sig,
+		},
+		polymorhpicFn: polyRef,
+	}
+}
+
 func (m *monomorphicFunctionSymbol) Copy() Symbol {
 	cp := *m
 	return &cp

@@ -27,14 +27,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
-	array "ballerina-lang-go/lib/array/compile"
-	bError "ballerina-lang-go/lib/error/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
-	io "ballerina-lang-go/lib/io/compile"
-	langinternal "ballerina-lang-go/lib/langinternal/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
-	bString "ballerina-lang-go/lib/string/compile"
-	bValue "ballerina-lang-go/lib/value/compile"
+	"ballerina-lang-go/lib/registry"
 )
 
 type scopeKind int
@@ -475,54 +468,37 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 	ast.Walk(functionResolver, function)
 }
 
+func loadEmbeddedBallerinaSymbols(ctx *context.CompilerContext, id PackageIdentifier) (model.ExportedSymbolSpace, bool, error) {
+	if id.OrgName != "ballerina" {
+		return model.ExportedSymbolSpace{}, false, nil
+	}
+	sym, ok, err := registry.LoadSymbols(ctx.CompilerEnvironment(), registry.ID{OrgName: id.OrgName, ModuleName: id.ModuleName})
+	return sym, ok, err
+}
+
 func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace,
 	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace, defaultOrg string,
 ) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// Check if this is ballerina import
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if isIoImport(&imp) {
-				// Use alias if available, otherwise use package name
-				key := "io"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = io.GetIoSymbols(ctx)
-			} else if isLangImport(&imp, "array") {
-				key := "array"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = array.GetArraySymbols(ctx)
-			} else if isLangImport(&imp, "map") {
-				key := "map"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bMap.GetMapSymbols(ctx)
-			} else if isLangImport(&imp, "error") {
-				key := "error"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bError.GetErrorSymbols(ctx)
-			} else if isLangImport(&imp, "string") {
-				key := "string"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bString.GetStringSymbols(ctx)
-			} else if isLangImport(&imp, "value") {
-				key := "value"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bValue.GetValueSymbols(ctx)
-			} else {
-				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			id := resolveImportPackageIdentifier(&imp, defaultOrg)
+			key := importKeyForAliasOrLast(&imp)
+			if symbols, ok := publicSymbols[id]; ok {
+				result[key] = symbols
+				continue
 			}
+			if sym, ok, err := loadEmbeddedBallerinaSymbols(ctx, id); ok {
+				if err != nil {
+					ctx.InternalError("embedded ballerina/"+id.ModuleName+": "+err.Error(), imp.GetPosition())
+					continue
+				}
+				result[key] = sym
+				continue
+			}
+			ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			continue
 		} else {
 			id := resolveImportPackageIdentifier(&imp, defaultOrg)
 			if symbols, ok := publicSymbols[id]; ok {
@@ -566,15 +542,42 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 	return PackageIdentifier{orgName, moduleName}
 }
 
+func importKeyForAliasOrLast(imp *ast.BLangImportPackage) string {
+	if imp.Alias != nil {
+		return imp.Alias.Value
+	}
+	comps := imp.GetPackageName()
+	return comps[len(comps)-1].GetValue()
+}
+
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result[array.PackageName] = array.GetArraySymbols(ctx)
-	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
-	result[bError.PackageName] = bError.GetErrorSymbols(ctx)
-	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
-	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
-	result[bString.PackageName] = bString.GetStringSymbols(ctx)
-	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
+	if !ctx.OmitEmbeddedLanglibImports() {
+		env := ctx.CompilerEnvironment()
+		mustEmbed := func(moduleName string) model.ExportedSymbolSpace {
+			sym, ok, err := registry.LoadSymbols(env, registry.ID{OrgName: "ballerina", ModuleName: moduleName})
+			if err != nil {
+				ctx.InternalError("embedded "+moduleName+": "+err.Error(), diagnostics.Location{})
+				return model.ExportedSymbolSpace{}
+			}
+			if !ok {
+				ctx.InternalError("embedded "+moduleName+" not registered", diagnostics.Location{})
+				return model.ExportedSymbolSpace{}
+			}
+			return sym
+		}
+		for _, moduleName := range []string{
+			registry.LangArray,
+			registry.LangMap,
+			registry.LangString,
+			registry.LangError,
+			registry.LangInt,
+			registry.LangInternal,
+			registry.LangValue,
+		} {
+			result[moduleName] = mustEmbed(moduleName)
+		}
+	}
 	return result
 }
 

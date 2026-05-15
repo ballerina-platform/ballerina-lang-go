@@ -32,12 +32,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
-	array "ballerina-lang-go/lib/array/compile"
-	bError "ballerina-lang-go/lib/error/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
-	bString "ballerina-lang-go/lib/string/compile"
-	bValue "ballerina-lang-go/lib/value/compile"
+	"ballerina-lang-go/lib/registry"
 )
 
 type typeResolver interface {
@@ -4006,17 +4001,17 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	var pkgAlias ast.BLangIdentifier
 	switch {
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, array.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangArray, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.INT):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bInt.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangInt, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bMap.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangMap, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.ERROR):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bError.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangError, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.STRING):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bString.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangString, methodSymbol.name, expr)
 	default:
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bValue.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangValue, methodSymbol.name, expr)
 	}
 	if !ok {
 		return nil, expressionEffect{}, false
@@ -4197,6 +4192,9 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		inv.SetResolvedSymbol(symbolRef)
 		return argTys, symbolRef, chain, true
 	case model.FunctionSymbol:
+		if argTys, monoRef, chain, handled, ok := tryResolveBuiltinFunction(t, chain, inv, fnSymbol, sym, expectedType); handled {
+			return argTys, monoRef, chain, ok
+		}
 		if !t.ensureResolved(fnSymbol, 0) {
 			return nil, fnSymbol, chain, false
 		}

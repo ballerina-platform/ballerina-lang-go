@@ -21,8 +21,7 @@ import (
 	"fmt"
 
 	"ballerina-lang-go/ast"
-	array "ballerina-lang-go/lib/array/compile"
-	langinternal "ballerina-lang-go/lib/langinternal/compile"
+	"ballerina-lang-go/lib/registry"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -1728,7 +1727,7 @@ func createQuerySortInvocation(
 	indicesExpr ast.BLangExpression,
 	payloadExpr ast.BLangExpression,
 ) *ast.BLangInvocation {
-	pkgName := langinternal.PackageName
+	pkgName := registry.LangInternal
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")
@@ -1754,7 +1753,7 @@ func createQuerySortInvocation(
 }
 
 func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := array.PackageName
+	pkgName := registry.LangArray
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")
