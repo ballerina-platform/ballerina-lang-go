@@ -202,6 +202,13 @@ func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
 	return pkgId.OrgName.Value() + "/" + pkgId.PkgName.Value() + ":" + name.Value()
 }
 
+func samePackageID(a, b *model.PackageID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.OrgName.Value() == b.OrgName.Value() && a.PkgName.Value() == b.PkgName.Value()
+}
+
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg := &BIRPackage{}
 	birPkg.PackageID = ast.PackageID
@@ -1379,6 +1386,20 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		pkgId = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
 	} else {
 		pkgId = ctx.birCx.packageID
+	}
+
+	// Singleton constants from other packages (e.g. imported enum members) are not
+	// initialized in the current module's init; inline their value.
+	if sym.Kind() == model.SymbolKindConstant && !samePackageID(pkgId, ctx.birCx.packageID) {
+		ty := ctx.birCx.CompilerContext.SymbolType(symRef)
+		if opt := semtypes.SingleShape(ty); !opt.IsEmpty() {
+			resultOperand := ctx.addTempVar(ty)
+			curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, opt.Get().Value, ctx.loc(expr.GetPosition())))
+			return expressionEffect{
+				result: resultOperand,
+				block:  curBB,
+			}
+		}
 	}
 	gv := &BIRGlobalVariableDcl{}
 	gv.Name = model.Name(varName)
