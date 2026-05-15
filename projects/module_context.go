@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -113,7 +114,10 @@ func buildDiagKeyPrefix(project Project, md ModuleDescriptor) string {
 	}
 
 	prefix := ""
-	if root := project.SourceRoot(); root != "" && root != "." {
+	// Normalize the source root to forward-slash form so DiagnosticEnv keys
+	// stay consistent across OSes (project.SourceRoot() may use backslashes
+	// on Windows).
+	if root := filepath.ToSlash(project.SourceRoot()); root != "" && root != "." {
 		// Workspace member (or any project loaded with a non-trivial source root):
 		// scope all its files under the source-root directory.
 		prefix = root + "/"
