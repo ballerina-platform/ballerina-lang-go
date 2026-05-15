@@ -34,6 +34,9 @@ jobs:
           DATE=$(date -u +%Y%m%d)
           echo "version=${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
+      - name: Generate embedded platform sym/bir
+        run: go run -tags bootstrap ./tools/gen-embedded-libs
+
       - name: Build the Ballerina CLI for all platforms
         env:
           VERSION: ${{ steps.version.outputs.version }}

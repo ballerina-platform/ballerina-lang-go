@@ -26,6 +26,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y hyperfine
 
+      - name: Generate embedded platform sym/bir
+        run: go run -tags bootstrap ./tools/gen-embedded-libs
+
       - name: Run all modules (tests + coverage)
         run: python3 .github/scripts/run_native_tests.py --with-coverage
 
@@ -77,6 +80,9 @@ jobs:
         shell: pwsh
         run: |
           choco install hyperfine -y
+
+      - name: Generate embedded platform sym/bir
+        run: go run -tags bootstrap ./tools/gen-embedded-libs
 
       - name: Run all modules
         shell: pwsh

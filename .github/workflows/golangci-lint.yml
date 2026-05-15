@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+      - name: Generate embedded platform sym/bir
+        run: go run -tags bootstrap ./tools/gen-embedded-libs
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

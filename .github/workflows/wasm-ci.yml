@@ -19,6 +19,9 @@ jobs:
         with:
           go-version: '1.26'
 
+      - name: Generate embedded platform sym/bir
+        run: go run -tags bootstrap ./tools/gen-embedded-libs
+
       - name: Run WASM tests
         run: |
           export GOOS=js
