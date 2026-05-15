@@ -97,54 +97,54 @@ public function main() {
     io:println(nInf % 0.0); // @output NaN
     io:println(anotherNan % 0.0); // @output NaN
 
-    io:println(7.0 % pInf); // @output  7.0
-    io:println(5.0 % pInf); // @output  5.0
-    io:println(0.7 % pInf); // @output  0.7
-    io:println(0.5 % pInf); // @output  0.5
-    io:println(0.0 % pInf); // @output  0.0
+    io:println(7.0 % pInf); // @output 7.0
+    io:println(5.0 % pInf); // @output 5.0
+    io:println(0.7 % pInf); // @output 0.7
+    io:println(0.5 % pInf); // @output 0.5
+    io:println(0.0 % pInf); // @output 0.0
     io:println(-7.0 % pInf); // @output -7.0
     io:println(-5.0 % pInf); // @output -5.0
     io:println(-0.7 % pInf); // @output -0.7
     io:println(-0.5 % pInf); // @output -0.5
     io:println(-0.0 % pInf); // @output -0.0
 
-    io:println(7.0 % nInf); // @output  7.0
-    io:println(5.0 % nInf); // @output  5.0
-    io:println(0.7 % nInf); // @output  0.7
-    io:println(0.5 % nInf); // @output  0.5
-    io:println(0.0 % nInf); // @output  0.0
+    io:println(7.0 % nInf); // @output 7.0
+    io:println(5.0 % nInf); // @output 5.0
+    io:println(0.7 % nInf); // @output 0.7
+    io:println(0.5 % nInf); // @output 0.5
+    io:println(0.0 % nInf); // @output 0.0
     io:println(-7.0 % nInf); // @output -7.0
     io:println(-5.0 % nInf); // @output -5.0
     io:println(-0.7 % nInf); // @output -0.7
     io:println(-0.5 % nInf); // @output -0.5
     io:println(-0.0 % nInf); // @output -0.0
 
-    io:println(7.0 % 7.0); // @output  0.0
-    io:println(5.0 % 7.0); // @output  5.0
-    io:println(0.7 % 7.0); // @output  0.7
-    io:println(0.5 % 7.0); // @output  0.5
-    io:println(0.0 % 7.0); // @output  0.0
+    io:println(7.0 % 7.0); // @output 0.0
+    io:println(5.0 % 7.0); // @output 5.0
+    io:println(0.7 % 7.0); // @output 0.7
+    io:println(0.5 % 7.0); // @output 0.5
+    io:println(0.0 % 7.0); // @output 0.0
     io:println(-7.0 % 7.0); // @output -0.0
     io:println(-5.0 % 7.0); // @output -5.0
     io:println(-0.7 % 7.0); // @output -0.7
     io:println(-0.5 % 7.0); // @output -0.5
     io:println(-0.0 % 7.0); // @output -0.0
 
-    io:println(7.0 % 5.0); // @output  2.0
+    io:println(7.0 % 5.0); // @output 2.0
     io:println(-7.0 % 5.0); // @output -2.0
 
-    io:println(7.0 % -7.0); // @output  0.0
-    io:println(5.0 % -7.0); // @output  5.0
-    io:println(0.7 % -7.0); // @output  0.7
-    io:println(0.5 % -7.0); // @output  0.5
-    io:println(0.0 % -7.0); // @output  0.0
+    io:println(7.0 % -7.0); // @output 0.0
+    io:println(5.0 % -7.0); // @output 5.0
+    io:println(0.7 % -7.0); // @output 0.7
+    io:println(0.5 % -7.0); // @output 0.5
+    io:println(0.0 % -7.0); // @output 0.0
     io:println(-7.0 % -7.0); // @output -0.0
     io:println(-5.0 % -7.0); // @output -5.0
     io:println(-0.7 % -7.0); // @output -0.7
     io:println(-0.5 % -7.0); // @output -0.5
     io:println(-0.0 % -7.0); // @output -0.0
 
-    io:println(7.0 % -5.0); // @output  2.0
+    io:println(7.0 % -5.0); // @output 2.0
     io:println(-7.0 % -5.0); // @output -2.0
 
     io:println(floatRem(1.0, 0.1)); // @output 0.09999999999999995
