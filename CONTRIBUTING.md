@@ -19,6 +19,12 @@ We appreciate your help!
 ## Build the source code
 
 - Ensure you have [Go 1.24 or later](https://go.dev/dl/).
+- Generate embedded platform sym/bir (required before build or test; do **not** commit `lib/registry/gen/*.sym` or `*.bir`):
+
+  ```bash
+  go run -tags bootstrap ./tools/gen-embedded-libs
+  ```
+
 - Production build: `go build -o bal ./cli/cmd`
 - Debug build (enables profiling): `go build -tags debug -o bal-debug ./cli/cmd`
 

@@ -25,6 +25,18 @@ The project is built using the [Go programming language](https://go.dev/). The f
 
 - [Go 1.24 or later](https://go.dev/dl/)
 
+### Embedded platform libraries (`langlib/`, `stdlib/io`)
+
+Shipped `ballerina/*` and `lang.*` modules are compiled to serialized symbols and BIR under `lib/registry/gen/`. Those files are **not** committed; they are embedded into the `bal` binary at build time via `go:embed` in `lib/registry/embed.go`.
+
+After cloning, or when you change sources under `langlib/` or `stdlib/`, regenerate them:
+
+```bash
+go run -tags bootstrap ./tools/gen-embedded-libs
+```
+
+CI runs the same command before build and test. The `bootstrap` build tag allows this tool to run when `lib/registry/gen/` is empty (see `lib/registry/embed_bootstrap.go`).
+
 ### Build the CLI
 
 #### Production Build (default)
@@ -101,7 +113,7 @@ E.g.
 
 ### Testing
 
-To run the tests, use the following command:
+Generate embedded platform artifacts first (see above), then:
 
 ```bash
 go test ./...

@@ -80,6 +80,7 @@ Stages 5–10 then run concurrently per module, with no cross-module dependencie
 
 ## Commands
 
+- Regenerate embedded platform sym/bir (gitignored; CI runs this before build/test): `go run -tags bootstrap ./tools/gen-embedded-libs`
 - You can run interpreter as `go run ./cli/cmd run [flags] <path to bal file>`
 
 ## Profiling
