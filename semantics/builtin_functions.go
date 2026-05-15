@@ -48,6 +48,7 @@ func tryResolveBuiltinFunction(t typeResolver, chain *binding, inv invocable, po
 		}
 		if !semtypes.IsSubtype(tyCtx, containerTy, semtypes.LIST) {
 			t.semanticError("expect first argument to be a subtype of (any|error)[]", inv.GetPosition())
+			return nil, polyRef, chain, true, false
 		}
 		sig = model.FunctionSignature{
 			ParamTypes:    []semtypes.SemType{containerTy},

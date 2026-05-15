@@ -489,15 +489,16 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				result[key] = symbols
 				continue
 			}
-			if sym, ok, err := loadEmbeddedBallerinaSymbols(ctx, id); ok {
-				if err != nil {
-					ctx.InternalError("embedded ballerina/"+id.ModuleName+": "+err.Error(), imp.GetPosition())
-					continue
-				}
+			sym, ok, err := loadEmbeddedBallerinaSymbols(ctx, id)
+			if err != nil {
+				ctx.InternalError("embedded ballerina/"+id.ModuleName+": "+err.Error(), imp.GetPosition())
+				continue
+			}
+			if ok {
 				result[key] = sym
 				continue
 			}
-			ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			ctx.Unimplemented("unsupported ballerina import: "+id.ModuleName, imp.GetPosition())
 			continue
 		} else {
 			id := resolveImportPackageIdentifier(&imp, defaultOrg)
