@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package langinternalruntime
+package lang_internal
 
 import (
 	"ballerina-lang-go/runtime"

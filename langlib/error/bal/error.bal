@@ -3,6 +3,7 @@
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
+//
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -14,15 +15,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
-
-import (
-	_ "ballerina-lang-go/langlib/array/externs"
-	_ "ballerina-lang-go/langlib/error/externs"
-	_ "ballerina-lang-go/langlib/int/externs"
-	_ "ballerina-lang-go/langlib/lang_internal/externs"
-	_ "ballerina-lang-go/langlib/map/externs"
-	_ "ballerina-lang-go/langlib/string/externs"
-	_ "ballerina-lang-go/lib/registry" // embedded ballerina/io (sym/bir)
-	_ "ballerina-lang-go/stdlib/io/externs"
-)
+public isolated function message(error e) returns string = external;
