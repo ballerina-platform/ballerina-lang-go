@@ -16,7 +16,7 @@ Run this command from the **root of this repository** (where `.git` lives), so `
 cd compiler-tools/benchmark && go build -o ../../bal-bench
 ```
 
-Each worktree run regenerates `lib/registry/gen/` automatically.
+Each worktree run regenerates `lib/registry/gen/` automatically when `tools/gen-embedded-libs/main.go` exists in that checked-out ref.
 
 ## Usage
 
