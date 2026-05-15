@@ -572,6 +572,7 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 			registry.LangString,
 			registry.LangError,
 			registry.LangInt,
+			registry.LangFloat,
 			registry.LangInternal,
 			registry.LangValue,
 		} {

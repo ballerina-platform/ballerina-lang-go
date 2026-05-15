@@ -19,6 +19,7 @@ package rt
 import (
 	_ "ballerina-lang-go/langlib/array/externs"
 	_ "ballerina-lang-go/langlib/error/externs"
+	_ "ballerina-lang-go/langlib/float/externs"
 	_ "ballerina-lang-go/langlib/int/externs"
 	_ "ballerina-lang-go/langlib/lang_internal/externs"
 	_ "ballerina-lang-go/langlib/map/externs"

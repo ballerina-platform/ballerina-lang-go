@@ -512,6 +512,8 @@ func mapToLangPrefixIfNeeded(prefix string) string {
 	switch prefix {
 	case "int":
 		return "lang.int"
+	case "float":
+		return "lang.float"
 	case "array":
 		return "lang.array"
 	case "map":

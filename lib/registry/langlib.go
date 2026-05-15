@@ -24,6 +24,7 @@ const (
 	LangString  = "lang.string"
 	LangError   = "lang.error"
 	LangInt     = "lang.int"
+	LangFloat   = "lang.float"
 	LangInternal = "lang.__internal"
 	LangValue    = "lang.value"
 )

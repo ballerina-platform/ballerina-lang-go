@@ -4004,6 +4004,8 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangArray, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.INT):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangInt, methodSymbol.name, expr)
+	case semtypes.IsSubtypeSimple(recieverTy, semtypes.FLOAT):
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangFloat, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, registry.LangMap, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.ERROR):
