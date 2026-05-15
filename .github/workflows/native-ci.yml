@@ -27,7 +27,9 @@ jobs:
           sudo apt-get install -y hyperfine
 
       - name: Generate embedded platform sym/bir
-        run: go run -tags bootstrap ./tools/gen-embedded-libs
+        run: |
+          mkdir -p .cover/root_codecov
+          GOCOVERDIR="$PWD/.cover/root_codecov" go run -cover -coverpkg=./... -tags bootstrap ./tools/gen-embedded-libs
 
       - name: Run all modules (tests + coverage)
         run: python3 .github/scripts/run_native_tests.py --with-coverage
