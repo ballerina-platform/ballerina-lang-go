@@ -349,14 +349,6 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	sa.importedPkgs[alias] = importNode
 }
 
-func isImplicitImport(importNode *ast.BLangImportPackage) bool {
-	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map") || isLangImport(importNode, "string")
-}
-
-func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
-	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
-}
-
 func validateInitFunction(a analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if function.IsPublic() {
 		a.semanticErr("'init' function cannot be declared as public", pos)
@@ -1623,11 +1615,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 		case *ast.BLangSimpleVarRef:
 			ref := inner.Symbol()
 			sym := a.ctx().GetSymbol(ref)
-			varSym, ok := sym.(*model.ValueSymbol)
-			if !ok {
-				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
-				return true
-			}
+			varSym := sym.(*model.ValueSymbol)
 			if varSym.Name() == "self" {
 				return true
 			}

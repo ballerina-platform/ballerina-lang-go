@@ -203,9 +203,6 @@ func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
 }
 
 func samePackageID(a, b *model.PackageID) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
 	return a.OrgName.Value() == b.OrgName.Value() && a.PkgName.Value() == b.PkgName.Value()
 }
 
