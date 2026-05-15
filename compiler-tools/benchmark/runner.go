@@ -129,10 +129,27 @@ func (b *benchmark) removeWorktree(path string) {
 }
 
 func (b *benchmark) buildInterpreter(worktreePath, ref, output string) error {
+	if err := generateEmbeddedLibsIfPresent(worktreePath, ref); err != nil {
+		return fmt.Errorf("failed to generate embedded platform libs for ref %q: %w", ref, err)
+	}
 	if err := runCmd(worktreePath, "go", "build", "-o", output, "./cli/cmd"); err != nil {
 		return fmt.Errorf("failed to build interpreter for ref %q: %w", ref, err)
 	}
 	return nil
+}
+
+// generateEmbeddedLibsIfPresent runs gen-embedded-libs when the worktree has the tool.
+// lib/registry/gen/*.sym and *.bir are gitignored; go:embed in embed.go requires them at build time.
+func generateEmbeddedLibsIfPresent(worktreePath, ref string) error {
+	tool := filepath.Join(worktreePath, "tools", "gen-embedded-libs", "main.go")
+	if _, err := os.Stat(tool); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	fmt.Printf("Generating embedded platform libs for %s...\n", ref)
+	return runCmd(worktreePath, "go", "run", "-tags", "bootstrap", "./tools/gen-embedded-libs")
 }
 
 func (b *benchmark) hyperfineFlags() []string {

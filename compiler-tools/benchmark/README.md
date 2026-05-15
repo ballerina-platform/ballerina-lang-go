@@ -1,6 +1,6 @@
 # Benchmark
 
-A tool that compares interpreter performance between two Git revisions. It checks out each revision in a temporary worktree, builds `./cli/cmd`, runs [hyperfine](https://github.com/sharkdp/hyperfine) on the same Ballerina target with both binaries, and writes an HTML report.
+A tool that compares interpreter performance between two Git revisions. It checks out each revision in a temporary worktree, generates embedded platform sym/bir when `tools/gen-embedded-libs` is present, builds `./cli/cmd`, runs [hyperfine](https://github.com/sharkdp/hyperfine) on the same Ballerina target with both binaries, and writes an HTML report.
 
 ## Prerequisites
 
@@ -15,6 +15,8 @@ Run this command from the **root of this repository** (where `.git` lives), so `
 ```bash
 cd compiler-tools/benchmark && go build -o ../../bal-bench
 ```
+
+Each worktree run regenerates `lib/registry/gen/` automatically.
 
 ## Usage
 
