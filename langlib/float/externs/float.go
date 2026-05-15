@@ -17,7 +17,6 @@
 package floatruntime
 
 import (
-	"fmt"
 	"math"
 
 	"ballerina-lang-go/runtime"
@@ -31,28 +30,16 @@ const (
 
 func initFloatModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "pow", func(args []values.BalValue) (values.BalValue, error) {
-		x, ok := args[0].(float64)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a float")
-		}
-		y, ok := args[1].(float64)
-		if !ok {
-			return nil, fmt.Errorf("second argument must be a float")
-		}
+		x := args[0].(float64)
+		y := args[1].(float64)
 		return math.Pow(x, y), nil
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "sqrt", func(args []values.BalValue) (values.BalValue, error) {
-		x, ok := args[0].(float64)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a float")
-		}
+		x := args[0].(float64)
 		return math.Sqrt(x), nil
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "abs", func(args []values.BalValue) (values.BalValue, error) {
-		x, ok := args[0].(float64)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a float")
-		}
+		x := args[0].(float64)
 		return math.Abs(x), nil
 	})
 }
