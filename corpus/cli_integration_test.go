@@ -224,6 +224,10 @@ func ensureCLIIntegrationBalBinaries(t *testing.T) {
 		if cliIntegrationBinsErr != nil {
 			return
 		}
+		cliIntegrationBinsErr = ensureEmbeddedPlatformArtifacts(cliIntegrationRepoRoot)
+		if cliIntegrationBinsErr != nil {
+			return
+		}
 		tmpDir, err := os.MkdirTemp("", "bal-cli-test")
 		if err != nil {
 			cliIntegrationBinsErr = err
@@ -268,6 +272,23 @@ func cliIntegrationBalExecutableName(debugBuild bool) string {
 		return base + ".exe"
 	}
 	return base
+}
+
+func ensureEmbeddedPlatformArtifacts(repoRoot string) error {
+	genDir := filepath.Join(repoRoot, "lib", "registry", "gen")
+	matches, err := filepath.Glob(filepath.Join(genDir, "*.stdlib.sym"))
+	if err != nil {
+		return err
+	}
+	if len(matches) > 0 {
+		return nil
+	}
+	cmd := exec.Command("go", "run", "-tags", "bootstrap", "./tools/gen-embedded-libs")
+	cmd.Dir = repoRoot
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("gen-embedded-libs: %w\n%s", err, out)
+	}
+	return nil
 }
 
 func buildBalBinaryTo(repoRoot, coverDir, outputPath string, debugBuild bool) error {
