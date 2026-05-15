@@ -598,11 +598,7 @@ func scanBalFiles(fsys fs.FS, dirPath string, moduleID ModuleID) ([]DocumentConf
 		}
 
 		docID := NewDocumentID(fileName, moduleID)
-		// Use the path relative to the project root as the document name so that
-		// files with the same name in different modules get distinct entries in
-		// the DiagnosticEnv and diagnostic messages show an unambiguous path.
-		docName := filePath
-		doc := NewDocumentConfig(docID, docName, string(content))
+		doc := NewDocumentConfig(docID, fileName, string(content))
 		docs = append(docs, doc)
 	}
 

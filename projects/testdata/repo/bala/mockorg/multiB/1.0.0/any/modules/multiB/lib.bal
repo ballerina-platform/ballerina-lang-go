@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public function main() {
-    // Minimal default module - no dependencies
+// Default module for multiB package
+
+public function getBaseValue() returns int {
+    return 100;
 }
