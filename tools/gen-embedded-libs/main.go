@@ -23,35 +23,32 @@
 //	go run -tags bootstrap ./tools/gen-embedded-libs
 //
 // The bootstrap build tag is required when lib/registry/gen is empty; see lib/registry/embed_bootstrap.go.
-// Generated .sym files are embedded into the CLI (see lib/registry/embed.go); .bir files are
-// also written for debugging/future use but are not embedded. All are gitignored.
+// Generated .sym and .bir files are embedded into the CLI (see lib/registry/embed.go).
+// All are gitignored.
 package main
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	bircodec "ballerina-lang-go/bir/codec"
+	"ballerina-lang-go/lib/registry"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/projects"
 )
 
-var embeddedPkgRoots = []string{
-	"langlib/int/bal",
-	"stdlib/io/bal",
-	"langlib/array/bal",
-	"langlib/map/bal",
-	"langlib/string/bal",
-	"langlib/error/bal",
-	"langlib/lang_internal/bal",
-	"langlib/value/bal",
-}
-
 func main() {
-	repoRoot, err := resolveRepoRoot()
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	pkgs, err := discoverEmbeddedPkgs(repoRoot)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -63,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, rel := range embeddedPkgRoots {
+	for _, rel := range pkgs {
 		if err := compileAndWrite(repoRoot, rel, outDir); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -71,13 +68,49 @@ func main() {
 	}
 }
 
-func compileAndWrite(repoRoot, relPkgRoot, outDir string) error {
-	balRoot := filepath.Join(repoRoot, filepath.FromSlash(relPkgRoot))
-	fsys := os.DirFS(balRoot)
-	genOpts := projects.NewBuildOptionsBuilder().WithOmitEmbeddedLanglibImports(true).Build()
-	result, err := projects.Load(fsys, ".", projects.ProjectLoadConfig{BuildOptions: &genOpts})
+// discoverEmbeddedPkgs finds langlib/*/bal and stdlib/*/bal packages. Langlibs are
+// compiled first without embedded langlib imports; stdlibs use embedded langlibs.
+func discoverEmbeddedPkgs(repoRoot string) ([]string, error) {
+	var pkgs []string
+	for _, root := range []string{"langlib", "stdlib"} {
+		entries, err := os.ReadDir(filepath.Join(repoRoot, root))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", root, err)
+		}
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			if e.IsDir() {
+				names = append(names, e.Name())
+			}
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			rel := filepath.ToSlash(filepath.Join(root, name, "bal"))
+			if _, err := os.Stat(filepath.Join(repoRoot, rel, "Ballerina.toml")); err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return nil, fmt.Errorf("%s: %w", rel, err)
+			}
+			pkgs = append(pkgs, rel)
+		}
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("no embedded packages under langlib/ or stdlib/")
+	}
+	return pkgs, nil
+}
+
+func compileAndWrite(repoRoot, rel, outDir string) error {
+	balRoot := filepath.Join(repoRoot, filepath.FromSlash(rel))
+	builder := projects.NewBuildOptionsBuilder()
+	if strings.HasPrefix(rel, "langlib/") {
+		builder = builder.WithOmitEmbeddedLanglibImports(true)
+	}
+	buildOpts := builder.Build()
+	result, err := projects.Load(os.DirFS(balRoot), ".", projects.ProjectLoadConfig{BuildOptions: &buildOpts})
 	if err != nil {
-		return fmt.Errorf("%s: load: %w", relPkgRoot, err)
+		return fmt.Errorf("%s: load: %w", rel, err)
 	}
 	compilation := result.Project().CurrentPackage().Compilation()
 	if compilation.DiagnosticResult().HasErrors() {
@@ -85,14 +118,14 @@ func compileAndWrite(repoRoot, relPkgRoot, outDir string) error {
 		for _, d := range compilation.DiagnosticResult().Diagnostics() {
 			fmt.Fprintf(&b, "%v\n", d)
 		}
-		return fmt.Errorf("%s: compile errors:\n%s", relPkgRoot, b.String())
+		return fmt.Errorf("%s: compile errors:\n%s", rel, b.String())
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
 	birPkgs := backend.BIRPackages()
 	exported := backend.ExportedSymbols()
 	if len(birPkgs) != 1 {
-		return fmt.Errorf("%s: expected one BIR package, got %d", relPkgRoot, len(birPkgs))
+		return fmt.Errorf("%s: expected one BIR package, got %d", rel, len(birPkgs))
 	}
 	birPkg := birPkgs[0]
 	orgName := birPkg.PackageID.OrgName.Value()
@@ -107,34 +140,28 @@ func compileAndWrite(repoRoot, relPkgRoot, outDir string) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("%s: missing exports for %s/%s", relPkgRoot, orgName, moduleName)
+		return fmt.Errorf("%s: missing exports for %s/%s", rel, orgName, moduleName)
 	}
 
 	symBytes, err := symbolpool.Marshal(exp, birPkg.TypeEnv)
 	if err != nil {
-		return fmt.Errorf("%s: marshal sym: %w", relPkgRoot, err)
+		return fmt.Errorf("%s: marshal sym: %w", rel, err)
 	}
 	birBytes, err := bircodec.Marshal(birPkg)
 	if err != nil {
-		return fmt.Errorf("%s: marshal bir: %w", relPkgRoot, err)
+		return fmt.Errorf("%s: marshal bir: %w", rel, err)
 	}
 
 	base := filepath.Join(outDir, fmt.Sprintf("%s.%s.platform", orgName, moduleName))
 	if err := os.WriteFile(base+".sym", symBytes, 0o644); err != nil {
-		return fmt.Errorf("%s: write sym: %w", relPkgRoot, err)
+		return fmt.Errorf("%s: write sym: %w", rel, err)
 	}
 	if err := os.WriteFile(base+".bir", birBytes, 0o644); err != nil {
-		return fmt.Errorf("%s: write bir: %w", relPkgRoot, err)
+		return fmt.Errorf("%s: write bir: %w", rel, err)
 	}
+	registry.RegisterEmbedded(registry.ID{OrgName: orgName, ModuleName: moduleName}, symBytes)
 	fmt.Println("wrote", base+".sym", "and", base+".bir")
 	return nil
-}
-
-func resolveRepoRoot() (string, error) {
-	if len(os.Args) > 1 {
-		return filepath.Abs(os.Args[1])
-	}
-	return findRepoRoot()
 }
 
 func findRepoRoot() (string, error) {
@@ -145,9 +172,10 @@ func findRepoRoot() (string, error) {
 	startDir := dir
 	for range 16 {
 		if st, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil && !st.IsDir() {
-			marker := filepath.Join(dir, "stdlib", "io", "bal", "Ballerina.toml")
-			if _, err := os.Stat(marker); err == nil {
-				return dir, nil
+			if _, err := os.Stat(filepath.Join(dir, "langlib")); err == nil {
+				if _, err := os.Stat(filepath.Join(dir, "stdlib")); err == nil {
+					return dir, nil
+				}
 			}
 		}
 		parent := filepath.Dir(dir)
