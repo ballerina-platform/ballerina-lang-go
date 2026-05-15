@@ -18,6 +18,7 @@ package test_util
 
 import (
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -25,6 +26,9 @@ import (
 // cannot run end-to-end yet. It is owned by the integration test (which
 // exercises the full compile + interpret pipeline) and reused by every
 // per-stage corpus test so we don't duplicate skip entries.
+//
+// Skips that apply only under js/wasm (for example wasm memory limits) live in
+// WasmSkipTests; IsUnsupported applies both.
 //
 // Per-stage test files may keep their own *additional* skip list for failures
 // that only show up at that stage; they should not re-list entries that are
@@ -207,11 +211,23 @@ var UnsupportedTests = []string{
 	"subset8/08-function/dependent-fn-5-e.bal",
 }
 
-// IsUnsupported reports whether the given corpus test path is in
-// UnsupportedTests. The path may be relative (e.g.
-// "subset8/08-foo/bar-v.bal") or absolute; entries are matched by suffix.
+// WasmSkipTests lists corpus tests skipped only on GOOS=js or GOARCH=wasm
+// (often memory-heavy interpreter work). Suffix-matched like UnsupportedTests; see MatchesSkip.
+var WasmSkipTests = []string{
+	"subset8/08-bench/ackermann-v.bal",
+	"subset8/08-bench/sieve-v.bal",
+}
+
+// IsUnsupported reports whether corpus tests skip this path. UnsupportedTests applies on
+// every platform; WasmSkipTests applies only on js/wasm. Path may be relative or absolute.
 func IsUnsupported(path string) bool {
-	return MatchesSkip(path, UnsupportedTests)
+	if MatchesSkip(path, UnsupportedTests) {
+		return true
+	}
+	if runtime.GOARCH != "wasm" && runtime.GOOS != "js" {
+		return false
+	}
+	return MatchesSkip(path, WasmSkipTests)
 }
 
 // MatchesSkip reports whether path matches any of the given skip entries by
