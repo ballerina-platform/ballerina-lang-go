@@ -19,12 +19,12 @@ package registry
 
 // Implicit-import keys for embedded ballerina/lang.* modules (default import aliases).
 const (
-	LangArray   = "lang.array"
-	LangMap     = "lang.map"
-	LangString  = "lang.string"
-	LangError   = "lang.error"
-	LangInt     = "lang.int"
-	LangFloat   = "lang.float"
+	LangArray    = "lang.array"
+	LangMap      = "lang.map"
+	LangString   = "lang.string"
+	LangError    = "lang.error"
+	LangInt      = "lang.int"
+	LangFloat    = "lang.float"
 	LangInternal = "lang.__internal"
 	LangValue    = "lang.value"
 )
