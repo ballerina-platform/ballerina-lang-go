@@ -54,4 +54,3 @@ parser/testdata/**/*.json
 # Generated embedded platform artifacts (regenerate: go run -tags bootstrap ./tools/gen-embedded-libs)
 lib/registry/gen/*.sym
 lib/registry/gen/*.bir
-stdlib/io/gen/

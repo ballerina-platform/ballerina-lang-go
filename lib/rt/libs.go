@@ -23,6 +23,6 @@ import (
 	_ "ballerina-lang-go/langlib/lang_internal/externs"
 	_ "ballerina-lang-go/langlib/map/externs"
 	_ "ballerina-lang-go/langlib/string/externs"
-	_ "ballerina-lang-go/lib/registry" // embedded ballerina/io (sym/bir)
+	_ "ballerina-lang-go/lib/registry" // embedded platform module symbols (langlib, standard library)
 	_ "ballerina-lang-go/stdlib/io/externs"
 )

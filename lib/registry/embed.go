@@ -28,38 +28,38 @@ import (
 //go:generate go run -tags bootstrap ../../tools/gen-embedded-libs
 
 //go:embed gen/*.sym
-var stdlibGen embed.FS
+var embeddedSyms embed.FS
 
 func init() {
-	registerEmbeddedStdlibArtifacts()
+	registerEmbeddedModules()
 }
 
-func registerEmbeddedStdlibArtifacts() {
-	entries, err := stdlibGen.ReadDir("gen")
+func registerEmbeddedModules() {
+	entries, err := embeddedSyms.ReadDir("gen")
 	if err != nil {
 		panic("registry: read gen: " + err.Error())
 	}
 	for _, e := range entries {
 		name := e.Name()
-		if !strings.HasSuffix(name, ".stdlib.sym") {
+		if !strings.HasSuffix(name, ".platform.sym") {
 			continue
 		}
-		base := strings.TrimSuffix(name, ".stdlib.sym")
+		base := strings.TrimSuffix(name, ".platform.sym")
 		org, mod, ok := strings.Cut(base, ".")
 		if !ok || org == "" || mod == "" {
 			panic("registry: bad embedded sym name: " + name)
 		}
 		RegisterEmbedded(
 			ID{OrgName: org, ModuleName: mod},
-			mustReadGen(name),
+			mustReadEmbeddedSym(name),
 		)
 	}
 }
 
-func mustReadGen(name string) []byte {
-	b, err := stdlibGen.ReadFile(path.Join("gen", name))
+func mustReadEmbeddedSym(name string) []byte {
+	b, err := embeddedSyms.ReadFile(path.Join("gen", name))
 	if err != nil {
-		panic("registry: embedded stdlib " + name + ": " + err.Error())
+		panic("registry: embedded platform sym " + name + ": " + err.Error())
 	}
 	return b
 }

@@ -287,8 +287,8 @@ func (c CompilationOptions) Stats() bool {
 	return c.stats.valueOr(false)
 }
 
-// OmitEmbeddedLanglibImports skips registry-backed lang.array/lang.map/lang.string/lang.error
-// implicit imports. Used when compiling those embedded packages (e.g. tools/gen-embedded-libs).
+// OmitEmbeddedLanglibImports skips registry-backed implicit langlib imports. Used when
+// compiling embedded langlib packages (e.g. tools/gen-embedded-libs).
 func (c CompilationOptions) OmitEmbeddedLanglibImports() bool {
 	return c.omitEmbeddedLanglibImports.valueOr(false)
 }
@@ -526,7 +526,7 @@ func (b *CompilationOptionsBuilder) WithStats(value bool) *CompilationOptionsBui
 	return b
 }
 
-// WithOmitEmbeddedLanglibImports sets whether embedded langlib registry imports are omitted.
+// WithOmitEmbeddedLanglibImports sets whether embedded langlib implicit imports are omitted.
 func (b *CompilationOptionsBuilder) WithOmitEmbeddedLanglibImports(value bool) *CompilationOptionsBuilder {
 	b.options.omitEmbeddedLanglibImports = optionalBoolOf(value)
 	return b

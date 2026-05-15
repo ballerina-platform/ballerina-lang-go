@@ -25,7 +25,7 @@ The project is built using the [Go programming language](https://go.dev/). The f
 
 - [Go 1.24 or later](https://go.dev/dl/)
 
-### Embedded platform libraries (`langlib/`, `stdlib/io`)
+### Embedded platform libraries (`langlib/`, `stdlib/`)
 
 Shipped `ballerina/*` and `lang.*` modules are compiled to serialized symbols and BIR under `lib/registry/gen/`. Those files are **not** committed; they are embedded into the `bal` binary at build time via `go:embed` in `lib/registry/embed.go`.
 

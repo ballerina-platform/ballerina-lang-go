@@ -21,5 +21,5 @@ package registry
 
 // Stub init so tools/gen-embedded-libs can run when lib/registry/gen is empty.
 // Normal builds (bal CLI, go test without -tags bootstrap) use embed.go and pack
-// gen/*.sym and gen/*.bir into the executable via go:embed.
+// gen/*.sym into the executable via go:embed.
 func init() {}

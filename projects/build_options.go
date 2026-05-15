@@ -488,7 +488,7 @@ func (b *BuildOptionsBuilder) WithLockingMode(mode PackageLockingMode) *BuildOpt
 	return b
 }
 
-// WithOmitEmbeddedLanglibImports sets whether embedded langlib registry imports are omitted during compilation.
+// WithOmitEmbeddedLanglibImports sets whether embedded langlib implicit imports are omitted.
 // Delegates to CompilationOptionsBuilder.
 func (b *BuildOptionsBuilder) WithOmitEmbeddedLanglibImports(value bool) *BuildOptionsBuilder {
 	b.compilationOptionsBuilder.WithOmitEmbeddedLanglibImports(value)
