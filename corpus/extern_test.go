@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extern_test
+package corpus
 
 import (
 	"bytes"
@@ -43,10 +43,10 @@ import (
 	_ "ballerina-lang-go/lib/rt"
 )
 
-const testDataDir = "testdata"
+const externTestDataDir = "extern/testdata"
 
 func TestExternValid(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "1-v.bal")
+	balFile := filepath.Join(externTestDataDir, "1-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,10 @@ func TestExternValid(t *testing.T) {
 
 	fsys := os.DirFS(filepath.Dir(absPath))
 
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -103,7 +106,7 @@ func TestExternValid(t *testing.T) {
 }
 
 func TestExternTypeMismatchArg(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "2-v.bal")
+	balFile := filepath.Join(externTestDataDir, "2-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -111,7 +114,10 @@ func TestExternTypeMismatchArg(t *testing.T) {
 
 	fsys := os.DirFS(filepath.Dir(absPath))
 
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -140,7 +146,7 @@ func TestExternTypeMismatchArg(t *testing.T) {
 }
 
 func TestExternTypeMismatchReturn(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "3-v.bal")
+	balFile := filepath.Join(externTestDataDir, "3-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +154,10 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 
 	fsys := os.DirFS(filepath.Dir(absPath))
 
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -177,7 +186,7 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 }
 
 func TestDependentlyTyped(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "dependently-typed-v.bal")
+	balFile := filepath.Join(externTestDataDir, "dependently-typed-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -298,7 +307,7 @@ func TestDependentlyTyped(t *testing.T) {
 }
 
 func TestDependentlyTypedAlias(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "dependent-alias-v.bal")
+	balFile := filepath.Join(externTestDataDir, "dependent-alias-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -351,7 +360,7 @@ func TestDependentlyTypedAlias(t *testing.T) {
 }
 
 func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "dependently-typed-incl-record-v.bal")
+	balFile := filepath.Join(externTestDataDir, "dependently-typed-incl-record-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -412,7 +421,7 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 }
 
 func TestDependentlyTypedMethod(t *testing.T) {
-	projectDir := filepath.Join(testDataDir, "dependently-typed-method-v")
+	projectDir := filepath.Join(externTestDataDir, "dependently-typed-method-v")
 	absPath, err := filepath.Abs(projectDir)
 	if err != nil {
 		t.Fatal(err)
@@ -469,7 +478,7 @@ func TestDependentlyTypedMethod(t *testing.T) {
 }
 
 func TestExternHandle(t *testing.T) {
-	balFile := filepath.Join(testDataDir, "4-v.bal")
+	balFile := filepath.Join(externTestDataDir, "4-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -520,19 +529,6 @@ func TestExternHandle(t *testing.T) {
 	}
 }
 
-func getBallerinaEnvPath(t *testing.T) string {
-	if balEnv := os.Getenv(projects.BallerinaEnvVar); balEnv != "" {
-		return balEnv
-	}
-
-	userHome, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("failed to get user home: %v", err)
-	}
-
-	return filepath.Join(userHome, projects.UserHomeDirName)
-}
-
 // TestDependentlyTypedCrossModuleRoundtrip manually compiles a helper module
 // containing a dependently-typed extern function, serializes its exported
 // symbols and BIR, then in a fresh compiler environment deserializes those
@@ -543,8 +539,8 @@ func getBallerinaEnvPath(t *testing.T) string {
 // serialization and drive correct type-resolution + BIR generation when the
 // dependent-fn is declared in a dependency module.
 func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
-	helperBalPath := filepath.Join(testDataDir, "cross-module-dependent-fn-v", "modules", "helper", "helper.bal")
-	mainBalPath := filepath.Join(testDataDir, "cross-module-dependent-fn-v", "main.bal")
+	helperBalPath := filepath.Join(externTestDataDir, "cross-module-dependent-fn-v", "modules", "helper", "helper.bal")
+	mainBalPath := filepath.Join(externTestDataDir, "cross-module-dependent-fn-v", "main.bal")
 
 	const (
 		org         = "testorg"
