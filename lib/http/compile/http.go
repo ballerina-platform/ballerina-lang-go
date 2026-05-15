@@ -40,16 +40,38 @@ func GetHttpSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	return model.NewExportedSymbolSpace(space, nil)
 }
 
+// headerValueType returns the closed record type {| string value; map<string> params; |}
+// used as the element type of parseHeader's return value.
+func headerValueType(env semtypes.Env) semtypes.SemType {
+	paramsMd := semtypes.NewMappingDefinition()
+	paramsType := paramsMd.DefineMappingTypeWrapped(env, []semtypes.Field{}, semtypes.STRING)
+	hvMd := semtypes.NewMappingDefinition()
+	return hvMd.DefineMappingTypeWrapped(env, []semtypes.Field{
+		semtypes.FieldFrom("value", semtypes.STRING, false, false),
+		semtypes.FieldFrom("params", paramsType, false, false),
+	}, semtypes.NEVER)
+}
+
 func addParseHeader(ctx *context.CompilerContext, space *model.SymbolSpace) {
+	env := ctx.GetTypeEnv()
+
+	hvType := headerValueType(env)
+	hvSym := model.NewTypeSymbol("HeaderValue", true)
+	hvSym.SetType(hvType)
+	space.AddSymbol("HeaderValue", &hvSym)
+
+	hvListLd := semtypes.NewListDefinition()
+	hvListType := hvListLd.DefineListTypeWrappedWithEnvSemType(env, hvType)
+
 	sig := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING},
-		ReturnType: semtypes.Union(semtypes.LIST, semtypes.ERROR),
+		ReturnType: semtypes.Union(hvListType, semtypes.ERROR),
 		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	sym := model.NewFunctionSymbol("parseHeader", sig, true)
 	space.AddSymbol("parseHeader", sym)
 	ref, _ := space.GetSymbol("parseHeader")
-	ctx.SetSymbolType(ref, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &sig))
+	ctx.SetSymbolType(ref, libcommon.FunctionSignatureToSemType(env, &sig))
 }
 
 func addClientConfiguration(ctx *context.CompilerContext, space *model.SymbolSpace) semtypes.SemType {
@@ -169,13 +191,16 @@ func registerDefaultLambda(ctx *context.CompilerContext, space *model.SymbolSpac
 func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSemType semtypes.SemType) {
 	env := ctx.GetTypeEnv()
 
-	// headers: map<string|string[]>? — open mapping (any key, string|list values), optional.
-	// Build an explicit open mapping type so the field value type resolves to STRING|LIST
-	// rather than NEVER (which happens when the basic MAPPING atom is used directly).
+	// headers: map<string|string[]>? — open mapping (any key, string|string[] values), optional.
+	// Build an explicit open mapping type so the field value type resolves to STRING|string[]
+	// rather than NEVER (which happens when the basic MAPPING atom is used directly), and so
+	// the list arm rejects non-string lists like int[] at compile time.
+	stringArrayLd := semtypes.NewListDefinition()
+	stringArrayType := stringArrayLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 	headersMd := semtypes.NewMappingDefinition()
 	headersMapType := headersMd.DefineMappingTypeWrapped(env,
 		[]semtypes.Field{},
-		semtypes.Union(semtypes.STRING, semtypes.LIST))
+		semtypes.Union(semtypes.STRING, stringArrayType))
 	headersOptType := semtypes.Union(headersMapType, semtypes.NIL)
 
 	// HeaderPosition: "LEADING"|"TRAILING". TRAILING is accepted at compile time but ignored at runtime.

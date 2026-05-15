@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"ballerina-lang-go/bir"
@@ -38,15 +39,56 @@ const (
 	moduleName = "http"
 )
 
+// byteArrayType and typeCtx are populated lazily on the first call into messageToBody;
+// they are used to distinguish a Ballerina byte[] body from other lists at runtime.
+// The runtime's TypeEnv is only set during package interpretation, not at NewRuntime,
+// so we cannot build these at module-init time.
+var (
+	byteArrayType    semtypes.SemType
+	typeCtx          semtypes.Context
+	typeContextOnce  sync.Once
+	runtimeForTypes  *runtime.Runtime
+)
+
+func initTypeContext() {
+	typeContextOnce.Do(func() {
+		env := runtimeForTypes.GetTypeEnv()
+		ld := semtypes.NewListDefinition()
+		byteArrayType = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+		typeCtx = semtypes.ContextFrom(env)
+	})
+}
+
+// splitOutsideQuotes splits s on every occurrence of sep that is not inside a
+// double-quoted string (RFC 7230 §3.2.6 quoted-string), honouring backslash escapes.
+func splitOutsideQuotes(s string, sep byte) []string {
+	var out []string
+	inQuote := false
+	start := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '\\' && inQuote && i+1 < len(s):
+			i++ // skip the escaped character
+		case c == '"':
+			inQuote = !inQuote
+		case c == sep && !inQuote:
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	return append(out, s[start:])
+}
+
 func parseHeader(input string) (*values.List, error) {
-	segments := strings.Split(input, ",")
+	segments := splitOutsideQuotes(input, ',')
 	list := values.NewList(0, semtypes.LIST, nil)
 	for _, seg := range segments {
 		seg = strings.TrimSpace(seg)
 		if seg == "" {
 			return nil, fmt.Errorf("invalid header value: empty segment")
 		}
-		parts := strings.Split(seg, ";")
+		parts := splitOutsideQuotes(seg, ';')
 		headerVal := strings.TrimSpace(parts[0])
 		if headerVal == "" {
 			return nil, fmt.Errorf("invalid header value: missing value before parameters")
@@ -89,6 +131,10 @@ func initHttpModule(rt *runtime.Runtime) {
 		"ballerina/http:LEADING":  "LEADING",
 		"ballerina/http:TRAILING": "TRAILING",
 	})
+
+	// Stash the runtime so messageToBody can lazily build the byte[] semtype on
+	// the first call (the type env isn't available until Interpret runs).
+	runtimeForTypes = rt
 
 	// Remote method name uses the "$remote$" prefix (model.RemoteMethodName).
 	// The BIR gen emits `callInfo.Name = "$remote$get"` for c->get(...), which
@@ -421,6 +467,12 @@ func initHttpModule(rt *runtime.Runtime) {
 			var reqHeaders map[string][]string
 			if len(args) > 4 {
 				reqHeaders = extractHeaders(args[4])
+				for hdrKey, hdrVals := range reqHeaders {
+					if strings.EqualFold(hdrKey, "content-type") && len(hdrVals) > 0 {
+						contentType = hdrVals[0]
+						break
+					}
+				}
 			}
 			if len(args) > 5 {
 				if mt, ok := args[5].(string); ok && mt != "" {
@@ -643,16 +695,20 @@ func buildResponse(statusCode int, respHeaders map[string][]string, body []byte)
 }
 
 // messageToBody converts a Ballerina message value to a []byte body and a default Content-Type.
+// A list is sent as application/octet-stream only when its declared semtype is a subtype of
+// byte[] — a json[] whose values happen to be 0–255 must still go out as application/json.
 // Returns (nil, "json_error") on JSON serialization failure.
 func messageToBody(msg values.BalValue) ([]byte, string) {
 	switch v := msg.(type) {
 	case string:
 		return []byte(v), "text/plain"
 	case *values.List:
-		if b, ok := listToBytes(v); ok {
-			return b, "application/octet-stream"
+		initTypeContext()
+		if v.Type != nil && semtypes.IsSubtype(typeCtx, v.Type, byteArrayType) {
+			if b, ok := listToBytes(v); ok {
+				return b, "application/octet-stream"
+			}
 		}
-		// Non-byte list (e.g. JSON array) — serialize as JSON.
 		b, err := toJSONBytes(v)
 		if err != nil {
 			return nil, "json_error"
@@ -722,7 +778,10 @@ func balToGoJSON(v values.BalValue) any {
 	case float64:
 		return t
 	case *decimal.Decimal:
-		return t.Float64()
+		// Emit the decimal128 string verbatim as a JSON number so the full
+		// precision of the value is preserved — going through Float64() truncates
+		// past ~17 significant digits.
+		return json.RawMessage(t.String())
 	case string:
 		return t
 	case *values.Map:

@@ -213,7 +213,7 @@ main() -> nil|error{
     %85 = ConstantLoad /path
     %86 = ConstantLoad X-Custom
     %87 = ConstantLoad value
-    %88 = newMap {| string|list... |}{%86=%87}
+    %88 = newMap {| string|[string...]... |}{%86=%87}
     %89 = $remote$get(c4,%85,%88) -> bb44;
   }
   bb44 {
