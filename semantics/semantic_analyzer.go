@@ -1597,12 +1597,15 @@ func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.
 // isIsolatedFuncInner validates an isolated function body: every variable reference
 // must resolve to a constant or to a variable declared within the body itself.
 func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
-	locals := make(map[string]struct{})
+	locals := make(map[model.SymbolRef]struct{})
 	tyCtx := a.tyCtx()
 	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangSimpleVariableDef:
-			locals[inner.Var.Name.Value] = struct{}{}
+			if ast.SymbolIsSet(inner.Var) {
+				base := analyzer.ctx().UnnarrowedSymbol(inner.Var.Symbol())
+				locals[base] = struct{}{}
+			}
 		case *ast.BLangInvocation:
 			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
@@ -1618,7 +1621,8 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 				a.semanticErr("non isolated initialization", inner.GetPosition())
 			}
 		case *ast.BLangSimpleVarRef:
-			sym := a.ctx().GetSymbol(inner.Symbol())
+			ref := inner.Symbol()
+			sym := a.ctx().GetSymbol(ref)
 			varSym, ok := sym.(*model.ValueSymbol)
 			if !ok {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
@@ -1630,7 +1634,8 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			if varSym.IsConst() {
 				return true
 			}
-			if _, isLocal := locals[varSym.Name()]; !isLocal {
+			base := analyzer.ctx().UnnarrowedSymbol(ref)
+			if _, isLocal := locals[base]; !isLocal {
 				a.semanticErr("access of mutable variable", inner.GetPosition())
 			}
 		}
