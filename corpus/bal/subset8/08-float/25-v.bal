@@ -14,8 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import testorg/cyclic.moduleA;
+// @productions float multiplicative-expr equality-expr floating-point-literal return-stmt function-call-expr assign-stmt local-var-decl-stmt
+import ballerina/io;
 
-public function fromB() returns string {
-    return moduleA:fromA();
+public function main() {
+    float nan1 = 0.0 / 0.0;
+    float x = 100 * nan1;
+    io:println(x == nan1); // @output true
 }

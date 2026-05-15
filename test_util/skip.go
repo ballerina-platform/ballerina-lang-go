@@ -34,10 +34,6 @@ import (
 // "subset8/08-foo/bar-v.bal"). They are matched as suffixes against either a
 // relative test name or an absolute path.
 var UnsupportedTests = []string{
-	// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
-	"subset8/08-comparable/order5-v.bal",
-	"subset8/08-const/const3-v.bal",
-
 	// --- Needs constant folding ---
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/83
 
@@ -151,24 +147,13 @@ var UnsupportedTests = []string{
 	"subset8/08-unused/unused5-e.bal",
 	"subset8/08-unused/unused6-e.bal",
 
-	// ----- Float errors -----
-	// Float `==` / `===` NaN and signed-zero semantics differ from Ballerina spec
-	// (NaN should equal NaN under `==`; `+0.0` should not equal `-0.0` under `===`).
-	"subset8/08-float/9-v.bal",
-	"subset8/08-float/10-v.bal",
-	"subset8/08-float/12-v.bal",
-	"subset8/08-float/14-v.bal",
-	"subset8/08-float/16-v.bal",
-	"subset8/08-float/const3-v.bal", // same issue at constant-folding time
-	"subset8/08-narrowing/3-v.bal",
+	// ----- Float-related skips -----
+	// BIR type-tests use plain `float` instead of the singleton union `Special`, so
+	// `x is Special` matches every float. Re-enable after TypeTest.Type keeps the union.
 	"subset8/08-singleton/floattest1-v.bal",
 	"subset8/08-singleton/floattest2-v.bal",
-	"subset8/08-float/24-v.bal",
 
-	// Float remainder `%` returns NaN for finite operands instead of computing the result.
-	"subset8/08-float/22-v.bal",
-
-	// ----- End of float errors -----
+	// ----- End float-related skips -----
 
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/283
 	"subset8/08-future/fieldexpr1-v.bal",
