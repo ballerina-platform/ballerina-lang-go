@@ -28,7 +28,7 @@ import (
 //go:generate go run -tags bootstrap ../../tools/gen-embedded-libs
 
 //go:embed gen/*.sym gen/*.bir
-var embeddedSyms embed.FS
+var embeddedPlatformLibsFS embed.FS
 
 func init() {
 	forEachPlatformArtifact(".platform.sym", func(id ID, data []byte) {
@@ -44,7 +44,7 @@ func ForEachEmbeddedPlatformBIR(fn func(birBytes []byte)) {
 }
 
 func forEachPlatformArtifact(suffix string, fn func(id ID, data []byte)) {
-	entries, err := embeddedSyms.ReadDir("gen")
+	entries, err := embeddedPlatformLibsFS.ReadDir("gen")
 	if err != nil {
 		panic("registry: read gen: " + err.Error())
 	}
@@ -71,7 +71,7 @@ func parsePlatformArtifactID(fileName, suffix string) (ID, bool) {
 }
 
 func mustReadEmbeddedFile(name string) []byte {
-	b, err := embeddedSyms.ReadFile(path.Join("gen", name))
+	b, err := embeddedPlatformLibsFS.ReadFile(path.Join("gen", name))
 	if err != nil {
 		panic("registry: embedded " + name + ": " + err.Error())
 	}
