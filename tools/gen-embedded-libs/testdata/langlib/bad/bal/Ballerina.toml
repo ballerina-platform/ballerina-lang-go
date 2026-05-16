@@ -1,0 +1,4 @@
+[package]
+org = "ballerina"
+name = "lang.bad"
+version = "0.0.1"

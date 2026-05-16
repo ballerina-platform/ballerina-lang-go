@@ -35,9 +35,9 @@ import (
 
 	bircodec "ballerina-lang-go/bir/codec"
 	"ballerina-lang-go/lib/registry"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/projects"
+	"ballerina-lang-go/semantics"
 )
 
 var embeddingTrees = []string{"langlib", "stdlib"}
@@ -50,38 +50,34 @@ func main() {
 }
 
 func generateEmbeddedLibs() error {
-	_, file, _, _ := runtime.Caller(1)
+	_, file, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-
-	var pkgs []string
-	for _, tree := range embeddingTrees {
-		relPaths, err := listBalPackageRels(repoRoot, tree)
-		if err != nil {
-			return err
-		}
-		pkgs = append(pkgs, relPaths...)
-	}
-
 	outDir := filepath.Join(repoRoot, "lib", "registry", "gen")
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
 	}
-	for _, rel := range pkgs {
-		if err := compileAndWrite(repoRoot, rel, outDir); err != nil {
+
+	for _, tree := range embeddingTrees {
+		rels, err := listBalPackageRels(repoRoot, tree)
+		if err != nil {
 			return err
+		}
+		for _, rel := range rels {
+			if err := compileAndWrite(repoRoot, rel, outDir); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-// listBalPackageRels returns slash-separated paths like langlib/foo/bal that contain Ballerina.toml.
-// tree is "langlib" or "stdlib"; module names are sorted.
 func listBalPackageRels(repoRoot, tree string) ([]string, error) {
 	entries, err := os.ReadDir(filepath.Join(repoRoot, tree))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", tree, err)
 	}
-	names := make([]string, 0, len(entries))
+
+	var names []string
 	for _, e := range entries {
 		if e.IsDir() {
 			names = append(names, e.Name())
@@ -111,6 +107,7 @@ func compileAndWrite(repoRoot, rel, outDir string) error {
 		b = b.WithOmitEmbeddedLanglibImports(true)
 	}
 	opts := b.Build()
+
 	result, err := projects.Load(os.DirFS(balRoot), ".", projects.ProjectLoadConfig{BuildOptions: &opts})
 	if err != nil {
 		return fmt.Errorf("%s: load: %w", rel, err)
@@ -122,30 +119,14 @@ func compileAndWrite(repoRoot, rel, outDir string) error {
 		for _, d := range compilation.DiagnosticResult().Diagnostics() {
 			fmt.Fprintf(&diag, "%v\n", d)
 		}
-		return fmt.Errorf("%s: compile errors:\n%s", rel, diag.String())
+		return fmt.Errorf("%s: compile errors:\n%s", rel, strings.TrimSuffix(diag.String(), "\n"))
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkgs := backend.BIRPackages()
-	exported := backend.ExportedSymbols()
-	if len(birPkgs) != 1 {
-		return fmt.Errorf("%s: expected one BIR package, got %d", rel, len(birPkgs))
-	}
-	birPkg := birPkgs[0]
-	orgName := birPkg.PackageID.OrgName.Value()
-	moduleName := birPkg.PackageID.PkgName.Value()
-
-	var exp model.ExportedSymbolSpace
-	var found bool
-	for id, e := range exported {
-		if id.OrgName == orgName && id.ModuleName == moduleName {
-			exp, found = e, true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("%s: missing exports for %s/%s", rel, orgName, moduleName)
-	}
+	birPkg := backend.BIR()
+	org := birPkg.PackageID.OrgName.Value()
+	mod := birPkg.PackageID.PkgName.Value()
+	exp := backend.ExportedSymbols()[semantics.PackageIdentifier{OrgName: org, ModuleName: mod}]
 
 	symBytes, err := symbolpool.Marshal(exp, birPkg.TypeEnv)
 	if err != nil {
@@ -156,14 +137,15 @@ func compileAndWrite(repoRoot, rel, outDir string) error {
 		return fmt.Errorf("%s: marshal bir: %w", rel, err)
 	}
 
-	base := filepath.Join(outDir, fmt.Sprintf("%s.%s.platform", orgName, moduleName))
-	if err := os.WriteFile(base+".sym", symBytes, 0o644); err != nil {
+	base := filepath.Join(outDir, org+"."+mod+".platform")
+	symPath, birPath := base+".sym", base+".bir"
+	if err := os.WriteFile(symPath, symBytes, 0o644); err != nil {
 		return fmt.Errorf("%s: write sym: %w", rel, err)
 	}
-	if err := os.WriteFile(base+".bir", birBytes, 0o644); err != nil {
+	if err := os.WriteFile(birPath, birBytes, 0o644); err != nil {
 		return fmt.Errorf("%s: write bir: %w", rel, err)
 	}
-	registry.RegisterEmbedded(registry.ID{OrgName: orgName, ModuleName: moduleName}, symBytes)
-	fmt.Println("wrote", base+".sym", "and", base+".bir")
+	registry.RegisterEmbedded(registry.ID{OrgName: org, ModuleName: mod}, symBytes)
+	fmt.Println("wrote", symPath, "and", birPath)
 	return nil
 }
