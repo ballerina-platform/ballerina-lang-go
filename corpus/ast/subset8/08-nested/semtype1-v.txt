@@ -36,7 +36,7 @@
           (user-defined-type ProperSubtypeData) dimensions: 1 ([])))))
   (type-definition StringSubtype
     (record-type
-      (field charSubtype
+      (field char
         (user-defined-type CharStringSubtype))
       (field nonChar
         (user-defined-type NonCharStringSubtype))))

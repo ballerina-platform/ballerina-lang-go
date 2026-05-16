@@ -33,7 +33,7 @@ public type ComplexSemType record {|
 |};
 
 type StringSubtype record {|
-    CharStringSubtype charSubtype;
+    CharStringSubtype char;
     NonCharStringSubtype nonChar;
 |};
 
