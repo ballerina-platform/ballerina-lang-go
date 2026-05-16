@@ -318,7 +318,18 @@ func Load(projectFs fs.FS, projectPath string, config ...ProjectLoadConfig) (Pro
 	}
 
 	if info.IsDir() {
-		// 2. Check for Ballerina.toml
+		// Bala directory layouts: TOML form carries Bala.toml (alongside
+		// Ballerina.toml), legacy form carries package.json. Detect bala
+		// before the generic Ballerina.toml check so the TOML form isn't
+		// mistaken for a build project.
+		if info, err := fs.Stat(projectFs, path.Join(projectPath, BalaTomlFile)); err == nil && !info.IsDir() {
+			return loader.loadBalaProject(projectPath, cfg)
+		}
+		if info, err := fs.Stat(projectFs, path.Join(projectPath, "package.json")); err == nil && !info.IsDir() {
+			return loader.loadBalaProject(projectPath, cfg)
+		}
+
+		// Build project: Ballerina.toml at the root.
 		tomlPath := path.Join(projectPath, BallerinaTomlFile)
 		if info, err := fs.Stat(projectFs, tomlPath); err == nil && !info.IsDir() {
 			// Check if it's a workspace project
@@ -326,12 +337,6 @@ func Load(projectFs fs.FS, projectPath string, config ...ProjectLoadConfig) (Pro
 				return loader.loadWorkspaceProject(projectPath, cfg)
 			}
 			return loader.loadBuildProject(projectPath, cfg)
-		}
-
-		// 3. Check for package.json (bala directory)
-		packageJSONPath := path.Join(projectPath, "package.json")
-		if info, err := fs.Stat(projectFs, packageJSONPath); err == nil && !info.IsDir() {
-			return loader.loadBalaProject(projectPath, cfg)
 		}
 
 		return ProjectLoadResult{}, &ProjectError{

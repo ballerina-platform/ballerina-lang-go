@@ -57,10 +57,11 @@ type balaProjectConfigResult struct {
 	Platform      string
 }
 
-// createBalaProjectConfig creates a PackageConfig by scanning a .bala directory.
-// The balaPath should point to the platform directory (e.g., .../1.0.0/any/).
+// createBalaProjectConfig creates a PackageConfig by scanning an extracted
+// .bala directory. Loads the TOML form when Bala.toml is present; otherwise
+// falls back to createBalaProjectConfigLegacy for the legacy package.json
+// layout.
 func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResult, error) {
-	// Verify bala directory exists
 	info, err := fs.Stat(fsys, balaPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
@@ -71,14 +72,75 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 		}
 	}
 
-	// Read and parse package.json
+	if _, err := fs.Stat(fsys, path.Join(balaPath, BalaTomlFile)); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return createBalaProjectConfigLegacy(fsys, balaPath)
+		}
+		return balaProjectConfigResult{}, &ProjectError{
+			Message: "failed to stat " + BalaTomlFile + ": " + err.Error(),
+		}
+	}
+
+	tomlPath := path.Join(balaPath, BallerinaTomlFile)
+	toml, err := tomlparser.Read(fsys, tomlPath)
+	if err != nil {
+		return balaProjectConfigResult{}, &ProjectError{
+			Message: "failed to read " + BallerinaTomlFile + " from bala: " + err.Error(),
+		}
+	}
+	manifest := newManifestBuilder(toml, balaPath).Build()
+
+	platform, err := readBalaTomlPlatform(fsys, balaPath)
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+
+	packageDesc := manifest.PackageDescriptor()
+	packageID := NewPackageID(packageDesc.Name().Value())
+
+	defaultModuleConfig, err := createDefaultModuleConfig(fsys, balaPath, packageDesc, packageID)
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+	otherModules, err := createOtherModuleConfigs(fsys, balaPath, packageDesc, packageID)
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+
+	ballerinaTomlContent, err := fs.ReadFile(fsys, tomlPath)
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+	ballerinaTomlDoc := NewDocumentConfig(
+		NewDocumentID(BallerinaTomlFile, defaultModuleConfig.ModuleID()),
+		BallerinaTomlFile,
+		string(ballerinaTomlContent),
+	)
+
+	config := NewPackageConfig(PackageConfigParams{
+		PackageID:       packageID,
+		PackageManifest: manifest,
+		PackagePath:     balaPath,
+		DefaultModule:   defaultModuleConfig,
+		OtherModules:    otherModules,
+		BallerinaToml:   ballerinaTomlDoc,
+		ReadmeMd:        nil, // TODO: read from docs/
+	})
+
+	return balaProjectConfigResult{
+		PackageConfig: config,
+		Platform:      platform,
+	}, nil
+}
+
+// createBalaProjectConfigLegacy loads the v3 bala format (package.json + dependency-graph.json).
+func createBalaProjectConfigLegacy(fsys fs.FS, balaPath string) (balaProjectConfigResult, error) {
 	packageJSONPath := path.Join(balaPath, "package.json")
 	pkgJSON, err := readBalaPackageJSON(fsys, packageJSONPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
 	}
 
-	// Create package descriptor
 	pkgVersion, err := NewPackageVersionFromString(pkgJSON.Version)
 	if err != nil {
 		return balaProjectConfigResult{}, &ProjectError{
@@ -92,40 +154,34 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 		pkgVersion,
 	)
 
-	// Read dependency-graph.json if it exists
 	depGraph, err := readBalaDependencyGraph(fsys, balaPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
 	}
 
-	// Extract dependencies for this package
 	dependencies := extractDependencies(depGraph, pkgJSON.Organization, pkgJSON.Name, pkgJSON.Version)
 
-	// Create manifest from package.json and dependency-graph.json
 	manifest := NewPackageManifestFromParams(PackageManifestParams{
 		PackageDesc:     packageDesc,
 		ExportedModules: pkgJSON.Export,
 		Dependencies:    dependencies,
 	})
 
-	// Create package ID
 	packageID := NewPackageID(pkgJSON.Name)
 
-	// Scan modules directory
 	modulesPath := path.Join(balaPath, ModulesDir)
 	moduleConfigs, defaultModuleConfig, err := scanBalaModules(fsys, modulesPath, packageDesc, packageID, pkgJSON.Name)
 	if err != nil {
 		return balaProjectConfigResult{}, err
 	}
 
-	// Build PackageConfig
 	config := NewPackageConfig(PackageConfigParams{
 		PackageID:       packageID,
 		PackageManifest: manifest,
 		PackagePath:     balaPath,
 		DefaultModule:   defaultModuleConfig,
 		OtherModules:    moduleConfigs,
-		BallerinaToml:   nil, // No Ballerina.toml in bala
+		BallerinaToml:   nil,
 		ReadmeMd:        nil, // TODO: read from docs/
 	})
 
@@ -133,6 +189,22 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 		PackageConfig: config,
 		Platform:      pkgJSON.Platform,
 	}, nil
+}
+
+// readBalaTomlPlatform reads Bala.toml and returns the [build].platform
+// string. Defaults to "any" when missing.
+func readBalaTomlPlatform(fsys fs.FS, balaPath string) (string, error) {
+	tomlPath := path.Join(balaPath, BalaTomlFile)
+	t, err := tomlparser.Read(fsys, tomlPath)
+	if err != nil {
+		return "", &ProjectError{
+			Message: "failed to read " + BalaTomlFile + ": " + err.Error(),
+		}
+	}
+	if v, ok := t.GetString("build.platform"); ok && v != "" {
+		return v, nil
+	}
+	return BalaPlatformAny, nil
 }
 
 // readBalaPackageJSON reads and parses the package.json file.
@@ -184,10 +256,8 @@ func extractDependencies(graph *balaDependencyGraph, org, name, version string) 
 		return nil
 	}
 
-	// Find the package entry matching org/name/version
 	for _, pkg := range graph.Packages {
 		if pkg.Org == org && pkg.Name == name && pkg.Version == version {
-			// Convert direct dependencies to Dependency objects
 			var deps []Dependency
 			for _, dep := range pkg.Dependencies {
 				depVersion, err := NewPackageVersionFromString(dep.Version)
@@ -245,7 +315,7 @@ func scanBalaModules(fsys fs.FS, modulesPath string, packageDesc PackageDescript
 		moduleDirName := entry.Name()
 		modulePath := path.Join(modulesPath, moduleDirName)
 
-		// Determine if this is the default module or a named module
+		// Determine if this is the default module.
 		// Default module has the same name as the package
 		isDefault := moduleDirName == pkgName
 
