@@ -67,7 +67,7 @@ func (r *PackageResolution) collectModuleDescriptors() []ModuleDescriptor {
 
 func (r *PackageResolution) buildModuleDependencyGraph() {
 	pkgCtx := r.rootPackageContext
-	builder := newDependencyGraphBuilder[ModuleDescriptor]()
+	builder := newDependencyGraphBuilder(moduleDescriptorCmp)
 
 	// Add all modules as nodes first
 	for _, modID := range pkgCtx.moduleIDs {
@@ -107,7 +107,7 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 }
 
 func (r *PackageResolution) buildPackageDependencyGraph() {
-	builder := newDependencyGraphBuilder[PackageDescriptor]()
+	builder := newDependencyGraphBuilder(packageDescriptorCmp)
 	ctx := context.Background()
 
 	// Add root package as a node
