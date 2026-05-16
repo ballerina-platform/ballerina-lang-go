@@ -39,26 +39,6 @@ const (
 	moduleName = "http"
 )
 
-// byteArrayType and typeCtx are populated lazily on the first call into messageToBody;
-// they are used to distinguish a Ballerina byte[] body from other lists at runtime.
-// The runtime's TypeEnv is only set during package interpretation, not at NewRuntime,
-// so we cannot build these at module-init time.
-var (
-	byteArrayType    semtypes.SemType
-	typeCtx          semtypes.Context
-	typeContextOnce  sync.Once
-	runtimeForTypes  *runtime.Runtime
-)
-
-func initTypeContext() {
-	typeContextOnce.Do(func() {
-		env := runtimeForTypes.GetTypeEnv()
-		ld := semtypes.NewListDefinition()
-		byteArrayType = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-		typeCtx = semtypes.ContextFrom(env)
-	})
-}
-
 // splitOutsideQuotes splits s on every occurrence of sep that is not inside a
 // double-quoted string (RFC 7230 §3.2.6 quoted-string), honouring backslash escapes.
 func splitOutsideQuotes(s string, sep byte) []string {
@@ -132,9 +112,79 @@ func initHttpModule(rt *runtime.Runtime) {
 		"ballerina/http:TRAILING": "TRAILING",
 	})
 
-	// Stash the runtime so messageToBody can lazily build the byte[] semtype on
-	// the first call (the type env isn't available until Interpret runs).
-	runtimeForTypes = rt
+	// msgToBody and execBody are per-runtime closures that lazily initialise the
+	// byte[] semtype on the first call (the TypeEnv isn't available until Interpret
+	// runs). Keeping all state local to initHttpModule eliminates the data race that
+	// arose from the previous package-level globals being written concurrently by
+	// parallel tests each calling NewRuntime.
+	var (
+		once      sync.Once
+		byteArrTy semtypes.SemType
+		typCtx    semtypes.Context
+	)
+	msgToBody := func(msg values.BalValue) ([]byte, string) {
+		once.Do(func() {
+			env := rt.GetTypeEnv()
+			ld := semtypes.NewListDefinition()
+			byteArrTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+			typCtx = semtypes.ContextFrom(env)
+		})
+		switch v := msg.(type) {
+		case string:
+			return []byte(v), "text/plain"
+		case *values.List:
+			if v.Type != nil && semtypes.IsSubtype(typCtx, v.Type, byteArrTy) {
+				if b, ok := listToBytes(v); ok {
+					return b, "application/octet-stream"
+				}
+			}
+			b, err := toJSONBytes(v)
+			if err != nil {
+				return nil, "json_error"
+			}
+			return b, "application/json"
+		default:
+			b, err := toJSONBytes(v)
+			if err != nil {
+				return nil, "json_error"
+			}
+			return b, "application/json"
+		}
+	}
+	execBody := func(verb string, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		path := args[1].(string)
+		var body []byte
+		contentType := ""
+		if len(args) > 2 && args[2] != nil {
+			body, contentType = msgToBody(args[2])
+			if body == nil && contentType == "json_error" {
+				return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
+			}
+		}
+		var reqHeaders map[string][]string
+		if len(args) > 3 {
+			reqHeaders = extractHeaders(args[3])
+			for hdrKey, hdrVals := range reqHeaders {
+				if strings.EqualFold(hdrKey, "content-type") && len(hdrVals) > 0 {
+					contentType = hdrVals[0]
+					break
+				}
+			}
+		}
+		if len(args) > 4 {
+			if mt, ok := args[4].(string); ok && mt != "" {
+				contentType = mt
+			}
+		}
+		urlVal, _ := self.Get("url")
+		clientHandle, _ := self.Get("$httpClient")
+		statusCode, respHeaders, respBody, err := clientHandle.(pal.HTTPClient).Execute(verb, urlVal.(string)+path, body, contentType, reqHeaders)
+		if err != nil {
+			return values.NewErrorWithMessage(err.Error()), nil
+		}
+		return buildResponse(statusCode, respHeaders, respBody), nil
+	}
 
 	// Remote method name uses the "$remote$" prefix (model.RemoteMethodName).
 	// The BIR gen emits `callInfo.Name = "$remote$get"` for c->get(...), which
@@ -369,7 +419,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.post",
 		func(args []values.BalValue) (values.BalValue, error) {
-			return execBodyMethod("POST", args)
+			return execBody("POST", args)
 		})
 
 	// head: body-less, like get
@@ -419,7 +469,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.put",
 		func(args []values.BalValue) (values.BalValue, error) {
-			return execBodyMethod("PUT", args)
+			return execBody("PUT", args)
 		})
 
 	// patch: body required, like post
@@ -429,7 +479,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.patch",
 		func(args []values.BalValue) (values.BalValue, error) {
-			return execBodyMethod("PATCH", args)
+			return execBody("PATCH", args)
 		})
 
 	// delete: message is optional (defaults to nil = empty body)
@@ -441,7 +491,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(args []values.BalValue) (values.BalValue, error) { return nil, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.delete",
 		func(args []values.BalValue) (values.BalValue, error) {
-			return execBodyMethod("DELETE", args)
+			return execBody("DELETE", args)
 		})
 
 	// execute: args = [self, httpVerb, path, message, headers?, mediaType?]
@@ -458,7 +508,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			var body []byte
 			contentType := ""
 			if len(args) > 3 && args[3] != nil {
-				body, contentType = messageToBody(args[3])
+				body, contentType = msgToBody(args[3])
 				if body == nil && contentType == "json_error" {
 					return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 				}
@@ -692,77 +742,6 @@ func buildResponse(statusCode int, respHeaders map[string][]string, body []byte)
 			"getHeaderNames":   "ballerina/http:Response.getHeaderNames",
 		},
 	)
-}
-
-// messageToBody converts a Ballerina message value to a []byte body and a default Content-Type.
-// A list is sent as application/octet-stream only when its declared semtype is a subtype of
-// byte[] — a json[] whose values happen to be 0–255 must still go out as application/json.
-// Returns (nil, "json_error") on JSON serialization failure.
-func messageToBody(msg values.BalValue) ([]byte, string) {
-	switch v := msg.(type) {
-	case string:
-		return []byte(v), "text/plain"
-	case *values.List:
-		initTypeContext()
-		if v.Type != nil && semtypes.IsSubtype(typeCtx, v.Type, byteArrayType) {
-			if b, ok := listToBytes(v); ok {
-				return b, "application/octet-stream"
-			}
-		}
-		b, err := toJSONBytes(v)
-		if err != nil {
-			return nil, "json_error"
-		}
-		return b, "application/json"
-	default:
-		b, err := toJSONBytes(v)
-		if err != nil {
-			return nil, "json_error"
-		}
-		return b, "application/json"
-	}
-}
-
-// execBodyMethod implements PUT/PATCH/DELETE externs.
-// args = [self, path, message, headers?, mediaType?]
-func execBodyMethod(verb string, args []values.BalValue) (values.BalValue, error) {
-	self := args[0].(*values.Object)
-	path := args[1].(string)
-
-	var body []byte
-	contentType := ""
-	if len(args) > 2 && args[2] != nil {
-		body, contentType = messageToBody(args[2])
-		if body == nil && contentType == "json_error" {
-			return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
-		}
-	}
-
-	var reqHeaders map[string][]string
-	if len(args) > 3 {
-		reqHeaders = extractHeaders(args[3])
-		// If the caller supplied a Content-Type header, let it override the
-		// body-serialisation default. The explicit mediaType arg (args[4]) wins.
-		for hdrKey, hdrVals := range reqHeaders {
-			if strings.EqualFold(hdrKey, "content-type") && len(hdrVals) > 0 {
-				contentType = hdrVals[0]
-				break
-			}
-		}
-	}
-	if len(args) > 4 {
-		if mt, ok := args[4].(string); ok && mt != "" {
-			contentType = mt
-		}
-	}
-
-	urlVal, _ := self.Get("url")
-	clientHandle, _ := self.Get("$httpClient")
-	statusCode, respHeaders, respBody, err := clientHandle.(pal.HTTPClient).Execute(verb, urlVal.(string)+path, body, contentType, reqHeaders)
-	if err != nil {
-		return values.NewErrorWithMessage(err.Error()), nil
-	}
-	return buildResponse(statusCode, respHeaders, respBody), nil
 }
 
 // balToGoJSON converts a Ballerina value to a Go value suitable for json.Marshal.
