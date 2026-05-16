@@ -469,9 +469,6 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 }
 
 func loadEmbeddedBallerinaSymbols(ctx *context.CompilerContext, id PackageIdentifier) (model.ExportedSymbolSpace, bool, error) {
-	if id.OrgName != "ballerina" {
-		return model.ExportedSymbolSpace{}, false, nil
-	}
 	sym, ok, err := registry.LoadSymbols(ctx.CompilerEnvironment(), registry.ID{OrgName: id.OrgName, ModuleName: id.ModuleName})
 	return sym, ok, err
 }
