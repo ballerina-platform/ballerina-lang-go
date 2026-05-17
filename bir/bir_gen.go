@@ -250,7 +250,7 @@ func processImports(compilerCtx *context.CompilerContext, genCtx *Context, impor
 			var orgName model.Name
 			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
 				orgName = model.Name(importPkg.OrgName.Value)
-			} else if genCtx.packageID != nil && genCtx.packageID.OrgName != nil {
+			} else if genCtx.packageID.OrgName != nil {
 				orgName = *genCtx.packageID.OrgName
 			} else {
 				orgName = model.ANON_ORG
@@ -1195,7 +1195,7 @@ func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expres
 		call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.birCx, symRef)
 		if inv, ok := callable.(*ast.BLangInvocation); ok && inv.PkgAlias != nil && inv.PkgAlias.Value != "" {
 			call.CalleePkg = ctx.birCx.importAliasMap[inv.PkgAlias.Value]
-		} else if ctx.birCx.packageID != nil {
+		} else {
 			call.CalleePkg = ctx.birCx.packageID
 		}
 	} else {

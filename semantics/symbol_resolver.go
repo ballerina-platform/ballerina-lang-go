@@ -500,14 +500,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 		} else {
 			id := resolveImportPackageIdentifier(&imp, defaultOrg)
 			if symbols, ok := publicSymbols[id]; ok {
-				var key string
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				} else {
-					comps := imp.GetPackageName()
-					key = comps[len(comps)-1].GetValue()
-				}
-				result[key] = symbols
+				result[importKeyForAliasOrLast(&imp)] = symbols
 			} else {
 				ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
 			}
@@ -552,29 +545,24 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result := make(map[string]model.ExportedSymbolSpace)
 	if !ctx.OmitEmbeddedLanglibImports() {
 		env := ctx.CompilerEnvironment()
-		mustEmbed := func(moduleName string) model.ExportedSymbolSpace {
+		mustEmbed := func(moduleName string) (model.ExportedSymbolSpace, bool) {
 			sym, ok, err := registry.LoadSymbols(env, registry.ID{OrgName: "ballerina", ModuleName: moduleName})
 			if err != nil {
 				ctx.InternalError("embedded "+moduleName+": "+err.Error(), diagnostics.Location{})
-				return model.ExportedSymbolSpace{}
+				return model.ExportedSymbolSpace{}, false
 			}
 			if !ok {
 				ctx.InternalError("embedded "+moduleName+" not registered", diagnostics.Location{})
-				return model.ExportedSymbolSpace{}
+				return model.ExportedSymbolSpace{}, false
 			}
-			return sym
+			return sym, true
 		}
-		for _, moduleName := range []string{
-			registry.LangArray,
-			registry.LangMap,
-			registry.LangString,
-			registry.LangError,
-			registry.LangInt,
-			registry.LangFloat,
-			registry.LangInternal,
-			registry.LangValue,
-		} {
-			result[moduleName] = mustEmbed(moduleName)
+		for _, moduleName := range registry.ImplicitLanglibModules {
+			sym, ok := mustEmbed(moduleName)
+			if !ok {
+				return result
+			}
+			result[moduleName] = sym
 		}
 	}
 	return result

@@ -54,7 +54,7 @@ func Register(id ID, m Module) {
 	modules[id] = m
 }
 
-func cachedSymbolsFromBytes(symBytes []byte) func(*context.CompilerEnvironment) (model.ExportedSymbolSpace, error) {
+func cachedSymbolsFromBytes(moduleName string, symBytes []byte) func(*context.CompilerEnvironment) (model.ExportedSymbolSpace, error) {
 	var cache sync.Map
 	return func(env *context.CompilerEnvironment) (model.ExportedSymbolSpace, error) {
 		if v, ok := cache.Load(env); ok {
@@ -64,6 +64,7 @@ func cachedSymbolsFromBytes(symBytes []byte) func(*context.CompilerEnvironment) 
 		if err != nil {
 			return model.ExportedSymbolSpace{}, err
 		}
+		applyExportedTypeSemtypes(moduleName, exported)
 		cache.Store(env, exported)
 		return exported, nil
 	}
@@ -71,7 +72,7 @@ func cachedSymbolsFromBytes(symBytes []byte) func(*context.CompilerEnvironment) 
 
 // RegisterEmbedded registers serialized exported symbols for a platform module.
 func RegisterEmbedded(id ID, symBytes []byte) {
-	Register(id, Module{Symbols: cachedSymbolsFromBytes(symBytes)})
+	Register(id, Module{Symbols: cachedSymbolsFromBytes(id.ModuleName, symBytes)})
 }
 
 // LoadSymbols returns exported symbols for id when registered; ok is false if unknown.
@@ -86,6 +87,5 @@ func LoadSymbols(env *context.CompilerEnvironment, id ID) (model.ExportedSymbolS
 	if err != nil {
 		return model.ExportedSymbolSpace{}, true, err
 	}
-	applyExportedTypeSemtypes(id.ModuleName, exp)
 	return exp, true, nil
 }

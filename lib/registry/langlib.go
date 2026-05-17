@@ -28,3 +28,15 @@ const (
 	LangInternal = "lang.__internal"
 	LangValue    = "lang.value"
 )
+
+// ImplicitLanglibModules lists embedded lang.* modules merged into every package's imports.
+var ImplicitLanglibModules = []string{
+	LangArray,
+	LangMap,
+	LangString,
+	LangError,
+	LangInt,
+	LangFloat,
+	LangInternal,
+	LangValue,
+}

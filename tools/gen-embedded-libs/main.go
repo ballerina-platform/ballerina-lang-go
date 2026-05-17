@@ -126,7 +126,10 @@ func compileAndWrite(repoRoot, rel, outDir string) error {
 	birPkg := backend.BIR()
 	org := birPkg.PackageID.OrgName.Value()
 	mod := birPkg.PackageID.PkgName.Value()
-	exp := backend.ExportedSymbols()[semantics.PackageIdentifier{OrgName: org, ModuleName: mod}]
+	exp, ok := backend.ExportedSymbols()[semantics.PackageIdentifier{OrgName: org, ModuleName: mod}]
+	if !ok {
+		return fmt.Errorf("%s: exported symbols not found for %s/%s", rel, org, mod)
+	}
 
 	symBytes, err := symbolpool.Marshal(exp, birPkg.TypeEnv)
 	if err != nil {
