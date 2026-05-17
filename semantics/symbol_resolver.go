@@ -495,7 +495,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				result[key] = sym
 				continue
 			}
-			ctx.Unimplemented("unsupported ballerina import: "+id.ModuleName, imp.GetPosition())
+			ctx.SemanticError("Unknown import: ballerina/"+id.ModuleName, imp.GetPosition())
 			continue
 		} else {
 			id := resolveImportPackageIdentifier(&imp, defaultOrg)
