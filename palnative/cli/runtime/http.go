@@ -15,11 +15,11 @@
 // under the License.
 
 // Native-CLI implementation of the pal.HTTP contract: a net/http-backed HTTP
-// client and the TLS plumbing it needs. nativePal (in utils.go) wires
-// newNativeHTTPClient into pal.HTTP.NewClient. Other PAL implementations
+// client and the TLS plumbing it needs. NewPlatform (in pal.go) wires
+// NewHTTPClient into pal.HTTP.NewClient. Other PAL implementations
 // (e.g. WASM/web-editor) would supply their own version of this file.
 
-package main
+package palnative
 
 import (
 	"bytes"
@@ -34,11 +34,11 @@ import (
 	"ballerina-lang-go/pal"
 )
 
-type nativeHTTPClient struct {
+type httpClient struct {
 	client *http.Client
 }
 
-func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
+func (c *httpClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		bodyReader = bytes.NewReader(body)
@@ -72,10 +72,10 @@ func (c *nativeHTTPClient) Execute(method, url string, body []byte, contentType 
 	return resp.StatusCode, map[string][]string(resp.Header), respBody, err
 }
 
-// newNativeHTTPClient is the pal.HTTP.NewClient factory for the native-CLI
+// NewHTTPClient is the pal.HTTP.NewClient factory for the native-CLI
 // platform. It builds a *http.Client configured from cfg and wraps it so the
 // runtime sees only the pal.HTTPClient interface.
-func newNativeHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
+func NewHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
 	tlsConfig := &tls.Config{InsecureSkipVerify: cfg.TLS.InsecureSkipVerify} //nolint:gosec
 	if len(cfg.TLS.CACertPEM) > 0 {
 		pool := x509.NewCertPool()
@@ -155,7 +155,7 @@ func newNativeHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
 			return nil
 		}
 	}
-	return &nativeHTTPClient{client: c}
+	return &httpClient{client: c}
 }
 
 // resolveCipherSuites maps IANA TLS 1.2 cipher suite names to Go uint16 IDs.

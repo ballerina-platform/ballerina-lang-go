@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	_ "ballerina-lang-go/lib/rt"
+	palnative "ballerina-lang-go/palnative/cli/runtime"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/tools/diagnostics"
@@ -267,7 +268,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	rt := runtime.NewRuntime(nativePal)
+	rt := runtime.NewRuntime(palnative.NewPlatform())
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			printRuntimeError(err)
