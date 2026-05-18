@@ -109,7 +109,11 @@ func newNativeHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
 		tlsConfig.MaxVersion = cfg.TLS.MaxVersion
 	}
 	if len(cfg.TLS.CipherSuiteNames) > 0 {
-		tlsConfig.CipherSuites = resolveCipherSuites(cfg.TLS.CipherSuiteNames)
+		if resolved := resolveCipherSuites(cfg.TLS.CipherSuiteNames); len(resolved) > 0 {
+			tlsConfig.CipherSuites = resolved
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: no valid cipher suites resolved from cfg.TLS.CipherSuiteNames %v; keeping secure defaults\n", cfg.TLS.CipherSuiteNames)
+		}
 	}
 	transport := &http.Transport{
 		TLSClientConfig:     tlsConfig,
