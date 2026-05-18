@@ -28,7 +28,7 @@ import (
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/lib/http/compile"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"

@@ -19,7 +19,7 @@ package runtime
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"

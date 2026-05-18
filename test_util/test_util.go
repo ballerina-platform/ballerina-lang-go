@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 )
 
 // TestKind represents the type of corpus test

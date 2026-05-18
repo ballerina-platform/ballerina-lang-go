@@ -23,7 +23,7 @@ package palnative
 import (
 	"os"
 
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 )
 
 // NewPlatform returns the native-CLI pal.Platform, wiring os.Stdout/Stderr for

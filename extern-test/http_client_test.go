@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/test_util"

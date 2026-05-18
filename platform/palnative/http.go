@@ -31,7 +31,7 @@ import (
 	"os"
 	"strings"
 
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/platform/pal"
 )
 
 type httpClient struct {
