@@ -2876,7 +2876,13 @@ func resolveQueryExpr(
 
 	var queryTy semtypes.SemType
 	if selectClause != nil {
-		selectTy, _, ok := resolveActionOrExpression(t, queryChain, selectClause.Expression, nil)
+		selectExpectedTy := querySelectExpectedType(
+			t.typeContext(),
+			t.typeEnv(),
+			expr.QueryConstructType,
+			expectedType,
+		)
+		selectTy, _, ok := resolveActionOrExpression(t, queryChain, selectClause.Expression, selectExpectedTy)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -2966,8 +2972,65 @@ func resolveQueryCollectionElementType(
 }
 
 func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
+	return mapQuerySelectExpectedTypeWithValue(env, semtypes.Union(semtypes.ANY, semtypes.ERROR))
+}
+
+func querySelectExpectedType(
+	ctx semtypes.Context,
+	env semtypes.Env,
+	queryConstructType model.TypeKind,
+	expectedType semtypes.SemType,
+) semtypes.SemType {
+	switch queryConstructType {
+	case model.TypeKind_NONE:
+		return listQuerySelectExpectedType(ctx, expectedType)
+	case model.TypeKind_MAP:
+		return mapQuerySelectExpectedTypeFromQueryExpectedType(ctx, env, expectedType)
+	default:
+		return nil
+	}
+}
+
+func listQuerySelectExpectedType(ctx semtypes.Context, expectedType semtypes.SemType) semtypes.SemType {
+	if expectedType == nil {
+		return nil
+	}
+	listTy := semtypes.Intersect(expectedType, semtypes.LIST)
+	if semtypes.IsEmpty(ctx, listTy) {
+		return nil
+	}
+	memberTypes := semtypes.ListAllMemberTypesInner(ctx, listTy)
+	var result semtypes.SemType = semtypes.NEVER
+	for _, memberTy := range memberTypes.SemTypes {
+		result = semtypes.Union(result, memberTy)
+	}
+	if semtypes.IsEmpty(ctx, result) {
+		return nil
+	}
+	return result
+}
+
+func mapQuerySelectExpectedTypeFromQueryExpectedType(
+	ctx semtypes.Context,
+	env semtypes.Env,
+	expectedType semtypes.SemType,
+) semtypes.SemType {
+	if expectedType == nil {
+		return nil
+	}
+	mappingTy := semtypes.Intersect(expectedType, semtypes.MAPPING)
+	if semtypes.IsEmpty(ctx, mappingTy) {
+		return nil
+	}
+	valueTy := semtypes.MappingMemberTypeInnerValProj(ctx, mappingTy, semtypes.STRING)
+	if semtypes.IsSubtype(ctx, semtypes.CreateAnydata(ctx), valueTy) {
+		return nil
+	}
+	return mapQuerySelectExpectedTypeWithValue(env, valueTy)
+}
+
+func mapQuerySelectExpectedTypeWithValue(env semtypes.Env, valueTy semtypes.SemType) semtypes.SemType {
 	ld := semtypes.NewListDefinition()
-	valueTy := semtypes.Union(semtypes.ANY, semtypes.ERROR)
 	return ld.DefineListTypeWrapped(env, []semtypes.SemType{semtypes.STRING, valueTy}, 2, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 }
 

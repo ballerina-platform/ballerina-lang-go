@@ -216,65 +216,111 @@
         (variable afterGroup (expr
           (simple-var-ref $desugar$9))))
       (var-def
-        (variable $desugar$21))
+        (variable $desugar$21 (expr
+          (simple-var-ref xs))))
       (var-def
         (variable $desugar$22 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$21))))))
+      (var-def
+        (variable $desugar$23 (expr
           (list-constructor-expr))))
       (var-def
         (variable x))
       (var-def
-        (variable $desugar$23 (expr
-          (simple-var-ref xs))))
-      (var-def
         (variable $desugar$24 (expr
-          (invocation lang.array length (
-            (simple-var-ref $desugar$23))))))
-      (var-def
-        (variable $desugar$25 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
-          (simple-var-ref $desugar$25)
-          (simple-var-ref $desugar$24))
+          (simple-var-ref $desugar$24)
+          (simple-var-ref $desugar$22))
         (block-stmt
           (assignment
             (simple-var-ref x)
             (index-based-access
-              (simple-var-ref $desugar$23)
-              (simple-var-ref $desugar$25)))
+              (simple-var-ref $desugar$21)
+              (simple-var-ref $desugar$24)))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$22)
+              (simple-var-ref $desugar$23)
+              (literal 1))))
+          (assignment
+            (simple-var-ref $desugar$24)
+            (binary-expr +
+              (simple-var-ref $desugar$24)
+              (numeric-literal 1)))))
+      (var-def
+        (variable contextualSelect (type
+          (array-type
+            (value-type decimal) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$23))))
+      (var-def
+        (variable $desugar$25))
+      (var-def
+        (variable $desugar$26 (expr
+          (list-constructor-expr))))
+      (var-def
+        (variable x))
+      (var-def
+        (variable $desugar$27 (expr
+          (simple-var-ref xs))))
+      (var-def
+        (variable $desugar$28 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$27))))))
+      (var-def
+        (variable $desugar$29 (expr
+          (numeric-literal 0))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$29)
+          (simple-var-ref $desugar$28))
+        (block-stmt
+          (assignment
+            (simple-var-ref x)
+            (index-based-access
+              (simple-var-ref $desugar$27)
+              (simple-var-ref $desugar$29)))
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref $desugar$26)
               (list-constructor-expr
                 (simple-var-ref x)))))
           (assignment
-            (simple-var-ref $desugar$25)
+            (simple-var-ref $desugar$29)
             (binary-expr +
-              (simple-var-ref $desugar$25)
+              (simple-var-ref $desugar$29)
               (numeric-literal 1)))))
       (var-def
-        (variable $desugar$26 (expr
+        (variable $desugar$30 (expr
           (invocation lang.__internal queryCollect (
-            (simple-var-ref $desugar$22)
+            (simple-var-ref $desugar$26)
             (numeric-literal 1))))))
       (assignment
         (simple-var-ref x)
         (index-based-access
-          (simple-var-ref $desugar$26)
+          (simple-var-ref $desugar$30)
           (numeric-literal 0)))
       (assignment
-        (simple-var-ref $desugar$21)
+        (simple-var-ref $desugar$25)
         (literal 1))
       (var-def
         (variable contextualCollect (type
           (value-type decimal)) (expr
-          (simple-var-ref $desugar$21))))
+          (simple-var-ref $desugar$25))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref doubled))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref afterGroup))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (index-based-access
+              (simple-var-ref contextualSelect)
+              (literal 0))
+            (value-type decimal)))))
       (expression-stmt
         (invocation io println (
           (type-test-expr is

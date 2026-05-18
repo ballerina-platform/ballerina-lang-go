@@ -26,10 +26,14 @@ public function main() {
         group by x
         collect x;
 
+    decimal[] contextualSelect = from var x in xs
+        select 1;
+
     decimal contextualCollect = from var x in xs
         collect 1;
 
     io:println(doubled); // @output [2,4,6]
     io:println(afterGroup); // @output [1,2,3]
+    io:println(contextualSelect[0] is decimal); // @output true
     io:println(contextualCollect is decimal); // @output true
 }

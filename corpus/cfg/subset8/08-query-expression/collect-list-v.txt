@@ -41,6 +41,17 @@
           (collect-clause
             (simple-var-ref x))))))
     (var-def
+      (variable contextualSelect (type
+        (array-type
+          (value-type decimal) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (literal 1))))))
+    (var-def
       (variable contextualCollect (type
         (value-type decimal)) (expr
         (query-expr
@@ -56,6 +67,13 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref afterGroup))))
+    (expression-stmt
+      (invocation io println (
+        (type-test-expr is
+          (index-based-access
+            (simple-var-ref contextualSelect)
+            (literal 0))
+          (value-type decimal)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is

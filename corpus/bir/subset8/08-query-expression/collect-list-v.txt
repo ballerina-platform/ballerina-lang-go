@@ -203,65 +203,109 @@ main() -> nil{
     x = %78;
     $desugar$9 = x;
     afterGroup = $desugar$9;
-    %82 = ConstantLoad 0
-    %83 = newArray list[%82]{}
-    $desugar$22 = %83;
-    $desugar$23 = xs;
-    %87 = length($desugar$23) -> bb25;
+    $desugar$21 = xs;
+    %82 = length($desugar$21) -> bb25;
   }
   bb25 {
-    $desugar$24 = %87;
-    %89 = ConstantLoad 0
-    $desugar$25 = %89;
+    $desugar$22 = %82;
+    %84 = ConstantLoad 0
+    %85 = newArray list[%84]{}
+    $desugar$23 = %85;
+    %88 = ConstantLoad 0
+    $desugar$24 = %88;
     GOTO bb26;
   }
   bb26 {
-    %92 = $desugar$25;
-    %93 = $desugar$24;
-    %91 = < %92 %93;
-    %91 ? bb27 : bb28;
+    %91 = $desugar$24;
+    %92 = $desugar$22;
+    %90 = < %91 %92;
+    %90 ? bb27 : bb28;
   }
   bb27 {
     PushScopeFrame 8
-    %0 = (1, $desugar$23)[(1, $desugar$25)];
+    %0 = (1, $desugar$21)[(1, $desugar$24)];
     (1, x) = %0;
     %1 = ConstantLoad 1
-    %2 = newArray list[%1]{(1, x)}
-    %3 = push((1, $desugar$22),%2) -> bb29;
+    %2 = %1;
+    %3 = push((1, $desugar$23),%2) -> bb29;
   }
   bb28 {
-    %94 = ConstantLoad 1
-    %95 = %94;
-    %96 = queryCollect($desugar$22,%95) -> bb30;
+    contextualSelect = $desugar$23;
+    %95 = ConstantLoad 0
+    %96 = newArray list[%95]{}
+    $desugar$26 = %96;
+    $desugar$27 = xs;
+    %100 = length($desugar$27) -> bb30;
   }
   bb29 {
-    %5 = (1, $desugar$25);
+    %5 = (1, $desugar$24);
     %6 = ConstantLoad 1
     %7 = %6;
     %4 = + %5 %7;
-    (1, $desugar$25) = %4;
+    (1, $desugar$24) = %4;
     PopScopeFrame
     GOTO bb26;
   }
   bb30 {
-    $desugar$26 = %96;
-    %99 = ConstantLoad 0
-    %98 = $desugar$26[%99];
-    x = %98;
-    %100 = ConstantLoad 1
-    $desugar$21 = %100;
-    contextualCollect = $desugar$21;
-    %102 = println(doubled) -> bb31;
+    $desugar$28 = %100;
+    %102 = ConstantLoad 0
+    $desugar$29 = %102;
+    GOTO bb31;
   }
   bb31 {
-    %103 = println(afterGroup) -> bb32;
+    %105 = $desugar$29;
+    %106 = $desugar$28;
+    %104 = < %105 %106;
+    %104 ? bb32 : bb33;
   }
   bb32 {
-    %104 = contextualCollect is decimal
-    %105 = %104;
-    %106 = println(%105) -> bb33;
+    PushScopeFrame 8
+    %0 = (1, $desugar$27)[(1, $desugar$29)];
+    (1, x) = %0;
+    %1 = ConstantLoad 1
+    %2 = newArray list[%1]{(1, x)}
+    %3 = push((1, $desugar$26),%2) -> bb34;
   }
   bb33 {
+    %107 = ConstantLoad 1
+    %108 = %107;
+    %109 = queryCollect($desugar$26,%108) -> bb35;
+  }
+  bb34 {
+    %5 = (1, $desugar$29);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$29) = %4;
+    PopScopeFrame
+    GOTO bb31;
+  }
+  bb35 {
+    $desugar$30 = %109;
+    %112 = ConstantLoad 0
+    %111 = $desugar$30[%112];
+    x = %111;
+    %113 = ConstantLoad 1
+    $desugar$25 = %113;
+    contextualCollect = $desugar$25;
+    %115 = println(doubled) -> bb36;
+  }
+  bb36 {
+    %116 = println(afterGroup) -> bb37;
+  }
+  bb37 {
+    %118 = ConstantLoad 0
+    %117 = contextualSelect[%118];
+    %119 = %117 is decimal
+    %120 = %119;
+    %121 = println(%120) -> bb38;
+  }
+  bb38 {
+    %122 = contextualCollect is decimal
+    %123 = %122;
+    %124 = println(%123) -> bb39;
+  }
+  bb39 {
     return;
   }
 }
