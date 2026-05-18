@@ -894,7 +894,7 @@ func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desuga
 }
 
 func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []ast.StatementNode {
-	classSym, ok := cx.getSymbol(expr.ClassSymbol).(*model.ClassSymbol)
+	classSym, ok := cx.getSymbol(expr.ClassSymbol).(model.ClassSymbol)
 	if !ok {
 		return nil
 	}

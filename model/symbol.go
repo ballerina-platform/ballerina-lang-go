@@ -248,10 +248,18 @@ type (
 		members []InclusionMember
 	}
 
-	ClassSymbol struct {
+	classSymbolBase struct {
 		TypeSymbol
 		memberHolderBase
 		methods map[string]SymbolRef
+	}
+
+	classSymbol struct {
+		classSymbolBase
+	}
+
+	NetworkClassSymbol struct {
+		classSymbolBase
 	}
 
 	RecordSymbol struct {
@@ -429,10 +437,14 @@ var (
 	_ Scope                          = &FunctionScope{}
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
-	_ Symbol                         = &ClassSymbol{}
+	_ Symbol                         = &classSymbol{}
+	_ Symbol                         = &NetworkClassSymbol{}
+	_ ClassSymbol                    = &classSymbol{}
+	_ ClassSymbol                    = &NetworkClassSymbol{}
 	_ Symbol                         = &RecordSymbol{}
 	_ Symbol                         = &ObjectTypeSymbol{}
-	_ MemberCarrier                  = &ClassSymbol{}
+	_ MemberCarrier                  = &classSymbol{}
+	_ MemberCarrier                  = &NetworkClassSymbol{}
 	_ MemberCarrier                  = &RecordSymbol{}
 	_ MemberCarrier                  = &ObjectTypeSymbol{}
 	_ Symbol                         = &ValueSymbol{}
@@ -707,6 +719,13 @@ type MemberCarrier interface {
 	FieldDefaults() []FieldDefault
 }
 
+type ClassSymbol interface {
+	Symbol
+	MemberCarrier
+	SetMethods(map[string]SymbolRef)
+	MethodSymbol(name string) (SymbolRef, bool)
+}
+
 func (m *memberHolderBase) Members() []InclusionMember { return m.members }
 func (m *memberHolderBase) AddMember(im InclusionMember) {
 	m.members = append(m.members, im)
@@ -922,10 +941,25 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 }
 
 func NewClassSymbol(name string, isPublic bool) ClassSymbol {
-	return ClassSymbol{
+	return &classSymbol{
+		classSymbolBase: newClassSymbolBase(name, isPublic),
+	}
+}
+
+// NewNetworkClassSymbol creates a ClassSymbol for classes representing network
+// interaction objects (e.g. clients and services).
+func NewNetworkClassSymbol(name string, isPublic bool) ClassSymbol {
+	return &NetworkClassSymbol{
+		classSymbolBase: newClassSymbolBase(name, isPublic),
+	}
+}
+
+func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
+	return classSymbolBase{
 		TypeSymbol: TypeSymbol{
 			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		},
+		methods: map[string]SymbolRef{},
 	}
 }
 
@@ -945,11 +979,11 @@ func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	}
 }
 
-func (c *ClassSymbol) SetMethods(methods map[string]SymbolRef) {
+func (c *classSymbolBase) SetMethods(methods map[string]SymbolRef) {
 	c.methods = methods
 }
 
-func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
+func (c *classSymbolBase) MethodSymbol(name string) (SymbolRef, bool) {
 	ref, ok := c.methods[name]
 	return ref, ok
 }

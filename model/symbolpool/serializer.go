@@ -38,6 +38,7 @@ const (
 	symTagDependentlyTypedFunction
 	symTagRecord
 	symTagObjectType
+	symTagNetworkClass
 )
 
 const (
@@ -140,8 +141,10 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 	switch s := sym.(type) {
-	case *model.ClassSymbol:
-		return sw.writeClassSymbol(buf, s)
+	case *model.NetworkClassSymbol:
+		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
+	case model.ClassSymbol:
+		return sw.writeClassSymbol(buf, symTagClass, s)
 	case *model.RecordSymbol:
 		return sw.writeRecordSymbol(buf, s)
 	case *model.ObjectTypeSymbol:
@@ -283,8 +286,8 @@ func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) e
 	return write(buf, int32(ref.SpaceIndex))
 }
 
-func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymbol) error {
-	if err := write(buf, symTagClass); err != nil {
+func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
+	if err := write(buf, tag); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {

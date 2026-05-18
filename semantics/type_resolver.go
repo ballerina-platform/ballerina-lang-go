@@ -270,7 +270,7 @@ func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemTyp
 	if !ok {
 		return model.SymbolRef{}, false
 	}
-	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	classSym, ok := t.getSymbol(classRef).(model.ClassSymbol)
 	if !ok {
 		return model.SymbolRef{}, false
 	}
@@ -485,7 +485,7 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 	}
 	for _, importedSpace := range t.importedSymbols {
 		for i, sym := range importedSpace.Main.Symbols() {
-			if _, ok := sym.(*model.ClassSymbol); ok {
+			if _, ok := sym.(model.ClassSymbol); ok {
 				ref := importedSpace.Main.RefAt(i)
 				if ty := sym.Type(); ty != nil {
 					t.classSymbolByType[ty] = ref
@@ -1482,7 +1482,7 @@ func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.Mem
 		return s
 	case *model.ObjectTypeSymbol:
 		return s
-	case *model.ClassSymbol:
+	case model.ClassSymbol:
 		return s
 	default:
 		t.internalError("unexpected type definition", defn.GetPosition())
@@ -1497,7 +1497,7 @@ func getMemberCarrier(t typeResolver, ref model.SymbolRef) model.MemberCarrier {
 		return s
 	case *model.ObjectTypeSymbol:
 		return s
-	case *model.ClassSymbol:
+	case model.ClassSymbol:
 		return s
 	default:
 		t.internalError("symbol is not a member carrier", diagnostics.NewBuiltinLocation())
@@ -2571,7 +2571,7 @@ func padNewExprArgTypesForDefaults(t typeResolver, objectTy semtypes.SemType, ar
 	if !ok {
 		return argTys, false
 	}
-	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	classSym, ok := t.getSymbol(classRef).(model.ClassSymbol)
 	if !ok {
 		return argTys, false
 	}

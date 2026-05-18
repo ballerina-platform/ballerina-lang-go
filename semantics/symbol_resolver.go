@@ -409,9 +409,8 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		name := classDef.Name.Value
-		isPublic := classDef.IsPublic()
-		symbol := model.NewClassSymbol(name, isPublic)
-		if !addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition()) {
+		symbol := newClassSymbolForDefn(classDef)
+		if !addTopLevelSymbol(moduleResolver, name, symbol, classDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
 		}
 		symRef, _, _ := moduleResolver.GetSymbol(name)
@@ -435,6 +434,15 @@ func reportUnusedImports(resolver *moduleSymbolResolver, pkg *ast.BLangPackage) 
 			resolver.ctx.SemanticError("unused import prefix '"+alias+"'", imp.GetPosition())
 		}
 	}
+}
+
+func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol {
+	name := classDef.Name.Value
+	isPublic := classDef.IsPublic()
+	if classDef.IsClient() || classDef.IsService() {
+		return model.NewNetworkClassSymbol(name, isPublic)
+	}
+	return model.NewClassSymbol(name, isPublic)
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
@@ -1029,7 +1037,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			sym := ctx.GetSymbol(symRef)
 			var carrier model.MemberCarrier
 			switch s := sym.(type) {
-			case *model.ClassSymbol:
+			case model.ClassSymbol:
 				carrier = s
 			case *model.ObjectTypeSymbol:
 				incTy := ctx.SymbolType(symRef)
@@ -1106,7 +1114,7 @@ func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.Sy
 				carrier = s
 			case *model.ObjectTypeSymbol:
 				carrier = s
-			case *model.ClassSymbol:
+			case model.ClassSymbol:
 				carrier = s
 			default:
 				continue
@@ -1244,7 +1252,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
 	}
 
-	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
+	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(model.ClassSymbol)
 	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
 	for _, m := range methods {
 		methodResolver := newFunctionResolver(classResolver, m.method)

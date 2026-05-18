@@ -116,7 +116,9 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 	case symTagType:
 		sr.readTypeSymbol(space)
 	case symTagClass:
-		sr.readClassSymbol(space)
+		sr.readClassSymbol(space, false)
+	case symTagNetworkClass:
+		sr.readClassSymbol(space, true)
 	case symTagRecord:
 		sr.readRecordSymbol(space)
 	case symTagObjectType:
@@ -236,9 +238,14 @@ func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef 
 	}
 }
 
-func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool) {
 	name, isPublic, ty := sr.readSymbolBase()
-	sym := model.NewClassSymbol(name, isPublic)
+	var sym model.ClassSymbol
+	if isNetwork {
+		sym = model.NewNetworkClassSymbol(name, isPublic)
+	} else {
+		sym = model.NewClassSymbol(name, isPublic)
+	}
 	sym.SetType(ty)
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
@@ -248,7 +255,7 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 		}
 	}
 	sym.SetMethods(methods)
-	space.AddSymbol(name, &sym)
+	space.AddSymbol(name, sym)
 }
 
 func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
