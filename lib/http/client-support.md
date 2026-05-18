@@ -137,7 +137,12 @@ public client class Client {
 
 // ── Module-level functions ────────────────────────────────────────────────────
 
-public isolated function parseHeader(string headerValue) returns string[]|error = external;
+public type HeaderValue record {|
+    string value;
+    map<string> params;
+|};
+
+public isolated function parseHeader(string headerValue) returns HeaderValue[]|error = external;
 ```
 
 ---
