@@ -343,22 +343,54 @@ func runCLICommand(t *testing.T, balBin, repoRoot, coverDir string, args ...stri
 	cmd.Stderr = &stderrBuf
 
 	err := cmd.Run()
+	stdoutStr := stdoutBuf.String()
+	stderrStr := stderrBuf.String()
+	if coverDir != "" {
+		stderrStr = stripGoCoverageErrors(stderrStr)
+	}
 	if err == nil {
-		return stdoutBuf.String(), stderrBuf.String(), 0
+		return stdoutStr, stderrStr, 0
 	}
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
-		return stdoutBuf.String(), stderrBuf.String(), exitErr.ExitCode()
+		return stdoutStr, stderrStr, exitErr.ExitCode()
 	}
 	t.Fatalf(
 		"failed to execute command %q (repo: %s): %v\nstdout:\n%s\nstderr:\n%s",
 		strings.Join(args, " "),
 		repoRoot,
 		err,
-		stdoutBuf.String(),
-		stderrBuf.String(),
+		stdoutStr,
+		stderrStr,
 	)
 	return "", "", 0
+}
+
+// stripGoCoverageErrors removes lines emitted by Go's coverage runtime when GOCOVERDIR is set.
+// When a covered binary exits abnormally (e.g. via os.Exit after a Ballerina panic), the coverage
+// meta-data write can fail and print "error: coverage ..." to stderr. These messages are
+// infrastructure noise unrelated to the program's observable output.
+func stripGoCoverageErrors(s string) string {
+	if !strings.Contains(s, "coverage") {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	skipNextBlank := false
+	for _, line := range lines {
+		if skipNextBlank {
+			skipNextBlank = false
+			if line == "" {
+				continue
+			}
+		}
+		if strings.HasPrefix(line, "error: coverage ") || strings.HasPrefix(line, "warning: coverage ") {
+			skipNextBlank = true
+			continue
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
 }
 
 func listBalRunCorpusPaths(t *testing.T, dir string, balFilesOnly bool) []string {
