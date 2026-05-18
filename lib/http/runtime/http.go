@@ -39,68 +39,8 @@ const (
 	moduleName = "http"
 )
 
-// splitOutsideQuotes splits s on every occurrence of sep that is not inside a
-// double-quoted string (RFC 7230 §3.2.6 quoted-string), honouring backslash escapes.
-func splitOutsideQuotes(s string, sep byte) []string {
-	var out []string
-	inQuote := false
-	start := 0
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		switch {
-		case c == '\\' && inQuote && i+1 < len(s):
-			i++ // skip the escaped character
-		case c == '"':
-			inQuote = !inQuote
-		case c == sep && !inQuote:
-			out = append(out, s[start:i])
-			start = i + 1
-		}
-	}
-	return append(out, s[start:])
-}
-
-func parseHeader(input string) (*values.List, error) {
-	segments := splitOutsideQuotes(input, ',')
-	list := values.NewList(0, semtypes.LIST, nil)
-	for _, seg := range segments {
-		seg = strings.TrimSpace(seg)
-		if seg == "" {
-			return nil, fmt.Errorf("invalid header value: empty segment")
-		}
-		parts := splitOutsideQuotes(seg, ';')
-		headerVal := strings.TrimSpace(parts[0])
-		if headerVal == "" {
-			return nil, fmt.Errorf("invalid header value: missing value before parameters")
-		}
-		params := values.NewMap(semtypes.MAPPING)
-		for _, param := range parts[1:] {
-			param = strings.TrimSpace(param)
-			if param == "" {
-				continue
-			}
-			eqIdx := strings.IndexByte(param, '=')
-			if eqIdx < 0 {
-				params.Put(strings.ToLower(param), "")
-				continue
-			}
-			key := strings.ToLower(strings.TrimSpace(param[:eqIdx]))
-			val := strings.TrimSpace(param[eqIdx+1:])
-			if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
-				val = val[1 : len(val)-1]
-			}
-			params.Put(key, val)
-		}
-		entry := values.NewMap(semtypes.MAPPING)
-		entry.Put("value", headerVal)
-		entry.Put("params", params)
-		list.Append(entry)
-	}
-	return list, nil
-}
-
-func decimalToDuration(d *decimal.Decimal) time.Duration {
-	return time.Duration(d.Float64() * float64(time.Second))
+func init() {
+	runtime.RegisterModuleInitializer(initHttpModule)
 }
 
 func initHttpModule(rt *runtime.Runtime) {
@@ -632,6 +572,70 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 }
 
+// splitOutsideQuotes splits s on every occurrence of sep that is not inside a
+// double-quoted string (RFC 7230 §3.2.6 quoted-string), honouring backslash escapes.
+func splitOutsideQuotes(s string, sep byte) []string {
+	var out []string
+	inQuote := false
+	start := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '\\' && inQuote && i+1 < len(s):
+			i++ // skip the escaped character
+		case c == '"':
+			inQuote = !inQuote
+		case c == sep && !inQuote:
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	return append(out, s[start:])
+}
+
+func parseHeader(input string) (*values.List, error) {
+	segments := splitOutsideQuotes(input, ',')
+	list := values.NewList(0, semtypes.LIST, nil)
+	for _, seg := range segments {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			return nil, fmt.Errorf("invalid header value: empty segment")
+		}
+		parts := splitOutsideQuotes(seg, ';')
+		headerVal := strings.TrimSpace(parts[0])
+		if headerVal == "" {
+			return nil, fmt.Errorf("invalid header value: missing value before parameters")
+		}
+		params := values.NewMap(semtypes.MAPPING)
+		for _, param := range parts[1:] {
+			param = strings.TrimSpace(param)
+			if param == "" {
+				continue
+			}
+			eqIdx := strings.IndexByte(param, '=')
+			if eqIdx < 0 {
+				params.Put(strings.ToLower(param), "")
+				continue
+			}
+			key := strings.ToLower(strings.TrimSpace(param[:eqIdx]))
+			val := strings.TrimSpace(param[eqIdx+1:])
+			if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
+				val = val[1 : len(val)-1]
+			}
+			params.Put(key, val)
+		}
+		entry := values.NewMap(semtypes.MAPPING)
+		entry.Put("value", headerVal)
+		entry.Put("params", params)
+		list.Append(entry)
+	}
+	return list, nil
+}
+
+func decimalToDuration(d *decimal.Decimal) time.Duration {
+	return time.Duration(d.Float64() * float64(time.Second))
+}
+
 // extractHeaders converts a Ballerina map<string|string[]>? value to Go request headers.
 func extractHeaders(arg values.BalValue) map[string][]string {
 	if arg == nil {
@@ -658,61 +662,6 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 		}
 	}
 	return result
-}
-
-// listToBytes converts a Ballerina byte[] (List of int64 in 0–255) to []byte.
-// Returns (nil, false) if any element is not an integer in the byte range,
-// indicating the list should be treated as a JSON array instead.
-func listToBytes(list *values.List) ([]byte, bool) {
-	b := make([]byte, list.Len())
-	for i := range list.Len() {
-		n, ok := list.Get(i).(int64)
-		if !ok || n < 0 || n > 255 {
-			return nil, false
-		}
-		b[i] = byte(n)
-	}
-	return b, true
-}
-
-// goToBalValue converts a Go value (from json.Decoder with UseNumber) to a Ballerina BalValue.
-// JSON null → nil, bool → bool, json.Number → int64 or float64, string → string,
-// []interface{} → *values.List, map[string]interface{} → *values.Map.
-func goToBalValue(v interface{}) values.BalValue {
-	switch v := v.(type) {
-	case nil:
-		return nil
-	case bool:
-		return v
-	case json.Number:
-		if i, err := v.Int64(); err == nil {
-			return i
-		}
-		f, _ := v.Float64()
-		return f
-	case string:
-		return v
-	case []interface{}:
-		list := values.NewList(len(v), semtypes.LIST, nil)
-		for i, elem := range v {
-			list.FillingSet(i, goToBalValue(elem))
-		}
-		return list
-	case map[string]interface{}:
-		m := values.NewMap(semtypes.MAPPING)
-		for k, val := range v {
-			m.Put(k, goToBalValue(val))
-		}
-		return m
-	default:
-		return nil
-	}
-}
-
-// responseHeaders returns the internal header map stored on a Response object.
-func responseHeaders(self *values.Object) *values.Map {
-	h, _ := self.Get("$headers")
-	return h.(*values.Map)
 }
 
 // buildResponse constructs a Ballerina Response object from HTTP response data.
@@ -743,6 +692,27 @@ func buildResponse(statusCode int, respHeaders map[string][]string, body []byte)
 			"getHeaderNames":   "ballerina/http:Response.getHeaderNames",
 		},
 	)
+}
+
+// responseHeaders returns the internal header map stored on a Response object.
+func responseHeaders(self *values.Object) *values.Map {
+	h, _ := self.Get("$headers")
+	return h.(*values.Map)
+}
+
+// listToBytes converts a Ballerina byte[] (List of int64 in 0–255) to []byte.
+// Returns (nil, false) if any element is not an integer in the byte range,
+// indicating the list should be treated as a JSON array instead.
+func listToBytes(list *values.List) ([]byte, bool) {
+	b := make([]byte, list.Len())
+	for i := range list.Len() {
+		n, ok := list.Get(i).(int64)
+		if !ok || n < 0 || n > 255 {
+			return nil, false
+		}
+		b[i] = byte(n)
+	}
+	return b, true
 }
 
 // balToGoJSON converts a Ballerina value to a Go value suitable for json.Marshal.
@@ -787,6 +757,36 @@ func toJSONBytes(v values.BalValue) ([]byte, error) {
 	return json.Marshal(balToGoJSON(v))
 }
 
-func init() {
-	runtime.RegisterModuleInitializer(initHttpModule)
+// goToBalValue converts a Go value (from json.Decoder with UseNumber) to a Ballerina BalValue.
+// JSON null → nil, bool → bool, json.Number → int64 or float64, string → string,
+// []interface{} → *values.List, map[string]interface{} → *values.Map.
+func goToBalValue(v interface{}) values.BalValue {
+	switch v := v.(type) {
+	case nil:
+		return nil
+	case bool:
+		return v
+	case json.Number:
+		if i, err := v.Int64(); err == nil {
+			return i
+		}
+		f, _ := v.Float64()
+		return f
+	case string:
+		return v
+	case []interface{}:
+		list := values.NewList(len(v), semtypes.LIST, nil)
+		for i, elem := range v {
+			list.FillingSet(i, goToBalValue(elem))
+		}
+		return list
+	case map[string]interface{}:
+		m := values.NewMap(semtypes.MAPPING)
+		for k, val := range v {
+			m.Put(k, goToBalValue(val))
+		}
+		return m
+	default:
+		return nil
+	}
 }
