@@ -95,6 +95,10 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	if !ok {
 		return
 	}
+	if semtypes.IsNever(retType) {
+		analyzeFunctionNeverReturn(ctx, fn, fnCfg)
+		return
+	}
 
 	for _, bb := range fnCfg.bbs {
 		if !bb.isTerminal() || !bb.isReachable() {
@@ -105,6 +109,18 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 		}
 		pos := positionForMissingReturn(bb, fn)
 		ctx.SemanticError("missing return statement", pos)
+	}
+}
+
+func analyzeFunctionNeverReturn(ctx *context.CompilerContext, fn *ast.BLangFunction, fnCfg functionCFG) {
+	for _, bb := range fnCfg.bbs {
+		if !bb.isTerminal() || !bb.isReachable() {
+			continue
+		}
+		if terminalBlockHasPanic(bb) {
+			continue
+		}
+		ctx.SemanticError("expected panic", positionForMissingReturn(bb, fn))
 	}
 }
 
@@ -122,6 +138,13 @@ func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	// a subtype of error (see analyzeStatement in control_flow_analyzer.go).
 	_, ok := last.(*ast.BLangExpressionStmt)
 	return ok
+}
+
+func terminalBlockHasPanic(bb basicBlock) bool {
+	if len(bb.nodes) == 0 {
+		return false
+	}
+	return bb.nodes[len(bb.nodes)-1].GetKind() == model.NodeKind_PANIC
 }
 
 func positionForMissingReturn(bb basicBlock, fn *ast.BLangFunction) diagnostics.Location {
