@@ -768,16 +768,13 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangGroupByClause:
-		for i := range node.GroupingKeyList {
-			Walk(v, &node.GroupingKeyList[i])
+		for _, groupingKey := range node.GetGroupingKeyList() {
+			Walk(v, groupingKey.(BLangNode))
 		}
 
 	case *BLangGroupingKey:
-		if node.VariableDef != nil {
-			Walk(v, node.VariableDef)
-		}
-		if node.VariableRef != nil {
-			Walk(v, node.VariableRef)
+		if groupingKey := node.GetGroupingKey(); groupingKey != nil {
+			Walk(v, groupingKey.(BLangNode))
 		}
 
 	case *BLangOnClause:

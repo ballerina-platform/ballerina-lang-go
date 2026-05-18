@@ -762,8 +762,8 @@ func (p *PrettyPrinter) printGroupByClause(node *BLangGroupByClause) {
 	p.startNode()
 	p.printString("group-by-clause")
 	p.indentLevel++
-	for i := range node.GroupingKeyList {
-		p.PrintInner(&node.GroupingKeyList[i])
+	for _, groupingKey := range node.GetGroupingKeyList() {
+		p.PrintInner(groupingKey.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()
@@ -773,11 +773,8 @@ func (p *PrettyPrinter) printGroupingKey(node *BLangGroupingKey) {
 	p.startNode()
 	p.printString("grouping-key")
 	p.indentLevel++
-	if node.VariableDef != nil {
-		p.PrintInner(node.VariableDef)
-	}
-	if node.VariableRef != nil {
-		p.PrintInner(node.VariableRef)
+	if groupingKey := node.GetGroupingKey(); groupingKey != nil {
+		p.PrintInner(groupingKey.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()

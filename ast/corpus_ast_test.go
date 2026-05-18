@@ -103,6 +103,7 @@ func getDiff(expectedAST, actualAST string) string {
 type walkTestVisitor struct {
 	t            *testing.T
 	visitedTypes map[string]int
+	visitedKinds map[model.NodeKind]int
 	nodeCount    int
 }
 
@@ -113,6 +114,7 @@ func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	v.nodeCount++
 	typeName := fmt.Sprintf("%T", node)
 	v.visitedTypes[typeName]++
+	v.visitedKinds[node.GetKind()]++
 
 	if diagnostics.IsLocationEmpty(node.GetPosition()) {
 		v.t.Errorf("node with missing position: %T", node)
@@ -166,6 +168,7 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 	visitor := &walkTestVisitor{
 		t:            t,
 		visitedTypes: make(map[string]int),
+		visitedKinds: make(map[model.NodeKind]int),
 	}
 	ast.Walk(visitor, result.CompilationUnit)
 
@@ -177,6 +180,9 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 		t.Logf("File: %s, Total nodes: %d", testCase.InputPath, visitor.nodeCount)
 		for typeName, count := range visitor.visitedTypes {
 			t.Logf("  %s: %d nodes", typeName, count)
+		}
+		for kind, count := range visitor.visitedKinds {
+			t.Logf("  kind %d: %d nodes", kind, count)
 		}
 	}
 }

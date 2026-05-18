@@ -3932,7 +3932,7 @@ func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClau
 			if !ok {
 				panic("expected grouping key variable reference to be a simple variable reference")
 			}
-			groupingKey.VariableRef = varRef
+			groupingKey.SetGroupingKey(varRef)
 		} else {
 			keyNode, ok := n.TransformGroupingKeyVarDeclaration(node.(*tree.GroupingKeyVarDeclarationNode)).(*BLangGroupingKey)
 			if !ok {
@@ -3940,7 +3940,7 @@ func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClau
 			}
 			groupingKey = keyNode
 		}
-		groupByClause.GroupingKeyList = append(groupByClause.GroupingKeyList, *groupingKey)
+		groupByClause.AddGroupingKey(groupingKey)
 	}
 	return groupByClause
 }
@@ -3968,7 +3968,7 @@ func (n *NodeBuilder) TransformGroupingKeyVarDeclaration(groupingKeyVarDeclarati
 	varDef := &BLangSimpleVariableDef{}
 	varDef.pos = pos
 	varDef.SetVariable(simpleVar)
-	groupingKey.VariableDef = varDef
+	groupingKey.SetGroupingKey(varDef)
 	return groupingKey
 }
 
