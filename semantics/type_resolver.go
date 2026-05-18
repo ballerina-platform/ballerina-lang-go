@@ -458,7 +458,7 @@ func (f *functionTypeResolver) nextMonoFnName(origName string) string {
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
 		ctx:                    ctx,
-		tyCtx:                  ctx.GetTypeContext(),
+		tyCtx:                  semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedSymbols:        importedSymbols,
 		pkg:                    pkg,
 		implicitImports:        make(map[string]ast.BLangImportPackage),

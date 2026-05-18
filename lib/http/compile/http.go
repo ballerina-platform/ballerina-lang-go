@@ -218,9 +218,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	space.AddSymbol("TRAILING", &trailingSym)
 
 	// json — the proper recursive Ballerina json type: nil|boolean|int|float|decimal|string|list(json)|map(json).
-	// Uses the shared compiler context so the result is memo-equal to the type resolved from TypeKind_JSON
-	// in the type resolver (both callers obtain the same Context from ctx.GetTypeContext()).
-	jsonType := semtypes.CreateJSON(ctx.GetTypeContext())
+	jsonType := semtypes.CreateJSON(semtypes.ContextFrom(ctx.GetTypeEnv()))
 
 	// Response: declared as a class so the type checker knows about statusCode and
 	// the header API. Users never write `new http:Response()` — Response objects are
