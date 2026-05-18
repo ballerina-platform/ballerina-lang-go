@@ -22,6 +22,24 @@ import (
 	"strings"
 )
 
+// FloatDeepEqual is Ballerina `==` for plain float values: +0 and -0 compare
+// equal; any two NaNs compare equal.
+func FloatDeepEqual(a, b float64) bool {
+	if a == b {
+		return true
+	}
+	return math.IsNaN(a) && math.IsNaN(b)
+}
+
+// FloatExactEqual is Ballerina `===` for plain float values: +0 and -0 are
+// distinct; any two NaNs compare equal (including differing quiet-NaN payloads).
+func FloatExactEqual(a, b float64) bool {
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return math.IsNaN(a) && math.IsNaN(b)
+	}
+	return math.Float64bits(a) == math.Float64bits(b)
+}
+
 // FormatFloat renders a Ballerina float using `lang.float:toString` semantics.
 //
 // The format matches jBallerina's `StringUtils.getStringValue(double)`:

@@ -260,6 +260,10 @@ func refEqual(op1, op2 values.BalValue) bool {
 		}
 		return d1.ExactEqual(d2)
 	}
+	if f1, ok := op1.(float64); ok {
+		f2, ok := op2.(float64)
+		return ok && values.FloatExactEqual(f1, f2)
+	}
 	return op1 == op2
 }
 
