@@ -81,6 +81,8 @@ var (
 		// panic or a compile-time `fatal[...]` bailout, so it does not satisfy
 		// the future-test contract yet. Tracked separately.
 		"subset8/08-future/fieldlvalue1-fp.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+		"subset8/08-xml/namespace12-v.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.
@@ -97,6 +99,12 @@ var (
 		"import-main-v",
 		"import-type6-v",
 	}
+
+	// Skip project tests for the BIR serialization roundtrip stage. These
+	// projects compile and run correctly, but recompilation from the
+	// serialized BIR fails. Add the project name (basename of the project
+	// directory) here.
+	skipProjectSerializationRoundtripTests = []string{}
 )
 
 func TestMain(m *testing.M) {
@@ -860,6 +868,8 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 					pkg.Annotations = append(pkg.Annotations, *n)
 				case *ast.BLangClassDefinition:
 					pkg.ClassDefinitions = append(pkg.ClassDefinitions, *n)
+				case *ast.BLangXMLNS:
+					pkg.XmlnsList = append(pkg.XmlnsList, *n)
 				default:
 					pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
 				}

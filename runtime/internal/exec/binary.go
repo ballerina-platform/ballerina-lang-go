@@ -46,6 +46,9 @@ func execBinaryOpAdd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case *decimal.Decimal:
 		v2 := op2.(*decimal.Decimal)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalArith(v1.Add, v2))
+	case values.XMLValue:
+		v2 := op2.(values.XMLValue)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, values.NewXMLSequence([]values.XMLValue{v1, v2}))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2)))
 	}

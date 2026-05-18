@@ -1360,14 +1360,6 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
 		node := transformedNode.(model.TopLevelNode)
-
-		// Special handling for XML namespace declarations
-		if _, isXMLNS := memberNode.(*tree.ModuleXMLNamespaceDeclarationNode); isXMLNS {
-			if blangXmlns, ok := transformedNode.(*BLangXMLNS); ok {
-				blangXmlns.CompUnit = &compUnit
-			}
-		}
-
 		compilationUnit.AddTopLevelNode(node)
 	}
 
@@ -2681,12 +2673,36 @@ func (n *NodeBuilder) TransformAnnotationAttachPoint(annotationAttachPointNode *
 	panic("TransformAnnotationAttachPoint unimplemented")
 }
 
+type xmlNamespaceDeclarationNode interface {
+	tree.Node
+	Namespaceuri() tree.ExpressionNode
+	NamespacePrefix() *tree.IdentifierToken
+}
+
+func (n *NodeBuilder) transformXMLNamespaceDeclaration(node xmlNamespaceDeclarationNode) BLangNode {
+	pos := getPosition(n.de(), node)
+	xmlns := &BLangXMLNS{}
+	xmlns.SetPosition(pos)
+	n.populateXMLNS(xmlns, pos, node.Namespaceuri(), node.NamespacePrefix())
+	return xmlns
+}
+
 func (n *NodeBuilder) TransformXMLNamespaceDeclaration(xMLNamespaceDeclarationNode *tree.XMLNamespaceDeclarationNode) BLangNode {
-	panic("TransformXMLNamespaceDeclaration unimplemented")
+	return n.transformXMLNamespaceDeclaration(xMLNamespaceDeclarationNode)
 }
 
 func (n *NodeBuilder) TransformModuleXMLNamespaceDeclaration(moduleXMLNamespaceDeclarationNode *tree.ModuleXMLNamespaceDeclarationNode) BLangNode {
-	panic("TransformModuleXMLNamespaceDeclaration unimplemented")
+	return n.transformXMLNamespaceDeclaration(moduleXMLNamespaceDeclarationNode)
+}
+
+func (n *NodeBuilder) populateXMLNS(target *BLangXMLNS, pos diagnostics.Location, uriNode tree.ExpressionNode, prefixTok *tree.IdentifierToken) {
+	if uriNode != nil {
+		target.SetNamespaceURI(n.createExpression(uriNode))
+	}
+	if prefixTok != nil {
+		prefixIdent := createIdentifierFromToken(getPosition(n.de(), prefixTok), prefixTok)
+		target.SetPrefix(&prefixIdent)
+	}
 }
 
 func (n *NodeBuilder) TransformFunctionBodyBlock(functionBodyBlockNode *tree.FunctionBodyBlockNode) BLangNode {
@@ -2836,11 +2852,105 @@ func (n *NodeBuilder) TransformLetVariableDeclaration(letVariableDeclarationNode
 }
 
 func (n *NodeBuilder) TransformTemplateExpression(templateExpressionNode *tree.TemplateExpressionNode) BLangNode {
-	panic("TransformTemplateExpression unimplemented")
+	typeToken := templateExpressionNode.Type()
+	if typeToken == nil || typeToken.Text() != "xml" {
+		n.cx.Unimplemented("non-xml template expressions not yet supported", getPosition(n.de(), templateExpressionNode))
+		return nil
+	}
+	var children []BLangExpression
+	content := templateExpressionNode.Content()
+	for child := range content.Iterator() {
+		bl := n.TransformSyntaxNode(child)
+		if bl == nil {
+			continue
+		}
+		expr, ok := bl.(BLangExpression)
+		if !ok {
+			n.cx.InternalError("xml template child did not produce BLangExpression", getPosition(n.de(), child))
+			return nil
+		}
+		children = append(children, expr)
+	}
+	if len(children) == 1 {
+		return children[0]
+	}
+	seq := &BLangXMLSequenceLiteral{}
+	seq.pos = getPosition(n.de(), templateExpressionNode)
+	seq.Children = children
+	return seq
+}
+
+func (n *NodeBuilder) xmlNameToString(name tree.XMLNameNode) string {
+	pos := getPosition(n.de(), name)
+	switch name := name.(type) {
+	case *tree.XMLSimpleNameNode:
+		tok := name.Name()
+		if tok == nil {
+			n.cx.InternalError("xml simple name missing identifier token", pos)
+			return ""
+		}
+		return tok.Text()
+	case *tree.XMLQualifiedNameNode:
+		// TODO: we will a have to revisit this when we support namespaces
+		prefixNode := name.Prefix()
+		localNode := name.Name()
+		if prefixNode == nil || localNode == nil {
+			n.cx.InternalError("xml qualified name missing prefix or local part", pos)
+			return ""
+		}
+		prefixTok := prefixNode.Name()
+		localTok := localNode.Name()
+		if prefixTok == nil || localTok == nil {
+			n.cx.InternalError("xml qualified name component missing identifier token", pos)
+			return ""
+		}
+		return prefixTok.Text() + ":" + localTok.Text()
+	}
+	n.cx.InternalError(fmt.Sprintf("unexpected xml name kind: %T", name), pos)
+	return ""
+}
+
+func (n *NodeBuilder) xmlAttributes(attrs tree.NodeList[*tree.XMLAttributeNode]) []BLangXMLAttribute {
+	out := make([]BLangXMLAttribute, 0, attrs.Size())
+	for attrNode := range attrs.Iterator() {
+		attr := n.TransformXMLAttribute(attrNode).(*BLangXMLAttribute)
+		out = append(out, *attr)
+	}
+	return out
 }
 
 func (n *NodeBuilder) TransformXMLElement(xMLElementNode *tree.XMLElementNode) BLangNode {
-	panic("TransformXMLElement unimplemented")
+	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
+	elem.pos = getPosition(n.de(), xMLElementNode)
+	if start := xMLElementNode.StartTag(); start != nil {
+		elem.Name = n.xmlNameToString(start.Name())
+		elem.Attrs = n.xmlAttributes(start.Attributes())
+	}
+	var children []BLangExpression
+	content := xMLElementNode.Content()
+	for child := range content.Iterator() {
+		bl := n.TransformSyntaxNode(child)
+		if bl == nil {
+			continue
+		}
+		expr, ok := bl.(BLangExpression)
+		if !ok {
+			n.cx.InternalError("xml element child did not produce BLangExpression", getPosition(n.de(), child))
+			continue
+		}
+		children = append(children, expr)
+	}
+	switch len(children) {
+	case 0:
+	case 1:
+		elem.Content = children[0]
+	default:
+		seq := &BLangXMLSequenceLiteral{}
+		seq.pos = elem.pos
+		seq.Children = children
+		elem.Content = seq
+	}
+	return elem
 }
 
 func (n *NodeBuilder) TransformXMLStartTag(xMLStartTagNode *tree.XMLStartTagNode) BLangNode {
@@ -2860,35 +2970,99 @@ func (n *NodeBuilder) TransformXMLQualifiedName(xMLQualifiedNameNode *tree.XMLQu
 }
 
 func (n *NodeBuilder) TransformXMLEmptyElement(xMLEmptyElementNode *tree.XMLEmptyElementNode) BLangNode {
-	panic("TransformXMLEmptyElement unimplemented")
+	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
+	elem.pos = getPosition(n.de(), xMLEmptyElementNode)
+	elem.Name = n.xmlNameToString(xMLEmptyElementNode.Name())
+	elem.Attrs = n.xmlAttributes(xMLEmptyElementNode.Attributes())
+	return elem
 }
 
 func (n *NodeBuilder) TransformInterpolation(interpolationNode *tree.InterpolationNode) BLangNode {
-	panic("TransformInterpolation unimplemented")
+	n.cx.Unimplemented("xml interpolation not yet supported", getPosition(n.de(), interpolationNode))
+	return nil
 }
 
 func (n *NodeBuilder) TransformXMLText(xMLTextNode *tree.XMLTextNode) BLangNode {
-	panic("TransformXMLText unimplemented")
+	text := &BLangXMLTextLiteral{}
+	text.pos = getPosition(n.de(), xMLTextNode)
+	if c := xMLTextNode.Content(); c != nil {
+		text.Body = c.Text()
+	}
+	return text
 }
 
 func (n *NodeBuilder) TransformXMLAttribute(xMLAttributeNode *tree.XMLAttributeNode) BLangNode {
-	panic("TransformXMLAttribute unimplemented")
+	attr := &BLangXMLAttribute{}
+	attr.pos = getPosition(n.de(), xMLAttributeNode)
+	attr.Name = n.xmlNameToString(xMLAttributeNode.AttributeName())
+	if valueNode := xMLAttributeNode.Value(); valueNode != nil {
+		if transformed := n.TransformXMLAttributeValue(valueNode); transformed != nil {
+			if expr, ok := transformed.(BLangExpression); ok {
+				attr.Value = expr
+			}
+		}
+	}
+	return attr
 }
 
 func (n *NodeBuilder) TransformXMLAttributeValue(xMLAttributeValue *tree.XMLAttributeValue) BLangNode {
-	panic("TransformXMLAttributeValue unimplemented")
+	var b strings.Builder
+	items := xMLAttributeValue.Value()
+	for child := range items.Iterator() {
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml attribute value interpolation not yet supported", getPosition(n.de(), child))
+			return nil
+		}
+		b.WriteString(tok.Text())
+	}
+	text := b.String()
+	lit := &BLangLiteral{}
+	lit.pos = getPosition(n.de(), xMLAttributeValue)
+	lit.SetValueType(n.types.getTypeFromTag(model.TypeTags_STRING).(BType))
+	lit.Value = text
+	lit.OriginalValue = text
+	return lit
 }
 
 func (n *NodeBuilder) TransformXMLComment(xMLComment *tree.XMLComment) BLangNode {
-	panic("TransformXMLComment unimplemented")
+	c := &BLangXMLCommentLiteral{}
+	c.pos = getPosition(n.de(), xMLComment)
+	var b strings.Builder
+	content := xMLComment.Content()
+	for child := range content.Iterator() {
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml interpolation in comment not yet supported", getPosition(n.de(), child))
+			continue
+		}
+		b.WriteString(tok.Text())
+	}
+	c.Body = b.String()
+	return c
 }
 
 func (n *NodeBuilder) TransformXMLCDATA(xMLCDATANode *tree.XMLCDATANode) BLangNode {
-	panic("TransformXMLCDATA unimplemented")
+	n.cx.Unimplemented("xml CDATA not yet supported", getPosition(n.de(), xMLCDATANode))
+	return nil
 }
 
 func (n *NodeBuilder) TransformXMLProcessingInstruction(xMLProcessingInstruction *tree.XMLProcessingInstruction) BLangNode {
-	panic("TransformXMLProcessingInstruction unimplemented")
+	pi := &BLangXMLPILiteral{}
+	pi.pos = getPosition(n.de(), xMLProcessingInstruction)
+	pi.Target = n.xmlNameToString(xMLProcessingInstruction.Target())
+	var b strings.Builder
+	data := xMLProcessingInstruction.Data()
+	for child := range data.Iterator() {
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml interpolation in processing instruction not yet supported", getPosition(n.de(), child))
+			continue
+		}
+		b.WriteString(tok.Text())
+	}
+	pi.Data = b.String()
+	return pi
 }
 
 func (n *NodeBuilder) TransformTableTypeDescriptor(tableTypeDescriptorNode *tree.TableTypeDescriptorNode) BLangNode {
@@ -4102,8 +4276,10 @@ func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDesc
 		return n.transformErrorTypeDescriptor(parameterizedTypeDescriptorNode)
 	case common.TYPEDESC_TYPE_DESC:
 		return n.transformTypedescTypeDescriptor(parameterizedTypeDescriptorNode)
+	case common.XML_TYPE_DESC:
+		return n.transformXMLTypeDescriptor(parameterizedTypeDescriptorNode)
 	}
-	panic("TransformParameterizedTypeDescriptor supported only for error and typedesc type descriptors")
+	panic("TransformParameterizedTypeDescriptor supported only for error, typedesc and xml type descriptors")
 }
 
 func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTypeDescriptorNode) BLangNode {
@@ -4126,6 +4302,28 @@ func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTy
 	} else {
 		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(constraint)}
 	}
+	return constrainedType
+}
+
+func (n *NodeBuilder) transformXMLTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
+	pos := getPosition(n.de(), parameterizedTypeDescriptorNode)
+	typeParamNode := parameterizedTypeDescriptorNode.TypeParamNode()
+	if typeParamNode == nil {
+		valueType := &BLangValueType{}
+		valueType.pos = pos
+		valueType.TypeKind = model.TypeKind_XML
+		return valueType
+	}
+	refType := &BLangBuiltInRefTypeNode{
+		TypeKind: model.TypeKind_XML,
+	}
+	refType.SetPosition(pos)
+	constraint := n.createTypeNode(typeParamNode.TypeNode())
+	constrainedType := &BLangConstrainedType{
+		Type:       model.TypeData{TypeDescriptor: refType},
+		Constraint: model.TypeData{TypeDescriptor: constraint},
+	}
+	constrainedType.SetPosition(pos)
 	return constrainedType
 }
 

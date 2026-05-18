@@ -373,6 +373,47 @@ type (
 		UserDefinedType *BLangUserDefinedType
 		ArgsExprs       []BLangExpression
 	}
+
+	BLangXMLSequenceLiteral struct {
+		bLangExpressionBase
+		// PR-TODO: this should by a slice of XML stuff
+		Children []BLangExpression
+	}
+
+	BLangXMLElementLiteral struct {
+		bLangExpressionBase
+		Name    string
+		Attrs   []BLangXMLAttribute
+		Content BLangExpression
+		// Namespaces holds XML namespace declarations to emit on this element.
+		// Keys are stored in already-printable form: "xmlns" for the default
+		// namespace, "xmlns:<prefix>" otherwise. Values are URIs.
+		// Populated by the symbol resolver from inline xmlns attributes and
+		// from outer-scope xmlns declarations referenced inside this literal.
+		Namespaces map[string]string
+	}
+
+	BLangXMLAttribute struct {
+		bLangExpressionBase
+		Name  string
+		Value BLangExpression
+	}
+
+	BLangXMLPILiteral struct {
+		bLangExpressionBase
+		Target string
+		Data   string
+	}
+
+	BLangXMLCommentLiteral struct {
+		bLangExpressionBase
+		Body string
+	}
+
+	BLangXMLTextLiteral struct {
+		bLangExpressionBase
+		Body string
+	}
 )
 
 var (
@@ -1155,3 +1196,69 @@ func createBLangUnaryExpr(location diagnostics.Location, operator model.Operator
 	exprNode.Operator = operator
 	return exprNode
 }
+func (b *BLangElvisExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (l *BLangXMLSequenceLiteral) GetKind() model.NodeKind {
+	return model.NodeKind_XML_SEQUENCE_LITERAL
+}
+
+func (l *BLangXMLSequenceLiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (l *BLangXMLElementLiteral) GetKind() model.NodeKind {
+	return model.NodeKind_XML_ELEMENT_LITERAL
+}
+
+func (l *BLangXMLElementLiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (a *BLangXMLAttribute) GetKind() model.NodeKind {
+	return model.NodeKind_XML_ATTRIBUTE
+}
+
+func (a *BLangXMLAttribute) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (l *BLangXMLPILiteral) GetKind() model.NodeKind {
+	return model.NodeKind_XML_PI_LITERAL
+}
+
+func (l *BLangXMLPILiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (l *BLangXMLCommentLiteral) GetKind() model.NodeKind {
+	return model.NodeKind_XML_COMMENT_LITERAL
+}
+
+func (l *BLangXMLCommentLiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (l *BLangXMLTextLiteral) GetKind() model.NodeKind {
+	return model.NodeKind_XML_TEXT_LITERAL
+}
+
+func (l *BLangXMLTextLiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+var (
+	_ BLangExpression = &BLangXMLSequenceLiteral{}
+	_ BLangExpression = &BLangXMLElementLiteral{}
+	_ BLangExpression = &BLangXMLAttribute{}
+	_ BLangExpression = &BLangXMLPILiteral{}
+	_ BLangExpression = &BLangXMLCommentLiteral{}
+	_ BLangExpression = &BLangXMLTextLiteral{}
+	_ BLangNode       = &BLangXMLSequenceLiteral{}
+	_ BLangNode       = &BLangXMLElementLiteral{}
+	_ BLangNode       = &BLangXMLAttribute{}
+	_ BLangNode       = &BLangXMLPILiteral{}
+	_ BLangNode       = &BLangXMLCommentLiteral{}
+	_ BLangNode       = &BLangXMLTextLiteral{}
+)

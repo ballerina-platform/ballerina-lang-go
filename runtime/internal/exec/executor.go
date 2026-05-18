@@ -253,6 +253,16 @@ func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Fra
 		execTypeTest(ctx, v, frame)
 	case *bir.FPLoad:
 		execFPLoad(ctx, v, frame)
+	case *bir.NewXMLElement:
+		execNewXMLElement(ctx, v, frame)
+	case *bir.NewXMLPI:
+		execNewXMLPI(ctx, v, frame)
+	case *bir.NewXMLComment:
+		execNewXMLComment(ctx, v, frame)
+	case *bir.NewXMLText:
+		execNewXMLText(ctx, v, frame)
+	case *bir.NewXMLSequence:
+		execNewXMLSequence(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}

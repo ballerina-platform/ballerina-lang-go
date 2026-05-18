@@ -30,7 +30,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 75
+	BIR_VERSION = 76
 )
 
 type birWriter struct {
@@ -334,6 +334,37 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		write(buf, int32(instr.NumLocals))
 	case *bir.PopScopeFrame:
 		// no fields to write
+	case *bir.NewXMLElement:
+		bw.writeOperand(buf, instr.NameOp)
+		write(buf, instr.ChildrenOp != nil)
+		if instr.ChildrenOp != nil {
+			bw.writeOperand(buf, instr.ChildrenOp)
+		}
+		write(buf, instr.AttrsOp != nil)
+		if instr.AttrsOp != nil {
+			bw.writeOperand(buf, instr.AttrsOp)
+		}
+		write(buf, instr.NamespacesOp != nil)
+		if instr.NamespacesOp != nil {
+			bw.writeOperand(buf, instr.NamespacesOp)
+		}
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLPI:
+		bw.writeOperand(buf, instr.TargetOp)
+		bw.writeOperand(buf, instr.DataOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLComment:
+		bw.writeOperand(buf, instr.BodyOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLText:
+		bw.writeOperand(buf, instr.BodyOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLSequence:
+		bw.writeLength(buf, len(instr.Children))
+		for _, child := range instr.Children {
+			bw.writeOperand(buf, child)
+		}
+		bw.writeOperand(buf, instr.LhsOp)
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}

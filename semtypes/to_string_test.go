@@ -638,6 +638,16 @@ func TestTypedescUnconstrained(t *testing.T) {
 	}
 }
 
+func TestXMLTop(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, XML)
+	expected := "xml"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
 func TestTypedescConstrained(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
@@ -649,12 +659,96 @@ func TestTypedescConstrained(t *testing.T) {
 	}
 }
 
+func TestXMLElement(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, XML_ELEMENT)
+	expected := "xml:Element"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLComment(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, XML_COMMENT)
+	expected := "xml:Comment"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLText(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, XML_TEXT)
+	expected := "xml:Text"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLProcessingInstruction(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	actual := ToString(cx, XML_PI)
+	expected := "xml:ProcessingInstruction"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLSequenceOfElement(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := XMLSequence(XML_ELEMENT)
+	actual := ToString(cx, ty)
+	expected := "xml<xml:Element>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
 func TestTypedescConstrainedUnion(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ty := TypedescContaining(env, Union(INT, STRING))
 	actual := ToString(cx, ty)
 	expected := "typedesc<int|string>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLSequenceOfComment(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := XMLSequence(XML_COMMENT)
+	actual := ToString(cx, ty)
+	expected := "xml<xml:Comment>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLSequenceOfPI(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := XMLSequence(XML_PI)
+	actual := ToString(cx, ty)
+	expected := "xml<xml:ProcessingInstruction>"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestXMLNeverSequence(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := XMLSingleton(XML_PRIMITIVE_NEVER)
+	actual := ToString(cx, ty)
+	expected := "xml<never>"
 	if actual != expected {
 		t.Errorf("got %q expected %q", actual, expected)
 	}

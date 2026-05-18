@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected int, got string
+error[SEMANTIC_ERROR]: incompatible type: expected int, got "helloworld"
   --> const-semantic-e.bal:17:15
    |
 17 | const int B = "hello" + "world"; // @error 

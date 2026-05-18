@@ -698,6 +698,49 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 			},
 		}
+	case bir.INSTRUCTION_KIND_NEW_XML_ELEMENT:
+		nameOp := br.readOperand(varMap)
+		var hasChildren bool
+		br.read(&hasChildren)
+		var childrenOp *bir.BIROperand
+		if hasChildren {
+			childrenOp = br.readOperand(varMap)
+		}
+		var attrsOp *bir.BIROperand
+		var hasAttrs bool
+		br.read(&hasAttrs)
+		if hasAttrs {
+			attrsOp = br.readOperand(varMap)
+		}
+		var namespacesOp *bir.BIROperand
+		var hasNamespaces bool
+		br.read(&hasNamespaces)
+		if hasNamespaces {
+			namespacesOp = br.readOperand(varMap)
+		}
+		lhsOp := br.readOperand(varMap)
+		return bir.NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, namespacesOp, pos)
+	case bir.INSTRUCTION_KIND_NEW_XML_PI:
+		targetOp := br.readOperand(varMap)
+		dataOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
+		return bir.NewXMLPIInstr(lhsOp, targetOp, dataOp, pos)
+	case bir.INSTRUCTION_KIND_NEW_XML_COMMENT:
+		bodyOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
+		return bir.NewXMLCommentInstr(lhsOp, bodyOp, pos)
+	case bir.INSTRUCTION_KIND_NEW_XML_TEXT:
+		bodyOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
+		return bir.NewXMLTextInstr(lhsOp, bodyOp, pos)
+	case bir.INSTRUCTION_KIND_NEW_XML_SEQUENCE:
+		count := br.readLength()
+		children := make([]*bir.BIROperand, count)
+		for k := 0; k < int(count); k++ {
+			children[k] = br.readOperand(varMap)
+		}
+		lhsOp := br.readOperand(varMap)
+		return bir.NewXMLSequenceInstr(lhsOp, children, pos)
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
