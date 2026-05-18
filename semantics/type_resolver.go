@@ -2395,8 +2395,7 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 	for i, arg := range e.ArgsExprs {
 		argTys[i] = arg.GetDeterminedType()
 	}
-	paddedArgTys, _ := padNewExprArgTypesForDefaults(t, determinedTy, argTys, e.GetPosition())
-	objTy, ok := determineObjectType(t, e, paddedArgTys, determinedTy)
+	objTy, ok := determineObjectType(t, e, argTys, determinedTy)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2445,17 +2444,18 @@ func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, argTys []
 	cx := t.typeContext()
 	alts := semtypes.ObjectAlternatives(cx, objectTy)
 
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	type candidate struct {
 		objType        semtypes.SemType
 		initReturnType semtypes.SemType
 	}
 	var candidates []candidate
 	for _, alt := range alts {
+		altArgTys, _ := padNewExprArgTypesForDefaults(t, alt.ObjectType, argTys, expr.GetPosition())
+		argLd := semtypes.NewListDefinition()
+		altArgListTy := argLd.DefineListTypeWrapped(cx.Env(), altArgTys, len(altArgTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 		paramListTy := semtypes.FunctionParamListType(cx, alt.InitFnType)
-		if semtypes.IsSubtype(cx, argListTy, paramListTy) {
-			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, argListTy)
+		if semtypes.IsSubtype(cx, altArgListTy, paramListTy) {
+			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, altArgListTy)
 			candidates = append(candidates, candidate{objType: alt.ObjectType, initReturnType: retTy})
 		}
 	}
