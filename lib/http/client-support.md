@@ -63,10 +63,10 @@ public type FollowRedirects record {|
 |};
 
 public type ClientConfiguration record {|
-    decimal timeout?;
-    FollowRedirects followRedirects?;
-    HttpVersion httpVersion?;
-    ClientSecureSocket secureSocket?;
+    decimal timeout = 30;
+    FollowRedirects? followRedirects = ();
+    HttpVersion httpVersion = "2.0";
+    ClientSecureSocket? secureSocket = ();
 |};
 
 // ── Response ─────────────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ The client can be initialised with a URL and an optional `ClientConfiguration` r
 
 | Field | Notes |
 |---|---|
-| `timeout` | Request timeout as a decimal (seconds) |
+| `timeout` | Request timeout as a decimal (seconds); default is `30` |
 | `httpVersion` | `"1.1"` or `"2.0"` (default). HTTP/2 is enabled over both TLS (via ALPN) and cleartext (h2c) |
 | `followRedirects` | Full `FollowRedirects` record: `enabled`, `maxCount` (default 5), `allowAuthHeaders` |
 | `secureSocket` | See TLS section below |

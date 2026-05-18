@@ -262,6 +262,7 @@ func initHttpModule(rt *runtime.Runtime) {
 									followRedirects.Enabled = b
 								}
 							}
+							followRedirects.MaxCount = 5
 							if mv, ok := frMap.Get("maxCount"); ok {
 								if n, ok := mv.(int64); ok {
 									followRedirects.MaxCount = int(n)
