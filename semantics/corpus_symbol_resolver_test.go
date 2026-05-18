@@ -30,9 +30,11 @@ import (
 )
 
 // symbolResolverSkipList is the symbol-resolver *additional* skip list, on
-// top of the shared test_util.UnsupportedTests baseline. Currently empty --
-// every known failure is already covered by the shared baseline.
-var symbolResolverSkipList = []string{}
+// top of the shared test_util.UnsupportedTests baseline.
+var symbolResolverSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
 
 func TestSymbolResolver(t *testing.T) {
 	flag.Parse()

@@ -467,6 +467,8 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 				pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
 			case *ast.BLangAnnotation:
 				pkg.Annotations = append(pkg.Annotations, *n)
+			case *ast.BLangXMLNS:
+				pkg.XmlnsList = append(pkg.XmlnsList, *n)
 			default:
 				pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
 			}

@@ -131,6 +131,35 @@ type (
 	PopScopeFrame struct {
 		BIRInstructionBase
 	}
+
+	NewXMLElement struct {
+		BIRInstructionBase
+		NameOp       *BIROperand
+		ChildrenOp   *BIROperand
+		AttrsOp      *BIROperand
+		NamespacesOp *BIROperand
+	}
+
+	NewXMLPI struct {
+		BIRInstructionBase
+		TargetOp *BIROperand
+		DataOp   *BIROperand
+	}
+
+	NewXMLComment struct {
+		BIRInstructionBase
+		BodyOp *BIROperand
+	}
+
+	NewXMLText struct {
+		BIRInstructionBase
+		BodyOp *BIROperand
+	}
+
+	NewXMLSequence struct {
+		BIRInstructionBase
+		Children []*BIROperand
+	}
 )
 
 type (
@@ -155,6 +184,11 @@ var (
 	_ BIRAssignInstruction    = &FPLoad{}
 	_ BIRInstruction          = &PushScopeFrame{}
 	_ BIRInstruction          = &PopScopeFrame{}
+	_ BIRAssignInstruction    = &NewXMLElement{}
+	_ BIRAssignInstruction    = &NewXMLPI{}
+	_ BIRAssignInstruction    = &NewXMLComment{}
+	_ BIRAssignInstruction    = &NewXMLText{}
+	_ BIRAssignInstruction    = &NewXMLSequence{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -448,4 +482,73 @@ func (m *MappingConstructorKeyValueEntry) ValueOp() *BIROperand {
 
 func (m *MappingConstructorKeyValueEntry) KeyOp() *BIROperand {
 	return m.keyOp
+}
+
+func (n *NewXMLElement) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLElement) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_ELEMENT }
+
+func NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, namespacesOp *BIROperand, pos Location) *NewXMLElement {
+	return &NewXMLElement{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		NameOp:       nameOp,
+		ChildrenOp:   childrenOp,
+		AttrsOp:      attrsOp,
+		NamespacesOp: namespacesOp,
+	}
+}
+
+func (n *NewXMLPI) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLPI) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_PI }
+
+func NewXMLPIInstr(lhsOp, targetOp, dataOp *BIROperand, pos Location) *NewXMLPI {
+	return &NewXMLPI{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		TargetOp: targetOp,
+		DataOp:   dataOp,
+	}
+}
+
+func (n *NewXMLComment) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLComment) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_COMMENT }
+
+func NewXMLCommentInstr(lhsOp, bodyOp *BIROperand, pos Location) *NewXMLComment {
+	return &NewXMLComment{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		BodyOp: bodyOp,
+	}
+}
+
+func (n *NewXMLText) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLText) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_TEXT }
+
+func NewXMLTextInstr(lhsOp, bodyOp *BIROperand, pos Location) *NewXMLText {
+	return &NewXMLText{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		BodyOp: bodyOp,
+	}
+}
+
+func (n *NewXMLSequence) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLSequence) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_SEQUENCE }
+
+func NewXMLSequenceInstr(lhsOp *BIROperand, children []*BIROperand, pos Location) *NewXMLSequence {
+	return &NewXMLSequence{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		Children: children,
+	}
 }

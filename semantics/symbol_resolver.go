@@ -36,6 +36,7 @@ import (
 	bMap "ballerina-lang-go/lib/map/compile"
 	bString "ballerina-lang-go/lib/string/compile"
 	bValue "ballerina-lang-go/lib/value/compile"
+	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
 type scopeKind int
@@ -96,6 +97,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		Main:       ctx.NewSymbolSpace(pkgID),
 		Prefix:     importedSymbols,
 		Annotation: ctx.NewSymbolSpace(pkgID),
+		XMLNS:      map[string]string{model.XMLNSReservedPrefix: model.XMLNSReservedURI},
 	}
 	return &moduleSymbolResolver{
 		ctx:       ctx,
@@ -392,6 +394,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symRef, _, _ := moduleResolver.GetSymbol(name)
 		moduleResolver.typeDefns[symRef] = classDef
 	}
+	processModuleXMLNS(moduleResolver, pkg)
 	ast.Walk(moduleResolver, pkg)
 	pkg.Scope = moduleResolver.scope
 	return moduleResolver.scope.Exports()
@@ -582,11 +585,15 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	result[bString.PackageName] = bString.GetStringSymbols(ctx)
 	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
+	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }
 
 func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangXMLNS:
+		processBlockXMLNS(bs, n)
+		return nil
 	case *ast.BLangFunction:
 		// This happens because we visit from the top in [resolveFunction]
 		if n == bs.node {
@@ -629,6 +636,16 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangXMLElementLiteral:
+		rootNeeds := map[string]string{}
+		resolveXMLElementLiteralNamespaces(resolver, resolver.GetScope(), n, rootNeeds)
+		mergeNamespaces(n, rootNeeds)
+		return nil
+	case *ast.BLangXMLSequenceLiteral:
+		for _, child := range n.Children {
+			ast.Walk(resolver, child)
+		}
+		return nil
 	case *ast.BLangFieldBaseAccess:
 		if classDef := getEnclosingClassDef(resolver); isSelfFieldAccess(n) && classDef != nil {
 			resolveSelfFieldAccess(resolver, n, classDef)

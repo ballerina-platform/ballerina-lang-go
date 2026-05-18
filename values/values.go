@@ -172,6 +172,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return "object"
 	case *TypeDesc:
 		return "typedesc"
+	case XMLValue:
+		return t.XMLString()
 	default:
 		return "<unsupported>"
 	}

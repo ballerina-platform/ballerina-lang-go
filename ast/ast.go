@@ -372,13 +372,6 @@ type (
 		bLangNodeBase
 		namespaceURI BLangExpression
 		prefix       *BLangIdentifier
-		CompUnit     *BLangIdentifier
-	}
-	BLangLocalXMLNS struct {
-		BLangXMLNS
-	}
-	BLangPackageXMLNS struct {
-		BLangXMLNS
 	}
 	BLangMarkdownDocumentation struct {
 		bLangNodeBase
@@ -679,8 +672,6 @@ var (
 	_ BLangNode = &BLangPackage{}
 	_ BLangNode = &BLangTestablePackage{}
 	_ BLangNode = &BLangXMLNS{}
-	_ BLangNode = &BLangLocalXMLNS{}
-	_ BLangNode = &BLangPackageXMLNS{}
 	_ BLangNode = &BLangMarkdownDocumentation{}
 	_ BLangNode = &BLangMarkdownReferenceDocumentation{}
 	_ BLangNode = &BLangConstant{}
@@ -1945,6 +1936,8 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 			p.TypeDefinitions = append(p.TypeDefinitions, *node)
 		case *BLangAnnotation:
 			p.Annotations = append(p.Annotations, *node)
+		case *BLangXMLNS:
+			p.XmlnsList = append(p.XmlnsList, *node)
 		case *BLangClassDefinition:
 			p.ClassDefinitions = append(p.ClassDefinitions, *node)
 		default:

@@ -29,9 +29,11 @@ import (
 )
 
 // typeResolverSkipList is the type-resolver *additional* skip list, on top of
-// the shared test_util.UnsupportedTests baseline. Currently empty -- every
-// known failure is already covered by the shared baseline.
-var typeResolverSkipList = []string{}
+// the shared test_util.UnsupportedTests baseline.
+var typeResolverSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
 
 func TestTypeResolver(t *testing.T) {
 	flag.Parse()

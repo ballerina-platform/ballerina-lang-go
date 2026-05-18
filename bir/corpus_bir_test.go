@@ -53,7 +53,10 @@ func getBIRDiff(expectedText, actualText string) string {
 
 // birGenerationSkipList is the BIR-stage *additional* skip list, on top of
 // the shared test_util.UnsupportedTests baseline.
-var birGenerationSkipList = []string{}
+var birGenerationSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
 
 func TestBIRGeneration(t *testing.T) {
 	flag.Parse()

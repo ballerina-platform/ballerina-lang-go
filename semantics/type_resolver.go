@@ -771,6 +771,9 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 	detectGlobalVarInitCycles(t, pkg)
+	for i := range pkg.XmlnsList {
+		resolveXMLNS(t, nil, &pkg.XmlnsList[i])
+	}
 
 	t.drainDeferredEmptinessChecks()
 }
@@ -1019,9 +1022,22 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 			t.semanticError("continue statement not allowed outside loop", s.GetPosition())
 		}
 		return statementEffect{binding: nil, nonCompletion: true}, true
+	case *ast.BLangXMLNS:
+		resolveXMLNS(t, chain, s)
+		return defaultStmtEffect(chain), true
 	default:
 		t.internalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
 		return defaultStmtEffect(chain), false
+	}
+}
+
+func resolveXMLNS(t typeResolver, chain *binding, decl *ast.BLangXMLNS) {
+	decl.SetDeterminedType(semtypes.NEVER)
+	if uriExpr, ok := decl.GetNamespaceURI().(ast.BLangExpression); ok && uriExpr != nil {
+		resolveActionOrExpression(t, chain, uriExpr, semtypes.STRING)
+	}
+	if prefix, ok := decl.GetPrefix().(*ast.BLangIdentifier); ok && prefix != nil {
+		prefix.SetDeterminedType(semtypes.NEVER)
 	}
 }
 
@@ -2327,6 +2343,16 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveRemoteMethodCallAction(t, chain, e, expectedType)
 	case *ast.BLangInferredTypedescDefault:
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
+	case *ast.BLangXMLSequenceLiteral:
+		return resolveXMLSequenceLiteral(t, chain, e, expectedType)
+	case *ast.BLangXMLElementLiteral:
+		return resolveXMLElementLiteral(t, chain, e)
+	case *ast.BLangXMLPILiteral:
+		return resolveXMLPILiteral(t, chain, e)
+	case *ast.BLangXMLCommentLiteral:
+		return resolveXMLCommentLiteral(t, chain, e)
+	case *ast.BLangXMLTextLiteral:
+		return resolveXMLTextLiteral(t, chain, e)
 	default:
 		t.internalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -2347,6 +2373,62 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 	}
 	setExpectedType(e, expectedType)
 	return expectedType, defaultExpressionEffect(chain), true
+}
+
+func resolveXMLTextLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLTextLiteral) (semtypes.SemType, expressionEffect, bool) {
+	ty := semtypes.XML_TEXT
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveXMLCommentLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLCommentLiteral) (semtypes.SemType, expressionEffect, bool) {
+	ty := semtypes.XML_COMMENT
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveXMLPILiteral(_ typeResolver, chain *binding, e *ast.BLangXMLPILiteral) (semtypes.SemType, expressionEffect, bool) {
+	ty := semtypes.XML_PI
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveXMLElementLiteral(t typeResolver, chain *binding, e *ast.BLangXMLElementLiteral) (semtypes.SemType, expressionEffect, bool) {
+	for i := range e.Attrs {
+		attr := &e.Attrs[i]
+		if attr.Value != nil {
+			if _, _, ok := resolveActionOrExpression(t, chain, attr.Value, semtypes.STRING); !ok {
+				return nil, expressionEffect{}, false
+			}
+		}
+		attr.SetDeterminedType(semtypes.NEVER)
+	}
+	if e.Content != nil {
+		if _, _, ok := resolveActionOrExpression(t, chain, e.Content, semtypes.XML); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+	ty := semtypes.XML_ELEMENT
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSequenceLiteral, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	var childUnion semtypes.SemType = semtypes.NEVER
+	for _, child := range e.Children {
+		childTy, _, ok := resolveActionOrExpression(t, chain, child, semtypes.XML)
+		if !ok {
+			return nil, expressionEffect{}, false
+		}
+		if !semtypes.IsSubtypeSimple(childTy, semtypes.XML) {
+			t.semanticError(fmt.Sprintf("expected xml value, got %s", semtypes.ToString(t.typeContext(), childTy)), child.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		childUnion = semtypes.Union(childUnion, childTy)
+	}
+	ty := semtypes.XMLSequence(childUnion)
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
 }
 
 func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
@@ -3380,6 +3462,89 @@ func negateNumericType(exprTy semtypes.SemType) semtypes.SemType {
 	}
 }
 
+func additiveSingletonType(t typeResolver, lhsTy, rhsTy semtypes.SemType, op model.OperatorKind, loc diagnostics.Location) (semtypes.SemType, bool) {
+	bothSameType := func(ty semtypes.BasicTypeBitSet) bool {
+		return semtypes.IsSubtypeSimple(lhsTy, ty) && semtypes.IsSubtypeSimple(rhsTy, ty)
+	}
+	switch {
+	case bothSameType(semtypes.XML):
+		if op != model.OperatorKind_ADD {
+			t.semanticError(fmt.Sprintf("unsupported operation %s for xml (only addition is supported)", string(op)), loc)
+			return nil, false
+		}
+		resultTy := semtypes.XMLSequence(semtypes.Union(lhsTy, rhsTy))
+		return resultTy, true
+	case bothSameType(semtypes.STRING):
+		if op != model.OperatorKind_ADD {
+			t.semanticError(fmt.Sprintf("unsupported operation %s for string (only addition is supported)", string(op)), loc)
+			return nil, false
+		}
+		lhsValue := semtypes.SingleShape(lhsTy)
+		rhsValue := semtypes.SingleShape(rhsTy)
+		if lhsValue.IsPresent() && rhsValue.IsPresent() {
+			resultValue := lhsValue.Get().Value.(string) + rhsValue.Get().Value.(string)
+			return semtypes.StringConst(resultValue), true
+		}
+		return nil, true
+	case bothSameType(semtypes.INT):
+		lhsValue := semtypes.SingleShape(lhsTy)
+		rhsValue := semtypes.SingleShape(rhsTy)
+		if lhsValue.IsPresent() && rhsValue.IsPresent() {
+			var resultValue int64
+			switch op {
+			case model.OperatorKind_ADD:
+				resultValue = lhsValue.Get().Value.(int64) + rhsValue.Get().Value.(int64)
+			case model.OperatorKind_SUB:
+				resultValue = lhsValue.Get().Value.(int64) - rhsValue.Get().Value.(int64)
+			default:
+				t.internalError(fmt.Sprintf("unexpect additive operand %s", string(op)), loc)
+			}
+			return semtypes.IntConst(resultValue), true
+		}
+		return nil, true
+	case bothSameType(semtypes.FLOAT):
+		lhsValue := semtypes.SingleShape(lhsTy)
+		rhsValue := semtypes.SingleShape(rhsTy)
+		if lhsValue.IsPresent() && rhsValue.IsPresent() {
+			var resultValue float64
+			switch op {
+			case model.OperatorKind_ADD:
+				resultValue = lhsValue.Get().Value.(float64) + rhsValue.Get().Value.(float64)
+			case model.OperatorKind_SUB:
+				resultValue = lhsValue.Get().Value.(float64) - rhsValue.Get().Value.(float64)
+			default:
+				t.internalError(fmt.Sprintf("unexpect additive operand %s", string(op)), loc)
+			}
+			return semtypes.FloatConst(resultValue), true
+		}
+		return nil, true
+	case bothSameType(semtypes.DECIMAL):
+		lhsValue := semtypes.SingleShape(lhsTy)
+		rhsValue := semtypes.SingleShape(rhsTy)
+		if lhsValue.IsPresent() && rhsValue.IsPresent() {
+			lhsDec := lhsValue.Get().Value.(*decimal.Decimal)
+			rhsDec := rhsValue.Get().Value.(*decimal.Decimal)
+			var result *decimal.Decimal
+			var err *decimal.Error
+			switch op {
+			case model.OperatorKind_ADD:
+				result, err = lhsDec.Add(rhsDec)
+			case model.OperatorKind_SUB:
+				result, err = lhsDec.Sub(rhsDec)
+			default:
+				t.internalError(fmt.Sprintf("unexpect additive operand %s", string(op)), loc)
+			}
+			if err != nil {
+				return nil, true
+			}
+			return semtypes.DecimalConst(*result), true
+		}
+		return nil, true
+	default:
+		return nil, true
+	}
+}
+
 func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	supportedTypes := additiveSupportedTypes
 	if expr.GetOperatorKind() == model.OperatorKind_SUB {
@@ -3414,7 +3579,13 @@ func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.Sem
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	// TODO: handle singleton
+	singletonTy, ok := additiveSingletonType(t, lhsTy, rhsTy, op, pos)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	if singletonTy != nil {
+		return singletonTy, defaultExpressionEffect(chain), true
+	}
 
 	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
 
@@ -3431,7 +3602,11 @@ func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.Sem
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 	if !semtypes.IsSubtype(ctx, lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, supportedTypes) {
-		t.semanticError(fmt.Sprintf("invalid type for operand of %s", string(op)), pos)
+		msg := "expect numeric, string, or xml types"
+		if op == model.OperatorKind_SUB {
+			msg = "expect numeric types"
+		}
+		t.semanticError(fmt.Sprintf("%s for %s", msg, string(op)), pos)
 		return nil, expressionEffect{}, false
 	} else if lhsBasicTy != rhsBasicTy {
 		t.semanticError("both operands must belong to same basic type", pos)
@@ -3839,7 +4014,7 @@ func buildEqualityNarrowing(t typeResolver, chain *binding, ref model.SymbolRef,
 	return expressionEffect{ifTrue: trueChain, ifFalse: falseChain}
 }
 
-var additiveSupportedTypes = semtypes.Union(semtypes.NUMBER, semtypes.STRING)
+var additiveSupportedTypes = semtypes.Union(semtypes.Union(semtypes.NUMBER, semtypes.STRING), semtypes.XML)
 
 var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
 
@@ -4674,6 +4849,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return semtypes.HANDLE, true
 		case model.TypeKind_TYPEDESC:
 			return semtypes.TYPEDESC, true
+		case model.TypeKind_XML:
+			return semtypes.XML, true
 		default:
 			t.internalError("unexpected type tag", diagnostics.Location{})
 			return nil, false
@@ -4791,6 +4968,16 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 					return nil, false
 				}
 				return semtypes.TypedescContaining(t.typeEnv(), constraint), true
+			case model.TypeKind_XML:
+				constraint, ok := resolveTypeDataPair(t, &ty.Constraint, depth+1)
+				if !ok {
+					return nil, false
+				}
+				if !semtypes.IsSubtypeSimple(constraint, semtypes.XML) {
+					t.semanticError(fmt.Sprintf("xml type constraint must be a subtype of xml, got %s", semtypes.ToString(t.typeContext(), constraint)), ty.GetPosition())
+					return nil, false
+				}
+				return semtypes.XMLSequence(constraint), true
 			default:
 				t.unimplemented("unsupported base type kind", diagnostics.Location{})
 				return nil, false
