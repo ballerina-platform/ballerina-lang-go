@@ -196,10 +196,3 @@ func listFiller(cx Context, t SemType) (Filler, bool) {
 	cx._fillerMemo[lat] = filler
 	return filler, true
 }
-
-func intFiller(cx Context, t SemType) (Filler, bool) {
-	if IsSubtype(cx, IntConst(0), t) {
-		return SingleValueFiller(valueFrom(int64(0))), true
-	}
-	return nil, false
-}

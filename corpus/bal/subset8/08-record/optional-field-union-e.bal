@@ -14,16 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type R1 record {|
-    int x;
-    int...;
-|};
+import ballerina/io;
 
-public type R2 record {|
-    int y;
-    int...;
-|};
+type R record {
+    int foo;
+    int bar;
+};
 
-public function foo(R1|R2 r) returns int? {
-    return r.x; // @error
+type R1 record {
+    int foo?;
+    string baz;
+};
+
+public function main() {
+    R|R1 r = {foo: 10, bar: 10};
+    int foo = r.foo; // @error
 }
