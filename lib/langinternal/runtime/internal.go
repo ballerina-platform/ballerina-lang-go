@@ -118,6 +118,9 @@ func initInternalModule(rt *runtime.Runtime) {
 		return nil, nil
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryGroup", func(args []values.BalValue) (values.BalValue, error) {
+		if len(args) != 3 {
+			return nil, fmt.Errorf("queryGroup expects 3 arguments, got %d", len(args))
+		}
 		rows, ok := args[0].(*values.List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a list")
@@ -133,6 +136,9 @@ func initInternalModule(rt *runtime.Runtime) {
 		return queryGroup(rows, keyRows, scalarFlags)
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(args []values.BalValue) (values.BalValue, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("queryCollect expects 2 arguments, got %d", len(args))
+		}
 		rows, ok := args[0].(*values.List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a list")

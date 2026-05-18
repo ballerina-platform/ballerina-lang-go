@@ -31,7 +31,12 @@ public function main() {
         group by var even = x % 2 == 0, var value = x
         select [even, value, x];
 
+    var groupedWithContextualDecimalKey = from var x in xs
+        group by decimal one = 1
+        select one is decimal;
+
     io:println(grouped); // @output [[1,[11,11]],[2,[12,12]],[3,[13]]]
     io:println(groupedWithDeclaredKey); // @output [[false,[1,1,3]],[true,[2,2]]]
     io:println(groupedWithMultipleKeys); // @output [[false,1,[1,1]],[true,2,[2,2]],[false,3,[3]]]
+    io:println(groupedWithContextualDecimalKey); // @output [true]
 }

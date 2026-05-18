@@ -2295,7 +2295,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangGroupExpr:
 		return resolveGroupExpr(t, chain, e, expectedType)
 	case *ast.BLangQueryExpr:
-		return resolveQueryExpr(t, chain, e)
+		return resolveQueryExpr(t, chain, e, expectedType)
 	case *ast.BLangWildCardBindingPattern:
 		ty := semtypes.ANY
 		setExpectedType(e, ty)
@@ -2788,7 +2788,12 @@ func resolveGroupExpr(t typeResolver, chain *binding, expr *ast.BLangGroupExpr, 
 	return innerTy, effect, true
 }
 
-func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveQueryExpr(
+	t typeResolver,
+	chain *binding,
+	expr *ast.BLangQueryExpr,
+	expectedType semtypes.SemType,
+) (semtypes.SemType, expressionEffect, bool) {
 	if len(expr.QueryClauseList) < 2 {
 		t.semanticError("query expression requires from and select clauses", expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -2904,7 +2909,12 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 		for _, variable := range queryVariablesBeforeClause(expr, lastClauseIndex) {
 			collectChain = aggregateQueryVariable(t, collectChain, variable, false)
 		}
-		collectTy, _, ok := resolveActionOrExpression(t, collectChain, collectClause.Expression.(ast.BLangExpression), nil)
+		collectTy, _, ok := resolveActionOrExpression(
+			t,
+			collectChain,
+			collectClause.Expression.(ast.BLangExpression),
+			expectedType,
+		)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -3053,20 +3063,23 @@ func resolveQueryGroupingKeyVarDef(t typeResolver, chain *binding, varDef *ast.B
 		t.semanticError("group by variable declaration requires an initializer", varDef.GetPosition())
 		return nil, false
 	}
-	initTy, _, ok := resolveActionOrExpression(t, chain, varDef.Var.Expr.(ast.BLangExpression), nil)
-	if !ok {
-		return nil, false
-	}
-	variableTy := initTy
+	var variableTy semtypes.SemType
 	if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
+		var ok bool
 		variableTy, ok = resolveBType(t, varDef.Var.TypeNode(), 0)
 		if !ok {
 			return nil, false
 		}
-		if !semtypes.IsSubtype(t.typeContext(), initTy, variableTy) {
-			t.semanticError("group by variable type is incompatible with initializer expression", varDef.GetPosition())
-			return nil, false
-		}
+	}
+	initTy, _, ok := resolveActionOrExpression(t, chain, varDef.Var.Expr.(ast.BLangExpression), variableTy)
+	if !ok {
+		return nil, false
+	}
+	if variableTy == nil {
+		variableTy = initTy
+	} else if !semtypes.IsSubtype(t.typeContext(), initTy, variableTy) {
+		t.semanticError("group by variable type is incompatible with initializer expression", varDef.GetPosition())
+		return nil, false
 	}
 	if varDef.Var.Name != nil {
 		varDef.Var.Name.SetDeterminedType(semtypes.NEVER)

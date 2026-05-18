@@ -470,7 +470,14 @@ main() -> nil{
   }
   bb58 {
     groupedWithMultipleKeys = $desugar$31;
-    %147 = println(grouped) -> bb60;
+    %147 = ConstantLoad 0
+    %148 = newArray list[%147]{}
+    $desugar$45 = %148;
+    %150 = ConstantLoad 0
+    %151 = newArray list[%150]{}
+    $desugar$46 = %151;
+    $desugar$47 = xs;
+    %155 = length($desugar$47) -> bb60;
   }
   bb59 {
     %12 = (1, $desugar$43);
@@ -482,12 +489,144 @@ main() -> nil{
     GOTO bb56;
   }
   bb60 {
-    %148 = println(groupedWithDeclaredKey) -> bb61;
+    $desugar$48 = %155;
+    %157 = ConstantLoad 0
+    $desugar$49 = %157;
+    GOTO bb61;
   }
   bb61 {
-    %149 = println(groupedWithMultipleKeys) -> bb62;
+    %160 = $desugar$49;
+    %161 = $desugar$48;
+    %159 = < %160 %161;
+    %159 ? bb62 : bb63;
   }
   bb62 {
+    PushScopeFrame 8
+    %0 = (1, $desugar$47)[(1, $desugar$49)];
+    (1, x) = %0;
+    %1 = ConstantLoad 1
+    %2 = newArray list[%1]{(1, x)}
+    %3 = push((1, $desugar$46),%2) -> bb64;
+  }
+  bb63 {
+    %162 = ConstantLoad 0
+    %163 = newArray list[%162]{}
+    $desugar$50 = %163;
+    %165 = ConstantLoad 0
+    %166 = newArray list[%165]{}
+    $desugar$51 = %166;
+    %168 = length($desugar$46) -> bb65;
+  }
+  bb64 {
+    %5 = (1, $desugar$49);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$49) = %4;
+    PopScopeFrame
+    GOTO bb61;
+  }
+  bb65 {
+    $desugar$52 = %168;
+    %170 = ConstantLoad 0
+    $desugar$53 = %170;
+    GOTO bb66;
+  }
+  bb66 {
+    %174 = $desugar$53;
+    %175 = $desugar$52;
+    %173 = < %174 %175;
+    %173 ? bb67 : bb68;
+  }
+  bb67 {
+    PushScopeFrame 15
+    %0 = (1, $desugar$46)[(1, $desugar$53)];
+    $desugar$54 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$54[%3];
+    (1, x) = %2;
+    %4 = ConstantLoad 1
+    (1, one) = %4;
+    %5 = (1, one);
+    %6 = push($desugar$54,%5) -> bb69;
+  }
+  bb68 {
+    %176 = ConstantLoad false
+    %177 = ConstantLoad true
+    %178 = ConstantLoad 2
+    %179 = newArray list[%178]{%176, %177}
+    %180 = queryGroup($desugar$50,$desugar$51,%179) -> bb72;
+  }
+  bb69 {
+    %7 = ConstantLoad 1
+    %8 = newArray list[%7]{(1, one)}
+    %9 = push((1, $desugar$51),%8) -> bb70;
+  }
+  bb70 {
+    %10 = push((1, $desugar$50),$desugar$54) -> bb71;
+  }
+  bb71 {
+    %12 = (1, $desugar$53);
+    %13 = ConstantLoad 1
+    %14 = %13;
+    %11 = + %12 %14;
+    (1, $desugar$53) = %11;
+    PopScopeFrame
+    GOTO bb66;
+  }
+  bb72 {
+    $desugar$55 = %180;
+    %182 = length($desugar$55) -> bb73;
+  }
+  bb73 {
+    $desugar$56 = %182;
+    %184 = ConstantLoad 0
+    $desugar$57 = %184;
+    GOTO bb74;
+  }
+  bb74 {
+    %187 = $desugar$57;
+    %188 = $desugar$56;
+    %186 = < %187 %188;
+    %186 ? bb75 : bb76;
+  }
+  bb75 {
+    PushScopeFrame 13
+    %0 = (1, $desugar$55)[(1, $desugar$57)];
+    $desugar$58 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$58[%3];
+    (1, x) = %2;
+    %5 = ConstantLoad 1
+    %4 = $desugar$58[%5];
+    (1, one) = %4;
+    %6 = (1, one) is decimal
+    %7 = %6;
+    %8 = push((1, $desugar$45),%7) -> bb77;
+  }
+  bb76 {
+    groupedWithContextualDecimalKey = $desugar$45;
+    %190 = println(grouped) -> bb78;
+  }
+  bb77 {
+    %10 = (1, $desugar$57);
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %9 = + %10 %12;
+    (1, $desugar$57) = %9;
+    PopScopeFrame
+    GOTO bb74;
+  }
+  bb78 {
+    %191 = println(groupedWithDeclaredKey) -> bb79;
+  }
+  bb79 {
+    %192 = println(groupedWithMultipleKeys) -> bb80;
+  }
+  bb80 {
+    %193 = println(groupedWithContextualDecimalKey) -> bb81;
+  }
+  bb81 {
     return;
   }
 }

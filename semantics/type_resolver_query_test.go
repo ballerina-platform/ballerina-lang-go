@@ -118,7 +118,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			resolver, cx := newTestQueryResolver()
-			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query)
+			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query, nil)
 			if ok {
 				t.Fatalf("expected resolveQueryExpr to fail")
 			}
@@ -336,7 +336,7 @@ func TestResolveQueryExprMapCollection(t *testing.T) {
 		newFromClause(mapRef, nil, true),
 		newSelectClause(newIntLiteral(1)),
 	)
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map collection")
 	}
@@ -354,7 +354,7 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map construct type")
 	}
@@ -374,7 +374,7 @@ func TestResolveQueryExprCollectClause(t *testing.T) {
 		newCollectClauseExpr(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for collect clause")
 	}
@@ -395,7 +395,7 @@ func TestResolveQueryExprCollectClauseRejectsConstructType(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for collect clause with query construct type")
 	}
@@ -415,7 +415,7 @@ func TestResolveQueryExprCollectAggregatesVariables(t *testing.T) {
 		newCollectClauseExpr(collectXRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for collect clause with query variable")
 	}
@@ -450,7 +450,7 @@ func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
 		newSelectClause(selectYRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for group by clause")
 	}
@@ -486,7 +486,7 @@ func TestResolveQueryExprGroupByVarDeclaration(t *testing.T) {
 		newSelectClause(selectNRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for group by variable declaration")
 	}
@@ -510,7 +510,7 @@ func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for invalid map select expression")
 	}
@@ -526,7 +526,7 @@ func TestResolveQueryExprOrderByClause(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for order by clause")
 	}
@@ -553,7 +553,7 @@ func TestResolveQueryExprJoinClause(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for join clause")
 	}
@@ -575,7 +575,7 @@ func TestResolveQueryExprMultipleOrderByConsecutive(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for consecutive order by clauses")
 	}
@@ -598,7 +598,7 @@ func TestResolveQueryExprMultipleOrderByNonConsecutive(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for non-consecutive order by clauses")
 	}
@@ -633,7 +633,7 @@ func TestResolveQueryExprOrderByRejectsMixedSimpleUnion(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for non-ordered mixed simple union")
 	}
@@ -648,7 +648,7 @@ func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
 			newSelectClause(newIntLiteral(1)),
 			newOnConflictClause(newErrorConstructorExpr()),
 		)
-		_, _, ok := resolveQueryExpr(resolver, nil, query)
+		_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 		if ok {
 			t.Fatalf("expected resolveQueryExpr to fail for non-map on conflict")
 		}
@@ -663,7 +663,7 @@ func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
 			newOnConflictClause(newIntLiteral(1)),
 		)
 		query.QueryConstructType = model.TypeKind_MAP
-		_, _, ok := resolveQueryExpr(resolver, nil, query)
+		_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 		if ok {
 			t.Fatalf("expected resolveQueryExpr to fail for invalid on conflict expression")
 		}
@@ -680,7 +680,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictNil(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict nil")
 	}
@@ -702,7 +702,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictError(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict error")
 	}

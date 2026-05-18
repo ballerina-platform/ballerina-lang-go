@@ -44,9 +44,24 @@
                 (simple-var-ref x)))
             (collect-clause
               (simple-var-ref x))))))
+      (var-def
+        (variable contextualCollect (type
+          (value-type decimal)) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable x))
+              (simple-var-ref xs))
+            (collect-clause
+              (literal 1))))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref doubled))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref afterGroup)))))))
+          (simple-var-ref afterGroup))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref contextualCollect)
+            (value-type decimal))))))))
