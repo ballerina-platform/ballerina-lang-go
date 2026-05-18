@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import testorg/cyclic.moduleB;
+// Default module for multiB package
 
-public function fromA() returns string {
-    return moduleB:fromB();
+public function getBaseValue() returns int {
+    return 100;
 }
