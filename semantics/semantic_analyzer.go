@@ -585,8 +585,8 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangTypeDefinition:
 		// We have set the type at constructor
 		return nil
-	case ast.ExpressionNode:
-		bLangExpr := n.(ast.BLangExpression)
+	case ast.BLangExpression:
+		bLangExpr := n
 		hasErrors := false
 		validateConstantExpr(ca.ctx(), bLangExpr, func(e ast.BLangExpression) {
 			ca.semanticErr("expression is not a constant expression", e.GetPosition())
@@ -1332,7 +1332,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	case *ast.BLangXMLNS:
-		expr := n.GetNamespaceURI().(ast.BLangExpression)
+		expr := n.GetNamespaceURI()
 		validateResolvedType(a, expr, semtypes.STRING)
 		validateConstantExpr(a.ctx(), expr, func(e ast.BLangExpression) {
 			a.semanticErr("expression is not a constant expression", e.GetPosition())
@@ -1411,12 +1411,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 }
 
 type assignmentNode interface {
-	GetVariable() ast.ExpressionNode
-	GetExpression() ast.ExpressionNode
+	GetVariable() ast.BLangExpression
+	GetExpression() ast.BLangActionOrExpression
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
-	variable := assignment.GetVariable().(ast.BLangExpression)
+	variable := assignment.GetVariable()
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()
 		if !ast.SymbolIsSet(symbolNode) {
@@ -1451,7 +1451,7 @@ func analyzeCompoundAssignment[A analyzer](a A, assignment *ast.BLangCompoundAss
 	if !analyzeAssignment(a, assignment) {
 		return false
 	}
-	lhsTy := assignment.GetVariable().(ast.BLangExpression).GetDeterminedType()
+	lhsTy := assignment.GetVariable().GetDeterminedType()
 	rhsTy := assignment.GetExpression().GetDeterminedType()
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		a.semanticErr("compound assignment operands cannot be nilable", assignment.GetPosition())

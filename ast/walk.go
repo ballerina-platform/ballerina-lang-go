@@ -917,14 +917,18 @@ func Walk(v Visitor, node BLangNode) {
 // We need to do this because TypeData is not a ast node but within it there can be ast nodes. Need to think if this is
 // the correct appraoch.
 func WalkTypeData(v Visitor, typeData *TypeData) {
-	v.VisitTypeData(typeData)
+	if w := v.VisitTypeData(typeData); w != nil {
+		v = w
+	}
 	if typeData.TypeDescriptor == nil {
+		v.Visit(nil)
 		return
 	}
 	td := typeData.TypeDescriptor
 	if tdNode, ok := td.(BLangNode); ok {
 		Walk(v, tdNode)
 	}
+	v.Visit(nil)
 }
 
 func walkTypeDescriptor(v Visitor, td TypeDescriptor) {

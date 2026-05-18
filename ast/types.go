@@ -278,11 +278,9 @@ func (b *BLangArrayType) GetDimensions() int {
 	return b.Dimensions
 }
 
-func (b *BLangArrayType) GetSizes() []ExpressionNode {
-	expressionNodes := make([]ExpressionNode, len(b.Sizes))
-	for i, size := range b.Sizes {
-		expressionNodes[i] = size
-	}
+func (b *BLangArrayType) GetSizes() []BLangExpression {
+	expressionNodes := make([]BLangExpression, len(b.Sizes))
+	copy(expressionNodes, b.Sizes)
 	return expressionNodes
 }
 
@@ -569,16 +567,14 @@ func NewBType(tag TypeTags, name model.Name, flags uint64) BType {
 	}
 }
 
-func (b *BLangFiniteTypeNode) GetValueSet() []ExpressionNode {
-	values := make([]ExpressionNode, len(b.ValueSpace))
-	for i, value := range b.ValueSpace {
-		values[i] = value
-	}
+func (b *BLangFiniteTypeNode) GetValueSet() []BLangExpression {
+	values := make([]BLangExpression, len(b.ValueSpace))
+	copy(values, b.ValueSpace)
 	return values
 }
 
-func (b *BLangFiniteTypeNode) AddValue(value ExpressionNode) {
-	b.ValueSpace = append(b.ValueSpace, value.(BLangExpression))
+func (b *BLangFiniteTypeNode) AddValue(value BLangExpression) {
+	b.ValueSpace = append(b.ValueSpace, value)
 }
 
 func (b *BLangFiniteTypeNode) GetKind() NodeKind {
@@ -782,6 +778,9 @@ func (b *BLangRecordType) GetKind() NodeKind {
 }
 
 func (b *BLangRecordType) GetRestFieldType() TypeData {
+	if b.RestType == nil {
+		return TypeData{}
+	}
 	return b.RestType.GetTypeData()
 }
 

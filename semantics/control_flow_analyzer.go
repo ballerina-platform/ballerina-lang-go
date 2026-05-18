@@ -339,14 +339,14 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	}
 }
 
-func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 ast.ExpressionNode) stmtEffect {
+func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 ast.BLangExpression) stmtEffect {
 	panic("unimplemented")
 }
 
 type ternaryExpressionChecker struct {
 	hasTernaryExpression bool
-	ifTrue               ast.ExpressionNode
-	ifFalse              ast.ExpressionNode
+	ifTrue               ast.BLangExpression
+	ifFalse              ast.BLangExpression
 }
 
 var _ ast.Visitor = &ternaryExpressionChecker{}

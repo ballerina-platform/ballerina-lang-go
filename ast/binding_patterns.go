@@ -259,8 +259,8 @@ func (b *BLangSimpleBindingPattern) GetKind() NodeKind {
 func (b *BLangErrorFieldBindingPatterns) GetNamedArgMatchPatterns() []NamedArgBindingPatternNode {
 	// migrated from BLangErrorFieldBindingPatterns.java:42:5
 	namedArgBindingPatterns := make([]NamedArgBindingPatternNode, len(b.NamedArgBindingPatterns))
-	for i, namedArgBindingPattern := range b.NamedArgBindingPatterns {
-		namedArgBindingPatterns[i] = &namedArgBindingPattern
+	for i := range b.NamedArgBindingPatterns {
+		namedArgBindingPatterns[i] = &b.NamedArgBindingPatterns[i]
 	}
 	return namedArgBindingPatterns
 }

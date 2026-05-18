@@ -79,8 +79,8 @@ func processBlockXMLNS(resolver *blockSymbolResolver, decl *ast.BLangXMLNS) {
 }
 
 func processXMLNSDecl[T symbolResolver](resolver T, scope model.Scope, decl *ast.BLangXMLNS) {
-	uriExpr, ok := decl.GetNamespaceURI().(ast.BLangExpression)
-	if !ok || uriExpr == nil {
+	uriExpr := decl.GetNamespaceURI()
+	if uriExpr == nil {
 		semanticError(resolver, "xmlns declaration missing URI", decl.GetPosition())
 		return
 	}

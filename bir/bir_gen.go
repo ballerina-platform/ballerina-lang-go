@@ -433,7 +433,7 @@ func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangC
 	if indexRef, ok := stmt.VarRef.(*ast.BLangIndexBasedAccess); ok {
 		return compoundAssignmentToMember(ctx, curBB, stmt, indexRef, pos)
 	}
-	ref := stmt.VarRef.(ast.BLangExpression)
+	ref := stmt.VarRef
 	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), pos)
 	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, pos)
 }

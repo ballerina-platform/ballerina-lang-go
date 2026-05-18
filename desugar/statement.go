@@ -113,7 +113,7 @@ func walkCompoundAssignment(cx *functionContext, stmt *ast.BLangCompoundAssignme
 	var initStmts []ast.StatementNode
 
 	if stmt.VarRef != nil {
-		result := walkExpression(cx, stmt.VarRef.(ast.BLangExpression))
+		result := walkExpression(cx, stmt.VarRef)
 		initStmts = append(initStmts, result.initStmts...)
 		stmt.VarRef = result.replacementNode.(ast.BLangExpression)
 	}

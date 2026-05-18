@@ -999,8 +999,8 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 
 // isFunctionCallAsync checks if a function call expression is async
 // migrated from BLangNodeBuilder.java:2313:5
-func (n *NodeBuilder) isFunctionCallAsync(functionCallExpressionNode *tree.FunctionCallExpressionNode) bool {
-	parent := functionCallExpressionNode.Parent()
+func (n *NodeBuilder) isFunctionCallAsync(functionCallBLangExpression *tree.FunctionCallExpressionNode) bool {
+	parent := functionCallBLangExpression.Parent()
 	if parent == nil {
 		panic("isFunctionCallAsync: parent is nil")
 	}
@@ -1956,35 +1956,35 @@ func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEa
 	return bLForeach
 }
 
-func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {
-	if binaryExpressionNode.Operator().Kind() == common.ELVIS_TOKEN {
+func (n *NodeBuilder) TransformBinaryExpression(binaryBLangExpression *tree.BinaryExpressionNode) BLangNode {
+	if binaryBLangExpression.Operator().Kind() == common.ELVIS_TOKEN {
 		panic("TransformBinaryExpression: elvis operator not supported")
 	}
 
 	bLBinaryExpr := BLangBinaryExpr{}
-	bLBinaryExpr.pos = getPosition(n.de(), binaryExpressionNode)
-	bLBinaryExpr.LhsExpr = n.createExpression(binaryExpressionNode.LhsExpr())
-	bLBinaryExpr.RhsExpr = n.createExpression(binaryExpressionNode.RhsExpr())
+	bLBinaryExpr.pos = getPosition(n.de(), binaryBLangExpression)
+	bLBinaryExpr.LhsExpr = n.createExpression(binaryBLangExpression.LhsExpr())
+	bLBinaryExpr.RhsExpr = n.createExpression(binaryBLangExpression.RhsExpr())
 	var operator model.OperatorKind
-	if binaryExpressionNode.Operator() == nil {
+	if binaryBLangExpression.Operator() == nil {
 		operator = model.OperatorKind_UNDEFINED
 	} else {
-		operator = model.OperatorKindValueFrom(binaryExpressionNode.Operator().Text())
+		operator = model.OperatorKindValueFrom(binaryBLangExpression.Operator().Text())
 	}
 	bLBinaryExpr.OpKind = operator
 	return &bLBinaryExpr
 }
 
-func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.BracedExpressionNode) BLangNode {
-	return n.createExpression(bracedExpressionNode.Expression())
+func (n *NodeBuilder) TransformBracedExpression(bracedBLangExpression *tree.BracedExpressionNode) BLangNode {
+	return n.createExpression(bracedBLangExpression.Expression())
 }
 
-func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
-	pos := getPosition(n.de(), checkExpressionNode)
+func (n *NodeBuilder) TransformCheckExpression(checkBLangExpression *tree.CheckExpressionNode) BLangNode {
+	pos := getPosition(n.de(), checkBLangExpression)
 	// we are deviating from the spec here (https://ballerina.io/spec/lang/master/#section_6.33) check is only suppose
 	// to work with expression but jBallerina also allow remote method calls (which is an action)
-	expr := n.createActionOrExpression(checkExpressionNode.Expression())
-	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
+	expr := n.createActionOrExpression(checkBLangExpression.Expression())
+	if checkBLangExpression.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos
 		checkedExpr.Expr = expr
@@ -1996,17 +1996,17 @@ func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckEx
 	return checkPanickedExpr
 }
 
-func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *tree.FieldAccessExpressionNode) BLangNode {
-	fieldName := fieldAccessExpressionNode.FieldName()
+func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessBLangExpression *tree.FieldAccessExpressionNode) BLangNode {
+	fieldName := fieldAccessBLangExpression.FieldName()
 	if fieldName.Kind() == common.QUALIFIED_NAME_REFERENCE {
 		panic("TransformFieldAccessExpression: QUALIFIED_NAME_REFERENCE unsupported")
 	}
 
 	bLFieldBasedAccess := &BLangFieldBaseAccess{}
 	simpleNameRef := fieldName.(*tree.SimpleNameReferenceNode)
-	bLFieldBasedAccess.Field = createIdentifierFromToken(getPosition(n.de(), fieldAccessExpressionNode.FieldName()), simpleNameRef.Name())
+	bLFieldBasedAccess.Field = createIdentifierFromToken(getPosition(n.de(), fieldAccessBLangExpression.FieldName()), simpleNameRef.Name())
 
-	containerExpr := fieldAccessExpressionNode.Expression()
+	containerExpr := fieldAccessBLangExpression.Expression()
 	if containerExpr.Kind() == common.BRACED_EXPRESSION {
 		bracedExpr := containerExpr.(*tree.BracedExpressionNode)
 		bLFieldBasedAccess.Expr = n.createExpression(bracedExpr.Expression())
@@ -2014,16 +2014,16 @@ func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *
 		bLFieldBasedAccess.Expr = n.createExpression(containerExpr)
 	}
 
-	bLFieldBasedAccess.pos = getPosition(n.de(), fieldAccessExpressionNode)
+	bLFieldBasedAccess.pos = getPosition(n.de(), fieldAccessBLangExpression)
 	return bLFieldBasedAccess
 }
 
-func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode *tree.FunctionCallExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformFunctionCallExpression(functionCallBLangExpression *tree.FunctionCallExpressionNode) BLangNode {
 	invocation := n.createBLangInvocation(
-		functionCallExpressionNode.FunctionName(),
-		functionCallExpressionNode.Arguments(),
-		getPosition(n.de(), functionCallExpressionNode),
-		n.isFunctionCallAsync(functionCallExpressionNode))
+		functionCallBLangExpression.FunctionName(),
+		functionCallBLangExpression.Arguments(),
+		getPosition(n.de(), functionCallBLangExpression),
+		n.isFunctionCallAsync(functionCallBLangExpression))
 	if n.inCollectContext {
 		collectContextInvocation := &BLangCollectContextInvocation{}
 		collectContextInvocation.Invocation = *invocation
@@ -2034,19 +2034,19 @@ func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode
 	}
 }
 
-func (n *NodeBuilder) TransformMethodCallExpression(methodCallExpressionNode *tree.MethodCallExpressionNode) BLangNode {
-	bLInvocation := n.createBLangInvocation(methodCallExpressionNode.MethodName(),
-		methodCallExpressionNode.Arguments(),
-		getPosition(n.de(), methodCallExpressionNode), false)
-	bLInvocation.Expr = n.createExpression(methodCallExpressionNode.Expression())
+func (n *NodeBuilder) TransformMethodCallExpression(methodCallBLangExpression *tree.MethodCallExpressionNode) BLangNode {
+	bLInvocation := n.createBLangInvocation(methodCallBLangExpression.MethodName(),
+		methodCallBLangExpression.Arguments(),
+		getPosition(n.de(), methodCallBLangExpression), false)
+	bLInvocation.Expr = n.createExpression(methodCallBLangExpression.Expression())
 	return bLInvocation
 }
 
-func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorExpressionNode *tree.MappingConstructorExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorBLangExpression *tree.MappingConstructorExpressionNode) BLangNode {
 	mappingConstructor := &BLangMappingConstructorExpr{
 		Fields: make([]MappingField, 0),
 	}
-	fields := mappingConstructorExpressionNode.FieldNodes()
+	fields := mappingConstructorBLangExpression.FieldNodes()
 	for i := 0; i < fields.Size(); i += 2 {
 		field := fields.Get(i)
 		switch field.Kind() {
@@ -2092,14 +2092,14 @@ func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorEx
 			panic(fmt.Sprintf("unexpected mapping field kind: %v", field.Kind()))
 		}
 	}
-	mappingConstructor.SetPosition(getPosition(n.de(), mappingConstructorExpressionNode))
+	mappingConstructor.SetPosition(getPosition(n.de(), mappingConstructorBLangExpression))
 	return mappingConstructor
 }
 
-func (n *NodeBuilder) TransformIndexedExpression(indexedExpressionNode *tree.IndexedExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformIndexedExpression(indexedBLangExpression *tree.IndexedExpressionNode) BLangNode {
 	indexBasedAccess := &BLangIndexBasedAccess{}
-	indexBasedAccess.pos = getPosition(n.de(), indexedExpressionNode)
-	keys := indexedExpressionNode.KeyExpression()
+	indexBasedAccess.pos = getPosition(n.de(), indexedBLangExpression)
+	keys := indexedBLangExpression.KeyExpression()
 	if keys.Size() == 0 {
 		panic("missing key expression in member access expression")
 	} else if keys.Size() == 1 {
@@ -2115,18 +2115,18 @@ func (n *NodeBuilder) TransformIndexedExpression(indexedExpressionNode *tree.Ind
 		indexBasedAccess.IndexExpr = listConstructorExpr
 	}
 
-	indexBasedAccess.Expr = n.createExpression(indexedExpressionNode.ContainerExpression())
+	indexBasedAccess.Expr = n.createExpression(indexedBLangExpression.ContainerExpression())
 	return indexBasedAccess
 }
 
-func (n *NodeBuilder) TransformTypeofExpression(typeofExpressionNode *tree.TypeofExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformTypeofExpression(typeofBLangExpression *tree.TypeofExpressionNode) BLangNode {
 	panic("TransformTypeofExpression unimplemented")
 }
 
-func (n *NodeBuilder) TransformUnaryExpression(unaryExpressionNode *tree.UnaryExpressionNode) BLangNode {
-	pos := getPosition(n.de(), unaryExpressionNode)
-	operator := model.OperatorKindValueFrom(unaryExpressionNode.UnaryOperator().Text())
-	expr := n.createExpression(unaryExpressionNode.Expression())
+func (n *NodeBuilder) TransformUnaryExpression(unaryBLangExpression *tree.UnaryExpressionNode) BLangNode {
+	pos := getPosition(n.de(), unaryBLangExpression)
+	operator := model.OperatorKindValueFrom(unaryBLangExpression.UnaryOperator().Text())
+	expr := n.createExpression(unaryBLangExpression.Expression())
 	if operator == model.OperatorKind_SUB {
 		if lit, ok := expr.(*BLangLiteral); ok && foldNegativeIntLiteral(lit) {
 			lit.SetPosition(pos)
@@ -2463,7 +2463,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 	return objectType
 }
 
-func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorExpressionNode *tree.ObjectConstructorExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorBLangExpression *tree.ObjectConstructorExpressionNode) BLangNode {
 	panic("TransformObjectConstructorExpression unimplemented")
 }
 
@@ -2621,12 +2621,12 @@ func (n *NodeBuilder) populateModuleVariableVisibilityAndQualifiers(node *tree.M
 	}
 }
 
-func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.TypeTestExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformTypeTestExpression(typeTestBLangExpression *tree.TypeTestExpressionNode) BLangNode {
 	typeTestExpr := &BLangTypeTestExpr{}
-	typeTestExpr.isNegation = typeTestExpressionNode.IsKeyword().Kind() == common.NOT_IS_KEYWORD
-	typeTestExpr.Expr = n.createExpression(typeTestExpressionNode.Expression())
-	typeTestExpr.Type = TypeData{TypeDescriptor: n.createTypeNode(typeTestExpressionNode.TypeDescriptor())}
-	typeTestExpr.SetPosition(getPosition(n.de(), typeTestExpressionNode))
+	typeTestExpr.isNegation = typeTestBLangExpression.IsKeyword().Kind() == common.NOT_IS_KEYWORD
+	typeTestExpr.Expr = n.createExpression(typeTestBLangExpression.Expression())
+	typeTestExpr.Type = TypeData{TypeDescriptor: n.createTypeNode(typeTestBLangExpression.TypeDescriptor())}
+	typeTestExpr.SetPosition(getPosition(n.de(), typeTestBLangExpression))
 	return typeTestExpr
 }
 
@@ -2751,20 +2751,20 @@ func (n *NodeBuilder) TransformBuiltinSimpleNameReference(builtinSimpleNameRefer
 	panic("TransformBuiltinSimpleNameReference unimplemented")
 }
 
-func (n *NodeBuilder) TransformTrapExpression(trapExpressionNode *tree.TrapExpressionNode) BLangNode {
-	pos := getPosition(n.de(), trapExpressionNode)
-	expr := n.createExpression(trapExpressionNode.Expression())
+func (n *NodeBuilder) TransformTrapExpression(trapBLangExpression *tree.TrapExpressionNode) BLangNode {
+	pos := getPosition(n.de(), trapBLangExpression)
+	expr := n.createExpression(trapBLangExpression.Expression())
 	trapExpr := &BLangTrapExpr{}
 	trapExpr.pos = pos
 	trapExpr.Expr = expr
 	return trapExpr
 }
 
-func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressionNode *tree.ListConstructorExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformListConstructorExpression(listConstructorBLangExpression *tree.ListConstructorExpressionNode) BLangNode {
 	argExprList := make([]BLangExpression, 0)
 	listConstructorExpr := &BLangListConstructorExpr{}
 
-	expressions := listConstructorExpressionNode.Expressions()
+	expressions := listConstructorBLangExpression.Expressions()
 	for i := 0; i < expressions.Size(); i += 2 {
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
@@ -2777,20 +2777,20 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 	}
 
 	listConstructorExpr.Exprs = argExprList
-	listConstructorExpr.pos = getPosition(n.de(), listConstructorExpressionNode)
+	listConstructorExpr.pos = getPosition(n.de(), listConstructorBLangExpression)
 	return listConstructorExpr
 }
 
-func (n *NodeBuilder) TransformTypeCastExpression(typeCastExpressionNode *tree.TypeCastExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformTypeCastExpression(typeCastBLangExpression *tree.TypeCastExpressionNode) BLangNode {
 	typeConversionNode := &BLangTypeConversionExpr{}
-	typeConversionNode.SetPosition(getPosition(n.de(), typeCastExpressionNode))
-	typeCastParamNode := typeCastExpressionNode.TypeCastParam()
+	typeConversionNode.SetPosition(getPosition(n.de(), typeCastBLangExpression))
+	typeCastParamNode := typeCastBLangExpression.TypeCastParam()
 	if typeCastParamNode != nil && typeCastParamNode.Type() != nil {
 		typeConversionNode.TypeDescriptor = n.createTypeNode(typeCastParamNode.Type()).(BType)
 	} else {
 		panic("type cast param node type is not present")
 	}
-	typeConversionNode.Expression = n.createExpression(typeCastExpressionNode.Expression())
+	typeConversionNode.Expression = n.createExpression(typeCastBLangExpression.Expression())
 	annotations := typeCastParamNode.Annotations()
 	if annotations.Size() > 0 {
 		panic("annotations not yet implemented")
@@ -2817,7 +2817,7 @@ func (n *NodeBuilder) TransformUnionTypeDescriptor(unionTypeDescriptorNode *tree
 	return bLUnionType
 }
 
-func (n *NodeBuilder) TransformTableConstructorExpression(tableConstructorExpressionNode *tree.TableConstructorExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformTableConstructorExpression(tableConstructorBLangExpression *tree.TableConstructorExpressionNode) BLangNode {
 	panic("TransformTableConstructorExpression unimplemented")
 }
 
@@ -2833,7 +2833,7 @@ func (n *NodeBuilder) TransformStreamTypeParams(streamTypeParamsNode *tree.Strea
 	panic("TransformStreamTypeParams unimplemented")
 }
 
-func (n *NodeBuilder) TransformLetExpression(letExpressionNode *tree.LetExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformLetExpression(letBLangExpression *tree.LetExpressionNode) BLangNode {
 	panic("TransformLetExpression unimplemented")
 }
 
@@ -2851,14 +2851,14 @@ func (n *NodeBuilder) TransformLetVariableDeclaration(letVariableDeclarationNode
 	return varDef.(BLangNode)
 }
 
-func (n *NodeBuilder) TransformTemplateExpression(templateExpressionNode *tree.TemplateExpressionNode) BLangNode {
-	typeToken := templateExpressionNode.Type()
+func (n *NodeBuilder) TransformTemplateExpression(templateBLangExpression *tree.TemplateExpressionNode) BLangNode {
+	typeToken := templateBLangExpression.Type()
 	if typeToken == nil || typeToken.Text() != "xml" {
-		n.cx.Unimplemented("non-xml template expressions not yet supported", getPosition(n.de(), templateExpressionNode))
+		n.cx.Unimplemented("non-xml template expressions not yet supported", getPosition(n.de(), templateBLangExpression))
 		return nil
 	}
 	var children []BLangExpression
-	content := templateExpressionNode.Content()
+	content := templateBLangExpression.Content()
 	for child := range content.Iterator() {
 		bl := n.TransformSyntaxNode(child)
 		if bl == nil {
@@ -2875,7 +2875,7 @@ func (n *NodeBuilder) TransformTemplateExpression(templateExpressionNode *tree.T
 		return children[0]
 	}
 	seq := &BLangXMLSequenceLiteral{}
-	seq.pos = getPosition(n.de(), templateExpressionNode)
+	seq.pos = getPosition(n.de(), templateBLangExpression)
 	seq.Children = children
 	return seq
 }
@@ -3019,7 +3019,7 @@ func (n *NodeBuilder) TransformXMLAttributeValue(xMLAttributeValue *tree.XMLAttr
 	text := b.String()
 	lit := &BLangLiteral{}
 	lit.pos = getPosition(n.de(), xMLAttributeValue)
-	lit.SetValueType(n.types.getTypeFromTag(model.TypeTags_STRING).(BType))
+	lit.SetValueType(n.types.getTypeFromTag(TypeTags_STRING).(BType))
 	lit.Value = text
 	lit.OriginalValue = text
 	return lit
@@ -3213,11 +3213,11 @@ func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDesc
 	return n.createTypeNode(parenthesisedTypeDescriptorNode.Typedesc()).(BLangNode)
 }
 
-func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewExpressionNode *tree.ExplicitNewExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewBLangExpression *tree.ExplicitNewExpressionNode) BLangNode {
 	typeInit := &BLangNewExpression{}
-	typeInit.pos = getPosition(n.de(), explicitNewExpressionNode)
-	typeInit.UserDefinedType = n.createTypeNode(explicitNewExpressionNode.TypeDescriptor()).(*BLangUserDefinedType)
-	if argList := explicitNewExpressionNode.ParenthesizedArgList(); argList != nil {
+	typeInit.pos = getPosition(n.de(), explicitNewBLangExpression)
+	typeInit.UserDefinedType = n.createTypeNode(explicitNewBLangExpression.TypeDescriptor()).(*BLangUserDefinedType)
+	if argList := explicitNewBLangExpression.ParenthesizedArgList(); argList != nil {
 		args := argList.Arguments()
 		for arg := range args.Iterator() {
 			typeInit.ArgsExprs = append(typeInit.ArgsExprs, n.createExpression(arg))
@@ -3226,10 +3226,10 @@ func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewExpressionNode *
 	return typeInit
 }
 
-func (n *NodeBuilder) TransformImplicitNewExpression(implicitNewExpressionNode *tree.ImplicitNewExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformImplicitNewExpression(implicitNewBLangExpression *tree.ImplicitNewExpressionNode) BLangNode {
 	typeInit := &BLangNewExpression{}
-	typeInit.pos = getPosition(n.de(), implicitNewExpressionNode)
-	if argList := implicitNewExpressionNode.ParenthesizedArgList(); argList != nil {
+	typeInit.pos = getPosition(n.de(), implicitNewBLangExpression)
+	if argList := implicitNewBLangExpression.ParenthesizedArgList(); argList != nil {
 		args := argList.Arguments()
 		for arg := range args.Iterator() {
 			typeInit.ArgsExprs = append(typeInit.ArgsExprs, n.createExpression(arg))
@@ -3335,11 +3335,11 @@ func (n *NodeBuilder) TransformCollectClause(collectClauseNode *tree.CollectClau
 	panic("TransformCollectClause unimplemented")
 }
 
-func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformQueryExpression(queryBLangExpression *tree.QueryExpressionNode) BLangNode {
 	queryExpr := &BLangQueryExpr{}
-	queryExpr.pos = getPosition(n.de(), queryExpressionNode)
+	queryExpr.pos = getPosition(n.de(), queryBLangExpression)
 
-	if constructType := queryExpressionNode.QueryConstructType(); constructType != nil {
+	if constructType := queryBLangExpression.QueryConstructType(); constructType != nil {
 		switch constructType.Keyword().Text() {
 		case string(TypeKind_MAP):
 			queryExpr.QueryConstructType = TypeKind_MAP
@@ -3348,7 +3348,7 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 		}
 	}
 
-	queryPipeline := queryExpressionNode.QueryPipeline()
+	queryPipeline := queryBLangExpression.QueryPipeline()
 	if queryPipeline == nil || queryPipeline.FromClause() == nil {
 		return queryExpr
 	}
@@ -3367,15 +3367,15 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 		}
 	}
 
-	resultClause := queryExpressionNode.ResultClause()
+	resultClause := queryBLangExpression.ResultClause()
 	if resultClause != nil && resultClause.Kind() == common.SELECT_CLAUSE {
 		queryExpr.AddQueryClause(n.TransformSyntaxNode(resultClause))
 	} else if resultClause != nil {
 		n.cx.Unimplemented("only select result clauses are supported for now", getPosition(n.de(), resultClause))
 	}
 
-	if queryExpressionNode.OnConflictClause() != nil {
-		queryExpr.AddQueryClause(n.TransformSyntaxNode(queryExpressionNode.OnConflictClause()))
+	if queryBLangExpression.OnConflictClause() != nil {
+		queryExpr.AddQueryClause(n.TransformSyntaxNode(queryBLangExpression.OnConflictClause()))
 	}
 
 	return queryExpr
@@ -3404,7 +3404,7 @@ func (n *NodeBuilder) TransformImplicitAnonymousFunctionParameters(implicitAnony
 	panic("TransformImplicitAnonymousFunctionParameters unimplemented")
 }
 
-func (n *NodeBuilder) TransformImplicitAnonymousFunctionExpression(implicitAnonymousFunctionExpressionNode *tree.ImplicitAnonymousFunctionExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformImplicitAnonymousFunctionExpression(implicitAnonymousFunctionBLangExpression *tree.ImplicitAnonymousFunctionExpressionNode) BLangNode {
 	panic("TransformImplicitAnonymousFunctionExpression unimplemented")
 }
 
@@ -3513,15 +3513,15 @@ func (n *NodeBuilder) TransformWaitField(waitFieldNode *tree.WaitFieldNode) BLan
 	panic("TransformWaitField unimplemented")
 }
 
-func (n *NodeBuilder) TransformAnnotAccessExpression(annotAccessExpressionNode *tree.AnnotAccessExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformAnnotAccessExpression(annotAccessBLangExpression *tree.AnnotAccessExpressionNode) BLangNode {
 	panic("TransformAnnotAccessExpression unimplemented")
 }
 
-func (n *NodeBuilder) TransformOptionalFieldAccessExpression(optionalFieldAccessExpressionNode *tree.OptionalFieldAccessExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformOptionalFieldAccessExpression(optionalFieldAccessBLangExpression *tree.OptionalFieldAccessExpressionNode) BLangNode {
 	panic("TransformOptionalFieldAccessExpression unimplemented")
 }
 
-func (n *NodeBuilder) TransformConditionalExpression(conditionalExpressionNode *tree.ConditionalExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformConditionalExpression(conditionalBLangExpression *tree.ConditionalExpressionNode) BLangNode {
 	panic("TransformConditionalExpression unimplemented")
 }
 
@@ -3681,7 +3681,7 @@ func (n *NodeBuilder) TransformCommitAction(commitActionNode *tree.CommitActionN
 	panic("TransformCommitAction unimplemented")
 }
 
-func (n *NodeBuilder) TransformTransactionalExpression(transactionalExpressionNode *tree.TransactionalExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformTransactionalExpression(transactionalBLangExpression *tree.TransactionalExpressionNode) BLangNode {
 	panic("TransformTransactionalExpression unimplemented")
 }
 
@@ -3689,11 +3689,11 @@ func (n *NodeBuilder) TransformByteArrayLiteral(byteArrayLiteralNode *tree.ByteA
 	panic("TransformByteArrayLiteral unimplemented")
 }
 
-func (n *NodeBuilder) TransformXMLFilterExpression(xMLFilterExpressionNode *tree.XMLFilterExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformXMLFilterExpression(xMLFilterBLangExpression *tree.XMLFilterExpressionNode) BLangNode {
 	panic("TransformXMLFilterExpression unimplemented")
 }
 
-func (n *NodeBuilder) TransformXMLStepExpression(xMLStepExpressionNode *tree.XMLStepExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformXMLStepExpression(xMLStepBLangExpression *tree.XMLStepExpressionNode) BLangNode {
 	panic("TransformXMLStepExpression unimplemented")
 }
 
@@ -4224,15 +4224,15 @@ func (n *NodeBuilder) TransformResourcePathParameter(resourcePathParameterNode *
 	panic("TransformResourcePathParameter unimplemented")
 }
 
-func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.RequiredExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformRequiredExpression(requiredBLangExpression *tree.RequiredExpressionNode) BLangNode {
 	panic("TransformRequiredExpression unimplemented")
 }
 
-func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorBLangExpression *tree.ErrorConstructorExpressionNode) BLangNode {
 	result := &BLangErrorConstructorExpr{}
-	result.pos = getPosition(n.de(), errorConstructorExpressionNode)
+	result.pos = getPosition(n.de(), errorConstructorBLangExpression)
 
-	typeRefNode := errorConstructorExpressionNode.TypeReference()
+	typeRefNode := errorConstructorBLangExpression.TypeReference()
 	if typeRefNode != nil {
 		typeDesc := n.createTypeNode(typeRefNode)
 		if userDefinedType, ok := typeDesc.(*BLangUserDefinedType); ok {
@@ -4242,7 +4242,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 		}
 	}
 
-	arguments := errorConstructorExpressionNode.Arguments()
+	arguments := errorConstructorBLangExpression.Arguments()
 	positionalArgs := make([]BLangExpression, 0)
 	namedArgs := make([]BLangNamedArgsExpression, 0)
 
@@ -4428,7 +4428,7 @@ func (n *NodeBuilder) TransformReCapturingGroups(reCapturingGroupsNode *tree.ReC
 	panic("TransformReCapturingGroups unimplemented")
 }
 
-func (n *NodeBuilder) TransformReFlagExpression(reFlagExpressionNode *tree.ReFlagExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformReFlagExpression(reFlagBLangExpression *tree.ReFlagExpressionNode) BLangNode {
 	panic("TransformReFlagExpression unimplemented")
 }
 
@@ -4460,7 +4460,7 @@ func (n *NodeBuilder) TransformReceiveField(receiveFieldNode *tree.ReceiveFieldN
 	panic("TransformReceiveField unimplemented")
 }
 
-func (n *NodeBuilder) TransformNaturalExpression(naturalExpressionNode *tree.NaturalExpressionNode) BLangNode {
+func (n *NodeBuilder) TransformNaturalExpression(naturalBLangExpression *tree.NaturalExpressionNode) BLangNode {
 	panic("TransformNaturalExpression unimplemented")
 }
 

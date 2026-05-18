@@ -109,8 +109,8 @@ type ImportPackageNode interface {
 
 type XMLNSDeclarationNode interface {
 	TopLevelNode
-	GetNamespaceURI() ExpressionNode
-	SetNamespaceURI(namespaceURI ExpressionNode)
+	GetNamespaceURI() BLangExpression
+	SetNamespaceURI(namespaceURI BLangExpression)
 	GetPrefix() *BLangIdentifier
 	SetPrefix(prefix *BLangIdentifier)
 }
@@ -129,7 +129,7 @@ type FunctionBodyNode = Node
 
 type ExprFunctionBodyNode interface {
 	FunctionBodyNode
-	GetExpr() ExpressionNode
+	GetExpr() BLangExpression
 }
 
 // BLangFunctionBody keeps Phase-1 name for the function-body polymorphism.
@@ -142,7 +142,7 @@ type VariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetInitialExpression() ExpressionNode
+	GetInitialExpression() BLangActionOrExpression
 	GetIsDeclaredWithVar() bool
 	SetIsDeclaredWithVar(isDeclaredWithVar bool)
 }
@@ -203,9 +203,8 @@ type ServiceNode interface {
 	TopLevelNode
 	GetName() *BLangIdentifier
 	SetName(name *BLangIdentifier)
-	GetResources() []FunctionNode
 	IsAnonymousService() bool
-	GetAttachedExprs() []ExpressionNode
+	GetAttachedExprs() []BLangExpression
 	GetServiceClass() ClassDefinition
 	GetAbsolutePath() []*BLangIdentifier
 	GetServiceNameLiteral() LiteralNode
@@ -248,7 +247,7 @@ type ArrayTypeNode interface {
 	ReferenceTypeNode
 	GetElementType() TypeData
 	GetDimensions() int
-	GetSizes() []ExpressionNode
+	GetSizes() []BLangExpression
 }
 
 type RecordTypeNode interface {
@@ -284,8 +283,8 @@ type MemberTypeDesc interface {
 
 type FiniteTypeNode interface {
 	ReferenceTypeNode
-	GetValueSet() []ExpressionNode
-	AddValue(value ExpressionNode)
+	GetValueSet() []BLangExpression
+	AddValue(value BLangExpression)
 }
 
 type ObjectMember interface {
@@ -335,54 +334,48 @@ type UserDefinedTypeNode interface {
 
 // Expression interfaces.
 
-type ExpressionNode = BLangActionOrExpression
-
-type VariableReferenceNode = ExpressionNode
+type VariableReferenceNode = BLangExpression
 
 type BinaryExpressionNode interface {
-	GetLeftExpression() ExpressionNode
-	GetRightExpression() ExpressionNode
+	GetLeftExpression() BLangExpression
+	GetRightExpression() BLangExpression
 	GetOperatorKind() model.OperatorKind
 }
 
 type UnaryExpressionNode interface {
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 	GetOperatorKind() model.OperatorKind
 }
 
 type IndexBasedAccessNode interface {
 	VariableReferenceNode
-	GetExpression() ExpressionNode
-	GetIndex() ExpressionNode
+	GetExpression() BLangExpression
+	GetIndex() BLangExpression
 }
 
 type FieldBasedAccessNode interface {
 	VariableReferenceNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 	GetFieldName() *BLangIdentifier
 }
 
 type ListConstructorExprNode interface {
-	ExpressionNode
-	GetExpressions() []ExpressionNode
+	BLangExpression
+	GetExpressions() []BLangExpression
 }
 
 type TypeTestExpressionNode interface {
-	ExpressionNode
-	GetExpression() ExpressionNode
+	BLangExpression
+	GetExpression() BLangExpression
 	GetType() TypeData
 }
 
-type CheckedExpressionNode = UnaryExpressionNode
-
-type CheckPanickedExpressionNode = UnaryExpressionNode
-
-type CollectContextInvocationNode = ExpressionNode
+type CollectContextInvocationNode = BLangExpression
 
 type ActionNode = Node
 
 type CommitExpressionNode interface {
-	ExpressionNode
+	BLangExpression
 	ActionNode
 }
 
@@ -393,7 +386,7 @@ type SimpleVariableReferenceNode interface {
 }
 
 type LiteralNode interface {
-	ExpressionNode
+	BLangExpression
 	GetValue() any
 	SetValue(value any)
 	GetOriginalValue() string
@@ -403,8 +396,8 @@ type LiteralNode interface {
 }
 
 type ElvisExpressionNode interface {
-	GetLeftExpression() ExpressionNode
-	GetRightExpression() ExpressionNode
+	GetLeftExpression() BLangExpression
+	GetRightExpression() BLangExpression
 }
 
 type MappingField interface {
@@ -421,24 +414,24 @@ type MappingVarNameFieldNode interface {
 }
 
 type MappingConstructor interface {
-	ExpressionNode
+	BLangExpression
 	GetFields() []MappingField
 }
 
 type MappingKeyValueFieldNode interface {
 	MappingField
-	GetKey() ExpressionNode
-	GetValue() ExpressionNode
+	GetKey() BLangExpression
+	GetValue() BLangExpression
 }
 
 type MarkdownDocumentationTextAttributeNode interface {
-	ExpressionNode
+	BLangExpression
 	GetText() string
 	SetText(text string)
 }
 
 type MarkdownDocumentationParameterAttributeNode interface {
-	ExpressionNode
+	BLangExpression
 	GetParameterName() *BLangIdentifier
 	SetParameterName(parameterName *BLangIdentifier)
 	GetParameterDocumentationLines() []string
@@ -447,7 +440,7 @@ type MarkdownDocumentationParameterAttributeNode interface {
 }
 
 type MarkdownDocumentationReturnParameterAttributeNode interface {
-	ExpressionNode
+	BLangExpression
 	GetReturnParameterDocumentationLines() []string
 	AddReturnParameterDocumentationLine(text string)
 	GetReturnParameterDocumentation() string
@@ -456,20 +449,20 @@ type MarkdownDocumentationReturnParameterAttributeNode interface {
 }
 
 type MarkDownDocumentationDeprecationAttributeNode interface {
-	ExpressionNode
+	BLangExpression
 	AddDeprecationDocumentationLine(text string)
 	AddDeprecationLine(text string)
 	GetDocumentation() string
 }
 
 type MarkDownDocumentationDeprecatedParametersAttributeNode interface {
-	ExpressionNode
+	BLangExpression
 	AddParameter(parameter MarkdownDocumentationParameterAttributeNode)
 	GetParameters() []MarkdownDocumentationParameterAttributeNode
 }
 
 type WorkerReceiveNode interface {
-	ExpressionNode
+	BLangExpression
 	ActionNode
 	GetWorkerName() *BLangIdentifier
 	SetWorkerName(identifierNode *BLangIdentifier)
@@ -479,9 +472,9 @@ type WorkerReceiveNode interface {
 // exists as a placeholder for BLangWorkerReceive.Send until worker-send
 // expressions are modeled.
 type WorkerSendExpressionNode interface {
-	ExpressionNode
+	BLangExpression
 	ActionNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 	GetWorkerName() *BLangIdentifier
 	SetWorkerName(identifierNode *BLangIdentifier)
 }
@@ -495,7 +488,7 @@ type MarkdownDocumentationReferenceAttributeNode interface {
 }
 
 type LambdaFunctionNode interface {
-	ExpressionNode
+	BLangExpression
 	GetFunctionNode() FunctionNode
 	SetFunctionNode(functionNode FunctionNode)
 }
@@ -504,46 +497,46 @@ type InvocationNode interface {
 	VariableReferenceNode
 	GetPackageAlias() IdentifierNode
 	GetName() IdentifierNode
-	GetArgumentExpressions() []ExpressionNode
-	GetRequiredArgs() []ExpressionNode
-	GetExpression() ExpressionNode
+	GetArgumentExpressions() []BLangExpression
+	GetRequiredArgs() []BLangExpression
+	GetExpression() BLangExpression
 }
 
 type GroupExpressionNode interface {
-	ExpressionNode
-	GetExpression() ExpressionNode
+	BLangExpression
+	GetExpression() BLangExpression
 }
 
 type TypedescExpressionNode interface {
-	ExpressionNode
+	BLangExpression
 	GetTypeDescriptor() TypeDescriptor
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
 type NamedArgNode interface {
-	ExpressionNode
+	BLangExpression
 	SetName(name *BLangIdentifier)
 	GetName() *BLangIdentifier
-	GetExpression() ExpressionNode
-	SetExpression(expr ExpressionNode)
+	GetExpression() BLangExpression
+	SetExpression(expr BLangExpression)
 }
 
 type ErrorConstructorExpressionNode interface {
-	ExpressionNode
-	GetPositionalArgs() []ExpressionNode
+	BLangExpression
+	GetPositionalArgs() []BLangExpression
 	GetNamedArgs() []NamedArgNode
 }
 
 type TypeConversionNode interface {
-	ExpressionNode
+	BLangExpression
 	AnnotatableNode
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
+	GetExpression() BLangExpression
+	SetExpression(expression BLangExpression)
 	GetTypeDescriptor() TypeDescriptor
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
-type DynamicArgNode = ExpressionNode
+type DynamicArgNode = BLangExpression
 
 // Statement interfaces.
 
@@ -559,8 +552,8 @@ type ContinueNode = StatementNode
 
 type AssignmentNode interface {
 	StatementNode
-	GetVariable() ExpressionNode
-	GetExpression() ExpressionNode
+	GetVariable() BLangExpression
+	GetExpression() BLangActionOrExpression
 	IsDeclaredWithVar() bool
 	SetDeclaredWithVar(IsDeclaredWithVar bool)
 	SetVariable(variableReferenceNode VariableReferenceNode)
@@ -583,13 +576,13 @@ type BlockStatementNode interface {
 }
 
 type ExpressionStatementNode interface {
-	GetExpression() ExpressionNode
+	GetExpression() BLangActionOrExpression
 }
 
 type IfNode interface {
 	StatementNode
-	GetCondition() ExpressionNode
-	SetCondition(condition ExpressionNode)
+	GetCondition() BLangExpression
+	SetCondition(condition BLangExpression)
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetElseStatement() StatementNode
@@ -606,17 +599,17 @@ type VariableDefinitionNode interface {
 
 type ReturnNode interface {
 	StatementNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangActionOrExpression
 }
 
 type PanicNode interface {
 	StatementNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 }
 
 type TrapNode interface {
-	ExpressionNode
-	GetExpression() ExpressionNode
+	BLangExpression
+	GetExpression() BLangExpression
 }
 
 type DoNode interface {
@@ -629,8 +622,8 @@ type DoNode interface {
 
 type WhileNode interface {
 	StatementNode
-	GetCondition() ExpressionNode
-	SetCondition(condition ExpressionNode)
+	GetCondition() BLangExpression
+	SetCondition(condition BLangExpression)
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetOnFailClause() OnFailClauseNode
@@ -641,7 +634,7 @@ type ForeachNode interface {
 	StatementNode
 	GetVariableDefinitionNode() VariableDefinitionNode
 	SetVariableDefinitionNode(node VariableDefinitionNode)
-	GetCollection() ExpressionNode
+	GetCollection() BLangActionOrExpression
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetIsDeclaredWithVar() bool
@@ -724,7 +717,7 @@ type RestBindingPatternNode interface {
 
 type MatchStatement interface {
 	StatementNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 	GetClauses() []MatchClause
 }
 
@@ -743,15 +736,15 @@ type MatchPatternNode interface {
 
 type ConstPatternNode interface {
 	MatchPatternNode
-	GetExpression() ExpressionNode
+	GetExpression() BLangExpression
 }
 
 // Clause interfaces.
 
 type InputClauseNode interface {
 	Node
-	GetCollection() ExpressionNode
-	SetCollection(collection ExpressionNode)
+	GetCollection() BLangExpression
+	SetCollection(collection BLangExpression)
 	GetVariableDefinitionNode() VariableDefinitionNode
 	SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode)
 	IsDeclaredWithVar() bool
@@ -769,28 +762,28 @@ type JoinClauseNode interface {
 
 type OnClauseNode interface {
 	Node
-	GetOnExpression() ExpressionNode
-	SetOnExpression(expression ExpressionNode)
-	GetEqualsExpression() ExpressionNode
-	SetEqualsExpression(expression ExpressionNode)
+	GetOnExpression() BLangExpression
+	SetOnExpression(expression BLangExpression)
+	GetEqualsExpression() BLangExpression
+	SetEqualsExpression(expression BLangExpression)
 }
 
 type SelectClauseNode interface {
 	Node
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
+	GetExpression() BLangExpression
+	SetExpression(expression BLangExpression)
 }
 
 type QueryExpressionNode interface {
-	ExpressionNode
+	BLangExpression
 	GetQueryClauses() []Node
 	AddQueryClause(queryClause Node)
 }
 
 type CollectClauseNode interface {
 	Node
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
+	GetExpression() BLangExpression
+	SetExpression(expression BLangExpression)
 }
 
 type DoClauseNode interface {
@@ -851,8 +844,8 @@ type AnnotationAttachmentNode interface {
 	SetPackageAlias(pkgAlias *BLangIdentifier)
 	GetAnnotationName() *BLangIdentifier
 	SetAnnotationName(name *BLangIdentifier)
-	GetExpressionNode() ExpressionNode
-	SetExpressionNode(expr ExpressionNode)
+	GetExpressionNode() BLangExpression
+	SetExpressionNode(expr BLangExpression)
 }
 
 type AnnotatableNode interface {
@@ -868,7 +861,7 @@ type OrderedNode interface {
 	SetPrecedence(precedence int)
 }
 
-type MatchGuard = ExpressionNode
+type MatchGuard = BLangActionOrExpression
 
 type AttachPoint struct {
 	Point  Point

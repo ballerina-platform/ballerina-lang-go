@@ -515,12 +515,12 @@ func (b *BLangAnnotationAttachment) SetAnnotationName(name *BLangIdentifier) {
 	b.AnnotationName = name
 }
 
-func (b *BLangAnnotationAttachment) GetExpressionNode() ExpressionNode {
+func (b *BLangAnnotationAttachment) GetExpressionNode() BLangExpression {
 	return b.Expr
 }
 
-func (b *BLangAnnotationAttachment) SetExpressionNode(expr ExpressionNode) {
-	b.Expr = expr.(BLangExpression)
+func (b *BLangAnnotationAttachment) SetExpressionNode(expr BLangExpression) {
+	b.Expr = expr
 }
 
 func (b *BLangAnnotation) GetKind() NodeKind {
@@ -556,8 +556,8 @@ func (b *BLangAnnotation) SetTypeDescriptor(typeDescriptor TypeDescriptor) {
 func (b *BLangAnnotation) GetAnnotationAttachments() []AnnotationAttachmentNode {
 	// migrated from BLangAnnotation.java:100:5
 	attachments := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
-	for i, attachment := range b.AnnAttachments {
-		attachments[i] = &attachment
+	for i := range b.AnnAttachments {
+		attachments[i] = &b.AnnAttachments[i]
 	}
 	return attachments
 }
@@ -599,7 +599,7 @@ func (b *BLangExprFunctionBody) GetKind() NodeKind {
 	return NodeKind_EXPR_FUNCTION_BODY
 }
 
-func (b *BLangExprFunctionBody) GetExpr() ExpressionNode {
+func (b *BLangExprFunctionBody) GetExpr() BLangExpression {
 	// migrated from BLangExprFunctionBody.java:55:5
 	return b.Expr
 }
@@ -742,8 +742,8 @@ func (b *BLangClassDefinition) GetKind() NodeKind {
 func (b *BLangClassDefinition) GetAnnotationAttachments() []AnnotationAttachmentNode {
 	// migrated from BLangClassDefinition.java:168:5
 	attachments := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
-	for i, attachment := range b.AnnAttachments {
-		attachments[i] = &attachment
+	for i := range b.AnnAttachments {
+		attachments[i] = &b.AnnAttachments[i]
 	}
 	return attachments
 }
@@ -982,9 +982,9 @@ func (b *BLangMarkdownDocumentation) GetDocumentation() string {
 
 func (b *BLangMarkdownDocumentation) GetParameterDocumentations() map[string]MarkdownDocumentationParameterAttributeNode {
 	result := make(map[string]MarkdownDocumentationParameterAttributeNode)
-	for _, parameter := range b.Parameters {
-		paramName := parameter.GetParameterName()
-		result[paramName.GetValue()] = &parameter
+	for i := range b.Parameters {
+		paramName := b.Parameters[i].GetParameterName()
+		result[paramName.GetValue()] = &b.Parameters[i]
 	}
 	return result
 }
@@ -1030,19 +1030,13 @@ func (b *BLangService) SetName(name *BLangIdentifier) {
 	b.Name = name
 }
 
-func (b *BLangService) GetResources() []FunctionNode {
-	return []FunctionNode{}
-}
-
 func (b *BLangService) IsAnonymousService() bool {
 	return false
 }
 
-func (b *BLangService) GetAttachedExprs() []ExpressionNode {
-	result := make([]ExpressionNode, len(b.AttachedExprs))
-	for i := range b.AttachedExprs {
-		result[i] = b.AttachedExprs[i]
-	}
+func (b *BLangService) GetAttachedExprs() []BLangExpression {
+	result := make([]BLangExpression, len(b.AttachedExprs))
+	copy(result, b.AttachedExprs)
 	return result
 }
 
@@ -1158,8 +1152,8 @@ func (b *bLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 
 func (b *bLangInvokableNodeBase) GetParameters() []SimpleVariableNode {
 	result := make([]SimpleVariableNode, len(b.RequiredParams))
-	for i, param := range b.RequiredParams {
-		result[i] = &param
+	for i := range b.RequiredParams {
+		result[i] = &b.RequiredParams[i]
 	}
 	return result
 }
@@ -1174,8 +1168,8 @@ func (b *bLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
 
 func (b *bLangInvokableNodeBase) GetRequiredParams() []SimpleVariableNode {
 	result := make([]SimpleVariableNode, len(b.RequiredParams))
-	for i, param := range b.RequiredParams {
-		result[i] = &param
+	for i := range b.RequiredParams {
+		result[i] = &b.RequiredParams[i]
 	}
 	return result
 }
@@ -1250,7 +1244,7 @@ func (b *BLangVariableBase) SetMarkdownDocumentationAttachment(markdownDocumenta
 	b.MarkdownDocumentationAttachment = markdownDocumentationAttachment.(*BLangMarkdownDocumentation)
 }
 
-func (b *BLangVariableBase) GetExpr() ExpressionNode {
+func (b *BLangVariableBase) GetExpr() BLangActionOrExpression {
 	return b.Expr
 }
 
@@ -1274,7 +1268,7 @@ func (m *BLangVariableBase) GetAnnotationAttachments() []AnnotationAttachmentNod
 	return m.AnnAttachments
 }
 
-func (m *BLangVariableBase) GetInitialExpression() ExpressionNode {
+func (m *BLangVariableBase) GetInitialExpression() BLangActionOrExpression {
 	return m.Expr
 }
 
@@ -1356,7 +1350,7 @@ func (b *BLangTypeDefinition) SetCycleDepth(depth int) {
 	b.CycleDepth = depth
 }
 
-func (b *BLangXMLNS) GetNamespaceURI() ExpressionNode {
+func (b *BLangXMLNS) GetNamespaceURI() BLangExpression {
 	return b.namespaceURI
 }
 
@@ -1364,8 +1358,8 @@ func (b *BLangXMLNS) GetPrefix() *BLangIdentifier {
 	return b.prefix
 }
 
-func (b *BLangXMLNS) SetNamespaceURI(namespaceURI ExpressionNode) {
-	b.namespaceURI = namespaceURI.(BLangExpression)
+func (b *BLangXMLNS) SetNamespaceURI(namespaceURI BLangExpression) {
+	b.namespaceURI = namespaceURI
 }
 
 func (b *BLangXMLNS) SetPrefix(prefix *BLangIdentifier) {

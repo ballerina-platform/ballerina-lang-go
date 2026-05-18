@@ -807,7 +807,7 @@ func resolveStatement(t typeResolver, chain *binding, stmt ast.BLangStatement) (
 }
 
 func resolveCompoundAssignment(t typeResolver, chain *binding, s *ast.BLangCompoundAssignment) (statementEffect, bool) {
-	lhs := s.GetVariable().(ast.BLangExpression)
+	lhs := s.GetVariable()
 	rhs := s.GetExpression()
 	lhsTy, rhsChain, ok := resolveCompoundAssignmentLhs(t, chain, lhs)
 	if !ok {
@@ -876,14 +876,14 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 		// we don't assign to the actual container so shoud use the narrowed type for the container variable
 		var lhsEffect expressionEffect
 		var ok bool
-		lhsTy, lhsEffect, ok = resolveActionOrExpression(t, chain, lhs.(ast.BLangExpression), nil)
+		lhsTy, lhsEffect, ok = resolveActionOrExpression(t, chain, lhs, nil)
 		if !ok {
 			return statementEffect{}, false
 		}
 		chain = lhsEffect.ifTrue
 	default:
 		var ok bool
-		lhsTy, _, ok = resolveActionOrExpression(t, nil, lhs.(ast.BLangExpression), nil)
+		lhsTy, _, ok = resolveActionOrExpression(t, nil, lhs, nil)
 		if !ok {
 			return statementEffect{}, false
 		}
@@ -892,7 +892,7 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 		return statementEffect{}, false
 	}
 	if expr, ok := s.GetVariable().(ast.NodeWithSymbol); ok {
-		return unnarrowSymbolAt(t, chain, expr.Symbol(), s.GetVariable().(ast.BLangExpression).GetPosition()), true
+		return unnarrowSymbolAt(t, chain, expr.Symbol(), s.GetVariable().GetPosition()), true
 	}
 	return defaultStmtEffect(chain), true
 }
@@ -1033,7 +1033,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 
 func resolveXMLNS(t typeResolver, chain *binding, decl *ast.BLangXMLNS) {
 	decl.SetDeterminedType(semtypes.NEVER)
-	if uriExpr, ok := decl.GetNamespaceURI().(ast.BLangExpression); ok && uriExpr != nil {
+	if uriExpr := decl.GetNamespaceURI(); uriExpr != nil {
 		resolveActionOrExpression(t, chain, uriExpr, semtypes.STRING)
 	}
 	if prefix := decl.GetPrefix(); prefix != nil {

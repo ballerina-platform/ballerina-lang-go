@@ -68,14 +68,14 @@ func (b *BLangConstPattern) GetKind() NodeKind {
 	return NodeKind_CONST_MATCH_PATTERN
 }
 
-func (b *BLangConstPattern) GetExpression() ExpressionNode {
+func (b *BLangConstPattern) GetExpression() BLangExpression {
 	// migrated from BLangConstPattern.java:58:5
 	return b.Expr
 }
 
-func (b *BLangConstPattern) SetExpression(expression ExpressionNode) {
+func (b *BLangConstPattern) SetExpression(expression BLangExpression) {
 	// migrated from BLangConstPattern.java:63:5
-	b.Expr = expression.(BLangExpression)
+	b.Expr = expression
 }
 
 func (b *BLangWildCardMatchPattern) GetKind() NodeKind {

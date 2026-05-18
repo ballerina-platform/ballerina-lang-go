@@ -225,7 +225,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node ast.Node, state *varInitState) {
 		a.markAssignmentTarget(n.VarRef, state)
 	case *ast.BLangCompoundAssignment:
 		a.checkExpression(n.Expr, state)
-		a.markAssignmentTarget(n.VarRef.(ast.BLangExpression), state)
+		a.markAssignmentTarget(n.VarRef, state)
 	case ast.BLangExpression:
 		// Expression nodes (like conditions in while loops) need to be checked
 		a.checkExpression(n, state)

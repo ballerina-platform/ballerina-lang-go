@@ -47,7 +47,7 @@ type (
 
 	BLangCompoundAssignment struct {
 		bLangStatementBase
-		VarRef       ExpressionNode
+		VarRef       BLangExpression
 		Expr         BLangActionOrExpression
 		OpKind       model.OperatorKind
 		ModifiedExpr BLangExpression
@@ -155,12 +155,12 @@ var (
 	_ BLangNode = &BLangMatchStatement{}
 )
 
-func (b *BLangAssignment) GetVariable() ExpressionNode {
+func (b *BLangAssignment) GetVariable() BLangExpression {
 	// migrated from BLangAssignment.java:48:5
 	return b.VarRef
 }
 
-func (b *BLangAssignment) GetExpression() ExpressionNode {
+func (b *BLangAssignment) GetExpression() BLangActionOrExpression {
 	// migrated from BLangAssignment.java:53:5
 	return b.Expr
 }
@@ -184,7 +184,7 @@ func (b *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
 
 func (b *BLangAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
 	// migrated from BLangAssignment.java:74:5
-	b.VarRef = variableReferenceNode.(BLangExpression)
+	b.VarRef = variableReferenceNode
 }
 
 func (b *BLangBlockStmt) GetKind() NodeKind {
@@ -220,12 +220,12 @@ func (b *BLangCompoundAssignment) GetOperatorKind() model.OperatorKind {
 	return b.OpKind
 }
 
-func (b *BLangCompoundAssignment) GetVariable() ExpressionNode {
+func (b *BLangCompoundAssignment) GetVariable() BLangExpression {
 	// migrated from BLangCompoundAssignment.java:64:5
 	return b.VarRef
 }
 
-func (b *BLangCompoundAssignment) GetExpression() ExpressionNode {
+func (b *BLangCompoundAssignment) GetExpression() BLangActionOrExpression {
 	// migrated from BLangCompoundAssignment.java:69:5
 	return b.Expr
 }
@@ -235,7 +235,7 @@ func (b *BLangCompoundAssignment) SetActionOrExpression(actionOrExpression BLang
 }
 
 func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
-	b.VarRef = variableReferenceNode.(BLangExpression)
+	b.VarRef = variableReferenceNode
 }
 
 func (b *BLangCompoundAssignment) GetKind() NodeKind {
@@ -281,7 +281,7 @@ func (b *BLangDo) GetKind() NodeKind {
 	return NodeKind_DO_STMT
 }
 
-func (b *BLangExpressionStmt) GetExpression() ExpressionNode {
+func (b *BLangExpressionStmt) GetExpression() BLangActionOrExpression {
 	// migrated from BLangExpressionStmt.java:46:5
 	return b.Expr
 }
@@ -298,7 +298,7 @@ func (b *BLangIf) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-func (b *BLangIf) GetCondition() ExpressionNode {
+func (b *BLangIf) GetCondition() BLangExpression {
 	// migrated from BLangIf.java:47:5
 	return b.Expr
 }
@@ -313,9 +313,9 @@ func (b *BLangIf) GetElseStatement() StatementNode {
 	return b.ElseStmt
 }
 
-func (b *BLangIf) SetCondition(condition ExpressionNode) {
+func (b *BLangIf) SetCondition(condition BLangExpression) {
 	// migrated from BLangIf.java:62:5
-	b.Expr = condition.(BLangExpression)
+	b.Expr = condition
 }
 
 func (b *BLangIf) SetBody(body BlockStatementNode) {
@@ -345,14 +345,14 @@ func (b *BLangWhile) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-func (b *BLangWhile) GetCondition() ExpressionNode {
+func (b *BLangWhile) GetCondition() BLangExpression {
 	// migrated from BLangWhile.java:50:5
 	return b.Expr
 }
 
-func (b *BLangWhile) SetCondition(condition ExpressionNode) {
+func (b *BLangWhile) SetCondition(condition BLangExpression) {
 	// migrated from BLangWhile.java:60:5
-	b.Expr = condition.(BLangExpression)
+	b.Expr = condition
 }
 
 func (b *BLangWhile) GetBody() BlockStatementNode {
@@ -412,7 +412,7 @@ func (b *BLangForeach) SetVariableDefinitionNode(node VariableDefinitionNode) {
 	panic("node is not a *BLangSimpleVariableDef")
 }
 
-func (b *BLangForeach) GetCollection() ExpressionNode {
+func (b *BLangForeach) GetCollection() BLangActionOrExpression {
 	return b.Collection
 }
 
@@ -475,7 +475,7 @@ func (b *BLangSimpleVariableDef) SetVariable(variable VariableNode) {
 	}
 }
 
-func (b *BLangReturn) GetExpression() ExpressionNode {
+func (b *BLangReturn) GetExpression() BLangActionOrExpression {
 	return b.Expr
 }
 
@@ -487,7 +487,7 @@ func (b *BLangReturn) GetKind() NodeKind {
 	return NodeKind_RETURN
 }
 
-func (b *BLangPanic) GetExpression() ExpressionNode {
+func (b *BLangPanic) GetExpression() BLangExpression {
 	return b.Expr
 }
 

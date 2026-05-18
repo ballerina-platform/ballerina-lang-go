@@ -135,12 +135,12 @@ func (b *BLangJoinClause) GetKind() NodeKind {
 	return NodeKind_JOIN
 }
 
-func (b *BLangJoinClause) GetCollection() ExpressionNode {
+func (b *BLangJoinClause) GetCollection() BLangExpression {
 	return b.Collection
 }
 
-func (b *BLangJoinClause) SetCollection(collection ExpressionNode) {
-	b.Collection = collection.(BLangExpression)
+func (b *BLangJoinClause) SetCollection(collection BLangExpression) {
+	b.Collection = collection
 }
 
 func (b *BLangJoinClause) GetVariableDefinitionNode() VariableDefinitionNode {
@@ -177,28 +177,28 @@ func (b *BLangOnClause) GetKind() NodeKind {
 	return NodeKind_ON
 }
 
-func (b *BLangOnClause) GetOnExpression() ExpressionNode {
+func (b *BLangOnClause) GetOnExpression() BLangExpression {
 	return b.OnExpr
 }
 
-func (b *BLangOnClause) SetOnExpression(expression ExpressionNode) {
-	b.OnExpr = expression.(BLangExpression)
+func (b *BLangOnClause) SetOnExpression(expression BLangExpression) {
+	b.OnExpr = expression
 }
 
-func (b *BLangOnClause) GetEqualsExpression() ExpressionNode {
+func (b *BLangOnClause) GetEqualsExpression() BLangExpression {
 	return b.EqualsExpr
 }
 
-func (b *BLangOnClause) SetEqualsExpression(expression ExpressionNode) {
-	b.EqualsExpr = expression.(BLangExpression)
+func (b *BLangOnClause) SetEqualsExpression(expression BLangExpression) {
+	b.EqualsExpr = expression
 }
 
-func (b *BLangFromClause) GetCollection() ExpressionNode {
+func (b *BLangFromClause) GetCollection() BLangExpression {
 	return b.Collection
 }
 
-func (b *BLangFromClause) SetCollection(collection ExpressionNode) {
-	b.Collection = collection.(BLangExpression)
+func (b *BLangFromClause) SetCollection(collection BLangExpression) {
+	b.Collection = collection
 }
 
 func (b *BLangFromClause) GetVariableDefinitionNode() VariableDefinitionNode {
@@ -232,12 +232,12 @@ func (b *BLangLimitClause) GetKind() NodeKind {
 	return NodeKind_LIMIT
 }
 
-func (b *BLangLimitClause) GetExpression() ExpressionNode {
+func (b *BLangLimitClause) GetExpression() BLangExpression {
 	return b.Expression
 }
 
-func (b *BLangLimitClause) SetExpression(expression ExpressionNode) {
-	b.Expression = expression.(BLangExpression)
+func (b *BLangLimitClause) SetExpression(expression BLangExpression) {
+	b.Expression = expression
 }
 
 func (b *BLangSelectClause) GetKind() NodeKind {
@@ -252,24 +252,24 @@ func (b *BLangOrderKey) GetKind() NodeKind {
 	return NodeKind_ORDER_KEY
 }
 
-func (b *BLangSelectClause) GetExpression() ExpressionNode {
+func (b *BLangSelectClause) GetExpression() BLangExpression {
 	return b.Expression
 }
 
-func (b *BLangSelectClause) SetExpression(expression ExpressionNode) {
-	b.Expression = expression.(BLangExpression)
+func (b *BLangSelectClause) SetExpression(expression BLangExpression) {
+	b.Expression = expression
 }
 
 func (b *BLangOnConflictClause) GetKind() NodeKind {
 	return NodeKind_ON_CONFLICT
 }
 
-func (b *BLangOnConflictClause) GetExpression() ExpressionNode {
+func (b *BLangOnConflictClause) GetExpression() BLangExpression {
 	return b.Expression
 }
 
-func (b *BLangOnConflictClause) SetExpression(expression ExpressionNode) {
-	b.Expression = expression.(BLangExpression)
+func (b *BLangOnConflictClause) SetExpression(expression BLangExpression) {
+	b.Expression = expression
 }
 
 func (b *BLangCollectClause) GetKind() NodeKind {
@@ -277,14 +277,14 @@ func (b *BLangCollectClause) GetKind() NodeKind {
 	return NodeKind_COLLECT
 }
 
-func (b *BLangCollectClause) GetExpression() ExpressionNode {
+func (b *BLangCollectClause) GetExpression() BLangExpression {
 	// migrated from BLangCollectClause.java:68:5
 	return b.Expression
 }
 
-func (b *BLangCollectClause) SetExpression(expression ExpressionNode) {
+func (b *BLangCollectClause) SetExpression(expression BLangExpression) {
 	// migrated from BLangCollectClause.java:73:5
-	b.Expression = expression.(BLangExpression)
+	b.Expression = expression
 }
 
 func (b *BLangDoClause) GetBody() BlockStatementNode {

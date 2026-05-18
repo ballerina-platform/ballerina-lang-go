@@ -421,8 +421,6 @@ type (
 var (
 	_ BinaryExpressionNode                                   = &BLangBinaryExpr{}
 	_ QueryExpressionNode                                    = &BLangQueryExpr{}
-	_ CheckedExpressionNode                                  = &BLangCheckedExpr{}
-	_ CheckPanickedExpressionNode                            = &BLangCheckPanickedExpr{}
 	_ CollectContextInvocationNode                           = &BLangCollectContextInvocation{}
 	_ SimpleVariableReferenceNode                            = &BLangSimpleVarRef{}
 	_ SimpleVariableReferenceNode                            = &BLangLocalVarRef{}
@@ -460,8 +458,6 @@ var (
 	_ MappingKeyValueFieldNode                               = &BLangMappingKeyValueField{}
 	_ BLangExpression                                        = &BLangMappingConstructorExpr{}
 	_ BLangNode                                              = &BLangMappingConstructorExpr{}
-	_ Node                                                   = &BLangMappingKey{}
-	_ BLangNode                                              = &BLangMappingKey{}
 	_ BLangExpression                                        = &BLangNamedArgsExpression{}
 	_ NamedArgNode                                           = &BLangNamedArgsExpression{}
 	_ TrapNode                                               = &BLangTrapExpr{}
@@ -505,7 +501,6 @@ var (
 	_ BLangNode       = &BLangTypeConversionExpr{}
 	_ BLangNode       = &BLangMappingConstructorExpr{}
 	_ BLangNode       = &BLangMappingKeyValueField{}
-	_ BLangNode       = &BLangMappingKey{}
 	_ BLangNode       = &BLangTrapExpr{}
 	_ BLangNode       = &BLangNewExpression{}
 )
@@ -552,7 +547,7 @@ func (b *BLangGroupExpr) GetKind() NodeKind {
 	return NodeKind_GROUP_EXPR
 }
 
-func (b *BLangGroupExpr) GetExpression() ExpressionNode {
+func (b *BLangGroupExpr) GetExpression() BLangExpression {
 	// migrated from BLangGroupExpr.java:62:5
 	return b.Expression
 }
@@ -648,12 +643,12 @@ func (b *BLangWorkerReceive) ToActionString() string {
 	return " <- "
 }
 
-func (b *BLangBinaryExpr) GetLeftExpression() ExpressionNode {
+func (b *BLangBinaryExpr) GetLeftExpression() BLangExpression {
 	// migrated from BLangBinaryExpr.java:45:5
 	return b.LhsExpr
 }
 
-func (b *BLangBinaryExpr) GetRightExpression() ExpressionNode {
+func (b *BLangBinaryExpr) GetRightExpression() BLangExpression {
 	// migrated from BLangBinaryExpr.java:50:5
 	return b.RhsExpr
 }
@@ -688,7 +683,7 @@ func (b *BLangQueryExpr) AddQueryClause(queryClause Node) {
 	panic("query clause is not a BLangNode")
 }
 
-func (b *BLangCheckedExpr) GetExpression() ExpressionNode {
+func (b *BLangCheckedExpr) GetExpression() BLangActionOrExpression {
 	// migrated from BLangCheckedExpr.java:53:5
 	return b.Expr
 }
@@ -816,12 +811,12 @@ func (b *BLangDynamicArgExpr) GetKind() NodeKind {
 	return NodeKind_DYNAMIC_PARAM_EXPR
 }
 
-func (b *BLangElvisExpr) GetLeftExpression() ExpressionNode {
+func (b *BLangElvisExpr) GetLeftExpression() BLangExpression {
 	// migrated from BLangElvisExpr.java:38:5
 	return b.LhsExpr
 }
 
-func (b *BLangElvisExpr) GetRightExpression() ExpressionNode {
+func (b *BLangElvisExpr) GetRightExpression() BLangExpression {
 	// migrated from BLangElvisExpr.java:43:5
 	return b.RhsExpr
 }
@@ -931,7 +926,7 @@ func (b *BLangMarkDownDeprecatedParametersDocumentation) GetKind() NodeKind {
 	return NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
 }
 
-func (b *BLangWorkerSendExprBase) GetExpr() ExpressionNode {
+func (b *BLangWorkerSendExprBase) GetExpr() BLangExpression {
 	return b.Expr
 }
 
@@ -951,23 +946,19 @@ func (b *bLangInvocationBase) GetName() IdentifierNode {
 	return b.Name
 }
 
-func (b *bLangInvocationBase) GetArgumentExpressions() []ExpressionNode {
-	result := make([]ExpressionNode, len(b.ArgExprs))
-	for i := range b.ArgExprs {
-		result[i] = b.ArgExprs[i]
-	}
+func (b *bLangInvocationBase) GetArgumentExpressions() []BLangExpression {
+	result := make([]BLangExpression, len(b.ArgExprs))
+	copy(result, b.ArgExprs)
 	return result
 }
 
-func (b *bLangInvocationBase) GetRequiredArgs() []ExpressionNode {
-	result := make([]ExpressionNode, len(b.RequiredArgs))
-	for i := range b.RequiredArgs {
-		result[i] = b.RequiredArgs[i]
-	}
+func (b *bLangInvocationBase) GetRequiredArgs() []BLangExpression {
+	result := make([]BLangExpression, len(b.RequiredArgs))
+	copy(result, b.RequiredArgs)
 	return result
 }
 
-func (b *bLangInvocationBase) GetExpression() ExpressionNode {
+func (b *bLangInvocationBase) GetExpression() BLangExpression {
 	return b.Expr
 }
 
@@ -992,12 +983,12 @@ func (b *BLangTypeConversionExpr) GetKind() NodeKind {
 	return NodeKind_TYPE_CONVERSION_EXPR
 }
 
-func (b *BLangTypeConversionExpr) GetExpression() ExpressionNode {
+func (b *BLangTypeConversionExpr) GetExpression() BLangExpression {
 	return b.Expression
 }
 
-func (b *BLangTypeConversionExpr) SetExpression(expression ExpressionNode) {
-	b.Expression = expression.(BLangExpression)
+func (b *BLangTypeConversionExpr) SetExpression(expression BLangExpression) {
+	b.Expression = expression
 }
 
 func (b *BLangTypeConversionExpr) GetTypeDescriptor() TypeDescriptor {
@@ -1031,7 +1022,7 @@ func (b *BLangNumericLiteral) GetKind() NodeKind {
 	return NodeKind_NUMERIC_LITERAL
 }
 
-func (b *BLangUnaryExpr) GetExpression() ExpressionNode {
+func (b *BLangUnaryExpr) GetExpression() BLangExpression {
 	return b.Expr
 }
 
@@ -1047,11 +1038,11 @@ func (b *BLangIndexBasedAccess) GetKind() NodeKind {
 	return NodeKind_INDEX_BASED_ACCESS_EXPR
 }
 
-func (b *BLangIndexBasedAccess) GetExpression() ExpressionNode {
+func (b *BLangIndexBasedAccess) GetExpression() BLangExpression {
 	return b.Expr
 }
 
-func (b *BLangIndexBasedAccess) GetIndex() ExpressionNode {
+func (b *BLangIndexBasedAccess) GetIndex() BLangExpression {
 	return b.IndexExpr
 }
 
@@ -1059,7 +1050,7 @@ func (b *BLangFieldBaseAccess) GetKind() NodeKind {
 	return NodeKind_FIELD_BASED_ACCESS_EXPR
 }
 
-func (b *BLangFieldBaseAccess) GetExpression() ExpressionNode {
+func (b *BLangFieldBaseAccess) GetExpression() BLangExpression {
 	return b.Expr
 }
 
@@ -1071,11 +1062,9 @@ func (b *BLangListConstructorExpr) GetKind() NodeKind {
 	return NodeKind_LIST_CONSTRUCTOR_EXPR
 }
 
-func (b *BLangListConstructorExpr) GetExpressions() []ExpressionNode {
-	result := make([]ExpressionNode, len(b.Exprs))
-	for i := range b.Exprs {
-		result[i] = b.Exprs[i]
-	}
+func (b *BLangListConstructorExpr) GetExpressions() []BLangExpression {
+	result := make([]BLangExpression, len(b.Exprs))
+	copy(result, b.Exprs)
 	return result
 }
 
@@ -1083,11 +1072,9 @@ func (b *BLangErrorConstructorExpr) GetKind() NodeKind {
 	return NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
 }
 
-func (b *BLangErrorConstructorExpr) GetPositionalArgs() []ExpressionNode {
-	result := make([]ExpressionNode, len(b.PositionalArgs))
-	for i, arg := range b.PositionalArgs {
-		result[i] = arg
-	}
+func (b *BLangErrorConstructorExpr) GetPositionalArgs() []BLangExpression {
+	result := make([]BLangExpression, len(b.PositionalArgs))
+	copy(result, b.PositionalArgs)
 	return result
 }
 
@@ -1107,7 +1094,7 @@ func (b *BLangTypeTestExpr) IsNegation() bool {
 	return b.isNegation
 }
 
-func (b *BLangTypeTestExpr) GetExpression() ExpressionNode {
+func (b *BLangTypeTestExpr) GetExpression() BLangExpression {
 	return b.Expr
 }
 
@@ -1115,22 +1102,18 @@ func (b *BLangTypeTestExpr) GetType() TypeData {
 	return b.Type
 }
 
-func (b *BLangMappingKey) GetKind() NodeKind {
-	panic("BLangMappingKey has no NodeKind")
-}
-
 func (b *BLangMappingKeyValueField) GetKind() NodeKind {
 	return NodeKind_RECORD_LITERAL_KEY_VALUE
 }
 
-func (b *BLangMappingKeyValueField) GetKey() ExpressionNode {
+func (b *BLangMappingKeyValueField) GetKey() BLangExpression {
 	if b.Key == nil {
 		return nil
 	}
 	return b.Key.Expr
 }
 
-func (b *BLangMappingKeyValueField) GetValue() ExpressionNode {
+func (b *BLangMappingKeyValueField) GetValue() BLangExpression {
 	return b.ValueExpr
 }
 
@@ -1158,19 +1141,19 @@ func (b *BLangNamedArgsExpression) GetName() *BLangIdentifier {
 	return &b.Name
 }
 
-func (b *BLangNamedArgsExpression) GetExpression() ExpressionNode {
+func (b *BLangNamedArgsExpression) GetExpression() BLangExpression {
 	return b.Expr
 }
 
-func (b *BLangNamedArgsExpression) SetExpression(expr ExpressionNode) {
-	b.Expr = expr.(BLangExpression)
+func (b *BLangNamedArgsExpression) SetExpression(expr BLangExpression) {
+	b.Expr = expr
 }
 
 func (b *BLangTrapExpr) GetKind() NodeKind {
 	return NodeKind_TRAP_EXPR
 }
 
-func (b *BLangTrapExpr) GetExpression() ExpressionNode {
+func (b *BLangTrapExpr) GetExpression() BLangExpression {
 	return b.Expr
 }
 
