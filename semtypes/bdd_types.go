@@ -125,7 +125,7 @@ func (sc *bddSerializationContext) serializeXmlBdd(bdd Bdd) unionOfIntersections
 	return sc.serializeBdd(bdd, sc.xmlAtomMap, sc.serializeXMLAtom, kind_XML_ATOM)
 }
 
-func (sc *bddSerializationContext) serializeXmlSubtype(xs xmlSubtype) xmlSubtypeEntry {
+func (sc *bddSerializationContext) serializeXmlSubtype(xs *xmlSubtype) xmlSubtypeEntry {
 	return xmlSubtypeEntry{
 		primitives: int32(xs.Primitives),
 		sequence:   sc.serializeXmlBdd(xs.Sequence),

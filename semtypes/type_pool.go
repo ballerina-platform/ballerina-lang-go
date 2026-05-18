@@ -93,7 +93,7 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 			case stringSubtype:
 				entry = subtypeDataEntry{kind: stringSubtypeData, index: uint32(len(bp.stringSubtype))}
 				bp.stringSubtype = append(bp.stringSubtype, fromStringSubtype(&data))
-			case xmlSubtype:
+			case *xmlSubtype:
 				entry = subtypeDataEntry{kind: xmlSubtypeData, index: uint32(len(bp.xmlSubtypes))}
 				bp.xmlSubtypes = append(bp.xmlSubtypes, sc.serializeXmlSubtype(data))
 			case Bdd:

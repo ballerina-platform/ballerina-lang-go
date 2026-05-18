@@ -43,25 +43,25 @@ const (
 
 var _ ProperSubtypeData = &xmlSubtype{}
 
-func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) xmlSubtype {
-	this := xmlSubtype{}
-	this.Primitives = primitives
-	this.Sequence = sequence
-	return this
+func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) *xmlSubtype {
+	return &xmlSubtype{
+		Primitives: primitives,
+		Sequence:   sequence,
+	}
 }
 
-func xmlSubtypeFrom(primitives int, sequence Bdd) xmlSubtype {
+func xmlSubtypeFrom(primitives int, sequence Bdd) *xmlSubtype {
 	return newXmlSubtypeFromIntBdd(primitives, sequence)
 }
 
-func xmlSingleton(primitives int) SemType {
+func XMLSingleton(primitives int) SemType {
 	return createXmlSemtype(createXmlSubtype(primitives, bddNothing()))
 }
 
-func xmlSequence(constituentType SemType) SemType {
+func XMLSequence(constituentType SemType) SemType {
 	common.Assert(IsSubtypeSimple(constituentType, XML))
 	if IsNever(constituentType) {
-		return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER))
+		return XMLSequence(XMLSingleton(XML_PRIMITIVE_NEVER))
 	}
 	if _, ok := constituentType.(BasicTypeBitSet); ok {
 		return constituentType
@@ -71,13 +71,13 @@ func xmlSequence(constituentType SemType) SemType {
 		if _, ok := xmlSt.(allOrNothingSubtype); ok {
 			// xmlSt stays as is
 		} else {
-			xmlSt = makeXmlSequence(xmlSt.(xmlSubtype))
+			xmlSt = makeXmlSequence(xmlSt.(*xmlSubtype))
 		}
 		return createXmlSemtype(xmlSt)
 	}
 }
 
-func makeXmlSequence(d xmlSubtype) SubtypeData {
+func makeXmlSequence(d *xmlSubtype) SubtypeData {
 	primitives := (XML_PRIMITIVE_NEVER | d.Primitives)
 	atom := (d.Primitives & XML_PRIMITIVE_SINGLETON)
 	sequence := bddUnion(bddAtom(new(createXMLRecAtom(atom))), d.Sequence)

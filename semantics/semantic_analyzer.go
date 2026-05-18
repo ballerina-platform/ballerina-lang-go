@@ -732,6 +732,20 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypedescExpr:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLElementLiteral:
+		for i := range expr.Attrs {
+			attr := &expr.Attrs[i]
+			if attr.Value != nil && !analyzeActionOrExpression(a, attr.Value, semtypes.STRING) {
+				return false
+			}
+		}
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLSequenceLiteral, *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLAttribute:
+		// XML attributes are metadata on elements and should not be analyzed as standalone expressions
+		// Their values are already analyzed as part of XMLElement processing
+		return validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -1366,6 +1380,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
+		return nil
+	case *ast.BLangXMLNS:
+		expr := n.GetNamespaceURI().(ast.BLangExpression)
+		validateResolvedType(a, expr, semtypes.STRING)
+		validateConstantExpr(a.ctx(), expr, func(e ast.BLangExpression) {
+			a.semanticErr("expression is not a constant expression", e.GetPosition())
+		})
 		return nil
 	case *ast.BLangMatchStatement:
 		return a
