@@ -26,6 +26,11 @@ public function main() {
         group by x
         collect x;
 
+    var afterGroupNonKey = from var x in [1, 2, 1, 3]
+        let int y = x + 10
+        group by x
+        collect y;
+
     decimal[] contextualSelect = from var x in xs
         select 1;
 
@@ -34,6 +39,7 @@ public function main() {
 
     io:println(doubled); // @output [2,4,6]
     io:println(afterGroup); // @output [1,2,3]
+    io:println(afterGroupNonKey); // @output [11,11,12,13]
     io:println(contextualSelect[0] is decimal); // @output true
     io:println(contextualCollect is decimal); // @output true
 }

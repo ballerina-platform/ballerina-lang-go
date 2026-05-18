@@ -136,8 +136,8 @@ func initInternalModule(rt *runtime.Runtime) {
 		return queryGroup(rows, keyRows, scalarFlags)
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(args []values.BalValue) (values.BalValue, error) {
-		if len(args) != 2 {
-			return nil, fmt.Errorf("queryCollect expects 2 arguments, got %d", len(args))
+		if len(args) != 3 {
+			return nil, fmt.Errorf("queryCollect expects 3 arguments, got %d", len(args))
 		}
 		rows, ok := args[0].(*values.List)
 		if !ok {
@@ -147,7 +147,11 @@ func initInternalModule(rt *runtime.Runtime) {
 		if !ok {
 			return nil, fmt.Errorf("second argument must be an int")
 		}
-		return queryCollect(rows, int(slotCount))
+		flattenFlags, ok := args[2].(*values.List)
+		if !ok {
+			return nil, fmt.Errorf("third argument must be a list")
+		}
+		return queryCollect(rows, int(slotCount), flattenFlags)
 	})
 }
 
@@ -231,9 +235,20 @@ func appendQueryGroupRow(groupRow *values.List, sourceRow *values.List, scalarSl
 	}
 }
 
-func queryCollect(rows *values.List, slotCount int) (*values.List, error) {
+func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (*values.List, error) {
 	if slotCount < 0 {
 		return nil, fmt.Errorf("slot count cannot be negative")
+	}
+	if flattenFlags.Len() != slotCount {
+		return nil, fmt.Errorf("collect flatten flags length mismatch: flags=%d slots=%d", flattenFlags.Len(), slotCount)
+	}
+	flattenSlots := make([]bool, slotCount)
+	for slot := 0; slot < slotCount; slot++ {
+		flatten, ok := flattenFlags.Get(slot).(bool)
+		if !ok {
+			return nil, fmt.Errorf("collect flatten flag %d must be a bool", slot)
+		}
+		flattenSlots[slot] = flatten
 	}
 	resultRow := values.NewList(0, semtypes.LIST, nil)
 	for slot := 0; slot < slotCount; slot++ {
@@ -248,7 +263,18 @@ func queryCollect(rows *values.List, slotCount int) (*values.List, error) {
 			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, row.Len(), slotCount)
 		}
 		for slot := 0; slot < slotCount; slot++ {
-			resultRow.Get(slot).(*values.List).Append(row.Get(slot))
+			valuesForSlot := resultRow.Get(slot).(*values.List)
+			if !flattenSlots[slot] {
+				valuesForSlot.Append(row.Get(slot))
+				continue
+			}
+			nestedValues, ok := row.Get(slot).(*values.List)
+			if !ok {
+				return nil, fmt.Errorf("query row %d slot %d must be a list for flattening", rowIndex, slot)
+			}
+			for valueIndex := 0; valueIndex < nestedValues.Len(); valueIndex++ {
+				valuesForSlot.Append(nestedValues.Get(valueIndex))
+			}
 		}
 	}
 	return resultRow, nil

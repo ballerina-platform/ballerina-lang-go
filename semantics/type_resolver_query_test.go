@@ -468,6 +468,50 @@ func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
 	}
 }
 
+func TestResolveQueryExprCollectDoesNotReaggregateGroupByVars(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
+	ySymbolRef := addTestValueSymbol(cx, space, "y", nil)
+
+	xDef := newSimpleVarDef("x", nil, nil)
+	xDef.Var.SetSymbol(xSymbolRef)
+	yDef := newSimpleVarDef("y", nil, newIntLiteral(1))
+	yDef.Var.SetSymbol(ySymbolRef)
+	groupXRef := newSimpleVarRef("x", xSymbolRef)
+	collectYRef := newSimpleVarRef("y", ySymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2, 3), xDef, true),
+		newLetClause(yDef),
+		newGroupByClause(newGroupingKeyRef(groupXRef)),
+		newCollectClauseExpr(collectYRef),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for group by + collect")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected collect result type to be a list, got %v", queryTy)
+	}
+	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
+	collectYTy := collectYRef.GetDeterminedType()
+	if !semtypes.IsSubtypeSimple(collectYTy, semtypes.LIST) {
+		t.Fatalf("expected grouped non-key variable to remain a list, got %v", collectYTy)
+	}
+	memberTy := semtypes.ListMemberTypeInnerVal(tyCtx, collectYTy, semtypes.IntConst(0))
+	if !semtypes.IsSubtypeSimple(memberTy, semtypes.INT) {
+		t.Fatalf("expected grouped non-key variable member type to be int, got %v", memberTy)
+	}
+	if semtypes.IsSubtypeSimple(memberTy, semtypes.LIST) {
+		t.Fatalf("expected grouped non-key variable not to be re-aggregated as a list of lists, got %v", collectYTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
 func TestResolveQueryExprGroupByVarDeclaration(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())

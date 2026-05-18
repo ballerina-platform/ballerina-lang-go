@@ -177,9 +177,10 @@ type queryLetStore struct {
 }
 
 type queryRowBinding struct {
-	varName *ast.BLangIdentifier
-	symbol  model.SymbolRef
-	valueTy semtypes.SemType
+	varName         *ast.BLangIdentifier
+	symbol          model.SymbolRef
+	valueTy         semtypes.SemType
+	groupAggregated bool
 }
 
 type queryOrderStageInput struct {
@@ -752,6 +753,7 @@ func queryGroupOutputBindings(
 			continue
 		}
 		binding.valueTy = queryListValueType(cx.typeEnv(), binding.valueTy, true)
+		binding.groupAggregated = true
 		result = append(result, binding)
 	}
 	return result
@@ -1138,7 +1140,8 @@ func appendQueryRowsCollectResultStmts(
 	pos diagnostics.Location,
 	initStmts *[]model.StatementNode,
 ) bool {
-	collectInvocation := createQueryCollectInvocation(cx, rowsRef, createIntLiteral(int64(len(bindings))))
+	flattenFlags := buildQueryCollectFlattenFlags(bindings, collectClause.GetPosition())
+	collectInvocation := createQueryCollectInvocation(cx, rowsRef, createIntLiteral(int64(len(bindings))), flattenFlags)
 	if collectInvocation == nil {
 		return false
 	}
@@ -1148,7 +1151,9 @@ func appendQueryRowsCollectResultStmts(
 	bodyStmts := make([]ast.BLangStatement, 0, len(bindings)+2)
 	for i, binding := range bindings {
 		collectBinding := binding
-		collectBinding.valueTy = queryListValueType(cx.typeEnv(), binding.valueTy, false)
+		if !binding.groupAggregated {
+			collectBinding.valueTy = queryListValueType(cx.typeEnv(), binding.valueTy, false)
+		}
 		bodyStmts = append(bodyStmts, createQueryBindingAssignment(
 			collectBinding,
 			createQueryRowSlotAccess(collectRowRef, i, collectBinding.valueTy, pos),
@@ -1167,6 +1172,18 @@ func appendQueryRowsCollectResultStmts(
 	bodyStmts = append(bodyStmts, assignResult)
 	*initStmts = append(*initStmts, bodyStmts...)
 	return true
+}
+
+func buildQueryCollectFlattenFlags(bindings []queryRowBinding, pos diagnostics.Location) *ast.BLangListConstructorExpr {
+	flags := make([]ast.BLangExpression, 0, len(bindings))
+	for _, binding := range bindings {
+		flags = append(flags, createBoolLiteral(binding.groupAggregated, pos))
+	}
+	listExpr := &ast.BLangListConstructorExpr{Exprs: flags}
+	listExpr.SetDeterminedType(semtypes.LIST)
+	listExpr.AtomicType = semtypes.LIST_ATOMIC_INNER
+	setPositionIfMissing(listExpr, pos)
+	return listExpr
 }
 
 func createQueryCounterRef(
@@ -1987,9 +2004,10 @@ func createQueryCollectInvocation(
 	cx *functionContext,
 	rowsExpr ast.BLangExpression,
 	slotCountExpr ast.BLangExpression,
+	flattenFlagsExpr ast.BLangExpression,
 ) *ast.BLangInvocation {
 	return createLangInternalInvocation(cx, "queryCollect", semtypes.LIST,
-		[]ast.BLangExpression{rowsExpr, slotCountExpr}, rowsExpr.GetPosition())
+		[]ast.BLangExpression{rowsExpr, slotCountExpr, flattenFlagsExpr}, rowsExpr.GetPosition())
 }
 
 func createLangInternalInvocation(

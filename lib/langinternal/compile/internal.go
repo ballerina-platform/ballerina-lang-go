@@ -38,7 +38,7 @@ func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace 
 		ReturnType: semtypes.LIST,
 	})
 	addInternalFunction(ctx, space, "queryCollect", model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.INT},
+		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.INT, semtypes.LIST},
 		ReturnType: semtypes.LIST,
 	})
 	return model.NewExportedSymbolSpace(space, nil)

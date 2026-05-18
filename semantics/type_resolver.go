@@ -2994,7 +2994,11 @@ func resolveQueryExpr(
 			return nil, expressionEffect{}, false
 		}
 		collectChain := queryChain
+		groupAggregatedSymbols := queryGroupAggregatedSymbolsBeforeClause(expr, lastClauseIndex)
 		for _, variable := range queryVariablesBeforeClause(expr, lastClauseIndex) {
+			if groupAggregatedSymbols[variable.symbol] {
+				continue
+			}
 			collectChain = aggregateQueryVariable(t, collectChain, variable, false)
 		}
 		collectTy, _, ok := resolveActionOrExpression(
@@ -3141,6 +3145,22 @@ func queryVariablesBeforeClause(queryExpr *ast.BLangQueryExpr, endIndex int) []q
 		}
 	}
 	return variables
+}
+
+func queryGroupAggregatedSymbolsBeforeClause(queryExpr *ast.BLangQueryExpr, endIndex int) map[model.SymbolRef]bool {
+	aggregated := make(map[model.SymbolRef]bool)
+	for i := 0; i < endIndex; i++ {
+		groupByClause, ok := queryExpr.QueryClauseList[i].(*ast.BLangGroupByClause)
+		if !ok || groupByClause.NonGroupingKeys == nil {
+			continue
+		}
+		for _, variable := range queryVariablesBeforeClause(queryExpr, i) {
+			if variable.name != "" && groupByClause.NonGroupingKeys.Contains(variable.name) {
+				aggregated[variable.symbol] = true
+			}
+		}
+	}
+	return aggregated
 }
 
 func appendQueryVariableInfo(
