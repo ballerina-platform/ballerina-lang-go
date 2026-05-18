@@ -258,7 +258,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	getHeaderNamesSig := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{headerPositionSemType},
 		ParamNames: []string{"position"},
-		ReturnType: semtypes.LIST,
+		ReturnType: stringArrayType,
 		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	getHeaderNamesFnSemType := libcommon.FunctionSignatureToSemType(env, &getHeaderNamesSig)

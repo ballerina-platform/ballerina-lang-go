@@ -503,11 +503,17 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getBinaryPayload",
 		func(args []values.BalValue) (values.BalValue, error) {
+			once.Do(func() {
+				env := rt.GetTypeEnv()
+				ld := semtypes.NewListDefinition()
+				byteArrTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+				typCtx = semtypes.ContextFrom(env)
+			})
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			body := bodyVal.(string)
 			raw := []byte(body)
-			list := values.NewList(len(raw), semtypes.LIST, nil)
+			list := values.NewList(len(raw), byteArrTy, nil)
 			for i, b := range raw {
 				list.FillingSet(i, int64(b))
 			}
