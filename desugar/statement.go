@@ -55,6 +55,8 @@ func walkStatement(cx *functionContext, node model.StatementNode) desugaredNode[
 		return walkContinue(cx, stmt)
 	case *ast.BLangMatchStatement:
 		return walkMatchStatement(cx, stmt)
+	case *ast.BLangXMLNS:
+		return desugaredNode[model.StatementNode]{replacementNode: stmt}
 	default:
 		panic("unexpected statement type")
 	}

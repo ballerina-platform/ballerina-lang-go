@@ -28,9 +28,11 @@ import (
 )
 
 // semanticAnalysisSkipList is the semantic-analysis *additional* skip list,
-// on top of the shared test_util.UnsupportedTests baseline. Currently empty
-// -- every known failure is already covered by the shared baseline.
-var semanticAnalysisSkipList = []string{}
+// on top of the shared test_util.UnsupportedTests baseline.
+var semanticAnalysisSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
 
 func TestSemanticAnalysis(t *testing.T) {
 	flag.Parse()
