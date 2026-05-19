@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/values"
 )
 
 func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
@@ -31,7 +32,12 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 				err = getFormattedError(ctx, r)
 			}
 		}()
-		executeFunction(ctx, *pkg.InitFunction, nil, nil)
+		if result := executeFunction(ctx, *pkg.InitFunction, nil, nil); result != nil {
+			if _, ok := result.(*values.Error); ok {
+				err = getFormattedError(ctx, result)
+				return
+			}
+		}
 	}
 	if pkg.MainFunction != nil {
 		defer func() {
@@ -39,7 +45,11 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 				err = getFormattedError(ctx, r)
 			}
 		}()
-		executeFunction(ctx, *pkg.MainFunction, nil, nil)
+		if result := executeFunction(ctx, *pkg.MainFunction, nil, nil); result != nil {
+			if _, ok := result.(*values.Error); ok {
+				err = getFormattedError(ctx, result)
+			}
+		}
 	}
 	return err
 }

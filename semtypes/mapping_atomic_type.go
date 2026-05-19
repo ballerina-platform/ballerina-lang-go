@@ -62,7 +62,7 @@ func (m *MappingAtomicType) FieldInnerVal(name string) SemType {
 func (m *MappingAtomicType) IsOptional(cx Context, name string) bool {
 	for i, n := range m.Names {
 		if n == name {
-			return IsSubtype(cx, UNDEF, cellInnerVal(&m.Types[i]))
+			return IsSubtype(cx, UNDEF, cellInner(&m.Types[i]))
 		}
 	}
 	return true

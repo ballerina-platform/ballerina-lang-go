@@ -868,7 +868,7 @@ func TypeCheckContext(env Env) Context {
 	return ContextFrom(env)
 }
 
-func createJson(context Context) SemType {
+func CreateJSON(context Context) SemType {
 	memo := context.jsonMemo()
 	env := context.Env()
 

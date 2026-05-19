@@ -725,6 +725,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		}
 	}
 	populateClassSymbolByType(t, pkg)
+	populateMappingAtomMaps(t, pkg, t.importedSymbols)
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		if _, ok := resolveFunctionSignature(t, fn); !ok {
@@ -2472,7 +2473,11 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 		}
 	}
 
-	objTy, ok := determineObjectType(t, e, determinedTy)
+	argTys := make([]semtypes.SemType, len(e.ArgsExprs))
+	for i, arg := range e.ArgsExprs {
+		argTys[i] = arg.GetDeterminedType()
+	}
+	objTy, ok := determineObjectType(t, e, argTys, determinedTy)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2494,26 +2499,45 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 	return e.GetDeterminedType(), defaultExpressionEffect(chain), true
 }
 
-func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
+// padNewExprArgTypesForDefaults pads argTys with the init method's default param types for
+// any trailing params omitted by the caller. Returns the padded slice and true when the init
+// was resolved; returns (argTys, false) unchanged when the class or init cannot be found.
+func padNewExprArgTypesForDefaults(t typeResolver, objectTy semtypes.SemType, argTys []semtypes.SemType, loc diagnostics.Location) ([]semtypes.SemType, bool) {
+	oat := semtypes.ToObjectAtomicType(t.typeContext(), objectTy)
+	if oat == nil {
+		return argTys, false
+	}
+	classRef, ok := t.getClassAtomSymbol(oat)
+	if !ok {
+		return argTys, false
+	}
+	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	if !ok {
+		return argTys, false
+	}
+	initRef, ok := classSym.MethodSymbol("init")
+	if !ok {
+		return argTys, false
+	}
+	return padArgTypesForDefaults(t, initRef, argTys, loc), true
+}
+
+func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, argTys []semtypes.SemType, objectTy semtypes.SemType) (semtypes.SemType, bool) {
 	cx := t.typeContext()
 	alts := semtypes.ObjectAlternatives(cx, objectTy)
 
-	argTys := make([]semtypes.SemType, len(expr.ArgsExprs))
-	for i, arg := range expr.ArgsExprs {
-		argTys[i] = arg.GetDeterminedType()
-	}
-
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	type candidate struct {
 		objType        semtypes.SemType
 		initReturnType semtypes.SemType
 	}
 	var candidates []candidate
 	for _, alt := range alts {
+		altArgTys, _ := padNewExprArgTypesForDefaults(t, alt.ObjectType, argTys, expr.GetPosition())
+		argLd := semtypes.NewListDefinition()
+		altArgListTy := argLd.DefineListTypeWrapped(cx.Env(), altArgTys, len(altArgTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 		paramListTy := semtypes.FunctionParamListType(cx, alt.InitFnType)
-		if semtypes.IsSubtype(cx, argListTy, paramListTy) {
-			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, argListTy)
+		if semtypes.IsSubtype(cx, altArgListTy, paramListTy) {
+			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, altArgListTy)
 			candidates = append(candidates, candidate{objType: alt.ObjectType, initReturnType: retTy})
 		}
 	}
@@ -4965,8 +4989,17 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		switch ty.TypeKind {
 		case model.TypeKind_MAP:
 			return semtypes.MAPPING, true
+		case model.TypeKind_JSON:
+			return semtypes.CreateJSON(t.typeContext()), true
+		case model.TypeKind_ANYDATA:
+			return semtypes.CreateAnydata(t.typeContext()), true
+		case model.TypeKind_ANY:
+			return semtypes.ANY, true
 		case model.TypeKind_XML:
 			return semtypes.XML, true
+		case model.TypeKind_STREAM, model.TypeKind_TABLE, model.TypeKind_FUTURE:
+			t.unimplemented("unsupported builtin type kind: "+string(ty.TypeKind), ty.GetPosition())
+			return nil, false
 		default:
 			t.internalError("Unexpected builtin type kind", ty.GetPosition())
 		}

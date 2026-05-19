@@ -18,7 +18,8 @@ package runtime
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/pal"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
@@ -77,4 +78,28 @@ func (rt *Runtime) GetTypeEnv() semtypes.Env {
 // the given runtime instance so it can be called from interpreted BIR code.
 func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
 	rt.registry.RegisterExternFunction(orgName, moduleName, funcName, impl)
+}
+
+// RegisterExternClassDef registers a synthetic BIRClassDef for a Go-declared class so
+// that execNewObject can resolve it. VTable entries have no BIR body; exec falls through
+// to nativeFunctions for method dispatch.
+func RegisterExternClassDef(rt *Runtime, def *bir.BIRClassDef) {
+	rt.registry.RegisterExternClassDef(def)
+}
+
+// RegisterModuleGlobals makes module-level constants accessible at runtime.
+// When Ballerina source code accesses an extern package's constant (e.g. http:LEADING),
+// the BIR executor looks it up as a global variable in that package's module. Without
+// registration, GetModule returns nil and causes a nil dereference panic.
+func RegisterModuleGlobals(rt *Runtime, pkgId *model.PackageID, globals map[string]values.BalValue) {
+	if existing := rt.registry.GetModule(pkgId); existing != nil {
+		if existing.Globals == nil {
+			existing.Globals = make(map[string]values.BalValue)
+		}
+		for k, v := range globals {
+			existing.Globals[k] = v
+		}
+		return
+	}
+	rt.registry.RegisterModule(pkgId, &modules.BIRModule{Globals: globals})
 }

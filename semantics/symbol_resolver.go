@@ -29,6 +29,7 @@ import (
 
 	array "ballerina-lang-go/lib/array/compile"
 	bError "ballerina-lang-go/lib/error/compile"
+	bHttp "ballerina-lang-go/lib/http/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
@@ -523,6 +524,12 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 					key = imp.Alias.Value
 				}
 				result[key] = bValue.GetValueSymbols(ctx)
+			} else if isHttpImport(&imp) {
+				key := "http"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bHttp.GetHttpSymbols(ctx)
 			} else {
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}

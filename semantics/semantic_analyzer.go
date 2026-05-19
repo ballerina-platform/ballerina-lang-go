@@ -353,6 +353,10 @@ func isIoImport(importNode *ast.BLangImportPackage) bool {
 	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "io"
 }
 
+func isHttpImport(importNode *ast.BLangImportPackage) bool {
+	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "http"
+}
+
 func isImplicitImport(importNode *ast.BLangImportPackage) bool {
 	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map") || isLangImport(importNode, "string")
 }

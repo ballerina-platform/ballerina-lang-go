@@ -14,21 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Package pal provides the Platform Adaptation Layer (PAL).
-//
-// PAL abstracts away interactions with the underlying platform such that the
-// runtime can be agnostic toward the underlying platform. All library functions
-// that interact with the underlying platform (e.g. io, http) should use PAL.
-// Each supported platform (e.g. native-cli, web-editor) should provide an
-// implementation of PAL to the runtime.
-package pal
+import ballerina/http;
+import ballerina/io;
 
-type (
-	Platform struct {
-		IO IO
-	}
-	IO struct {
-		Stdout func(p []byte) (n int, err error)
-		Stderr func(p []byte) (n int, err error)
-	}
-)
+public function main() returns error? {
+    http:Client c = check new http:Client("http://testserver", {});
+
+    // String body
+    http:Response r = check c->post("/echo", "hello post");
+    io:println(r.statusCode);
+    io:println(r.getTextPayload());
+
+    // Map body — should be serialized to JSON
+    http:Response r2 = check c->post("/echo", {"msg": "hello"});
+    io:println(r2.statusCode);
+    io:println(r2.getTextPayload());
+    return;
+}
