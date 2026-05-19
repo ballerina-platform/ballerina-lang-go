@@ -60,13 +60,16 @@ func initHttpModule(rt *runtime.Runtime) {
 	var (
 		once      sync.Once
 		byteArrTy semtypes.SemType
+		strArrTy  semtypes.SemType
 		typCtx    semtypes.Context
 	)
 	msgToBody := func(msg values.BalValue) ([]byte, string) {
 		once.Do(func() {
 			env := rt.GetTypeEnv()
-			ld := semtypes.NewListDefinition()
-			byteArrTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+			bld := semtypes.NewListDefinition()
+			byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+			sld := semtypes.NewListDefinition()
+			strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 			typCtx = semtypes.ContextFrom(env)
 		})
 		switch v := msg.(type) {
@@ -505,8 +508,10 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(args []values.BalValue) (values.BalValue, error) {
 			once.Do(func() {
 				env := rt.GetTypeEnv()
-				ld := semtypes.NewListDefinition()
-				byteArrTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+				bld := semtypes.NewListDefinition()
+				byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+				sld := semtypes.NewListDefinition()
+				strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 				typCtx = semtypes.ContextFrom(env)
 			})
 			self := args[0].(*values.Object)
@@ -568,9 +573,17 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getHeaderNames",
 		func(args []values.BalValue) (values.BalValue, error) {
+			once.Do(func() {
+				env := rt.GetTypeEnv()
+				bld := semtypes.NewListDefinition()
+				byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+				sld := semtypes.NewListDefinition()
+				strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
+				typCtx = semtypes.ContextFrom(env)
+			})
 			self := args[0].(*values.Object)
 			keys := responseHeaders(self).Keys()
-			list := values.NewList(len(keys), semtypes.LIST, nil)
+			list := values.NewList(len(keys), strArrTy, nil)
 			for i, k := range keys {
 				list.FillingSet(i, k)
 			}

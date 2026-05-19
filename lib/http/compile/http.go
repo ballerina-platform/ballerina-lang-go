@@ -197,6 +197,8 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	// the list arm rejects non-string lists like int[] at compile time.
 	stringArrayLd := semtypes.NewListDefinition()
 	stringArrayType := stringArrayLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
+	byteArrayLd := semtypes.NewListDefinition()
+	byteArrayType := byteArrayLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
 	headersMd := semtypes.NewMappingDefinition()
 	headersMapType := headersMd.DefineMappingTypeWrapped(env,
 		[]semtypes.Field{},
@@ -250,7 +252,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 	getHeadersSig := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.STRING, headerPositionSemType},
 		ParamNames: []string{"headerName", "position"},
-		ReturnType: semtypes.Union(semtypes.LIST, semtypes.ERROR),
+		ReturnType: semtypes.Union(stringArrayType, semtypes.ERROR),
 		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	getHeadersFnSemType := libcommon.FunctionSignatureToSemType(env, &getHeadersSig)
@@ -272,7 +274,7 @@ func addClient(ctx *context.CompilerContext, space *model.SymbolSpace, configSem
 
 	gbpSig := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{},
-		ReturnType: semtypes.Union(semtypes.LIST, semtypes.ERROR),
+		ReturnType: semtypes.Union(byteArrayType, semtypes.ERROR),
 		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	gbpFnSemType := libcommon.FunctionSignatureToSemType(env, &gbpSig)
