@@ -17,11 +17,17 @@
 package langinternalruntime
 
 import (
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
+	"math"
+	"reflect"
 	"sort"
+	"strconv"
+	"strings"
+	"unsafe"
 )
 
 const (
@@ -160,6 +166,8 @@ type queryGroupState struct {
 	row *values.List
 }
 
+type queryGroupIndex map[string][]int
+
 func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
 	rowCount := rows.Len()
 	if keyRows.Len() != rowCount {
@@ -177,6 +185,8 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 
 	result := values.NewList(0, semtypes.LIST, nil)
 	groups := make([]queryGroupState, 0)
+	groupIndices := make(queryGroupIndex)
+	expectedKeyArity := -1
 	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
 		sourceRow, ok := rows.Get(rowIndex).(*values.List)
 		if !ok {
@@ -189,10 +199,16 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 		if !ok {
 			return nil, fmt.Errorf("group key row %d must be a list", rowIndex)
 		}
-		groupIndex := findQueryGroup(groups, keyRow)
+		if expectedKeyArity == -1 {
+			expectedKeyArity = keyRow.Len()
+		} else if keyRow.Len() != expectedKeyArity {
+			return nil, fmt.Errorf("group key row %d length mismatch: got %d, expected %d", rowIndex, keyRow.Len(), expectedKeyArity)
+		}
+		groupIndex, keySignature := findQueryGroup(groups, groupIndices, keyRow)
 		if groupIndex == -1 {
 			groupRow := createQueryGroupRow(sourceRow, scalarSlots)
 			groups = append(groups, queryGroupState{key: keyRow, row: groupRow})
+			groupIndices[keySignature] = append(groupIndices[keySignature], len(groups)-1)
 			result.Append(groupRow)
 			continue
 		}
@@ -201,13 +217,112 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 	return result, nil
 }
 
-func findQueryGroup(groups []queryGroupState, keyRow *values.List) int {
-	for i := range groups {
-		if values.DeepEquals(groups[i].key, keyRow) {
-			return i
+func findQueryGroup(groups []queryGroupState, groupIndices queryGroupIndex, keyRow *values.List) (int, string) {
+	keySignature := queryGroupKeySignature(keyRow)
+	for _, groupIndex := range groupIndices[keySignature] {
+		if values.DeepEquals(groups[groupIndex].key, keyRow) {
+			return groupIndex, keySignature
 		}
 	}
-	return -1
+	return -1, keySignature
+}
+
+func queryGroupKeySignature(keyRow *values.List) string {
+	var b strings.Builder
+	writeQueryGroupValueSignature(&b, keyRow, make(map[uintptr]bool))
+	return b.String()
+}
+
+func writeQueryGroupValueSignature(b *strings.Builder, v values.BalValue, visited map[uintptr]bool) {
+	switch typedValue := v.(type) {
+	case nil:
+		b.WriteString("nil;")
+	case bool:
+		b.WriteString("bool:")
+		b.WriteString(strconv.FormatBool(typedValue))
+		b.WriteByte(';')
+	case int64:
+		b.WriteString("int:")
+		b.WriteString(strconv.FormatInt(typedValue, 10))
+		b.WriteByte(';')
+	case float64:
+		writeQueryGroupFloatSignature(b, typedValue)
+	case string:
+		writeQueryGroupStringSignature(b, "string", typedValue)
+	case *decimal.Decimal:
+		b.WriteString("decimal:")
+		writeQueryGroupFloatSignature(b, typedValue.Float64())
+	case *values.List:
+		writeQueryGroupListSignature(b, typedValue, visited)
+	case *values.Map:
+		writeQueryGroupMapSignature(b, typedValue, visited)
+	default:
+		b.WriteString("unknown:")
+		b.WriteString(reflect.TypeOf(typedValue).String())
+		b.WriteByte(';')
+	}
+}
+
+func writeQueryGroupFloatSignature(b *strings.Builder, f float64) {
+	b.WriteString("float:")
+	switch {
+	case math.IsNaN(f):
+		b.WriteString("NaN")
+	case f == 0:
+		b.WriteByte('0')
+	default:
+		b.WriteString(strconv.FormatFloat(f, 'g', -1, 64))
+	}
+	b.WriteByte(';')
+}
+
+func writeQueryGroupStringSignature(b *strings.Builder, tag string, s string) {
+	b.WriteString(tag)
+	b.WriteByte(':')
+	b.WriteString(strconv.Itoa(len(s)))
+	b.WriteByte(':')
+	b.WriteString(s)
+	b.WriteByte(';')
+}
+
+func writeQueryGroupListSignature(b *strings.Builder, list *values.List, visited map[uintptr]bool) {
+	ptr := uintptr(unsafe.Pointer(list))
+	if visited[ptr] {
+		b.WriteString("list:cycle;")
+		return
+	}
+	visited[ptr] = true
+	defer delete(visited, ptr)
+
+	b.WriteString("list:")
+	b.WriteString(strconv.Itoa(list.Len()))
+	b.WriteByte('[')
+	for i := 0; i < list.Len(); i++ {
+		writeQueryGroupValueSignature(b, list.Get(i), visited)
+	}
+	b.WriteByte(']')
+}
+
+func writeQueryGroupMapSignature(b *strings.Builder, mapping *values.Map, visited map[uintptr]bool) {
+	ptr := uintptr(unsafe.Pointer(mapping))
+	if visited[ptr] {
+		b.WriteString("map:cycle;")
+		return
+	}
+	visited[ptr] = true
+	defer delete(visited, ptr)
+
+	keys := mapping.Keys()
+	sort.Strings(keys)
+	b.WriteString("map:")
+	b.WriteString(strconv.Itoa(len(keys)))
+	b.WriteByte('{')
+	for _, key := range keys {
+		writeQueryGroupStringSignature(b, "key", key)
+		value, _ := mapping.Get(key)
+		writeQueryGroupValueSignature(b, value, visited)
+	}
+	b.WriteByte('}')
 }
 
 func createQueryGroupRow(sourceRow *values.List, scalarSlots []bool) *values.List {
