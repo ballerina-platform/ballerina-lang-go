@@ -1,14 +1,14 @@
-# Supported language features (subset 6)
+# Supported language features (subset 7)
 
-## Module level declarations
+**Supported Ballerina code:** see [corpus/bal](../corpus/bal)—the [corpus/bal/subset7](../corpus/bal/subset7) directory contains the tests and examples that define what is supported in this subset.
+
+## Module-level declarations
 
 - [Import declarations](https://ballerina.io/spec/lang/master/#import-decl)
 - [Function definition](https://ballerina.io/spec/lang/master/#function-defn)
-  - Currently only support [`block-function-body`](https://ballerina.io/spec/lang/master/#block-function-body)
-  - Currently only support [`required-params`](https://ballerina.io/spec/lang/master/#required-params) in the signature
+  - Currently only supports [`required-params`](https://ballerina.io/spec/lang/master/#required-params) and [`defaultable-params`](https://ballerina.io/spec/lang/master/#defaultable-params) in the signature
 - [Constant declarations](https://ballerina.io/spec/lang/master/#module-const-decl)
-  - Currently only support literals as constant expressions
-  - Currently don't support type declarations in constant declarations
+- [Module variable declarations](https://ballerina.io/spec/lang/master/#module-var-decl)
 - [Class definition](https://ballerina.io/spec/lang/master/#section_8.6)
   - `class-type-quals` not supported
   - Only `object-field` and `method-defn` members supported
@@ -18,7 +18,7 @@
 - [Assignment](https://ballerina.io/spec/lang/master/#assignment-stmt)
   - See supported [`lvexpr`](#expressions)
 - [Destructuring assignment statement](https://ballerina.io/spec/lang/master/#destructuring-assignment-stmt)
-  - Only support [`wildcard-binding-pattern`](https://ballerina.io/spec/lang/master/#wildcard-binding-pattern)
+  - Only supports [`wildcard-binding-pattern`](https://ballerina.io/spec/lang/master/#wildcard-binding-pattern)
 - [Compound Assignment](https://ballerina.io/spec/lang/master/#compound-assignment-stmt)
   - See supported [binary operators](#operators)
   - Currently don't fully support [nil lifting](https://ballerina.io/spec/lang/master/#nil_lifting)
@@ -30,14 +30,14 @@
   - Currently don't support `final`
 - [Return](https://ballerina.io/spec/lang/master/#return-stmt)
 - [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
-  - Currently only support range and list
+  - Currently only supports range, list and map subtypes
 
 ## Expressions
 
 - [Literal](https://ballerina.io/spec/lang/master/#literal)
   - Currently support `nil-literal`, `boolean-literal`, `numeric-literal` and `string-literal` only
 - [lvexpr](https://ballerina.io/spec/lang/master/#section_7.14.1)
-  - Currently only support [variable-reference-lvexpr](https://ballerina.io/spec/lang/master/#variable-reference-lvexpr)
+  - Currently only supports [variable-reference-lvexpr](https://ballerina.io/spec/lang/master/#variable-reference-lvexpr)
 - [`Call`](https://ballerina.io/spec/lang/master/#call-expr)
 - [List constructor](https://ballerina.io/spec/lang/master/#list-constructor-expr)
   - Currently [spread-list-member](https://ballerina.io/spec/lang/master/#spread-list-member) not supported
@@ -54,6 +54,9 @@
 - [Field access expression](https://ballerina.io/spec/lang/master/#section_6.10)
 - [Range expression](https://ballerina.io/spec/lang/master/#section_6.26)
 - [New expression](https://ballerina.io/spec/lang/master/#section_6.8.2)
+- [Query expressions](https://ballerina.io/spec/lang/master/#query-expr)
+  - Currently only supports the `from`, `where`, `let`, and `select` clauses.
+  - Currently only `map` is supported for `query-constructor-type`.
 
 ## Operators
 
@@ -61,7 +64,7 @@
   - Equality ops `==`, `!=`, `===`, `!==`
   - Multiplicative ops `*`, `%`, `/`
   - Bitwise ops `&`, `|`, `^`
-  - Relational ops `<`, `<=`, `>`, `>=`,
+  - Relational ops `<`, `<=`, `>`, `>=`
   - Additive ops `+`, `-`
   - Shift ops `<<`, `>>`, `>>>`
 - Unary operators
@@ -86,12 +89,19 @@
     - `Unsigned16`
     - `Unsigned32`
     - `toHexString`
+  - `ballerina/lang.map`
+    - `length`
+    - `keys`
+    - `remove`
 
 ## Method call
 
 - Method call syntax can be used for calling the following langlib functions:
   - `array:length`
   - `array:push`
+  - `map:length`
+  - `map:keys`
+  - `map:remove`
 
 ## Object type definitions
 
