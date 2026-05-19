@@ -73,6 +73,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			sld := semtypes.NewListDefinition()
 			strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 			typCtx = semtypes.ContextFrom(env)
+			jsonTy := semtypes.CreateJSON(typCtx)
+			jmd := semtypes.NewMappingDefinition()
+			jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
+			jld := semtypes.NewListDefinition()
+			jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
 		})
 		switch v := msg.(type) {
 		case string:
