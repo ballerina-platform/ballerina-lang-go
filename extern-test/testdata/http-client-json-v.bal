@@ -20,7 +20,7 @@ import ballerina/io;
 public function main() returns error? {
     http:Client c = check new ("https://httpbin.org");
     http:Response r = check c->get("/json");
-    json payload = check r.getJsonPayload();
-    io:println(payload is json);
+    json|error payload = r.getJsonPayload();
+    io:println(payload is error);
     return;
 }

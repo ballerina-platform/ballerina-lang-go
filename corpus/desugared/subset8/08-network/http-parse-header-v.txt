@@ -24,5 +24,81 @@
         (invocation io println (
           (invocation lang.array length (
             (simple-var-ref values))))))
+      (var-def
+        (variable $desugar$1 (expr
+          (invocation http parseHeader (
+            (literal multipart/form-data; boundary="----boundary"))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$1))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$1))) ())
+      (var-def
+        (variable quoted (expr
+          (simple-var-ref $desugar$1))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.array length (
+            (simple-var-ref quoted))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (index-based-access
+              (simple-var-ref quoted)
+              (literal 0))
+            (literal value)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (index-based-access
+              (index-based-access
+                (simple-var-ref quoted)
+                (literal 0))
+              (literal params))
+            (literal boundary)))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation http parseHeader (
+            (literal multipart/form-data; boundary))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$2))) ())
+      (var-def
+        (variable noVal (expr
+          (simple-var-ref $desugar$2))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.array length (
+            (simple-var-ref noVal))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (index-based-access
+              (index-based-access
+                (simple-var-ref noVal)
+                (literal 0))
+              (literal params))
+            (literal boundary)))))
+      (var-def
+        (variable $desugar$3 (expr
+          (invocation http parseHeader (
+            (literal text/html))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$3))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$3))) ())
+      (var-def
+        (variable single (expr
+          (simple-var-ref $desugar$3))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.array length (
+            (simple-var-ref single))))))
       (return
         (literal <nil>)))))
