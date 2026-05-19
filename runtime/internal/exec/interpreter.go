@@ -18,23 +18,30 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
-func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
-	ctx := NewContext(reg)
-	ctx.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
-	// Execute init function to initialize globals
+func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
+	ctx := extern.CreateContext(env)
+	cs := &callStack{elements: make([]*Frame, 0, 32)}
+	ctx.CallStack = cs
+	env.Registry.(*modules.Registry).RegisterModule(pkg.PackageID, modules.NewBIRModule(ctx, &pkg))
+	defer func() {
+		if r := recover(); r != nil {
+			err = getFormattedError(cs, r)
+		}
+	}()
 	if pkg.InitFunction != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				err = getFormattedError(ctx, r)
+				err = getFormattedError(cs, r)
 			}
 		}()
 		if result := executeFunction(ctx, *pkg.InitFunction, nil, nil); result != nil {
 			if _, ok := result.(*values.Error); ok {
-				err = getFormattedError(ctx, result)
+				err = getFormattedError(cs, result)
 				return
 			}
 		}
@@ -42,12 +49,12 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 	if pkg.MainFunction != nil {
 		defer func() {
 			if r := recover(); r != nil {
-				err = getFormattedError(ctx, r)
+				err = getFormattedError(cs, r)
 			}
 		}()
 		if result := executeFunction(ctx, *pkg.MainFunction, nil, nil); result != nil {
 			if _, ok := result.(*values.Error); ok {
-				err = getFormattedError(ctx, result)
+				err = getFormattedError(cs, result)
 			}
 		}
 	}

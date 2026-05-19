@@ -28,6 +28,7 @@ import (
 	"ballerina-lang-go/platform/palnative"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
 	"github.com/spf13/cobra"
@@ -258,17 +259,19 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 
 	// Dump BIR if requested
+	tyEnv := project.Environment().TypeEnv()
 	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
+		tyCtx := semtypes.ContextFrom(tyEnv)
 		for _, birPkg := range birPkgs {
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
-			fmt.Fprintln(os.Stderr, strings.TrimSpace(prettyPrinter.Print(*birPkg)))
+			fmt.Fprintln(os.Stderr, strings.TrimSpace(prettyPrinter.Print(tyCtx, *birPkg)))
 			fmt.Fprintln(os.Stderr, "===================END BIR===================")
 		}
 	}
 
-	rt := runtime.NewRuntime(palnative.NewPlatform())
+	rt := runtime.NewRuntime(palnative.NewPlatform(), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			printRuntimeError(err)

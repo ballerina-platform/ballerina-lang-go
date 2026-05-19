@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 )
 
@@ -30,7 +31,7 @@ const (
 )
 
 func initStringModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "length", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "length", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		s, ok := args[0].(string)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a string")

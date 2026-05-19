@@ -36,6 +36,7 @@ import (
 type serializationFixture struct {
 	birPkg          *bir.BIRPackage
 	exportedSymbols model.ExportedSymbolSpace
+	tyEnv           semtypes.Env
 }
 
 func compileForSerializationBench(b *testing.B, balFile string) *serializationFixture {
@@ -55,6 +56,7 @@ func compileForSerializationBench(b *testing.B, balFile string) *serializationFi
 	if err != nil {
 		b.Fatalf("projects.Load(%s): %v", balFile, err)
 	}
+	tyEnv := result.Project().Environment().TypeEnv()
 	compilation := result.Project().CurrentPackage().Compilation()
 
 	var stderrBuf bytes.Buffer
@@ -78,7 +80,7 @@ func compileForSerializationBench(b *testing.B, balFile string) *serializationFi
 		b.Fatalf("exported symbols not found for %s/%s", pkgIdent.OrgName, pkgIdent.ModuleName)
 	}
 
-	return &serializationFixture{birPkg: birPkg, exportedSymbols: exported}
+	return &serializationFixture{birPkg: birPkg, exportedSymbols: exported, tyEnv: tyEnv}
 }
 
 func benchTestPairs(b *testing.B) []test_util.TestCase {
@@ -90,7 +92,7 @@ func BenchmarkBIRMarshal(b *testing.B) {
 		fixture := compileForSerializationBench(b, tc.InputPath)
 		b.Run(tc.Name, func(b *testing.B) {
 			for b.Loop() {
-				if _, err := bircodec.Marshal(fixture.birPkg); err != nil {
+				if _, err := bircodec.Marshal(fixture.tyEnv, fixture.birPkg); err != nil {
 					b.Fatalf("BIR Marshal: %v", err)
 				}
 			}
@@ -101,7 +103,7 @@ func BenchmarkBIRMarshal(b *testing.B) {
 func BenchmarkBIRUnmarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
 		fixture := compileForSerializationBench(b, tc.InputPath)
-		data, err := bircodec.Marshal(fixture.birPkg)
+		data, err := bircodec.Marshal(fixture.tyEnv, fixture.birPkg)
 		if err != nil {
 			b.Fatalf("BIR Marshal setup: %v", err)
 		}
@@ -122,7 +124,7 @@ func BenchmarkSymbolMarshal(b *testing.B) {
 		fixture := compileForSerializationBench(b, tc.InputPath)
 		b.Run(tc.Name, func(b *testing.B) {
 			for b.Loop() {
-				if _, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.birPkg.TypeEnv); err != nil {
+				if _, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.tyEnv); err != nil {
 					b.Fatalf("Symbol Marshal: %v", err)
 				}
 			}
@@ -133,7 +135,7 @@ func BenchmarkSymbolMarshal(b *testing.B) {
 func BenchmarkSymbolUnmarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
 		fixture := compileForSerializationBench(b, tc.InputPath)
-		data, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.birPkg.TypeEnv)
+		data, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.tyEnv)
 		if err != nil {
 			b.Fatalf("Symbol Marshal setup: %v", err)
 		}

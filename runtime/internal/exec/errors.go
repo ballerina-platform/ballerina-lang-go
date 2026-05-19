@@ -25,9 +25,9 @@ import (
 	"ballerina-lang-go/values"
 )
 
-func getFormattedError(ctx *Context, r any) error {
+func getFormattedError(cs *callStack, r any) error {
 	message := panicMessage(r)
-	stack := formatCallStack(ctx)
+	stack := formatCallStack(cs)
 	return fmt.Errorf("%s", formatRuntimePanic(message, stack))
 }
 
@@ -42,8 +42,8 @@ func panicMessage(r any) string {
 	}
 }
 
-func formatCallStack(ctx *Context) []string {
-	frames := ctx.Frames()
+func formatCallStack(cs *callStack) []string {
+	frames := cs.Frames()
 	const maxFrames = 32
 	out := make([]string, 0, len(frames))
 	for i := len(frames) - 1; i >= 0; i-- {

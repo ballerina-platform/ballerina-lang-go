@@ -22,50 +22,61 @@ import (
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/decimal"
+	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
 
-func execConstantLoad(ctx *Context, constantLoad *bir.ConstantLoad, frame *Frame) {
+func execConstantLoad(ctx *extern.Context, constantLoad *bir.ConstantLoad, frame *Frame) {
 	setOperandValue(ctx, constantLoad.LhsOp, frame, constantLoad.Value)
 }
 
-func execMove(ctx *Context, moveIns *bir.Move, frame *Frame) {
+func execMove(ctx *extern.Context, moveIns *bir.Move, frame *Frame) {
 	setOperandValue(ctx, moveIns.LhsOp, frame, getOperandValue(ctx, moveIns.RhsOp, frame))
 }
 
-func execNewArray(ctx *Context, newArray *bir.NewArray, frame *Frame) {
+func execNewArray(ctx *extern.Context, newArray *bir.NewArray, frame *Frame) {
 	size := 0
 	if newArray.SizeOp != nil {
 		size = int(getOperandValue(ctx, newArray.SizeOp, frame).(int64))
 	}
-	list := values.NewList(size, newArray.Type, newArray.Filler)
+	initial := make([]values.BalValue, len(newArray.Values))
 	for i, value := range newArray.Values {
-		list.FillingSet(i, getOperandValue(ctx, value, frame))
+		initial[i] = getOperandValue(ctx, value, frame)
 	}
+	atomic := semtypes.ToListAtomicType(ctx.TypeCtx, newArray.Type)
+	list := values.NewList(newArray.Type, atomic, newArray.IsReadonly, newArray.Filler, size, initial)
 	setOperandValue(ctx, newArray.LhsOp, frame, list)
 }
 
-func execNewMap(ctx *Context, newMap *bir.NewMap, frame *Frame) {
-	m := values.NewMap(newMap.Type)
+func execNewMap(ctx *extern.Context, newMap *bir.NewMap, frame *Frame) {
+	seen := make(map[string]struct{}, len(newMap.Values))
+	entries := make([]values.MapEntry, 0, len(newMap.Values)+len(newMap.Defaults))
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
-		keyVal := getOperandValue(ctx, kv.KeyOp(), frame)
-		keyStr := keyVal.(string)
+		keyStr := getOperandValue(ctx, kv.KeyOp(), frame).(string)
 		valueVal := getOperandValue(ctx, kv.ValueOp(), frame)
-		m.Put(keyStr, valueVal)
+		seen[keyStr] = struct{}{}
+		entries = append(entries, values.MapEntry{Key: keyStr, Value: valueVal})
 	}
 	for _, def := range newMap.Defaults {
-		if _, exists := m.Get(def.FieldName); !exists {
-			fn := ctx.GetBIRFunction(def.FunctionLookupKey)
-			val := executeFunction(ctx, *fn, nil, frame)
-			m.Put(def.FieldName, val)
+		if _, exists := seen[def.FieldName]; exists {
+			continue
 		}
+		fn := ctx.Env.Registry.(*modules.Registry).GetBIRFunction(def.FunctionLookupKey)
+		val := executeFunction(ctx, *fn, nil, frame)
+		entries = append(entries, values.MapEntry{Key: def.FieldName, Value: val})
 	}
+	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, newMap.Type)
+	if atomic == nil {
+		panic(fmt.Sprintf("mapping inherent type has no atomic representation: %s", semtypes.ToString(ctx.TypeCtx, newMap.Type)))
+	}
+	m := values.NewMap(newMap.Type, atomic, newMap.IsReadonly, entries)
 	setOperandValue(ctx, newMap.GetLhsOperand(), frame, m)
 }
 
-func execNewError(ctx *Context, newError *bir.NewError, frame *Frame) {
+func execNewError(ctx *extern.Context, newError *bir.NewError, frame *Frame) {
 	msgVal := getOperandValue(ctx, newError.MessageOp, frame)
 	message := msgVal.(string)
 
@@ -82,11 +93,11 @@ func execNewError(ctx *Context, newError *bir.NewError, frame *Frame) {
 	setOperandValue(ctx, newError.GetLhsOperand(), frame, errVal)
 }
 
-func execNewObject(ctx *Context, newObject *bir.NewObject, frame *Frame) {
-	classDef := ctx.GetClassDef(newObject.ClassDefRef)
+func execNewObject(ctx *extern.Context, newObject *bir.NewObject, frame *Frame) {
+	classDef := ctx.Env.Registry.(*modules.Registry).GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
 	for _, field := range classDef.Fields {
-		fv, _ := values.FillerValue(ctx.TypeCheckContext(), field.Ty)
+		fv, _ := values.FillerValue(ctx.TypeCtx, field.Ty)
 		fieldValues[field.Name] = fv
 	}
 	methodKeys := make(map[string]string, len(classDef.VTable))
@@ -98,16 +109,16 @@ func execNewObject(ctx *Context, newObject *bir.NewObject, frame *Frame) {
 	setOperandValue(ctx, newObject.GetLhsOperand(), frame, obj)
 }
 
-func execArrayStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execArrayStore(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	list := getOperandValue(ctx, access.LhsOp, frame).(*values.List)
 	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
 	if idx < 0 {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
-	list.FillingSet(idx, getOperandValue(ctx, access.RhsOp, frame))
+	list.FillingSet(ctx.TypeCtx, idx, getOperandValue(ctx, access.RhsOp, frame))
 }
 
-func execArrayLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execArrayLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	list := getOperandValue(ctx, access.RhsOp, frame).(*values.List)
 	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
 	if idx < 0 || idx >= list.Len() {
@@ -116,7 +127,7 @@ func execArrayLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	setOperandValue(ctx, access.LhsOp, frame, list.Get(idx))
 }
 
-func execArrayFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execArrayFillingLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	list := getOperandValue(ctx, access.RhsOp, frame).(*values.List)
 	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
 	if idx < 0 {
@@ -125,7 +136,7 @@ func execArrayFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	setOperandValue(ctx, access.LhsOp, frame, list.FillingGet(idx))
 }
 
-func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execMapStore(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	container := getOperandValue(ctx, access.LhsOp, frame)
 	keyStr := getOperandValue(ctx, access.KeyOp, frame).(string)
 	if container == nil {
@@ -133,23 +144,23 @@ func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	}
 	m := container.(*values.Map)
 	valueVal := getOperandValue(ctx, access.RhsOp, frame)
-	if valueVal == nil && m.ShouldDeleteOnNilStore(ctx.TypeCheckContext(), keyStr) {
-		m.Delete(keyStr)
+	if valueVal == nil && m.ShouldDeleteOnNilStore(ctx.TypeCtx, keyStr) {
+		m.Delete(ctx.TypeCtx, keyStr)
 		return
 	}
-	m.Put(keyStr, valueVal)
+	m.Put(ctx.TypeCtx, keyStr, valueVal)
 }
 
-func execMapFillingLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execMapFillingLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	container := getOperandValue(ctx, access.RhsOp, frame)
 	key := getOperandValue(ctx, access.KeyOp, frame).(string)
 	if container == nil {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("missing key: %q", key)))
 	}
-	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(key, access.Filler))
+	setOperandValue(ctx, access.LhsOp, frame, container.(*values.Map).FillingGet(ctx.TypeCtx, key, access.Filler))
 }
 
-func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execMapLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	container := getOperandValue(ctx, access.RhsOp, frame)
 	key := getOperandValue(ctx, access.KeyOp, frame).(string)
 	if container == nil {
@@ -160,27 +171,27 @@ func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 
-func execObjectStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execObjectStore(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	obj := getOperandValue(ctx, access.LhsOp, frame).(*values.Object)
 	field := getOperandValue(ctx, access.KeyOp, frame).(string)
 	value := getOperandValue(ctx, access.RhsOp, frame)
 	obj.Put(field, value)
 }
 
-func execObjectLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+func execObjectLoad(ctx *extern.Context, access *bir.FieldAccess, frame *Frame) {
 	obj := getOperandValue(ctx, access.RhsOp, frame).(*values.Object)
 	field := getOperandValue(ctx, access.KeyOp, frame).(string)
 	value, _ := obj.Get(field)
 	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 
-func execTypeCast(ctx *Context, typeCast *bir.TypeCast, frame *Frame) {
+func execTypeCast(ctx *extern.Context, typeCast *bir.TypeCast, frame *Frame) {
 	sourceValue := getOperandValue(ctx, typeCast.RhsOp, frame)
 	result := castValue(ctx, sourceValue, typeCast.Type)
 	setOperandValue(ctx, typeCast.LhsOp, frame, result)
 }
 
-func execFPLoad(ctx *Context, fpLoad *bir.FPLoad, frame *Frame) {
+func execFPLoad(ctx *extern.Context, fpLoad *bir.FPLoad, frame *Frame) {
 	fn := &values.Function{
 		Type:      fpLoad.Type,
 		LookupKey: fpLoad.FunctionLookupKey,
@@ -191,30 +202,42 @@ func execFPLoad(ctx *Context, fpLoad *bir.FPLoad, frame *Frame) {
 	setOperandValue(ctx, fpLoad.LhsOp, frame, fn)
 }
 
-func execTypeTest(ctx *Context, typeTest *bir.TypeTest, frame *Frame) {
+func execTypeTest(ctx *extern.Context, typeTest *bir.TypeTest, frame *Frame) {
 	sourceValue := getOperandValue(ctx, typeTest.RhsOp, frame)
 	valueType := values.SemTypeForValue(sourceValue)
-	typeCtx := ctx.TypeCheckContext()
+	typeCtx := ctx.TypeCtx
 	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
 	setOperandValue(ctx, typeTest.LhsOp, frame, matches)
 }
 
-func castValue(ctx *Context, value values.BalValue, targetType semtypes.SemType) values.BalValue {
-	typeCtx := ctx.TypeCheckContext()
+func castValue(ctx *extern.Context, value values.BalValue, targetType semtypes.SemType) values.BalValue {
+	typeCtx := ctx.TypeCtx
 	valueType := values.SemTypeForValue(value)
 	if semtypes.IsSubtype(typeCtx, valueType, targetType) {
 		return value
 	}
+	var converted values.BalValue
 	switch {
 	case semtypes.IsSubtypeSimple(targetType, semtypes.INT):
-		return toInt(value)
+		converted = toInt(value)
 	case semtypes.IsSubtypeSimple(targetType, semtypes.FLOAT):
-		return toFloat(value)
+		converted = toFloat(value)
 	case semtypes.IsSubtypeSimple(targetType, semtypes.DECIMAL):
-		return toDecimal(value)
+		converted = toDecimal(value)
+	default:
+		panic(badTypeCastError(typeCtx, valueType, targetType))
 	}
-	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
-		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType))))
+	// Numeric conversion only guarantees the basic type; narrow subtypes
+	// (e.g. `2|3|4`, `int:Signed8`, `byte`) still require a membership check.
+	if !semtypes.IsSubtype(typeCtx, values.SemTypeForValue(converted), targetType) {
+		panic(badTypeCastError(typeCtx, valueType, targetType))
+	}
+	return converted
+}
+
+func badTypeCastError(typeCtx semtypes.Context, valueType, targetType semtypes.SemType) *values.Error {
+	return values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
+		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType)))
 }
 
 func toInt(value any) int64 {
@@ -284,23 +307,23 @@ func toDecimal(value any) *decimal.Decimal {
 	}
 }
 
-func execNewXMLText(ctx *Context, instr *bir.NewXMLText, frame *Frame) {
+func execNewXMLText(ctx *extern.Context, instr *bir.NewXMLText, frame *Frame) {
 	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLText{Body: body})
 }
 
-func execNewXMLComment(ctx *Context, instr *bir.NewXMLComment, frame *Frame) {
+func execNewXMLComment(ctx *extern.Context, instr *bir.NewXMLComment, frame *Frame) {
 	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLComment{Body: body})
 }
 
-func execNewXMLPI(ctx *Context, instr *bir.NewXMLPI, frame *Frame) {
+func execNewXMLPI(ctx *extern.Context, instr *bir.NewXMLPI, frame *Frame) {
 	target := getOperandValue(ctx, instr.TargetOp, frame).(string)
 	data := getOperandValue(ctx, instr.DataOp, frame).(string)
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLProcessingInstruction{Target: target, Data: data})
 }
 
-func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
+func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Frame) {
 	name := getOperandValue(ctx, instr.NameOp, frame).(string)
 	var children values.XMLValue
 	if instr.ChildrenOp != nil {
@@ -322,7 +345,7 @@ func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children})
 }
 
-func execNewXMLSequence(ctx *Context, instr *bir.NewXMLSequence, frame *Frame) {
+func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *Frame) {
 	items := make([]values.XMLValue, 0, len(instr.Children))
 	for i, op := range instr.Children {
 		val := getOperandValue(ctx, op, frame)

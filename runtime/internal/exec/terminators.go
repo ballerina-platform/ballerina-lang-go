@@ -18,17 +18,19 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
-func execBranch(ctx *Context, branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
+func execBranch(ctx *extern.Context, branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	if getOperandValue(ctx, branchTerm.Op, frame).(bool) {
 		return branchTerm.TrueBB
 	}
 	return branchTerm.FalseBB
 }
 
-func execCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock {
+func execCall(ctx *extern.Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock {
 	args := extractArgs(ctx, callInfo.Args, frame)
 	result := executeCall(ctx, callInfo, args)
 	if callInfo.LhsOp != nil {
@@ -37,7 +39,7 @@ func execCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock
 	return callInfo.ThenBB
 }
 
-func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
+func executeCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
 	if callInfo.IsMethodCall {
 		return dispatchMethodCall(ctx, callInfo, args)
 	}
@@ -45,7 +47,7 @@ func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) value
 		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
 	}
 	if callInfo.CachedNativeFunc != nil {
-		result, err := callInfo.CachedNativeFunc(args)
+		result, err := callInfo.CachedNativeFunc(ctx, args)
 		if err != nil {
 			panic(err)
 		}
@@ -54,7 +56,7 @@ func executeCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) value
 	return lookupAndExecute(ctx, callInfo, args, callInfo.FunctionLookupKey)
 }
 
-func dispatchMethodCall(ctx *Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
+func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
 	receiverObj := args[0].(*values.Object)
 	lookupKey, found := receiverObj.MethodLookupKey(string(callInfo.Name))
 	if !found {
@@ -68,7 +70,7 @@ func dispatchMethodCall(ctx *Context, callInfo *bir.Call, args []values.BalValue
 			return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
 		}
 		if callInfo.CachedNativeFunc != nil {
-			result, err := callInfo.CachedNativeFunc(args)
+			result, err := callInfo.CachedNativeFunc(ctx, args)
 			if err != nil {
 				panic(err)
 			}
@@ -82,16 +84,17 @@ func dispatchMethodCall(ctx *Context, callInfo *bir.Call, args []values.BalValue
 	return lookupAndExecute(ctx, callInfo, args, lookupKey)
 }
 
-func lookupAndExecute(ctx *Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) values.BalValue {
-	fn := ctx.GetBIRFunction(lookupKey)
+func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) values.BalValue {
+	reg := ctx.Env.Registry.(*modules.Registry)
+	fn := reg.GetBIRFunction(lookupKey)
 	if fn != nil {
 		callInfo.CachedBIRFunc = fn
 		return executeFunction(ctx, *fn, args, nil)
 	}
-	externFn := ctx.GetNativeFunction(lookupKey)
+	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
 		callInfo.CachedNativeFunc = externFn.Impl
-		result, err := externFn.Impl(args)
+		result, err := externFn.Impl(ctx, args)
 		if err != nil {
 			panic(err)
 		}
@@ -100,7 +103,7 @@ func lookupAndExecute(ctx *Context, callInfo *bir.Call, args []values.BalValue, 
 	panic(values.NewErrorWithMessage("function not found: " + callInfo.Name.Value()))
 }
 
-func execFpCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock {
+func execFpCall(ctx *extern.Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlock {
 	args := extractArgs(ctx, callInfo.Args, frame)
 	fnValue := getOperandValue(ctx, callInfo.FpOperand, frame).(*values.Function)
 	lookupKey := fnValue.LookupKey
@@ -108,15 +111,16 @@ func execFpCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlo
 	if fnValue.ParentFrame != nil {
 		parentFrame = fnValue.ParentFrame.(*Frame)
 	}
-	fn := ctx.GetBIRFunction(lookupKey)
+	reg := ctx.Env.Registry.(*modules.Registry)
+	fn := reg.GetBIRFunction(lookupKey)
 	var result values.BalValue
 	if fn != nil {
 		result = executeFunction(ctx, *fn, args, parentFrame)
 	} else {
-		externFn := ctx.GetNativeFunction(lookupKey)
+		externFn := reg.GetNativeFunction(lookupKey)
 		if externFn != nil {
 			var err error
-			result, err = externFn.Impl(args)
+			result, err = externFn.Impl(ctx, args)
 			if err != nil {
 				panic(err)
 			}
@@ -130,7 +134,7 @@ func execFpCall(ctx *Context, callInfo *bir.Call, frame *Frame) *bir.BIRBasicBlo
 	return callInfo.ThenBB
 }
 
-func extractArgs(ctx *Context, args []bir.BIROperand, frame *Frame) []values.BalValue {
+func extractArgs(ctx *extern.Context, args []bir.BIROperand, frame *Frame) []values.BalValue {
 	values := make([]values.BalValue, len(args))
 	for i, op := range args {
 		values[i] = getOperandValue(ctx, &op, frame)
@@ -138,7 +142,7 @@ func extractArgs(ctx *Context, args []bir.BIROperand, frame *Frame) []values.Bal
 	return values
 }
 
-func execPanic(ctx *Context, panicTerm *bir.Panic, frame *Frame) *bir.BIRBasicBlock {
+func execPanic(ctx *extern.Context, panicTerm *bir.Panic, frame *Frame) *bir.BIRBasicBlock {
 	errVal := getOperandValue(ctx, panicTerm.ErrorOp, frame)
 	panic(errVal)
 }

@@ -100,7 +100,6 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		Functions:     functions,
 		InitFunction:  initFunction,
 		MainFunction:  mainFunction,
-		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
 }
 
@@ -561,6 +560,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
+		var isReadonly bool
+		br.read(&isReadonly)
 		valuesCount := br.readLength()
 		arrayValues := make([]*bir.BIROperand, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
@@ -571,10 +572,11 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Type:   ty,
-			SizeOp: sizeOp,
-			Values: arrayValues,
-			Filler: br.restFillerFactoryForListType(ty),
+			Type:       ty,
+			SizeOp:     sizeOp,
+			Values:     arrayValues,
+			Filler:     br.restFillerFactoryForListType(ty),
+			IsReadonly: isReadonly,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
@@ -607,6 +609,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 	case bir.INSTRUCTION_KIND_NEW_STRUCTURE:
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
+		var isReadonly bool
+		br.read(&isReadonly)
 		valuesCount := br.readLength()
 		values := make([]bir.MappingConstructorEntry, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
@@ -632,9 +636,10 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Type:     ty,
-			Values:   values,
-			Defaults: defaults,
+			Type:       ty,
+			Values:     values,
+			Defaults:   defaults,
+			IsReadonly: isReadonly,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ERROR:
 		ty := br.readType()
