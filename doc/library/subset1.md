@@ -1,5 +1,10 @@
 # Supported ballerina library features
 
+## [io](https://github.com/ballerina-platform/module-ballerina-io/blob/master/docs/spec/spec.md)
+### [Console I/O](https://github.com/ballerina-platform/module-ballerina-io/blob/master/docs/spec/spec.md#2-console-io)
+- `print`
+- `println`
+
 ## [http](https://github.com/ballerina-platform/module-ballerina-http/blob/master/docs/spec/spec.md)
 ### Client — remote methods
 

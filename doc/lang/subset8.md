@@ -94,10 +94,7 @@
 
 ## Import declarations
 
-- Only following libraries with given methods/types are supported
-  - `ballerina/io`
-    - `print`
-    - `println`
+- Only following lang libraries with given methods/types are supported
   - `ballerina/lang.array`
     - `length`
     - `push`
