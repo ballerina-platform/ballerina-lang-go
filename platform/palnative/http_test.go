@@ -155,8 +155,8 @@ func TestNewHTTPClient_RedirectsDisabled(t *testing.T) {
 func TestNewHTTPClient_RedirectsEnabled(t *testing.T) {
 	client := NewHTTPClient(pal.ClientConfig{
 		FollowRedirects: pal.FollowRedirects{
-			Enabled:         true,
-			MaxCount:        3,
+			Enabled:          true,
+			MaxCount:         3,
 			AllowAuthHeaders: true,
 		},
 	})

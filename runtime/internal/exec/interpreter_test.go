@@ -37,11 +37,17 @@ func compileBIR(t *testing.T, src string) bir.BIRPackage {
 	if err != nil {
 		t.Fatalf("create temp file: %v", err)
 	}
-	defer os.Remove(tmp.Name())
+	defer func() {
+		if err := os.Remove(tmp.Name()); err != nil {
+			t.Fatalf("remove temp file: %v", err)
+		}
+	}()
 	if _, err := tmp.WriteString(src); err != nil {
 		t.Fatalf("write temp file: %v", err)
 	}
-	tmp.Close()
+	if err := tmp.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
