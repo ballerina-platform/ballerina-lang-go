@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"ballerina-lang-go/platform/pal"
+	"ballerina-lang-go/platform/palnative"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/test_util"
@@ -348,5 +349,102 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 	expected := "200\n"
 	if stdoutBuf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}
+
+// TestHttpClientPublicGet exercises palnative.NewHTTPClient against a real
+// public endpoint, ensuring the full Ballerina → PAL → palnative path is
+// covered. Skipped when EXTERN_SKIP_NETWORK=1 or no network is available.
+// TODO: Replace with a Ballerina HTTP service once server support lands.
+func TestHttpClientPublicGet(t *testing.T) {
+	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
+		t.Skip("skipping network-dependent test")
+	}
+
+	balFile := filepath.Join(testDataDir, "http-client-public-get-v.bal")
+	absPath, err := filepath.Abs(balFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
+
+	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
+		BallerinaEnvFs: ballerinaEnvFs,
+	})
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	stdoutBuf := &bytes.Buffer{}
+	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
+	testPal.HTTP = pal.HTTP{
+		NewClient: palnative.NewHTTPClient,
+	}
+
+	rt := runtime.NewRuntime(testPal)
+	if err := rt.Interpret(*birPkg); err != nil {
+		t.Fatalf("runtime error: %v", err)
+	}
+
+	if strings.TrimSpace(stdoutBuf.String()) != "200" {
+		t.Errorf("expected status 200, got: %q", stdoutBuf.String())
+	}
+}
+
+// TestHttpClientRedirect exercises redirect-following through palnative.NewHTTPClient.
+func TestHttpClientRedirect(t *testing.T) {
+	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
+		t.Skip("skipping network-dependent test")
+	}
+
+	balFile := filepath.Join(testDataDir, "http-client-redirect-v.bal")
+	absPath, err := filepath.Abs(balFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
+
+	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
+		BallerinaEnvFs: ballerinaEnvFs,
+	})
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	stdoutBuf := &bytes.Buffer{}
+	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
+	testPal.HTTP = pal.HTTP{
+		NewClient: palnative.NewHTTPClient,
+	}
+
+	rt := runtime.NewRuntime(testPal)
+	if err := rt.Interpret(*birPkg); err != nil {
+		t.Fatalf("runtime error: %v", err)
+	}
+
+	if strings.TrimSpace(stdoutBuf.String()) != "200" {
+		t.Errorf("expected final status 200 after redirect, got: %q", stdoutBuf.String())
 	}
 }

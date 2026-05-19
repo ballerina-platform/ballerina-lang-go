@@ -14,6 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// These two test cases cannot be expressed as corpus/bal -p tests: when
+// init()/main() returns an error value (rather than panicking), ctx.PopFrame()
+// has already run before getFormattedError is called, so no stack frame exists
+// in the output. The corpus @panic annotation validator requires a frame, so
+// they live here instead.
 package exec_test
 
 import (
@@ -21,7 +26,6 @@ import (
 	"strings"
 	"testing"
 
-	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
@@ -29,25 +33,19 @@ import (
 	"ballerina-lang-go/test_util/testphases"
 )
 
-// compileBIR compiles inline Ballerina source to a BIR package.
-// t.Fatal is called on any compilation failure.
-func compileBIR(t *testing.T, src string) bir.BIRPackage {
+// compileAndInterpret compiles inline Ballerina source and interprets it.
+// Returns the error from Interpret, or nil on success.
+func compileAndInterpret(t *testing.T, src string) error {
 	t.Helper()
 	tmp, err := os.CreateTemp("", "exec-test-*.bal")
 	if err != nil {
 		t.Fatalf("create temp file: %v", err)
 	}
-	defer func() {
-		if err := os.Remove(tmp.Name()); err != nil {
-			t.Fatalf("remove temp file: %v", err)
-		}
-	}()
+	defer os.Remove(tmp.Name())
 	if _, err := tmp.WriteString(src); err != nil {
 		t.Fatalf("write temp file: %v", err)
 	}
-	if err := tmp.Close(); err != nil {
-		t.Fatalf("close temp file: %v", err)
-	}
+	tmp.Close()
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
@@ -61,23 +59,21 @@ func compileBIR(t *testing.T, src string) bir.BIRPackage {
 	if result.BIRPackage == nil {
 		t.Fatal("BIR package is nil after compilation")
 	}
-	return *result.BIRPackage
+	return exec.Interpret(*result.BIRPackage, modules.NewRegistry())
 }
 
-// TestInterpret_InitFunctionReturnsError verifies that when a module-level
-// init() function explicitly returns an error value, Interpret surfaces it
-// as a formatted error (exercises interpreter.go L36-38).
+// TestInterpret_InitFunctionReturnsError verifies that when init() explicitly
+// returns an error value, Interpret surfaces it (exercises interpreter.go L36-38).
+// This cannot be a corpus -p test: no stack frame is emitted for return-error
+// (as opposed to panic), so the @panic annotation validator would fail.
 func TestInterpret_InitFunctionReturnsError(t *testing.T) {
-	pkg := compileBIR(t, `
+	err := compileAndInterpret(t, `
 function init() returns error? {
     return error("initialization failed");
 }
-
 public function main() {
 }
 `)
-
-	err := exec.Interpret(pkg, modules.NewRegistry())
 	if err == nil {
 		t.Fatal("expected non-nil error when init function returns an error, got nil")
 	}
@@ -86,68 +82,19 @@ public function main() {
 	}
 }
 
-// TestInterpret_MainSucceeds verifies a program with only a main function
-// (no explicit init) executes without error (exercises the main-function path).
-func TestInterpret_MainSucceeds(t *testing.T) {
-	pkg := compileBIR(t, `
-public function main() {
-}
-`)
-	if err := exec.Interpret(pkg, modules.NewRegistry()); err != nil {
-		t.Fatalf("expected nil error for successful main, got: %s", err.Error())
-	}
-}
-
 // TestInterpret_MainFunctionReturnsError verifies that when main() explicitly
-// returns an error, Interpret surfaces it (exercises interpreter.go L49-51).
+// returns an error value, Interpret surfaces it (exercises interpreter.go L49-51).
+// Same reason as TestInterpret_InitFunctionReturnsError for not being a corpus test.
 func TestInterpret_MainFunctionReturnsError(t *testing.T) {
-	pkg := compileBIR(t, `
+	err := compileAndInterpret(t, `
 public function main() returns error? {
     return error("main failed");
 }
 `)
-	err := exec.Interpret(pkg, modules.NewRegistry())
 	if err == nil {
 		t.Fatal("expected non-nil error when main returns an error, got nil")
 	}
 	if !strings.Contains(err.Error(), "main failed") {
 		t.Errorf("expected error message to contain 'main failed', got: %s", err.Error())
-	}
-}
-
-// TestInterpret_InitFunctionPanics verifies that a panic inside init() is
-// caught by the defer/recover block and returned as an error (exercises L30-34).
-func TestInterpret_InitFunctionPanics(t *testing.T) {
-	pkg := compileBIR(t, `
-function init() {
-    panic error("init panic");
-}
-
-public function main() {
-}
-`)
-	err := exec.Interpret(pkg, modules.NewRegistry())
-	if err == nil {
-		t.Fatal("expected non-nil error when init panics, got nil")
-	}
-	if !strings.Contains(err.Error(), "init panic") {
-		t.Errorf("expected error message to contain 'init panic', got: %s", err.Error())
-	}
-}
-
-// TestInterpret_MainFunctionPanics verifies that a panic inside main() is
-// caught by the defer/recover block and returned as an error (exercises L43-46).
-func TestInterpret_MainFunctionPanics(t *testing.T) {
-	pkg := compileBIR(t, `
-public function main() {
-    panic error("main panic");
-}
-`)
-	err := exec.Interpret(pkg, modules.NewRegistry())
-	if err == nil {
-		t.Fatal("expected non-nil error when main panics, got nil")
-	}
-	if !strings.Contains(err.Error(), "main panic") {
-		t.Errorf("expected error message to contain 'main panic', got: %s", err.Error())
 	}
 }

@@ -20,5 +20,20 @@ import ballerina/io;
 public function main() returns error? {
     var values = check http:parseHeader("text/plain;q=0.9, application/json");
     io:println(values.length()); // @output 2
+
+    // Quoted param value: boundary should be stripped of quotes.
+    var quoted = check http:parseHeader("multipart/form-data; boundary=\"----boundary\"");
+    io:println(quoted.length()); // @output 1
+    io:println(quoted[0].value); // @output multipart/form-data
+    io:println(quoted[0].params["boundary"]); // @output ----boundary
+
+    // Param without value: boundary key present with empty string.
+    var noVal = check http:parseHeader("multipart/form-data; boundary");
+    io:println(noVal.length()); // @output 1
+    io:println(noVal[0].params["boundary"]); // @output
+
+    // Single value with no params.
+    var single = check http:parseHeader("text/html");
+    io:println(single.length()); // @output 1
     return;
 }

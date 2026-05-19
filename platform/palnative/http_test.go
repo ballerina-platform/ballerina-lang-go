@@ -18,6 +18,8 @@ package palnative
 
 import (
 	"crypto/tls"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -119,96 +121,163 @@ func TestResolveCipherSuites_InsecureName(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// NewHTTPClient
+// NewHTTPClient — real TLS handshake assertions
 // ---------------------------------------------------------------------------
 
-func TestNewHTTPClient_DefaultConfig(t *testing.T) {
-	client := NewHTTPClient(pal.ClientConfig{})
-	if client == nil {
-		t.Fatal("expected non-nil client for default config")
+// TestNewHTTPClient_InsecureSkipVerify verifies that a client with
+// InsecureSkipVerify=true can connect to a self-signed TLS server.
+func TestNewHTTPClient_InsecureSkipVerify(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
+	client := NewHTTPClient(pal.ClientConfig{
+		TLS: pal.TLSConfig{InsecureSkipVerify: true},
+	})
+	status, _, _, err := client.Execute("GET", server.URL+"/", nil, "", nil)
+	if err != nil {
+		t.Fatalf("expected successful connection with InsecureSkipVerify=true, got: %v", err)
+	}
+	if status != 200 {
+		t.Errorf("expected status 200, got %d", status)
 	}
 }
 
-func TestNewHTTPClient_WithTimeout(t *testing.T) {
-	client := NewHTTPClient(pal.ClientConfig{Timeout: 5 * time.Second})
-	if client == nil {
-		t.Fatal("expected non-nil client with timeout config")
+// TestNewHTTPClient_TLSVerificationFails verifies that without InsecureSkipVerify
+// a connection to a self-signed TLS server fails.
+func TestNewHTTPClient_TLSVerificationFails(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
+	client := NewHTTPClient(pal.ClientConfig{
+		TLS: pal.TLSConfig{InsecureSkipVerify: false},
+	})
+	_, _, _, err := client.Execute("GET", server.URL+"/", nil, "", nil)
+	if err == nil {
+		t.Fatal("expected TLS verification error for self-signed cert, got nil")
 	}
 }
 
-func TestNewHTTPClient_HTTP2(t *testing.T) {
-	client := NewHTTPClient(pal.ClientConfig{HTTPVersion: "2.0"})
-	if client == nil {
-		t.Fatal("expected non-nil client with HTTP/2 config")
+// TestNewHTTPClient_Timeout verifies that the client respects the timeout.
+func TestNewHTTPClient_Timeout(t *testing.T) {
+	// Server that never responds
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second)
+	}))
+	defer server.Close()
+
+	client := NewHTTPClient(pal.ClientConfig{
+		Timeout: 100 * time.Millisecond,
+	})
+	_, _, _, err := client.Execute("GET", server.URL+"/", nil, "", nil)
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
 	}
 }
 
+// TestNewHTTPClient_RedirectsDisabled verifies that a client with redirects
+// disabled does NOT follow 3xx responses.
 func TestNewHTTPClient_RedirectsDisabled(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirect" {
+			http.Redirect(w, r, "/destination", http.StatusFound)
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
 	client := NewHTTPClient(pal.ClientConfig{
 		FollowRedirects: pal.FollowRedirects{Enabled: false},
 	})
-	if client == nil {
-		t.Fatal("expected non-nil client with redirects disabled")
+	status, _, _, err := client.Execute("GET", server.URL+"/redirect", nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != http.StatusFound {
+		t.Errorf("expected 302 (redirect not followed), got %d", status)
 	}
 }
 
+// TestNewHTTPClient_RedirectsEnabled verifies that a client with redirects
+// enabled follows 3xx responses up to the limit.
 func TestNewHTTPClient_RedirectsEnabled(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirect" {
+			http.Redirect(w, r, "/destination", http.StatusFound)
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
 	client := NewHTTPClient(pal.ClientConfig{
-		FollowRedirects: pal.FollowRedirects{
-			Enabled:          true,
-			MaxCount:         3,
-			AllowAuthHeaders: true,
-		},
+		FollowRedirects: pal.FollowRedirects{Enabled: true, MaxCount: 3},
 	})
-	if client == nil {
-		t.Fatal("expected non-nil client with redirects enabled")
+	status, _, _, err := client.Execute("GET", server.URL+"/redirect", nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != 200 {
+		t.Errorf("expected 200 (redirect followed), got %d", status)
 	}
 }
 
-func TestNewHTTPClient_TLSVersions(t *testing.T) {
+// TestNewHTTPClient_TLSVersionRange verifies that the client can be configured
+// with specific TLS min/max versions and successfully connects.
+func TestNewHTTPClient_TLSVersionRange(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
 	client := NewHTTPClient(pal.ClientConfig{
 		TLS: pal.TLSConfig{
-			MinVersion: tls.VersionTLS12,
-			MaxVersion: tls.VersionTLS13,
+			MinVersion:         tls.VersionTLS12,
+			MaxVersion:         tls.VersionTLS13,
+			InsecureSkipVerify: true,
 		},
 	})
-	if client == nil {
-		t.Fatal("expected non-nil client with TLS version range")
+	status, _, _, err := client.Execute("GET", server.URL+"/", nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != 200 {
+		t.Errorf("expected 200, got %d", status)
 	}
 }
 
+// TestNewHTTPClient_ValidCipherSuites verifies that configuring known cipher
+// suite names resolves and allows the TLS handshake to complete.
 func TestNewHTTPClient_ValidCipherSuites(t *testing.T) {
 	suites := tls.CipherSuites()
 	if len(suites) == 0 {
 		t.Skip("no cipher suites available")
 	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+
+	// Build the cipher suite name list from the first available suite.
+	names := make([]string, len(suites))
+	for i, s := range suites {
+		names[i] = s.Name
+	}
 	client := NewHTTPClient(pal.ClientConfig{
 		TLS: pal.TLSConfig{
-			CipherSuiteNames: []string{suites[0].Name},
+			CipherSuiteNames:   names,
+			InsecureSkipVerify: true,
 		},
 	})
-	if client == nil {
-		t.Fatal("expected non-nil client with valid cipher suites")
+	status, _, _, err := client.Execute("GET", server.URL+"/", nil, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error with valid cipher suites: %v", err)
 	}
-}
-
-func TestNewHTTPClient_InvalidCipherSuites(t *testing.T) {
-	// All unknown names — falls through to the warning path, but should not panic.
-	client := NewHTTPClient(pal.ClientConfig{
-		TLS: pal.TLSConfig{
-			CipherSuiteNames: []string{"NOT_A_REAL_CIPHER"},
-		},
-	})
-	if client == nil {
-		t.Fatal("expected non-nil client even when cipher suite names are unresolvable")
-	}
-}
-
-func TestNewHTTPClient_InsecureSkipVerify(t *testing.T) {
-	client := NewHTTPClient(pal.ClientConfig{
-		TLS: pal.TLSConfig{InsecureSkipVerify: true},
-	})
-	if client == nil {
-		t.Fatal("expected non-nil client with InsecureSkipVerify")
+	if status != 200 {
+		t.Errorf("expected 200, got %d", status)
 	}
 }
