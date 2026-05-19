@@ -4851,6 +4851,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return semtypes.TYPEDESC, true
 		case model.TypeKind_XML:
 			return semtypes.XML, true
+		case model.TypeKind_READONLY:
+			return semtypes.VAL_READONLY, true
 		default:
 			t.internalError("unexpected type tag", diagnostics.Location{})
 			return nil, false

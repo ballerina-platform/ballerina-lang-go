@@ -46,9 +46,6 @@ func execNewArray(ctx *extern.Context, newArray *bir.NewArray, frame *Frame) {
 		initial[i] = getOperandValue(ctx, value, frame)
 	}
 	atomic := semtypes.ToListAtomicType(ctx.TypeCtx, newArray.Type)
-	if atomic == nil {
-		panic(fmt.Sprintf("list inherent type has no atomic representation: %s", semtypes.ToString(ctx.TypeCtx, newArray.Type)))
-	}
 	list := values.NewList(newArray.Type, atomic, newArray.IsReadonly, newArray.Filler, size, initial)
 	setOperandValue(ctx, newArray.LhsOp, frame, list)
 }

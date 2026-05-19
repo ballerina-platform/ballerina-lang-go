@@ -36,18 +36,16 @@ type List struct {
 // initial values occupy the low indices and any remaining slots are populated
 // by the filler factory.
 func NewList(ty semtypes.SemType, atomic *semtypes.ListAtomicType, isReadonly bool,
-	filler FillerFactory, size int, initial []BalValue) *List {
+	filler FillerFactory, size int, initial []BalValue,
+) *List {
 	if atomic == nil {
 		panic("values.NewList: atomic type must not be nil")
 	}
-	length := size
-	if len(initial) > length {
-		length = len(initial)
-	}
+	length := max(len(initial), size)
 	elems := make([]BalValue, length)
 	copy(elems, initial)
-	for i := len(initial); i < length; i++ {
-		elems[i] = filler()
+	if len(initial) < length {
+		panic("values.NewList: missing values")
 	}
 	return &List{
 		Type:       ty,
