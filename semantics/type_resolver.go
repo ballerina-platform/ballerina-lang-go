@@ -3204,9 +3204,10 @@ func aggregateQueryVariable(t typeResolver, chain *binding, variable queryVariab
 	aggregatedTy := queryAggregatedListType(t.typeEnv(), elemTy, nonEmpty)
 	aggregatedSymbol := narrowSymbol(t, variable.symbol, aggregatedTy)
 	return &binding{
-		ref:            variable.symbol,
-		narrowedSymbol: aggregatedSymbol,
-		prev:           chain,
+		ref:             variable.symbol,
+		narrowedSymbol:  aggregatedSymbol,
+		prev:            chain,
+		queryAggregated: true,
 	}
 }
 
@@ -3499,6 +3500,7 @@ func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (s
 }
 
 func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	expr.ImplicitSpreadMembers = nil
 	if expectedType != nil {
 		return resolveListConstructorWithExpectedType(t, chain, expr, expectedType)
 	}
@@ -3506,11 +3508,21 @@ func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangL
 }
 
 func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
-	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
+	memberTypes := make([]semtypes.SemType, 0, len(expr.Exprs))
+	var restTy semtypes.SemType = semtypes.NEVER
+	hasImplicitSpread := false
 	for i, memberExpr := range expr.Exprs {
+		isImplicitSpread := isQueryAggregatedVariableReference(chain, memberExpr)
 		memberTy, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
+		}
+		if isImplicitSpread {
+			expr.SetImplicitSpreadMember(i)
+			spreadMemberTy := semtypes.ListProj(t.typeContext(), memberTy, semtypes.INT)
+			restTy = semtypes.Union(restTy, widenedListMemberType(spreadMemberTy))
+			hasImplicitSpread = true
+			continue
 		}
 		var broadTy semtypes.SemType
 		if semtypes.SingleShape(memberTy).IsEmpty() {
@@ -3518,11 +3530,15 @@ func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLang
 		} else {
 			broadTy = semtypes.WidenToBasicTypes(memberTy)
 		}
-		memberTypes[i] = broadTy
+		if hasImplicitSpread {
+			restTy = semtypes.Union(restTy, broadTy)
+			continue
+		}
+		memberTypes = append(memberTypes, broadTy)
 	}
 
 	ld := semtypes.NewListDefinition()
-	listTy := ld.DefineListTypeWrapped(t.typeEnv(), memberTypes, len(memberTypes), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
+	listTy := ld.DefineListTypeWrapped(t.typeEnv(), memberTypes, len(memberTypes), restTy, semtypes.CellMutability_CELL_MUT_LIMITED)
 
 	setExpectedType(expr, listTy)
 	lat := semtypes.ToListAtomicType(t.typeContext(), listTy)
@@ -3532,6 +3548,10 @@ func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLang
 }
 
 func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if resultType, lat, ok := expectedListAtomicType(t, expectedType); ok {
+		return resolveListConstructorWithAtomicType(t, chain, expr, resultType, lat)
+	}
+
 	for _, memberExpr := range expr.Exprs {
 		if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil); !ok {
 			return nil, expressionEffect{}, false
@@ -3558,6 +3578,76 @@ func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr
 	expr.AtomicType = lat
 	setExpectedType(expr, resultType)
 	return resultType, defaultExpressionEffect(chain), true
+}
+
+func expectedListAtomicType(t typeResolver, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType, bool) {
+	expectedListType := semtypes.Intersect(expectedType, semtypes.LIST)
+	if semtypes.IsEmpty(t.typeContext(), expectedListType) {
+		return nil, semtypes.ListAtomicType{}, false
+	}
+	lat := semtypes.ToListAtomicType(t.typeContext(), expectedListType)
+	if lat == nil {
+		return nil, semtypes.ListAtomicType{}, false
+	}
+	return expectedListType, *lat, true
+}
+
+func resolveListConstructorWithAtomicType(
+	t typeResolver,
+	chain *binding,
+	expr *ast.BLangListConstructorExpr,
+	resultType semtypes.SemType,
+	lat semtypes.ListAtomicType,
+) (semtypes.SemType, expressionEffect, bool) {
+	memberIndex := 0
+	for i, memberExpr := range expr.Exprs {
+		requiredType := lat.MemberAtInnerVal(memberIndex)
+		if semtypes.IsNever(requiredType) {
+			t.semanticError("too many members in list constructor", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		if isQueryAggregatedVariableReference(chain, memberExpr) {
+			if semtypes.IsNever(lat.Rest()) {
+				t.semanticError("aggregated variable reference cannot be used as a spread member for a fixed-length list constructor", memberExpr.GetPosition())
+				return nil, expressionEffect{}, false
+			}
+			expr.SetImplicitSpreadMember(i)
+			memberExpr.SetDeterminedType(nil)
+			spreadExpectedType := queryAggregatedListType(t.typeEnv(), requiredType, false)
+			if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, spreadExpectedType); !ok {
+				return nil, expressionEffect{}, false
+			}
+			memberIndex = lat.Members.FixedLength
+			continue
+		}
+		memberExpr.SetDeterminedType(nil)
+		if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, requiredType); !ok {
+			return nil, expressionEffect{}, false
+		}
+		memberIndex++
+	}
+
+	expr.AtomicType = lat
+	setExpectedType(expr, resultType)
+	return resultType, defaultExpressionEffect(chain), true
+}
+
+func isQueryAggregatedVariableReference(chain *binding, expr ast.BLangExpression) bool {
+	switch ref := expr.(type) {
+	case *ast.BLangSimpleVarRef:
+		return lookupQueryAggregatedBinding(chain, ref.Symbol())
+	case *ast.BLangLocalVarRef:
+		return lookupQueryAggregatedBinding(chain, ref.Symbol())
+	default:
+		return false
+	}
+}
+
+func widenedListMemberType(ty semtypes.SemType) semtypes.SemType {
+	if semtypes.SingleShape(ty).IsEmpty() {
+		return ty
+	}
+	return semtypes.WidenToBasicTypes(ty)
 }
 
 func selectListInherentType(t typeResolver, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType, bool) {

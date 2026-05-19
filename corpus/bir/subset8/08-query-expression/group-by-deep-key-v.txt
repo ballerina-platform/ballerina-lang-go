@@ -122,7 +122,7 @@ main() -> nil{
     %46 ? bb16 : bb17;
   }
   bb16 {
-    PushScopeFrame 13
+    PushScopeFrame 23
     %0 = (1, $desugar$10)[(1, $desugar$12)];
     $desugar$13 = %0;
     %3 = ConstantLoad 0
@@ -131,24 +131,59 @@ main() -> nil{
     %5 = ConstantLoad 1
     %4 = $desugar$13[%5];
     (1, key) = %4;
-    %6 = ConstantLoad 2
-    %7 = newArray [[int, never...], [int, int...], never...][%6]{(1, key), (1, x)}
-    %8 = push((1, $desugar$0),%7) -> bb18;
+    %6 = ConstantLoad 0
+    %7 = newArray [[int, never...], int...][%6]{}
+    $desugar$14 = %7;
+    %9 = push($desugar$14,(1, key)) -> bb18;
   }
   bb17 {
     groupedByListKey = $desugar$0;
-    %50 = println(groupedByListKey) -> bb19;
+    %50 = println(groupedByListKey) -> bb25;
   }
   bb18 {
-    %10 = (1, $desugar$12);
-    %11 = ConstantLoad 1
-    %12 = %11;
-    %9 = + %10 %12;
-    (1, $desugar$12) = %9;
+    $desugar$15 = (1, x);
+    %11 = length($desugar$15) -> bb19;
+  }
+  bb19 {
+    $desugar$16 = %11;
+    %13 = ConstantLoad 0
+    $desugar$17 = %13;
+    GOTO bb20;
+  }
+  bb20 {
+    %16 = $desugar$17;
+    %17 = $desugar$16;
+    %15 = < %16 %17;
+    %15 ? bb21 : bb22;
+  }
+  bb21 {
+    PushScopeFrame 7
+    %0 = (1, $desugar$15)[(1, $desugar$17)];
+    %1 = %0;
+    %2 = push((1, $desugar$14),%1) -> bb23;
+  }
+  bb22 {
+    %18 = push((1, $desugar$0),$desugar$14) -> bb24;
+  }
+  bb23 {
+    %4 = (1, $desugar$17);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, $desugar$17) = %3;
+    PopScopeFrame
+    GOTO bb20;
+  }
+  bb24 {
+    %20 = (1, $desugar$12);
+    %21 = ConstantLoad 1
+    %22 = %21;
+    %19 = + %20 %22;
+    (1, $desugar$12) = %19;
     PopScopeFrame
     GOTO bb15;
   }
-  bb19 {
+  bb25 {
     return;
   }
 }

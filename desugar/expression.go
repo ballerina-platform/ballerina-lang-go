@@ -570,10 +570,96 @@ func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructor
 		expr.Exprs[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
+	if expr.HasImplicitSpreadMembers() {
+		return desugarListConstructorWithImplicitSpread(cx, expr, initStmts)
+	}
+
 	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: expr,
 	}
+}
+
+func desugarListConstructorWithImplicitSpread(
+	cx *functionContext,
+	expr *ast.BLangListConstructorExpr,
+	initStmts []model.StatementNode,
+) desugaredNode[ast.BLangActionOrExpression] {
+	pos := expr.GetPosition()
+	emptyList := &ast.BLangListConstructorExpr{Exprs: []ast.BLangExpression{}}
+	emptyList.SetDeterminedType(expr.GetDeterminedType())
+	emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
+	setPositionIfMissing(emptyList, pos)
+
+	resultDef, resultRef := assignToLocal(cx, emptyList, pos)
+	initStmts = append(initStmts, resultDef)
+
+	for i, memberExpr := range expr.Exprs {
+		if !expr.IsImplicitSpreadMember(i) {
+			pushMember := createPushInvocation(cx, resultRef, memberExpr)
+			if pushMember == nil {
+				return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
+			}
+			initStmts = append(initStmts, &ast.BLangExpressionStmt{Expr: pushMember})
+			continue
+		}
+		initStmts = appendImplicitSpreadListPushStmts(cx, initStmts, resultRef, memberExpr, pos)
+	}
+
+	resultRef.SetDeterminedType(expr.GetDeterminedType())
+	return desugaredNode[ast.BLangActionOrExpression]{
+		initStmts:       initStmts,
+		replacementNode: resultRef,
+	}
+}
+
+func appendImplicitSpreadListPushStmts(
+	cx *functionContext,
+	initStmts []model.StatementNode,
+	resultRef *ast.BLangSimpleVarRef,
+	spreadExpr ast.BLangExpression,
+	pos diagnostics.Location,
+) []model.StatementNode {
+	spreadDef, spreadRef := assignToLocal(cx, spreadExpr, pos)
+	initStmts = append(initStmts, spreadDef)
+
+	lengthRef, ok := createQueryLengthRef(cx, &initStmts, spreadRef, pos)
+	if !ok {
+		return initStmts
+	}
+	counterRef := createQueryCounterRef(cx, &initStmts, pos)
+	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	elemTy := semtypes.ListProj(tyCtx, spreadExpr.GetDeterminedType(), semtypes.INT)
+	spreadAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: counterRef,
+	}
+	spreadAccess.Expr = spreadRef
+	spreadAccess.SetDeterminedType(elemTy)
+	setPositionIfMissing(spreadAccess, pos)
+
+	pushMember := createPushInvocation(cx, resultRef, spreadAccess)
+	if pushMember == nil {
+		return initStmts
+	}
+	bodyStmts := []ast.BLangStatement{
+		&ast.BLangExpressionStmt{Expr: pushMember},
+		createIncrementStmt(counterRef),
+	}
+	cond := &ast.BLangBinaryExpr{
+		LhsExpr: counterRef,
+		RhsExpr: lengthRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	cond.SetDeterminedType(semtypes.BOOLEAN)
+	whileStmt := &ast.BLangWhile{
+		Expr: cond,
+		Body: ast.BLangBlockStmt{Stmts: bodyStmts},
+	}
+	whileStmt.SetScope(cx.currentScope())
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, pos)
+	initStmts = append(initStmts, whileStmt)
+	return initStmts
 }
 
 func walkErrorConstructorExpr(cx *functionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[ast.BLangActionOrExpression] {

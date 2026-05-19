@@ -22,5 +22,5 @@ public function main() {
         group by var key = [x]
         select [key, x];
 
-    io:println(groupedByListKey); // @output [[[1],[1,1]],[[2],[2]]]
+    io:println(groupedByListKey); // @output [[[1],1,1],[[2],2]]
 }

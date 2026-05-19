@@ -1034,13 +1034,23 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 	// The type resolver has already selected the inherent type and re-resolved members
 	// with per-member expected types. We only need to validate members here.
 	lat := expr.AtomicType
+	memberIndex := 0
 	for i, memberExpr := range expr.Exprs {
-		memberExpectedType := lat.MemberAtInnerVal(i)
+		memberExpectedType := lat.MemberAtInnerVal(memberIndex)
+		if expr.IsImplicitSpreadMember(i) {
+			memberExpectedType = listOfMemberType(a.ctx().GetTypeEnv(), memberExpectedType)
+			if !analyzeActionOrExpression(a, memberExpr, memberExpectedType) {
+				return false
+			}
+			memberIndex = lat.Members.FixedLength
+			continue
+		}
 		if !analyzeActionOrExpression(a, memberExpr, memberExpectedType) {
 			return false
 		}
+		memberIndex++
 	}
-	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+	for i := memberIndex; i < lat.Members.FixedLength; i++ {
 		memberTy := lat.MemberAtInnerVal(i)
 		if _, ok := semtypes.FillerValue(a.tyCtx(), memberTy); !ok {
 			a.semanticErr(fmt.Sprintf("missing required member at index %d: type '%s' has no filler value", i, semtypes.ToString(a.tyCtx(), memberTy)), expr.GetPosition())
@@ -1048,6 +1058,11 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)
+}
+
+func listOfMemberType(env semtypes.Env, memberTy semtypes.SemType) semtypes.SemType {
+	ld := semtypes.NewListDefinition()
+	return ld.DefineListTypeWrappedWithEnvSemType(env, memberTy)
 }
 
 func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) bool {

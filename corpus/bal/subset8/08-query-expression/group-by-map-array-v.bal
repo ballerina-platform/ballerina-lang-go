@@ -17,12 +17,13 @@
 import ballerina/io;
 
 public function main() {
-    int[] xs = [1, 2, 3, 4, 5];
-    var nested = from var x in xs
-        group by var even = x % 2 == 0
-        select from var y in x
-            group by var big = y > 2
-            select [big, y];
+    [string, int][] pairs = [["odd", 1], ["even", 2], ["odd", 3], ["even", 4]];
 
-    io:println(nested); // @output [[[false,1],[true,3,5]],[[false,2],[true,4]]]
+    map<int[]> grouped = map from var p in pairs
+        let string key = p[0]
+        let int n = p[1]
+        group by key
+        select [key, [n]];
+
+    io:println(grouped); // @output {"odd":[1,3],"even":[2,4]}
 }

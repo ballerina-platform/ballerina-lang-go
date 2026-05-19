@@ -151,7 +151,7 @@ main() -> nil{
   }
   bb17 {
     nested = $desugar$0;
-    %52 = println(nested) -> bb37;
+    %52 = println(nested) -> bb43;
   }
   bb18 {
     $desugar$17 = %14;
@@ -259,7 +259,7 @@ main() -> nil{
     %45 ? bb33 : bb34;
   }
   bb33 {
-    PushScopeFrame 13
+    PushScopeFrame 24
     %0 = (1, $desugar$24)[(1, $desugar$26)];
     $desugar$27 = %0;
     %3 = ConstantLoad 0
@@ -268,23 +268,59 @@ main() -> nil{
     %5 = ConstantLoad 1
     %4 = $desugar$27[%5];
     (1, big) = %4;
-    %6 = ConstantLoad 2
-    %7 = newArray [boolean, [int, int...], never...][%6]{(1, big), (1, y)}
-    %8 = push((1, $desugar$14),%7) -> bb35;
+    %6 = ConstantLoad 0
+    %7 = newArray [boolean, int...][%6]{}
+    $desugar$28 = %7;
+    %9 = (1, big);
+    %10 = push($desugar$28,%9) -> bb35;
   }
   bb34 {
-    %48 = push((1, $desugar$0),$desugar$14) -> bb36;
+    %48 = push((1, $desugar$0),$desugar$14) -> bb42;
   }
   bb35 {
-    %10 = (1, $desugar$26);
-    %11 = ConstantLoad 1
-    %12 = %11;
-    %9 = + %10 %12;
-    (1, $desugar$26) = %9;
+    $desugar$29 = (1, y);
+    %12 = length($desugar$29) -> bb36;
+  }
+  bb36 {
+    $desugar$30 = %12;
+    %14 = ConstantLoad 0
+    $desugar$31 = %14;
+    GOTO bb37;
+  }
+  bb37 {
+    %17 = $desugar$31;
+    %18 = $desugar$30;
+    %16 = < %17 %18;
+    %16 ? bb38 : bb39;
+  }
+  bb38 {
+    PushScopeFrame 7
+    %0 = (1, $desugar$29)[(1, $desugar$31)];
+    %1 = %0;
+    %2 = push((1, $desugar$28),%1) -> bb40;
+  }
+  bb39 {
+    %19 = push((1, $desugar$14),$desugar$28) -> bb41;
+  }
+  bb40 {
+    %4 = (1, $desugar$31);
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %3 = + %4 %6;
+    (1, $desugar$31) = %3;
+    PopScopeFrame
+    GOTO bb37;
+  }
+  bb41 {
+    %21 = (1, $desugar$26);
+    %22 = ConstantLoad 1
+    %23 = %22;
+    %20 = + %21 %23;
+    (1, $desugar$26) = %20;
     PopScopeFrame
     GOTO bb32;
   }
-  bb36 {
+  bb42 {
     %50 = (1, $desugar$12);
     %51 = ConstantLoad 1
     %52 = %51;
@@ -293,7 +329,7 @@ main() -> nil{
     PopScopeFrame
     GOTO bb15;
   }
-  bb37 {
+  bb43 {
     return;
   }
 }

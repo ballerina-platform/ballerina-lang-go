@@ -40,6 +40,9 @@ type binding struct {
 	// When lookupBinding crosses this marker and finds a narrowed binding beyond it,
 	// the variable is captured from the outer scope and should be treated as unnarrowed.
 	functionBoundary bool
+	// queryAggregated marks a query variable that was converted to an aggregated
+	// variable binding by a group by clause.
+	queryAggregated bool
 }
 
 func (b *binding) isUnnarrowing() bool {
@@ -69,6 +72,23 @@ type statementEffect struct {
 // meaning it's captured by a closure. In that case, the unnarrowed base symbol is returned.
 func lookupBinding(chain *binding, ref model.SymbolRef) (model.SymbolRef, bool, bool) {
 	return lookupBindingInner(chain, ref, false)
+}
+
+func lookupQueryAggregatedBinding(chain *binding, ref model.SymbolRef) bool {
+	return lookupQueryAggregatedBindingInner(chain, ref, false)
+}
+
+func lookupQueryAggregatedBindingInner(chain *binding, ref model.SymbolRef, crossedBoundary bool) bool {
+	if chain == nil {
+		return false
+	}
+	if chain.functionBoundary {
+		return lookupQueryAggregatedBindingInner(chain.prev, ref, true)
+	}
+	if chain.ref == ref {
+		return !crossedBoundary && !chain.isUnnarrowing() && chain.queryAggregated
+	}
+	return lookupQueryAggregatedBindingInner(chain.prev, ref, crossedBoundary)
 }
 
 func lookupBindingInner(chain *binding, ref model.SymbolRef, crossedBoundary bool) (model.SymbolRef, bool, bool) {

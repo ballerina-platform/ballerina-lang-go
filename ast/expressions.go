@@ -320,9 +320,10 @@ type (
 
 	BLangListConstructorExpr struct {
 		bLangExpressionBase
-		Exprs          []BLangExpression
-		IsTypedescExpr bool
-		AtomicType     semtypes.ListAtomicType
+		Exprs                 []BLangExpression
+		IsTypedescExpr        bool
+		AtomicType            semtypes.ListAtomicType
+		ImplicitSpreadMembers []bool
 	}
 
 	BLangErrorConstructorExpr struct {
@@ -1080,6 +1081,26 @@ func (b *BLangListConstructorExpr) GetExpressions() []model.ExpressionNode {
 		result[i] = b.Exprs[i]
 	}
 	return result
+}
+
+func (b *BLangListConstructorExpr) SetImplicitSpreadMember(index int) {
+	if len(b.ImplicitSpreadMembers) != len(b.Exprs) {
+		b.ImplicitSpreadMembers = make([]bool, len(b.Exprs))
+	}
+	b.ImplicitSpreadMembers[index] = true
+}
+
+func (b *BLangListConstructorExpr) IsImplicitSpreadMember(index int) bool {
+	return index < len(b.ImplicitSpreadMembers) && b.ImplicitSpreadMembers[index]
+}
+
+func (b *BLangListConstructorExpr) HasImplicitSpreadMembers() bool {
+	for _, isSpread := range b.ImplicitSpreadMembers {
+		if isSpread {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *BLangErrorConstructorExpr) GetKind() model.NodeKind {
