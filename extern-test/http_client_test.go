@@ -33,6 +33,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"testing"
 	"time"
@@ -367,9 +368,7 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 // covered. Skipped when EXTERN_SKIP_NETWORK=1 or no network is available.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientPublicGet(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 
 	balFile := filepath.Join(testDataDir, "http-client-public-get-v.bal")
 	absPath, err := filepath.Abs(balFile)
@@ -414,9 +413,7 @@ func TestHttpClientPublicGet(t *testing.T) {
 
 // TestHttpClientRedirect exercises redirect-following through palnative.NewHTTPClient.
 func TestHttpClientRedirect(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 
 	balFile := filepath.Join(testDataDir, "http-client-redirect-v.bal")
 	absPath, err := filepath.Abs(balFile)
@@ -459,9 +456,18 @@ func TestHttpClientRedirect(t *testing.T) {
 	}
 }
 
+// skipIfNoNetwork skips the test when EXTERN_SKIP_NETWORK is set or when
+// running under WASM (js/wasm), which has no outbound TCP access.
+func skipIfNoNetwork(t *testing.T) {
+	t.Helper()
+	if os.Getenv("EXTERN_SKIP_NETWORK") != "" || goruntime.GOOS == "js" {
+		t.Skip("skipping network-dependent test")
+	}
+}
+
 // runNetworkBal compiles and interprets a static .bal file using
 // palnative.NewHTTPClient. Returns trimmed stdout. Callers must guard
-// with EXTERN_SKIP_NETWORK before calling.
+// with skipIfNoNetwork before calling.
 func runNetworkBal(t *testing.T, balFile string) string {
 	t.Helper()
 	absPath, err := filepath.Abs(balFile)
@@ -497,26 +503,20 @@ func runNetworkBal(t *testing.T, balFile string) string {
 }
 
 // TestHttpClientJson exercises Response.getJsonPayload against httpbin /json.
-// Asserts that parsing succeeds (result is not an error) rather than using
-// `is json`, which is a subtype check that requires the map value type to be
-// exactly json — a deeper type-system fix tracked separately.
+// Asserts that the returned value satisfies `is json` (map<json> semtype).
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientJson(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-json-v.bal"))
-	if out != "false" {
-		t.Errorf("expected getJsonPayload() to succeed (not be an error), got: %q", out)
+	if out != "true" {
+		t.Errorf("expected getJsonPayload() result to be json, got: %q", out)
 	}
 }
 
 // TestHttpClientText exercises Response.getTextPayload against httpbin /html.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientText(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-text-v.bal"))
 	if out != "true" {
 		t.Errorf("expected getTextPayload() to return non-empty string, got: %q", out)
@@ -526,9 +526,7 @@ func TestHttpClientText(t *testing.T) {
 // TestHttpClientBinary exercises Response.getBinaryPayload against httpbin /bytes/16.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientBinary(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-binary-v.bal"))
 	if out != "true" {
 		t.Errorf("expected getBinaryPayload() to return non-empty byte[], got: %q", out)
@@ -539,9 +537,7 @@ func TestHttpClientBinary(t *testing.T) {
 // dedicated httpbin endpoints that each return 200 for their verb.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientPublicMethods(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-public-methods-v.bal"))
 	if out != "200\n200\n200\n200" {
 		t.Errorf("expected four 200 status codes, got: %q", out)
@@ -553,9 +549,7 @@ func TestHttpClientPublicMethods(t *testing.T) {
 // Ballerina as an error value.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientTimeout(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-timeout-v.bal"))
 	if out != "true" {
 		t.Errorf("expected timeout to produce an error value, got: %q", out)
@@ -566,9 +560,7 @@ func TestHttpClientTimeout(t *testing.T) {
 // unreachable host propagates back to Ballerina as an error value.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientConnectionError(t *testing.T) {
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" {
-		t.Skip("skipping network-dependent test")
-	}
+	skipIfNoNetwork(t)
 	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-connection-error-v.bal"))
 	if out != "true" {
 		t.Errorf("expected connection error to produce an error value, got: %q", out)
