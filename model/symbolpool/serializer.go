@@ -39,6 +39,7 @@ const (
 	symTagRecord
 	symTagObjectType
 	symTagNetworkClass
+	symTagResourceMethod
 )
 
 const (
@@ -155,6 +156,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeValueSymbol(buf, s)
 	case model.DependentlyTypedFunctionSymbol:
 		return sw.writeDependentlyTypedFunctionSymbol(buf, s)
+	case *model.ResourceMethodSymbol:
+		return sw.writeResourceMethodSymbol(buf, s)
 	case model.FunctionSymbol:
 		return sw.writeFunctionSymbol(buf, s)
 	default:
@@ -293,7 +296,21 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.Members())
+	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	if tag == symTagNetworkClass {
+		refs := sym.(*model.NetworkClassSymbol).ResourceMethods()
+		if err := write(buf, int64(len(refs))); err != nil {
+			return err
+		}
+		for _, ref := range refs {
+			if err := sw.writeSymbolRef(buf, ref); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {
@@ -325,7 +342,12 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	sig := sym.Signature()
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
+}
+
+func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.FunctionSignature,
+	defaults *model.DefaultableParamInfo, included *model.IncludedRecordParamInfo,
+) error {
 	if err := write(buf, int64(len(sig.ParamTypes))); err != nil {
 		return err
 	}
@@ -356,10 +378,26 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := write(buf, uint8(sig.Flags)); err != nil {
 		return err
 	}
-	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes)); err != nil {
+	if err := sw.writeDefaultableParams(buf, defaults, len(sig.ParamTypes)); err != nil {
 		return err
 	}
-	return sw.writeIncludedRecordParams(buf, sym.IncludedRecordParams(), len(sig.ParamTypes))
+	return sw.writeIncludedRecordParams(buf, included, len(sig.ParamTypes))
+}
+
+func (sw *symbolWriter) writeResourceMethodSymbol(buf *bytes.Buffer, sym *model.ResourceMethodSymbol) error {
+	if err := write(buf, symTagResourceMethod); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, sym.MethodName()); err != nil {
+		return err
+	}
+	if err := sw.writeType(buf, sym.PathType()); err != nil {
+		return err
+	}
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
 }
 
 func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, sym model.DependentlyTypedFunctionSymbol) error {

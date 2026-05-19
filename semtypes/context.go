@@ -36,6 +36,7 @@ type context struct {
 	_orderedMemo           SemType
 	_isolatedObjectMemo    SemType
 	_serviceObjectMemo     SemType
+	_clientObjectMemo      SemType
 	_isolatedFnMemo        SemType
 	_isolatedMemo          SemType
 	_iterableMemo          SemType
@@ -127,6 +128,14 @@ func (c *context) serviceObjectMemo() SemType {
 
 func (c *context) setServiceObjectMemo(t SemType) {
 	c._serviceObjectMemo = t
+}
+
+func (c *context) clientObjectMemo() SemType {
+	return c._clientObjectMemo
+}
+
+func (c *context) setClientObjectMemo(t SemType) {
+	c._clientObjectMemo = t
 }
 
 func (c *context) iterableMemo() SemType {

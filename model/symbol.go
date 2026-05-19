@@ -251,7 +251,8 @@ type (
 	classSymbolBase struct {
 		TypeSymbol
 		memberHolderBase
-		methods map[string]SymbolRef
+		methods         map[string]SymbolRef
+		resourceMethods []SymbolRef
 	}
 
 	classSymbol struct {
@@ -296,6 +297,13 @@ type (
 	monomorphicFunctionSymbol struct {
 		functionSymbol
 		polymorhpicFn SymbolRef
+	}
+
+	ResourceMethodSymbol struct {
+		functionSymbol
+		methodName   string
+		pathListType semtypes.SemType
+		pathParams   []SymbolRef
 	}
 
 	containerGenericFunctionSymbol struct {
@@ -453,6 +461,7 @@ var (
 	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
 	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
 	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
+	_ FunctionSymbol                 = &ResourceMethodSymbol{}
 	_ Symbol                         = &SymbolRef{}
 	_ SymbolSpaceProvider            = &ModuleScope{}
 )
@@ -961,6 +970,49 @@ func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
 		},
 		methods: map[string]SymbolRef{},
 	}
+}
+
+func (c *classSymbolBase) ResourceMethods() []SymbolRef {
+	return c.resourceMethods
+}
+
+func (c *classSymbolBase) AddResourceMethod(ref SymbolRef) {
+	c.resourceMethods = append(c.resourceMethods, ref)
+}
+
+func NewResourceMethodSymbol(name, methodName string, isPublic bool) *ResourceMethodSymbol {
+	return &ResourceMethodSymbol{
+		functionSymbol: functionSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+		methodName: methodName,
+	}
+}
+
+func (r *ResourceMethodSymbol) MethodName() string {
+	return r.methodName
+}
+
+// PR-TODO: rename
+func (r *ResourceMethodSymbol) PathType() semtypes.SemType {
+	return r.pathListType
+}
+
+func (r *ResourceMethodSymbol) SetPathType(ty semtypes.SemType) {
+	r.pathListType = ty
+}
+
+func (r *ResourceMethodSymbol) PathParams() []SymbolRef {
+	return r.pathParams
+}
+
+func (r *ResourceMethodSymbol) SetPathParams(params []SymbolRef) {
+	r.pathParams = params
+}
+
+func (r *ResourceMethodSymbol) Copy() Symbol {
+	cp := *r
+	return &cp
 }
 
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {

@@ -1,0 +1,81 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class foo {
+
+  foo.$resource$get$0(string) -> nil{
+    bb0 {
+      %4 = ConstantLoad get test/
+      %3 = + %4 name;
+      %5 = println(%3) -> bb1;
+    }
+    bb1 {
+      return;
+    }
+  }
+
+  foo.$resource$get$1(int) -> nil{
+    bb0 {
+      %3 = ConstantLoad get other
+      %4 = println(%3) -> bb1;
+    }
+    bb1 {
+      %5 = id;
+      %6 = println(%5) -> bb2;
+    }
+    bb2 {
+      return;
+    }
+  }
+
+  foo.$resource$post$2(string) -> nil{
+    bb0 {
+      %4 = ConstantLoad post test/
+      %3 = + %4 name;
+      %5 = println(%3) -> bb1;
+    }
+    bb1 {
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:foo
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    f = %3;
+    %6 = ConstantLoad a
+    %7 = foo.$resource$get$0(f,%6) -> bb5;
+  }
+  bb5 {
+    %8 = ConstantLoad 42
+    %9 = %8;
+    %10 = foo.$resource$get$1(f,%9) -> bb6;
+  }
+  bb6 {
+    %11 = ConstantLoad b
+    %12 = foo.$resource$post$2(f,%11) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}

@@ -1027,6 +1027,8 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 		return lambdaFunction(ctx, curBB, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return generateCall(ctx, curBB, expr)
+	case *ast.BLangClientResourceAccessAction:
+		return generateResourceAccessCall(ctx, curBB, expr)
 	case *ast.BLangTypedescExpr:
 		return typedescExpression(ctx, curBB, expr)
 	case *ast.BLangXMLSequenceLiteral:
@@ -1468,6 +1470,48 @@ type callable interface {
 	GetName() ast.IdentifierNode
 }
 
+// PR-TODO: use a seperate action for resource call dispatch
+//
+// The resource method receives the computed path segments (in source order)
+// as its leading positional arguments, followed by the user-written args.
+// This is where that concatenation actually happens in the lowered call;
+// the AST keeps Path and ArgExprs stored separately.
+func generateResourceAccessCall(ctx context, bb *BIRBasicBlock, expr *ast.BLangClientResourceAccessAction) expressionEffect {
+	curBB := bb
+	var args []BIROperand
+	recvEffect := handleActionOrExpression(ctx, curBB, expr.Expr)
+	curBB = recvEffect.block
+	args = append(args, *recvEffect.result)
+	for i := range expr.Path {
+		seg := &expr.Path[i]
+		if seg.Kind != ast.ResourceAccessSegmentComputed {
+			continue
+		}
+		effect := handleActionOrExpression(ctx, curBB, seg.Expr)
+		effect = snapshotIfNeeded(ctx, effect, ctx.function().loc(expr.GetPosition()))
+		curBB = effect.block
+		args = append(args, *effect.result)
+	}
+	for _, arg := range expr.ArgExprs {
+		effect := handleActionOrExpression(ctx, curBB, arg)
+		effect = snapshotIfNeeded(ctx, effect, ctx.function().loc(expr.GetPosition()))
+		curBB = effect.block
+		args = append(args, *effect.result)
+	}
+	thenBB := ctx.function().addBB()
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	symRef := expr.MethodSymbol()
+	callName := ctx.function().birCx.CompilerContext.SymbolName(symRef)
+	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(callName), thenBB, resultOperand, ctx.function().loc(expr.GetPosition()))
+	call.IsMethodCall = true
+	call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.function().birCx, symRef)
+	if ctx.function().birCx.packageID != nil {
+		call.CalleePkg = ctx.function().birCx.packageID
+	}
+	curBB.Terminator = call
+	return expressionEffect{result: resultOperand, block: thenBB}
+}
+
 func generateCall(ctx context, bb *BIRBasicBlock, callable callable) expressionEffect {
 	curBB := bb
 	if ast.IsStreamOperation(callable) {
@@ -1777,7 +1821,93 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		birClassDef.VTable[methodName] = fn
 	}
 
+	for _, rm := range class.ResourceMethods {
+		// Resource method symbol names are already class-qualified
+		// (e.g. Client.$resource$get$0) so use the function lookup key
+		// directly to avoid double-prefixing the class name.
+		lookupKey := buildFunctionLookupKeyFromSymbol(ctx, rm.Symbol())
+		var fn *BIRFunction
+		if rm.IsNative() {
+			fn = &BIRFunction{
+				Name:              model.Name(ctx.CompilerContext.SymbolName(rm.Symbol())),
+				OriginalName:      model.Name(rm.GetName().GetValue()),
+				Flags:             rm.Flags(),
+				FunctionLookupKey: lookupKey,
+			}
+			fn.Pos = birLoc(ctx.CompilerContext.DiagnosticEnv(), rm.GetPosition())
+		} else {
+			fn = transformResourceMethodInner(newFunctionRoot(ctx, nil), rm, &selfRef)
+			fn.FunctionLookupKey = lookupKey
+		}
+		birClassDef.VTable[ctx.CompilerContext.SymbolName(rm.Symbol())] = fn
+	}
+
 	birPkg.ClassDefs = append(birPkg.ClassDefs, *birClassDef)
+}
+
+func transformResourceMethodInner(root *funcBlock, rm *ast.BLangResourceMethod, selfSymbolRef *model.SymbolRef) *BIRFunction {
+	symRef := rm.Symbol()
+	ctx := root.fn.birCx
+	funcName := model.Name(ctx.CompilerContext.SymbolName(symRef))
+	birFunc := &BIRFunction{}
+	birFunc.Pos = root.fn.loc(rm.GetPosition())
+	birFunc.Name = funcName
+	birFunc.OriginalName = funcName
+	birFunc.Flags = rm.Flags()
+	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
+	funcSym := ctx.CompilerContext.GetSymbol(symRef).(model.FunctionSymbol)
+	retOp := root.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType)
+	root.fn.retVarDcl = retOp.VariableDcl.(*BIRLocalVariableDcl)
+	if selfSymbolRef != nil {
+		root.addLocalVar(model.Name("self"), ctx.CompilerContext.SymbolType(*selfSymbolRef), *selfSymbolRef)
+	}
+	var requiredParams []BIRParameter
+	for i := range rm.ResourcePath {
+		seg := &rm.ResourcePath[i]
+		if seg.Kind == ast.ResourcePathSegmentName || seg.Name == "" {
+			continue
+		}
+		name := seg.Name
+		ref, ok := rm.Scope().GetSymbol(name)
+		if !ok {
+			continue
+		}
+		root.addLocalVar(model.Name(name), ctx.CompilerContext.SymbolType(ref), ref)
+		requiredParams = append(requiredParams, BIRParameter{Name: model.Name(name)})
+	}
+	for i := range rm.RequiredParams {
+		param := &rm.RequiredParams[i]
+		root.addLocalVar(model.Name(param.GetName().GetValue()), ctx.CompilerContext.SymbolType(param.Symbol()), param.Symbol())
+		requiredParams = append(requiredParams, BIRParameter{
+			Name:  model.Name(param.GetName().GetValue()),
+			Flags: param.Flags(),
+		})
+	}
+	if rm.RestParam != nil {
+		restParam := rm.RestParam
+		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
+		root.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, restParam.Symbol())
+		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
+	}
+	birFunc.RequiredParams = requiredParams
+	switch body := rm.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		handleBlockFunctionBody(root, body)
+	case *ast.BLangExprFunctionBody:
+		handleExprFunctionBody(root, body)
+	case nil:
+	default:
+		panic("unexpected function body type")
+	}
+	for _, bbPtr := range root.fn.bbs {
+		birFunc.BasicBlocks = append(birFunc.BasicBlocks, *bbPtr)
+	}
+	for _, varPtr := range root.localVars {
+		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
+	}
+	birFunc.ErrorTable = root.fn.errorEntries
+	birFunc.ReturnVariable = root.fn.retVarDcl
+	return birFunc
 }
 
 func newExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangNewExpression) expressionEffect {

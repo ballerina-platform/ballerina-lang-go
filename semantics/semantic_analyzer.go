@@ -65,7 +65,7 @@ type (
 
 	functionAnalyzer struct {
 		analyzerBase
-		function *ast.BLangFunction
+		function ast.BLangNode
 		retTy    semtypes.SemType
 		// enclosingClass is set when the function is a method of a class
 		// definition (including the init function). nil for free functions.
@@ -497,15 +497,21 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 // are added later as normal semantic analysis encounters their definitions.
 func buildFunctionLocals(parent analyzer, fn *ast.BLangFunction) *localScope {
 	scope := newLocalScope(nil, true)
-	for _, param := range fn.RequiredParams {
+	finishBuildFunctionLocals(parent, scope, fn.RequiredParams, fn.RestParam)
+	return scope
+}
+
+// finishBuildFunctionLocals seeds a function-locals scope with the function's
+// required parameters and rest parameter (if any).
+func finishBuildFunctionLocals(parent analyzer, scope *localScope, requiredParams []ast.BLangSimpleVariable, restParam ast.SimpleVariableNode) {
+	for _, param := range requiredParams {
 		sym := param.Symbol()
 		scope.define(sym, varDeclMetadata{Type: parent.ctx().SymbolType(sym), Final: true})
 	}
-	if fn.RestParam != nil {
-		sym := fn.RestParam.Symbol()
+	if restParam != nil {
+		sym := restParam.Symbol()
 		scope.define(sym, varDeclMetadata{Type: parent.ctx().SymbolType(sym), Final: true})
 	}
-	return scope
 }
 
 // validateIsolatedDefaultParams runs the isolated-closure analysis on
@@ -645,6 +651,41 @@ func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
 
 func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
 	return initializeFunctionAnalyzerInner(parent, function, classDef)
+}
+
+func initializeResourceMethodAnalyzer(parent analyzer, rm *ast.BLangResourceMethod, classDef *ast.BLangClassDefinition) *functionAnalyzer {
+	fa := &functionAnalyzer{
+		analyzerBase:   analyzerBase{parent: parent},
+		function:       rm,
+		enclosingClass: classDef,
+		locals:         buildResourceMethodLocals(parent, rm),
+	}
+	fnSymbol := parent.ctx().GetSymbol(rm.Symbol()).(model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature().ReturnType
+	return fa
+}
+
+func buildResourceMethodLocals(parent analyzer, method *ast.BLangResourceMethod) *localScope {
+	scope := newLocalScope(nil, true)
+	for i := range method.ResourcePath {
+		seg := &method.ResourcePath[i]
+		if seg.Kind == ast.ResourcePathSegmentName || seg.Name == "" {
+			continue
+		}
+		ref, ok := method.Scope().GetSymbol(seg.Name)
+		if !ok {
+			continue
+		}
+		scope.define(ref, varDeclMetadata{Type: parent.ctx().SymbolType(ref), Final: true})
+	}
+	finishBuildFunctionLocals(parent, scope, method.RequiredParams, method.RestParam)
+	ref, ok := method.Scope().GetSymbol("self")
+	if !ok {
+		parent.internalErr("resource method missing 'self' symbol", method.GetPosition())
+		return scope
+	}
+	scope.define(ref, varDeclMetadata{Type: parent.ctx().SymbolType(ref), Final: true})
+	return scope
 }
 
 // walkMethodBody descends through a method's body using the provided
@@ -916,6 +957,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return analyzeLambdaFunction(a, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return analyzeInvocation(a, expr, expectedType)
+	case *ast.BLangClientResourceAccessAction:
+		return analyzeClientResourceAccessAction(a, expr, expectedType)
 	case *ast.BLangInferredTypedescDefault:
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypedescExpr:
@@ -1580,6 +1623,45 @@ func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.Sem
 	return analyzeDirectInvocation(a, inv, fnSymbol, paramListTy, expectedType)
 }
 
+// Path computed segments are typed against rmSym.PathType() during type
+// resolution, not against the function parameter list, so we walk them
+// here independently of the call's argument analysis.
+func analyzeClientResourceAccessAction[A analyzer](a A, expr *ast.BLangClientResourceAccessAction, expectedType semtypes.SemType) bool {
+	if expr.Expr != nil {
+		if !analyzeActionOrExpression(a, expr.Expr, semtypes.CreateClientObject(a.tyCtx())) {
+			return false
+		}
+	}
+	pathType := resolvedResourceMethodPathType(a, expr)
+	for i := range expr.Path {
+		seg := &expr.Path[i]
+		if seg.Kind != ast.ResourceAccessSegmentComputed {
+			continue
+		}
+		segExpectedTy := resourcePathSegmentExpectedType(a.tyCtx(), pathType, i)
+		if !analyzeActionOrExpression(a, seg.Expr, segExpectedTy) {
+			return false
+		}
+	}
+	return analyzeInvocation(a, expr, expectedType)
+}
+
+func resolvedResourceMethodPathType[A analyzer](a A, expr *ast.BLangClientResourceAccessAction) semtypes.SemType {
+	ref := expr.MethodSymbol()
+	rmSym, ok := a.getSymbol(ref).(*model.ResourceMethodSymbol)
+	if !ok {
+		return nil
+	}
+	return rmSym.PathType()
+}
+
+func resourcePathSegmentExpectedType(ctx semtypes.Context, pathType semtypes.SemType, index int) semtypes.SemType {
+	if pathType == nil {
+		return nil
+	}
+	return semtypes.ListMemberTypeInnerVal(ctx, pathType, semtypes.IntConst(int64(index)))
+}
+
 func analyzeStreamOperation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) bool {
 	if len(invocation.ArgExprs) != 0 {
 		a.semanticErr("stream method '"+invocation.Name.Value+"' takes no arguments", invocation.GetPosition())
@@ -1782,6 +1864,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			fa := initializeMethodAnalyzer(a, method, n)
 			walkMethodBody(fa, method)
 		}
+		for _, rm := range n.ResourceMethods {
+			fa := initializeResourceMethodAnalyzer(a, rm, n)
+			validateResourceMethodReturnType(a, fa.retTy, rm)
+			if rm.Body != nil {
+				ast.Walk(fa, rm.GetBody().(ast.BLangNode))
+			}
+		}
 		validateClassDefn(a, n)
 		return nil
 	default:
@@ -1934,6 +2023,47 @@ func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
 		validateIsolatedClassFields(a, classDef)
 	} else {
 		validateObjInclusions(a, classDef.Inclusions, classDef.InclusionPositions)
+	}
+	validateDuplicateResourceMethods(a, classDef)
+}
+
+func validateResourceMethodReturnType[A analyzer](a A, retTy semtypes.SemType, rm *ast.BLangResourceMethod) {
+	if semtypes.IsSubtypeSimple(retTy, semtypes.FUNCTION) {
+		a.semanticErr("resource method return type must not include a function type", rm.GetPosition())
+		return
+	}
+	if semtypes.IsClientObject(a.tyCtx(), retTy) {
+		a.semanticErr("resource method return type must not include a client object type", rm.GetPosition())
+	}
+}
+
+func validateDuplicateResourceMethods[A analyzer](a A, classDef *ast.BLangClassDefinition) {
+	rms := classDef.ResourceMethods
+	if len(rms) < 2 {
+		return
+	}
+	tyCtx := a.tyCtx()
+	ctx := a.ctx()
+	for i := 1; i < len(rms); i++ {
+		later, ok := ctx.GetSymbol(rms[i].Symbol()).(*model.ResourceMethodSymbol)
+		if !ok {
+			a.internalErr("expected resource method symbol", rms[i].GetPosition())
+			continue
+		}
+		for j := 0; j < i; j++ {
+			earlier, ok := ctx.GetSymbol(rms[j].Symbol()).(*model.ResourceMethodSymbol)
+			if !ok {
+				a.internalErr("expected resource method symbol", rms[j].GetPosition())
+				continue
+			}
+			if later.MethodName() != earlier.MethodName() {
+				continue
+			}
+			if semtypes.IsSameType(tyCtx, later.PathType(), earlier.PathType()) {
+				a.semanticErr("duplicate resource method '"+later.MethodName()+"'", rms[i].GetPosition())
+				break
+			}
+		}
 	}
 }
 

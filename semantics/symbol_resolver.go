@@ -446,22 +446,32 @@ func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
-	// First add all the parameters to the functionResolver scope
-	for i := range function.RequiredParams {
-		param := &function.RequiredParams[i]
+	resolveFunctionInner(functionResolver, function.RequiredParams, function.RestParam, function)
+}
+
+func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams []ast.BLangSimpleVariable, restParam ast.SimpleVariableNode, walkNode ast.BLangNode) {
+	scope := functionResolver.scope.MainSpace()
+	for i := range requiredParams {
+		param := &requiredParams[i]
 		name := param.Name.Value
+		if _, exists := scope.GetSymbol(name); exists {
+			semanticError(functionResolver, "redeclared symbol '"+name+"'", param.GetPosition())
+			continue
+		}
 		symbol := model.NewValueSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
 	}
-
-	if function.RestParam != nil {
-		restParam := function.RestParam.(*ast.BLangSimpleVariable)
-		name := restParam.Name.Value
-		symbol := model.NewValueSymbol(name, false, false, true)
-		addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
+	if restParam != nil {
+		rest := restParam.(*ast.BLangSimpleVariable)
+		name := rest.Name.Value
+		if _, exists := scope.GetSymbol(name); exists {
+			semanticError(functionResolver, "redeclared symbol '"+name+"'", rest.GetPosition())
+		} else {
+			symbol := model.NewValueSymbol(name, false, false, true)
+			addSymbolAndSetOnNode(functionResolver, name, &symbol, rest)
+		}
 	}
-
-	ast.Walk(functionResolver, function)
+	ast.Walk(functionResolver, walkNode)
 }
 
 func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model.Scope, function *ast.BLangFunction) {
@@ -1203,7 +1213,6 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		classResolver.AddSymbol(name, &symbol)
 	}
 
-	isPublicClass := classDef.IsPublic()
 	className := classDef.Name.Value
 	methods := classMethodsInResolutionOrder(classDef)
 	for _, m := range methods {
@@ -1213,15 +1222,24 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		}
 		isPublic := m.method.IsPublic()
 		symbol := ms.allocateFunctionSymbol(m.method, m.name, isPublic)
-		if isPublicClass && isPublic {
-			moduleName := className + "." + m.name
-			ms.scope.AddSymbol(moduleName, symbol)
-			moduleRef, _ := ms.scope.GetSymbol(moduleName)
-			classResolver.AddSymbol(m.name, symbol)
-			m.method.SetSymbol(moduleRef)
-		} else {
-			addSymbolAndSetOnNode(classResolver, m.name, symbol, m.method)
+		mangledName := className + "." + m.name
+		ms.scope.AddSymbol(mangledName, symbol)
+		moduleRef, _ := ms.scope.GetSymbol(mangledName)
+		m.method.SetSymbol(moduleRef)
+	}
+
+	networkClassSym, isNetworkClass := ms.ctx.GetSymbol(classDef.Symbol()).(*model.NetworkClassSymbol)
+	for idx, rm := range classDef.ResourceMethods {
+		if !isNetworkClass {
+			semanticError(classResolver, "resource methods are only allowed in client or service classes", rm.GetPosition())
+			continue
 		}
+		mangledName := className + "." + mangledResourceMethodName(rm.Name.Value, idx)
+		symbol := model.NewResourceMethodSymbol(mangledName, rm.Name.Value, classDef.IsPublic() && rm.IsPublic())
+		ms.scope.AddSymbol(mangledName, symbol)
+		symRef, _ := ms.scope.GetSymbol(mangledName)
+		rm.SetSymbol(symRef)
+		networkClassSym.AddResourceMethod(symRef)
 	}
 
 	for _, m := range includedFields {
@@ -1252,6 +1270,15 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
 	}
 
+	for _, rm := range classDef.ResourceMethods {
+		if !isNetworkClass {
+			continue
+		}
+		methodResolver := newFunctionResolver(classResolver, rm)
+		rm.SetScope(methodResolver.scope)
+		resolveResourceMethod(methodResolver, rm)
+	}
+
 	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(model.ClassSymbol)
 	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
 	for _, m := range methods {
@@ -1265,6 +1292,27 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		methodTable["init"] = classDef.InitFunction.Symbol()
 	}
 	classSym.SetMethods(methodTable)
+}
+
+func mangledResourceMethodName(methodName string, idx int) string {
+	return fmt.Sprintf("$resource$%s$%d", methodName, idx)
+}
+
+func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangResourceMethod) {
+	for i := range rm.ResourcePath {
+		seg := &rm.ResourcePath[i]
+		if seg.Kind == ast.ResourcePathSegmentName || seg.Name == "" {
+			continue
+		}
+		name := seg.Name
+		if _, sk, exists := functionResolver.GetSymbol(name); exists && sk == blockScopeKind {
+			semanticError(functionResolver, "redeclared symbol '"+name+"'", seg.GetPosition())
+			continue
+		}
+		symbol := model.NewValueSymbol(name, false, false, true)
+		functionResolver.AddSymbol(name, &symbol)
+	}
+	resolveFunctionInner(functionResolver, rm.RequiredParams, rm.RestParam, rm)
 }
 
 func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {

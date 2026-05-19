@@ -1,0 +1,56 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class foo {
+
+  foo.$resource$get$0(string,int,[int...]) -> nil{
+    bb0 {
+      %5 = println(foo) -> bb1;
+    }
+    bb1 {
+      %6 = bar;
+      %7 = println(%6) -> bb2;
+    }
+    bb2 {
+      %8 = println(vals) -> bb3;
+    }
+    bb3 {
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:foo
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    f = %3;
+    %6 = ConstantLoad foo
+    %7 = ConstantLoad 4
+    %8 = %7;
+    %9 = ConstantLoad 0
+    %10 = newArray [int...][%9]{}
+    %11 = foo.$resource$get$0(f,%6,%8,%10) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}
