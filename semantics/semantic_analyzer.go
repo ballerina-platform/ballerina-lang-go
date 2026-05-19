@@ -1693,10 +1693,11 @@ func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.
 func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 	locals := make(map[model.SymbolRef]struct{})
 	tyCtx := a.tyCtx()
+	ctx := a.ctx()
 	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangSimpleVariableDef:
-			locals[inner.Var.Symbol()] = struct{}{}
+			locals[ctx.UnnarrowedSymbol(inner.Var.Symbol())] = struct{}{}
 		case *ast.BLangInvocation:
 			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
@@ -1724,7 +1725,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			if varSym.IsConst() {
 				return true
 			}
-			if _, isLocal := locals[inner.Symbol()]; !isLocal {
+			if _, isLocal := locals[ctx.UnnarrowedSymbol(inner.Symbol())]; !isLocal {
 				a.semanticErr("access of mutable variable", inner.GetPosition())
 			}
 		}
