@@ -23,6 +23,9 @@ import (
 	"io/fs"
 	"path"
 	"sort"
+	"strings"
+
+	"ballerina-lang-go/lib/stdlibs"
 )
 
 const (
@@ -30,6 +33,10 @@ const (
 	centralCacheSubpath = "repositories/central.ballerina.io/bala"
 	// platformAny is the platform directory name for platform-independent packages.
 	platformAny = "any"
+	// platformGoPrefix marks platform directories that target a specific Go
+	// toolchain version (e.g. "go1.26"). Used as a fallback when no "any"
+	// directory is present.
+	platformGoPrefix = "go"
 )
 
 // bindableRepository is an internal interface for repositories that support late binding.
@@ -155,20 +162,62 @@ func (r *FileSystemRepository) Exists(ctx context.Context, org, name, version st
 	return found, nil
 }
 
+// findPlatformDir resolves the platform-specific subdirectory of a versioned
+// bala directory. Priority order:
+//  1. "any" — platform-agnostic balas win when present.
+//  2. Highest "go*" directory (e.g. "go1.26") — Go-targeted balas, biased to
+//     the lexicographically greatest entry so newer Go toolchain versions
+//     are preferred when multiple are present.
+//
+// A directory only qualifies when it contains either a Bala.toml (new format)
+// or a package.json (legacy v3 format) — the marker the bala loader uses to
+// dispatch.
 func (r *FileSystemRepository) findPlatformDir(versionDir string) (string, bool, error) {
-	platformPath := path.Join(versionDir, platformAny)
+	if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, platformAny)); err != nil {
+		return "", false, err
+	} else if ok {
+		return dir, true, nil
+	}
+
+	entries, err := fs.ReadDir(r.fsys, versionDir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	var goCandidates []string
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), platformGoPrefix) {
+			goCandidates = append(goCandidates, entry.Name())
+		}
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(goCandidates)))
+	for _, name := range goCandidates {
+		if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, name)); err != nil {
+			return "", false, err
+		} else if ok {
+			return dir, true, nil
+		}
+	}
+	return "", false, nil
+}
+
+// checkPlatformDir returns (path, true, nil) when platformPath is a directory
+// holding a valid bala manifest (Bala.toml or legacy package.json).
+func (r *FileSystemRepository) checkPlatformDir(platformPath string) (string, bool, error) {
 	info, exists, err := statIfExists(r.fsys, platformPath)
 	if err != nil || !exists || !info.IsDir() {
 		return "", false, err
 	}
-
-	packageJSON := path.Join(platformPath, "package.json")
-	_, exists, err = statIfExists(r.fsys, packageJSON)
-	if err != nil || !exists {
-		return "", false, err
+	for _, marker := range []string{BalaTomlFile, "package.json"} {
+		if _, found, err := statIfExists(r.fsys, path.Join(platformPath, marker)); err != nil {
+			return "", false, err
+		} else if found {
+			return platformPath, true, nil
+		}
 	}
-
-	return platformPath, true, nil
+	return "", false, nil
 }
 
 // statIfExists returns (info, true, nil) if path exists, (nil, false, nil) if not found,
@@ -190,12 +239,18 @@ var _ bindableRepository = (*FileSystemRepository)(nil)
 // defaultRepositories returns repositories for the standard repository locations
 // using the given ballerinaEnvFs.
 //
+// The bundled repository is searched first so standard libraries baked into
+// the binary resolve without touching the central cache. Falls through to the
+// central cache when the bundle does not advertise the requested package.
+//
 // The central repository is exposed as a RemoteRepository whose on-disk cache
 // is the central bala directory. The RemoteRepository currently has no remote
 // source wired in, so it behaves as a cache-only read until that arrives.
 func defaultRepositories(ballerinaEnvFs fs.FS) []Repository {
+	bundled := NewFileSystemRepository(stdlibs.FS, ".")
 	centralCache := NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath)
 	return []Repository{
+		bundled,
 		NewRemoteRepository(centralCache),
 	}
 }
