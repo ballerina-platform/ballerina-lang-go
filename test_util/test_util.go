@@ -204,6 +204,11 @@ func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 			Stdout: stdout.Write,
 			Stderr: stderr.Write,
 		},
+		FS: pal.FS{
+			ReadFile: func(path string) ([]byte, error) {
+				return os.ReadFile(path)
+			},
+		},
 		HTTP: pal.HTTP{
 			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
 				return &stubHTTPClient{}

@@ -34,6 +34,11 @@ func NewPlatform() pal.Platform {
 			Stdout: func(p []byte) (n int, err error) { return os.Stdout.Write(p) },
 			Stderr: func(p []byte) (n int, err error) { return os.Stderr.Write(p) },
 		},
+		FS: pal.FS{
+			ReadFile: func(path string) ([]byte, error) {
+				return os.ReadFile(path)
+			},
+		},
 		HTTP: pal.HTTP{
 			NewClient: NewHTTPClient,
 		},
