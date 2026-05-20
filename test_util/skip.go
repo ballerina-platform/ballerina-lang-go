@@ -159,9 +159,6 @@ var UnsupportedTests = []string{
 	"subset8/08-future/fieldexpr1-v.bal",
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/442
 	"subset8/08-future/main-v.bal",
-	// https://github.com/ballerina-platform/ballerina-lang-go/issues/443
-	"subset8/08-future/never-v.bal",
-
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/288
 	"subset8/08-future/xmlsubtype-v.bal", // xml:Element type unknown
 

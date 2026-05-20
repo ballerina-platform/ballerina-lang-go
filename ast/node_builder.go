@@ -952,7 +952,8 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeDescri
 		common.NIL_TYPE_DESC,
 		common.HANDLE_TYPE_DESC,
 		common.ANYDATA_TYPE_DESC,
-		common.READONLY_TYPE_DESC:
+		common.READONLY_TYPE_DESC,
+		common.NEVER_TYPE_DESC:
 		valueType := BLangValueType{}
 		valueType.TypeKind = typeKind
 		valueType.pos = getPosition(n.de(), typeNode)
