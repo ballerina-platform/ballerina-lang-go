@@ -90,7 +90,7 @@ func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {
 	rm.SetSignature(sig)
 	rm.SetDefaultableParams(defaults)
 	rm.SetIncludedRecordParams(included)
-	rm.SetPathType(pathType)
+	rm.SetPathListType(pathType)
 	space.AddSymbol(name, rm)
 }
 

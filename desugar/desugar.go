@@ -775,7 +775,6 @@ func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinit
 	}
 }
 
-// desugarFunction returns a desugared function (may be same or new instance)
 func desugarResourceMethod(pkgCtx *packageContext, rm *ast.BLangResourceMethod) {
 	if rm.Body == nil {
 		return
@@ -796,6 +795,7 @@ func desugarResourceMethod(pkgCtx *packageContext, rm *ast.BLangResourceMethod) 
 	}
 }
 
+// desugarFunction returns a desugared function (may be same or new instance)
 func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFunction {
 	if fn.Body == nil {
 		return fn

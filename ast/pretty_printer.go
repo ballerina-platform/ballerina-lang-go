@@ -581,9 +581,7 @@ func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
 func (p *PrettyPrinter) printClientResourceAccessAction(node *BLangClientResourceAccessAction) {
 	p.startNode()
 	p.printString("client-resource-access")
-	if node.MethodName != "" {
-		p.printString(node.MethodName)
-	}
+	p.printString(node.MethodName)
 	p.indentLevel++
 	if node.Expr != nil {
 		p.printString("expr:")

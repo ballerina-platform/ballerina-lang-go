@@ -36,11 +36,11 @@
           (user-defined-type foo)) (expr
           (new ()))))
       (expression-stmt
-        (client-resource-access expr:
+        (client-resource-access get expr:
           (simple-var-ref f) name:test computed:
           (literal a)))
       (expression-stmt
-        (client-resource-access expr:
+        (client-resource-access get expr:
           (simple-var-ref f) name:other computed:
           (literal 42)))
       (expression-stmt

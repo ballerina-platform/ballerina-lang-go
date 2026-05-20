@@ -993,12 +993,11 @@ func (r *ResourceMethodSymbol) MethodName() string {
 	return r.methodName
 }
 
-// PR-TODO: rename
-func (r *ResourceMethodSymbol) PathType() semtypes.SemType {
+func (r *ResourceMethodSymbol) PathListType() semtypes.SemType {
 	return r.pathListType
 }
 
-func (r *ResourceMethodSymbol) SetPathType(ty semtypes.SemType) {
+func (r *ResourceMethodSymbol) SetPathListType(ty semtypes.SemType) {
 	r.pathListType = ty
 }
 

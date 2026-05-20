@@ -394,7 +394,7 @@ func (sw *symbolWriter) writeResourceMethodSymbol(buf *bytes.Buffer, sym *model.
 	if err := sw.writeStringCP(buf, sym.MethodName()); err != nil {
 		return err
 	}
-	if err := sw.writeType(buf, sym.PathType()); err != nil {
+	if err := sw.writeType(buf, sym.PathListType()); err != nil {
 		return err
 	}
 	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())

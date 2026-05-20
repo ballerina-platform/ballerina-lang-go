@@ -8,18 +8,11 @@ class foo {
     }
   }
 
-  resource get test/[string]/[int] foo.$resource$get$0(string,int,[int...]) -> nil{
+  resource get items/[string...] foo.$resource$get$0([string...]) -> nil{
     bb0 {
-      %5 = println(foo) -> bb1;
+      %3 = println(rest) -> bb1;
     }
     bb1 {
-      %6 = bar;
-      %7 = println(%6) -> bb2;
-    }
-    bb2 {
-      %8 = println(vals) -> bb3;
-    }
-    bb3 {
       return;
     }
   }
@@ -43,13 +36,11 @@ main() -> nil{
   }
   bb4 {
     f = %3;
-    %6 = ConstantLoad test
-    %7 = ConstantLoad foo
-    %8 = ConstantLoad 4
-    %9 = %8;
-    %10 = ConstantLoad 0
-    %11 = newArray [int...][%10]{}
-    %12 = f->[%6,%7,%9].get(%11) -> bb5;
+    %6 = ConstantLoad items
+    %7 = ConstantLoad a
+    %8 = ConstantLoad b
+    %9 = ConstantLoad c
+    %10 = f->[%6,%7,%8,%9].get() -> bb5;
   }
   bb5 {
     return;

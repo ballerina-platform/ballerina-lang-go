@@ -4560,6 +4560,7 @@ func (n *NodeBuilder) TransformClientResourceAccessAction(node *tree.ClientResou
 	action := &BLangClientResourceAccessAction{}
 	action.pos = getPosition(n.de(), node)
 	action.Expr = n.createExpression(node.Expression())
+	action.MethodName = "get"
 	if methodName := node.MethodName(); methodName != nil {
 		nameTok := methodName.Name()
 		if nameTok == nil || nameTok.IsMissing() {
@@ -4568,11 +4569,7 @@ func (n *NodeBuilder) TransformClientResourceAccessAction(node *tree.ClientResou
 			action.MethodName = nameTok.Text()
 		}
 	}
-	nameValue := action.MethodName
-	if nameValue == "" {
-		nameValue = "get"
-	}
-	nameID := &BLangIdentifier{Value: nameValue}
+	nameID := &BLangIdentifier{Value: action.MethodName}
 	nameID.SetPosition(action.pos)
 	action.Name = nameID
 	action.Path = n.createResourceAccessSegments(node.ResourceAccessPath())

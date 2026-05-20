@@ -1627,10 +1627,8 @@ func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.Sem
 // resolution, not against the function parameter list, so we walk them
 // here independently of the call's argument analysis.
 func analyzeClientResourceAccessAction[A analyzer](a A, expr *ast.BLangClientResourceAccessAction, expectedType semtypes.SemType) bool {
-	if expr.Expr != nil {
-		if !analyzeActionOrExpression(a, expr.Expr, semtypes.CreateClientObject(a.tyCtx())) {
-			return false
-		}
+	if !analyzeActionOrExpression(a, expr.Expr, semtypes.CreateClientObject(a.tyCtx())) {
+		return false
 	}
 	pathType := resolvedResourceMethodPathType(a, expr)
 	for i := range expr.Path {
@@ -1652,13 +1650,10 @@ func resolvedResourceMethodPathType[A analyzer](a A, expr *ast.BLangClientResour
 	if !ok {
 		return nil
 	}
-	return rmSym.PathType()
+	return rmSym.PathListType()
 }
 
 func resourcePathSegmentExpectedType(ctx semtypes.Context, pathType semtypes.SemType, index int) semtypes.SemType {
-	if pathType == nil {
-		return nil
-	}
 	return semtypes.ListMemberTypeInnerVal(ctx, pathType, semtypes.IntConst(int64(index)))
 }
 
@@ -2059,7 +2054,7 @@ func validateDuplicateResourceMethods[A analyzer](a A, classDef *ast.BLangClassD
 			if later.MethodName() != earlier.MethodName() {
 				continue
 			}
-			if semtypes.IsSameType(tyCtx, later.PathType(), earlier.PathType()) {
+			if semtypes.IsSameType(tyCtx, later.PathListType(), earlier.PathListType()) {
 				a.semanticErr("duplicate resource method '"+later.MethodName()+"'", rms[i].GetPosition())
 				break
 			}

@@ -1043,18 +1043,6 @@ const (
 	ResourcePathSegmentParamRest
 )
 
-func (b *BLangResourceMethod) GetKind() NodeKind {
-	return NodeKind_RESOURCE_FUNC
-}
-
-func (b *BLangResourcePathSegment) GetKind() NodeKind {
-	return NodeKind_RESOURCE
-}
-
-func (b *BLangResourceAccessSegment) GetKind() NodeKind {
-	return NodeKind_RESOURCE
-}
-
 func (b *bLangInvokableNodeBase) GetName() IdentifierNode {
 	return &b.Name
 }

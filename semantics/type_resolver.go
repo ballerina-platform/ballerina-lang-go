@@ -4848,7 +4848,7 @@ func resolveResourceMethodSignature(t typeResolver, classDef *ast.BLangClassDefi
 	if !ok {
 		return false
 	}
-	sym.SetPathType(pathTy)
+	sym.SetPathListType(pathTy)
 	sym.SetPathParams(pathParamRefs)
 
 	_, _, _, _, ok = resolveInvokableSignature(t, method, sym, method.RequiredParams)
@@ -4864,7 +4864,9 @@ func resolveResourcePathType(t typeResolver, method *ast.BLangResourceMethod) (s
 		seg := &method.ResourcePath[i]
 		switch seg.Kind {
 		case ast.ResourcePathSegmentName:
-			members = append(members, semtypes.StringConst(seg.Name))
+			literalTy := semtypes.StringConst(seg.Name)
+			seg.SetDeterminedType(literalTy)
+			members = append(members, literalTy)
 		case ast.ResourcePathSegmentParam, ast.ResourcePathSegmentParamRest:
 			if seg.ParamType == nil {
 				t.internalError("resource path parameter is missing type", seg.GetPosition())
@@ -4935,9 +4937,6 @@ func resolveClientResourceAccessAction(t typeResolver, chain *binding, expr *ast
 		return nil, expressionEffect{}, false
 	}
 	methodName := expr.MethodName
-	if methodName == "" {
-		methodName = "get"
-	}
 	var matches []model.SymbolRef
 	for _, rmRef := range networkSym.ResourceMethods() {
 		rmSym, ok := t.getSymbol(rmRef).(*model.ResourceMethodSymbol)
@@ -4945,7 +4944,7 @@ func resolveClientResourceAccessAction(t typeResolver, chain *binding, expr *ast
 			t.internalError("expected resource method symbol", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		if rmSym.MethodName() != methodName || !semtypes.IsSubtype(t.typeContext(), argPathTy, rmSym.PathType()) {
+		if rmSym.MethodName() != methodName || !semtypes.IsSubtype(t.typeContext(), argPathTy, rmSym.PathListType()) {
 			continue
 		}
 		matches = append(matches, rmRef)

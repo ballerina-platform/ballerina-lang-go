@@ -84,22 +84,22 @@ type invokableNode interface {
 	Symbol() model.SymbolRef
 }
 
-func analyzeInvokableExplicitReturn(ctx *context.CompilerContext, n invokableNode, cfg *PackageCFG) {
-	if n.IsNative() {
+func analyzeInvokableExplicitReturn(ctx *context.CompilerContext, fn invokableNode, cfg *PackageCFG) {
+	if fn.IsNative() {
 		return
 	}
-	sym := ctx.GetSymbol(n.Symbol()).(model.FunctionSymbol)
+	sym := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
 	retType := sym.Signature().ReturnType
 	if semtypes.ContainsBasicType(retType, semtypes.NIL) {
 		return
 	}
 
-	fnCfg, ok := cfg.lookupFunctionCfg(n.Symbol())
+	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
 		return
 	}
 	if semtypes.IsNever(retType) {
-		analyzeFunctionNeverReturn(ctx, n, fnCfg)
+		analyzeFunctionNeverReturn(ctx, fn, fnCfg)
 		return
 	}
 
@@ -110,12 +110,12 @@ func analyzeInvokableExplicitReturn(ctx *context.CompilerContext, n invokableNod
 		if terminalBlockHasReturnOrPanic(bb) {
 			continue
 		}
-		pos := positionForMissingReturn(bb, n)
+		pos := positionForMissingReturn(bb, fn)
 		ctx.SemanticError("missing return statement", pos)
 	}
 }
 
-func analyzeFunctionNeverReturn(ctx *context.CompilerContext, n invokableNode, fnCfg functionCFG) {
+func analyzeFunctionNeverReturn(ctx *context.CompilerContext, fn invokableNode, fnCfg functionCFG) {
 	for _, bb := range fnCfg.bbs {
 		if !bb.isTerminal() || !bb.isReachable() {
 			continue
@@ -123,7 +123,7 @@ func analyzeFunctionNeverReturn(ctx *context.CompilerContext, n invokableNode, f
 		if terminalBlockHasPanic(bb) {
 			continue
 		}
-		ctx.SemanticError("expected panic", positionForMissingReturn(bb, n))
+		ctx.SemanticError("expected panic", positionForMissingReturn(bb, fn))
 	}
 }
 
