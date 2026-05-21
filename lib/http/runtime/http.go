@@ -19,7 +19,6 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -267,7 +266,7 @@ func initHttpModule(rt *runtime.Runtime) {
 							}
 							if v, ok := ssMap.Get("cert"); ok {
 								if certPath, ok := v.(string); ok && certPath != "" {
-									data, err := os.ReadFile(certPath)
+									data, err := rt.Platform().FS.ReadFile(certPath)
 									if err != nil {
 										return values.NewErrorWithMessage("secureSocket.cert: " + err.Error()), nil
 									}
@@ -278,7 +277,7 @@ func initHttpModule(rt *runtime.Runtime) {
 								if keyMap, ok := v.(*values.Map); ok {
 									if cv, ok := keyMap.Get("certFile"); ok {
 										if p, ok := cv.(string); ok && p != "" {
-											data, err := os.ReadFile(p)
+											data, err := rt.Platform().FS.ReadFile(p)
 											if err != nil {
 												return values.NewErrorWithMessage("secureSocket.key.certFile: " + err.Error()), nil
 											}
@@ -287,7 +286,7 @@ func initHttpModule(rt *runtime.Runtime) {
 									}
 									if kv, ok := keyMap.Get("keyFile"); ok {
 										if p, ok := kv.(string); ok && p != "" {
-											data, err := os.ReadFile(p)
+											data, err := rt.Platform().FS.ReadFile(p)
 											if err != nil {
 												return values.NewErrorWithMessage("secureSocket.key.keyFile: " + err.Error()), nil
 											}

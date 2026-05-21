@@ -28,11 +28,15 @@ import "time"
 type (
 	Platform struct {
 		IO   IO
+		FS   FS
 		HTTP HTTP
 	}
 	IO struct {
 		Stdout func(p []byte) (n int, err error)
 		Stderr func(p []byte) (n int, err error)
+	}
+	FS struct {
+		ReadFile func(path string) ([]byte, error)
 	}
 	HTTP struct {
 		NewClient func(cfg ClientConfig) HTTPClient
