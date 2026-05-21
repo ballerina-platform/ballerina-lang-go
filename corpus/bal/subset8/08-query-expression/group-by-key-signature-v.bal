@@ -55,7 +55,7 @@ public function main() {
     io:println(groupedByString); // @output [["a","a","a"],["b","b"]]
     io:println(groupedByFloat); // @output [[1.0,1.0,1.0],[-0.0,-0.0,0.0],[NaN,NaN,NaN]]
     io:println(groupedByNil); // @output [[1,1],[null,null,null],[2,2]]
-    io:println(groupedByDecimal); // @output [[1.0,1.0,1.00],[2.0,2.0]]
+    io:println(groupedByDecimal); // @output [[1,1,1],[2,2]]
     io:println(groupedByMultipleKeys); // @output [[[1],false,1,1],[[2],true,2]]
     io:println(groupedByMap); // @output [[{"a":1,"b":2},{"a":1,"b":2},{"b":2,"a":1}],[{"a":1,"b":3},{"a":1,"b":3}]]
 }

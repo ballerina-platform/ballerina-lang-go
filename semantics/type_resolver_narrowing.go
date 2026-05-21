@@ -23,11 +23,19 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+type bindingFlags uint8
+
+const (
+	bindingFlagFunctionBoundary bindingFlags = 1 << iota
+	bindingFlagQueryAggregated
+)
+
 type binding struct {
 	// ref is the underlying symbol we are narrowing. This is never a narrowed symbol
 	ref            model.SymbolRef
 	narrowedSymbol model.SymbolRef
 	prev           *binding
+	flags          bindingFlags
 	// assignmentPos is set on unnarrowing entries created by an assignment
 	// statement. The loop arms use it to report assignments to variables
 	// narrowed outside the loop whose effect reaches the loop top via the
@@ -36,13 +44,10 @@ type binding struct {
 	// defaultType is used for unreachable branches (e.g. false branch of constant true)
 	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
 	defaultType semtypes.SemType
-	// functionBoundary marks the entry point of a lambda/closure function scope.
-	// When lookupBinding crosses this marker and finds a narrowed binding beyond it,
-	// the variable is captured from the outer scope and should be treated as unnarrowed.
-	functionBoundary bool
-	// queryAggregated marks a query variable that was converted to an aggregated
-	// variable binding by a group by clause.
-	queryAggregated bool
+}
+
+func (b *binding) hasFlag(flag bindingFlags) bool {
+	return b.flags&flag != 0
 }
 
 func (b *binding) isUnnarrowing() bool {
@@ -82,11 +87,11 @@ func lookupQueryAggregatedBindingInner(chain *binding, ref model.SymbolRef, cros
 	if chain == nil {
 		return false
 	}
-	if chain.functionBoundary {
+	if chain.hasFlag(bindingFlagFunctionBoundary) {
 		return lookupQueryAggregatedBindingInner(chain.prev, ref, true)
 	}
-	if chain.ref == ref {
-		return !crossedBoundary && !chain.isUnnarrowing() && chain.queryAggregated
+	if chain.ref == ref || chain.narrowedSymbol == ref {
+		return !crossedBoundary && !chain.isUnnarrowing() && chain.hasFlag(bindingFlagQueryAggregated)
 	}
 	return lookupQueryAggregatedBindingInner(chain.prev, ref, crossedBoundary)
 }
@@ -95,7 +100,7 @@ func lookupBindingInner(chain *binding, ref model.SymbolRef, crossedBoundary boo
 	if chain == nil {
 		return ref, false, false
 	}
-	if chain.functionBoundary {
+	if chain.hasFlag(bindingFlagFunctionBoundary) {
 		return lookupBindingInner(chain.prev, ref, true)
 	}
 	if chain.ref == ref {
@@ -149,7 +154,7 @@ func reportOutsideLoopAssignments(t typeResolver, chains []*binding, loopEntry *
 	for _, chain := range chains {
 		seen := make(map[model.SymbolRef]bool)
 		for c := chain; c != nil && c != loopEntry; c = c.prev {
-			if c.functionBoundary {
+			if c.hasFlag(bindingFlagFunctionBoundary) {
 				continue
 			}
 			if seen[c.ref] {
@@ -170,7 +175,7 @@ func accumNarrowedTypes(t typeResolver, chain *binding, accum map[model.SymbolRe
 	if chain == nil {
 		return accumDefault
 	}
-	if chain.functionBoundary {
+	if chain.hasFlag(bindingFlagFunctionBoundary) {
 		// This is just a marker move to the next one
 		return accumNarrowedTypes(t, chain.prev, accum, accumDefault)
 	}
@@ -241,11 +246,11 @@ func diff(c1, c2 *binding) *binding {
 	if c1 == c2 {
 		return nil
 	}
-	result := &binding{ref: c1.ref, narrowedSymbol: c1.narrowedSymbol, defaultType: c1.defaultType}
+	result := &binding{ref: c1.ref, narrowedSymbol: c1.narrowedSymbol, flags: c1.flags, defaultType: c1.defaultType}
 	cur := result
 	parent := c1.prev
 	for parent != nil && parent != c2 {
-		cur.prev = &binding{ref: parent.ref, narrowedSymbol: parent.narrowedSymbol, defaultType: parent.defaultType}
+		cur.prev = &binding{ref: parent.ref, narrowedSymbol: parent.narrowedSymbol, flags: parent.flags, defaultType: parent.defaultType}
 		cur = cur.prev
 		parent = parent.prev
 	}

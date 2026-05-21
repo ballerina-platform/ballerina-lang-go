@@ -269,26 +269,21 @@ func (b *BLangGroupingKey) GetKind() model.NodeKind {
 }
 
 func (b *BLangGroupingKey) SetGroupingKey(groupingKey model.Node) {
-	switch key := groupingKey.(type) {
-	case *BLangSimpleVariableDef:
+	if key, ok := groupingKey.(*BLangSimpleVariableDef); ok {
 		b.VariableDef = key
 		b.VariableRef = nil
-	case *BLangSimpleVarRef:
-		b.VariableRef = key
-		b.VariableDef = nil
-	default:
-		panic("groupingKey is neither a BLangSimpleVariableDef nor a BLangSimpleVarRef")
+		return
 	}
+	key := groupingKey.(*BLangSimpleVarRef)
+	b.VariableRef = key
+	b.VariableDef = nil
 }
 
 func (b *BLangGroupingKey) GetGroupingKey() model.Node {
 	if b.VariableRef != nil {
 		return b.VariableRef
 	}
-	if b.VariableDef != nil {
-		return b.VariableDef
-	}
-	return nil
+	return b.VariableDef
 }
 
 func (b *BLangLimitClause) GetKind() model.NodeKind {

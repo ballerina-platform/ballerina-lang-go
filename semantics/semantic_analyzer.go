@@ -1035,20 +1035,27 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 	// with per-member expected types. We only need to validate members here.
 	lat := expr.AtomicType
 	memberIndex := 0
+	restMember := false
 	for i, memberExpr := range expr.Exprs {
 		memberExpectedType := lat.MemberAtInnerVal(memberIndex)
-		if expr.IsImplicitSpreadMember(i) {
+		if restMember || expr.IsSpreadMember(i) {
+			memberExpectedType = lat.Rest()
+		}
+		if expr.IsSpreadMember(i) {
 			memberExpectedType = listOfMemberType(a.ctx().GetTypeEnv(), memberExpectedType)
 			if !analyzeActionOrExpression(a, memberExpr, memberExpectedType) {
 				return false
 			}
+			restMember = true
 			memberIndex = lat.Members.FixedLength
 			continue
 		}
 		if !analyzeActionOrExpression(a, memberExpr, memberExpectedType) {
 			return false
 		}
-		memberIndex++
+		if !restMember {
+			memberIndex++
+		}
 	}
 	for i := memberIndex; i < lat.Members.FixedLength; i++ {
 		memberTy := lat.MemberAtInnerVal(i)

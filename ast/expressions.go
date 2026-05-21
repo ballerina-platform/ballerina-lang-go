@@ -320,10 +320,10 @@ type (
 
 	BLangListConstructorExpr struct {
 		bLangExpressionBase
-		Exprs                 []BLangExpression
-		IsTypedescExpr        bool
-		AtomicType            semtypes.ListAtomicType
-		ImplicitSpreadMembers []bool
+		Exprs          []BLangExpression
+		IsTypedescExpr bool
+		AtomicType     semtypes.ListAtomicType
+		SpreadMembers  []bool
 	}
 
 	BLangErrorConstructorExpr struct {
@@ -1083,19 +1083,19 @@ func (b *BLangListConstructorExpr) GetExpressions() []model.ExpressionNode {
 	return result
 }
 
-func (b *BLangListConstructorExpr) SetImplicitSpreadMember(index int) {
-	if len(b.ImplicitSpreadMembers) != len(b.Exprs) {
-		b.ImplicitSpreadMembers = make([]bool, len(b.Exprs))
+func (b *BLangListConstructorExpr) SetSpreadMember(index int) {
+	if len(b.SpreadMembers) != len(b.Exprs) {
+		b.SpreadMembers = make([]bool, len(b.Exprs))
 	}
-	b.ImplicitSpreadMembers[index] = true
+	b.SpreadMembers[index] = true
 }
 
-func (b *BLangListConstructorExpr) IsImplicitSpreadMember(index int) bool {
-	return index < len(b.ImplicitSpreadMembers) && b.ImplicitSpreadMembers[index]
+func (b *BLangListConstructorExpr) IsSpreadMember(index int) bool {
+	return index < len(b.SpreadMembers) && b.SpreadMembers[index]
 }
 
-func (b *BLangListConstructorExpr) HasImplicitSpreadMembers() bool {
-	for _, isSpread := range b.ImplicitSpreadMembers {
+func (b *BLangListConstructorExpr) HasSpreadMembers() bool {
+	for _, isSpread := range b.SpreadMembers {
 		if isSpread {
 			return true
 		}

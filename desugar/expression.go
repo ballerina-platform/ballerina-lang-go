@@ -570,8 +570,8 @@ func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructor
 		expr.Exprs[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
-	if expr.HasImplicitSpreadMembers() {
-		return desugarListConstructorWithImplicitSpread(cx, expr, initStmts)
+	if expr.HasSpreadMembers() {
+		return desugarListConstructorWithSpread(cx, expr, initStmts)
 	}
 
 	return desugaredNode[ast.BLangActionOrExpression]{
@@ -580,7 +580,7 @@ func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructor
 	}
 }
 
-func desugarListConstructorWithImplicitSpread(
+func desugarListConstructorWithSpread(
 	cx *functionContext,
 	expr *ast.BLangListConstructorExpr,
 	initStmts []model.StatementNode,
@@ -595,7 +595,7 @@ func desugarListConstructorWithImplicitSpread(
 	initStmts = append(initStmts, resultDef)
 
 	for i, memberExpr := range expr.Exprs {
-		if !expr.IsImplicitSpreadMember(i) {
+		if !expr.IsSpreadMember(i) {
 			pushMember := createPushInvocation(cx, resultRef, memberExpr)
 			if pushMember == nil {
 				return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
@@ -603,7 +603,7 @@ func desugarListConstructorWithImplicitSpread(
 			initStmts = append(initStmts, &ast.BLangExpressionStmt{Expr: pushMember})
 			continue
 		}
-		initStmts = appendImplicitSpreadListPushStmts(cx, initStmts, resultRef, memberExpr, pos)
+		initStmts = appendSpreadListPushStmts(cx, initStmts, resultRef, memberExpr, pos)
 	}
 
 	resultRef.SetDeterminedType(expr.GetDeterminedType())
@@ -613,7 +613,7 @@ func desugarListConstructorWithImplicitSpread(
 	}
 }
 
-func appendImplicitSpreadListPushStmts(
+func appendSpreadListPushStmts(
 	cx *functionContext,
 	initStmts []model.StatementNode,
 	resultRef *ast.BLangSimpleVarRef,

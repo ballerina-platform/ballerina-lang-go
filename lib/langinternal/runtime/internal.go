@@ -162,11 +162,10 @@ func initInternalModule(rt *runtime.Runtime) {
 }
 
 type queryGroupState struct {
-	key *values.List
 	row *values.List
 }
 
-type queryGroupIndex map[string][]int
+type queryGroupIndex map[string]int
 
 func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
 	rowCount := rows.Len()
@@ -204,11 +203,11 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 		} else if keyRow.Len() != expectedKeyArity {
 			return nil, fmt.Errorf("group key row %d length mismatch: got %d, expected %d", rowIndex, keyRow.Len(), expectedKeyArity)
 		}
-		groupIndex, keySignature := findQueryGroup(groups, groupIndices, keyRow)
-		if groupIndex == -1 {
+		groupIndex, keySignature, found := findQueryGroup(groupIndices, keyRow)
+		if !found {
 			groupRow := createQueryGroupRow(sourceRow, scalarSlots)
-			groups = append(groups, queryGroupState{key: keyRow, row: groupRow})
-			groupIndices[keySignature] = append(groupIndices[keySignature], len(groups)-1)
+			groups = append(groups, queryGroupState{row: groupRow})
+			groupIndices[keySignature] = len(groups) - 1
 			result.Append(groupRow)
 			continue
 		}
@@ -217,14 +216,13 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 	return result, nil
 }
 
-func findQueryGroup(groups []queryGroupState, groupIndices queryGroupIndex, keyRow *values.List) (int, string) {
+func findQueryGroup(groupIndices queryGroupIndex, keyRow *values.List) (int, string, bool) {
 	keySignature := queryGroupKeySignature(keyRow)
-	for _, groupIndex := range groupIndices[keySignature] {
-		if values.DeepEquals(groups[groupIndex].key, keyRow) {
-			return groupIndex, keySignature
-		}
+	groupIndex, ok := groupIndices[keySignature]
+	if !ok {
+		return 0, keySignature, false
 	}
-	return -1, keySignature
+	return groupIndex, keySignature, true
 }
 
 func queryGroupKeySignature(keyRow *values.List) string {
