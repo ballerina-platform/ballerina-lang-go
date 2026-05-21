@@ -10,7 +10,7 @@ class NumberIterator {
       %3 = ConstantLoad 2
       %4 = ConstantLoad 3
       %5 = ConstantLoad 3
-      %6 = newArray [int, int, int, never...][%5]{%2, %3, %4}
+      %6 = newArray [int...][%5]{%2, %3, %4}
       %7 = ConstantLoad items
       self[%7] = %6;
       %8 = ConstantLoad 0

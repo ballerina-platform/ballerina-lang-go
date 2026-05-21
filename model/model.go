@@ -14,16 +14,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package ast
-
-import "ballerina-lang-go/model"
-
-// FIXME: implement this
-type BTypeIdSet struct {
-}
-
-type BTypeId struct {
-	PackageID model.PackageID
-	Name      string
-	PublicID  bool
-}
+// Package model provide shared representations for both front end and backend
+package model

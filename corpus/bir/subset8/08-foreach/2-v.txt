@@ -63,7 +63,7 @@ class Words {
       %2 = ConstantLoad hello
       %3 = ConstantLoad world
       %4 = ConstantLoad 2
-      %5 = newArray [string, string, never...][%4]{%2, %3}
+      %5 = newArray [string...][%4]{%2, %3}
       %6 = ConstantLoad data
       self[%6] = %5;
       return;

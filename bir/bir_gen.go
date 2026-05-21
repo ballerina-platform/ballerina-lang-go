@@ -307,8 +307,7 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
-	dcl.Flags = ast.FlagsAsInt64()
-	dcl.Origin = model.SymbolOrigin_SOURCE
+	dcl.Flags = ast.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
@@ -320,8 +319,7 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
-	dcl.Flags = c.FlagsAsInt64()
-	dcl.Origin = model.SymbolOrigin_SOURCE
+	dcl.Flags = c.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
@@ -338,7 +336,7 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 	birFunc.Pos = stmtCx.loc(astFunc.GetPosition())
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
-	birFunc.Flags = astFunc.FlagsAsInt64()
+	birFunc.Flags = astFunc.Flags()
 	ctx := stmtCx.birCx
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
@@ -351,11 +349,11 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), ctx.CompilerContext.SymbolType(param.Symbol()), param.Symbol())
 		requiredParams[i] = BIRParameter{
 			Name:  model.Name(param.GetName().GetValue()),
-			Flags: param.FlagsAsInt64(),
+			Flags: param.Flags(),
 		}
 	}
 	if astFunc.RestParam != nil {
-		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
+		restParam := astFunc.RestParam
 		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
 		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, restParam.Symbol())
 		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
@@ -396,7 +394,7 @@ type statementEffect struct {
 	block *BIRBasicBlock
 }
 
-func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangStatement) statementEffect {
+func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.StatementNode) statementEffect {
 	switch stmt := stmt.(type) {
 	case *ast.BLangExpressionStmt:
 		return expressionStatement(ctx, curBB, stmt)
@@ -435,7 +433,7 @@ func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangC
 	if indexRef, ok := stmt.VarRef.(*ast.BLangIndexBasedAccess); ok {
 		return compoundAssignmentToMember(ctx, curBB, stmt, indexRef, pos)
 	}
-	ref := stmt.VarRef.(ast.BLangExpression)
+	ref := stmt.VarRef
 	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), pos)
 	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, pos)
 }
@@ -775,7 +773,7 @@ func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new 
 
 func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 	curBB := ctx.addBB()
-	effect := handleActionOrExpression(ctx, curBB, body.Expr.(ast.BLangExpression))
+	effect := handleActionOrExpression(ctx, curBB, body.Expr)
 	curBB = effect.block
 	if curBB != nil {
 		retAssign := &Move{}
@@ -1278,7 +1276,7 @@ type callable interface {
 	ResolvedSymbol() model.SymbolRef
 	Receiver() ast.BLangExpression
 	CallArgs() []ast.BLangExpression
-	GetName() model.IdentifierNode
+	GetName() ast.IdentifierNode
 }
 
 func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expressionEffect {
@@ -1575,7 +1573,7 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 			fn = &BIRFunction{
 				Name:              model.Name(method.GetName().GetValue()),
 				OriginalName:      model.Name(method.GetName().GetValue()),
-				Flags:             method.FlagsAsInt64(),
+				Flags:             method.Flags(),
 				FunctionLookupKey: lookupKey,
 			}
 			fn.Pos = birLoc(ctx.CompilerContext.DiagnosticEnv(), method.GetPosition())
