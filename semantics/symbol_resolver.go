@@ -76,6 +76,7 @@ type (
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]ast.TypeDefinition
 		prevPos        map[string]prevPos
+		usedPrefixes   map[string]bool
 		defaultCounter int
 	}
 
@@ -102,12 +103,13 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		XMLNS:      map[string]string{model.XMLNSReservedPrefix: model.XMLNSReservedURI},
 	}
 	return &moduleSymbolResolver{
-		ctx:       ctx,
-		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
-		scope:     scope,
-		pkgID:     pkgID,
-		typeDefns: make(map[model.SymbolRef]ast.TypeDefinition),
-		prevPos:   make(map[string]prevPos),
+		ctx:          ctx,
+		tyCtx:        semtypes.ContextFrom(ctx.GetTypeEnv()),
+		scope:        scope,
+		pkgID:        pkgID,
+		typeDefns:    make(map[model.SymbolRef]ast.TypeDefinition),
+		prevPos:      make(map[string]prevPos),
+		usedPrefixes: make(map[string]bool),
 	}
 }
 
@@ -147,6 +149,9 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 }
 
 func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
+	if prefix != "" {
+		ms.usedPrefixes[prefix] = true
+	}
 	return ms.scope.GetPrefixedSymbol(prefix, name)
 }
 
@@ -415,8 +420,22 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	}
 	processModuleXMLNS(moduleResolver, pkg)
 	ast.Walk(moduleResolver, pkg)
+	reportUnusedImports(moduleResolver, pkg)
 	pkg.Scope = moduleResolver.scope
 	return moduleResolver.scope.Exports()
+}
+
+func reportUnusedImports(resolver *moduleSymbolResolver, pkg *ast.BLangPackage) {
+	for i := range pkg.Imports {
+		imp := &pkg.Imports[i]
+		alias := imp.Alias.Value
+		if alias == string(model.IGNORE) {
+			continue
+		}
+		if !resolver.usedPrefixes[alias] {
+			resolver.ctx.SemanticError("unused import prefix '"+alias+"'", imp.GetPosition())
+		}
+	}
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {

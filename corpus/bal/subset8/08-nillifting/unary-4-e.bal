@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
 
 const int? base2 = ();
 const int? x = +base2; // @error
