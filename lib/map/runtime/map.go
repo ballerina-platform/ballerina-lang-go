@@ -18,6 +18,7 @@ package maprt
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"sync"
@@ -28,15 +29,15 @@ const (
 	moduleName = "lang.map"
 )
 
-func mapLength(args []values.BalValue) (values.BalValue, error) {
+func mapLength(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	m := args[0].(*values.Map)
 	return int64(m.Len()), nil
 }
 
-func mapKeys(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue, error) {
+func mapKeys(rt *runtime.Runtime) extern.NativeFunc {
 	var stringArrayTy semtypes.SemType
 	var stringArrayOnce sync.Once
-	return func(args []values.BalValue) (values.BalValue, error) {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		stringArrayOnce.Do(func() {
 			env := rt.GetTypeEnv()
 			ld := semtypes.NewListDefinition()
@@ -48,17 +49,17 @@ func mapKeys(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue,
 		for i, k := range keys {
 			items[i] = k
 		}
-		list := values.NewList(0, stringArrayTy, nil)
-		list.Append(items...)
+		atomic := semtypes.ToListAtomicType(ctx.TypeCtx, stringArrayTy)
+		list := values.NewList(stringArrayTy, atomic, false, nil, 0, items)
 		return list, nil
 	}
 }
 
-func mapRemove(args []values.BalValue) (values.BalValue, error) {
+func mapRemove(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	m := args[0].(*values.Map)
 	key := args[1].(string)
 	val, _ := m.Get(key)
-	m.Delete(key)
+	m.Delete(ctx.TypeCtx, key)
 	return val, nil
 }
 

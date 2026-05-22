@@ -19,11 +19,9 @@ package modules
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/values"
 )
-
-const nativeMethodFlagMask int64 = 1 << model.Flag_NATIVE
 
 type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
@@ -56,7 +54,7 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 			classDef := &m.Pkg.ClassDefs[i]
 			r.birClassDefs[classDef.LookupKey] = classDef
 			for _, fn := range classDef.VTable {
-				if fn.Flags&nativeMethodFlagMask != 0 {
+				if fn.Flags.Has(model.FlagNative) {
 					continue
 				}
 				r.birFunctions[fn.FunctionLookupKey] = fn
@@ -81,7 +79,7 @@ func (r *Registry) GetTypeEnv() semtypes.Env {
 	return r.typeEnv
 }
 
-func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
+func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl extern.NativeFunc) {
 	externFn := &ExternFunction{
 		Name: funcName,
 		Impl: impl,
@@ -94,6 +92,13 @@ func (r *Registry) RegisterExternFunction(orgName string, moduleName string, fun
 
 func (r *Registry) GetClassDef(lookupKey string) *bir.BIRClassDef {
 	return r.birClassDefs[lookupKey]
+}
+
+// RegisterExternClassDef registers a synthetic BIRClassDef so that execNewObject
+// can build method-key maps for Go-declared classes. VTable entries are intentionally
+// NOT added to birFunctions so that exec falls through to nativeFunctions for dispatch.
+func (r *Registry) RegisterExternClassDef(def *bir.BIRClassDef) {
+	r.birClassDefs[def.LookupKey] = def
 }
 
 func (r *Registry) GetBIRFunction(funcName string) *bir.BIRFunction {

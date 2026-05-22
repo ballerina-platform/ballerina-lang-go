@@ -100,7 +100,6 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		Functions:     functions,
 		InitFunction:  initFunction,
 		MainFunction:  mainFunction,
-		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
 }
 
@@ -221,14 +220,12 @@ func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGl
 		_ = br.readKind() // kind (ignored, concrete type determines it)
 		name := br.readStringCPEntry()
 		flags := br.readFlags()
-		origin := br.readOrigin()
 
 		ty := br.readType()
 
 		lookupKey := pkgID.OrgName.Value() + "/" + pkgID.PkgName.Value() + ":" + name.Value()
 		gv := bir.BIRGlobalVariableDcl{
 			Flags:              flags,
-			Origin:             origin,
 			GlobalVarLookupKey: lookupKey,
 		}
 		gv.Pos = pos
@@ -293,7 +290,6 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	name := br.readStringCPEntry()
 	originalName := br.readStringCPEntry()
 	flag := br.readFlags()
-	origin := br.readOrigin()
 	functionLookupKey := br.readStringCPEntry()
 	requiredParamsCount := br.readLength()
 
@@ -400,15 +396,12 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	}
 
 	return &bir.BIRFunction{
-		BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
-			BIRNodeBase: bir.BIRNodeBase{
-				Pos: pos,
-			},
+		BIRNodeBase: bir.BIRNodeBase{
+			Pos: pos,
 		},
 		Name:              name,
 		OriginalName:      originalName,
 		Flags:             flag,
-		Origin:            origin,
 		FunctionLookupKey: string(functionLookupKey),
 		RequiredParams:    requiredParams,
 		RestParams:        restParams,
@@ -515,7 +508,7 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		var tagByte int8
 		br.read(&tagByte)
 
-		tag := model.TypeTags(tagByte)
+		tag := typeTag(tagByte)
 		value := br.readConstValueByTag(tag)
 
 		if isWrapped {
@@ -561,6 +554,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
+		var isReadonly bool
+		br.read(&isReadonly)
 		valuesCount := br.readLength()
 		arrayValues := make([]*bir.BIROperand, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
@@ -571,10 +566,11 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Type:   ty,
-			SizeOp: sizeOp,
-			Values: arrayValues,
-			Filler: br.restFillerFactoryForListType(ty),
+			Type:       ty,
+			SizeOp:     sizeOp,
+			Values:     arrayValues,
+			Filler:     br.restFillerFactoryForListType(ty),
+			IsReadonly: isReadonly,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
@@ -607,6 +603,8 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 	case bir.INSTRUCTION_KIND_NEW_STRUCTURE:
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
+		var isReadonly bool
+		br.read(&isReadonly)
 		valuesCount := br.readLength()
 		values := make([]bir.MappingConstructorEntry, valuesCount)
 		for k := 0; k < int(valuesCount); k++ {
@@ -632,9 +630,10 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 				BIRNodeBase: bir.BIRNodeBase{Pos: pos},
 				LhsOp:       lhsOp,
 			},
-			Type:     ty,
-			Values:   values,
-			Defaults: defaults,
+			Type:       ty,
+			Values:     values,
+			Defaults:   defaults,
+			IsReadonly: isReadonly,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ERROR:
 		ty := br.readType()
@@ -916,39 +915,39 @@ func (br *birReader) readConstValue() any {
 	var tagByte int8
 	br.read(&tagByte)
 
-	tag := model.TypeTags(tagByte)
+	tag := typeTag(tagByte)
 	return br.readConstValueByTag(tag)
 }
 
-func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
+func (br *birReader) readConstValueByTag(tag typeTag) any {
 	switch tag {
-	case model.TypeTags_INT,
-		model.TypeTags_SIGNED32_INT,
-		model.TypeTags_SIGNED16_INT,
-		model.TypeTags_SIGNED8_INT,
-		model.TypeTags_UNSIGNED32_INT,
-		model.TypeTags_UNSIGNED16_INT,
-		model.TypeTags_UNSIGNED8_INT:
+	case typeTagInt,
+		typeTagSigned32,
+		typeTagSigned16,
+		typeTagSigned8,
+		typeTagUnsigned32,
+		typeTagUnsigned16,
+		typeTagUnsigned8:
 		var val int64
 		br.read(&val)
 		return val
-	case model.TypeTags_BYTE:
+	case typeTagByte:
 		var val byte
 		br.read(&val)
 		return val
-	case model.TypeTags_FLOAT:
+	case typeTagFloat:
 		var val float64
 		br.read(&val)
 		return val
-	case model.TypeTags_BOOLEAN:
+	case typeTagBoolean:
 		var val bool
 		br.read(&val)
 		return val
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING:
+	case typeTagString, typeTagCharString:
 		var idx int32
 		br.read(&idx)
 		return br.getStringFromCP(int(idx))
-	case model.TypeTags_DECIMAL:
+	case typeTagDecimal:
 		var idx int32
 		br.read(&idx)
 		str := br.getStringFromCP(int(idx))
@@ -957,7 +956,7 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 			panic(fmt.Sprintf("invalid decimal value %q: %v", str, err))
 		}
 		return r
-	case model.TypeTags_NIL:
+	case typeTagNil:
 		var idx int32
 		br.read(&idx)
 		return nil
@@ -998,16 +997,10 @@ func (br *birReader) readKind() bir.VarKind {
 	return bir.VarKind(val)
 }
 
-func (br *birReader) readFlags() int64 {
+func (br *birReader) readFlags() model.Flag {
 	var val int64
 	br.read(&val)
-	return val
-}
-
-func (br *birReader) readOrigin() model.SymbolOrigin {
-	var val uint8
-	br.read(&val)
-	return model.SymbolOrigin(val)
+	return model.Flag(val)
 }
 
 func (br *birReader) readStringCPEntry() model.Name {

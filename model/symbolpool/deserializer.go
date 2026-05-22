@@ -178,8 +178,8 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 		case inclusionMemberTagField:
 			name := sr.readStringCP()
 			ty := sr.readType()
-			var vis uint8
-			read(sr.r, &vis)
+			var isPublic bool
+			read(sr.r, &isPublic)
 			var flags uint8
 			read(sr.r, &flags)
 			var fdFlags model.FieldDescriptorFlag
@@ -192,7 +192,7 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 			if flags&4 != 0 {
 				fdFlags |= model.FieldDescriptorHasDefault
 			}
-			fd := model.NewFieldDescriptor(name, fdFlags, model.Visibility(vis))
+			fd := model.NewFieldDescriptor(name, fdFlags, isPublic)
 			fd.SetMemberType(ty)
 			fd.DefaultFnRef = sr.readSymbolRef(space)
 			members = append(members, &fd)
@@ -201,10 +201,10 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 			ty := sr.readType()
 			var kind uint8
 			read(sr.r, &kind)
-			var vis uint8
-			read(sr.r, &vis)
+			var isPublic bool
+			read(sr.r, &isPublic)
 			methodRef := sr.readSymbolRef(space)
-			md := model.NewMethodDescriptor(name, model.InclusionMemberKind(kind), model.Visibility(vis), methodRef)
+			md := model.NewMethodDescriptor(name, model.InclusionMemberKind(kind), isPublic, methodRef)
 			md.SetMemberType(ty)
 			members = append(members, &md)
 		case inclusionMemberTagRestType:

@@ -343,20 +343,22 @@ func runCLICommand(t *testing.T, balBin, repoRoot, coverDir string, args ...stri
 	cmd.Stderr = &stderrBuf
 
 	err := cmd.Run()
+	stdoutStr := stdoutBuf.String()
+	stderrStr := stderrBuf.String()
 	if err == nil {
-		return stdoutBuf.String(), stderrBuf.String(), 0
+		return stdoutStr, stderrStr, 0
 	}
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
-		return stdoutBuf.String(), stderrBuf.String(), exitErr.ExitCode()
+		return stdoutStr, stderrStr, exitErr.ExitCode()
 	}
 	t.Fatalf(
 		"failed to execute command %q (repo: %s): %v\nstdout:\n%s\nstderr:\n%s",
 		strings.Join(args, " "),
 		repoRoot,
 		err,
-		stdoutBuf.String(),
-		stderrBuf.String(),
+		stdoutStr,
+		stderrStr,
 	)
 	return "", "", 0
 }

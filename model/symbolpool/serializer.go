@@ -215,7 +215,7 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 			if err := sw.writeType(buf, member.MemberType()); err != nil {
 				return err
 			}
-			if err := write(buf, uint8(member.Visibility())); err != nil {
+			if err := write(buf, member.IsPublic()); err != nil {
 				return err
 			}
 			var flags uint8
@@ -247,7 +247,7 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 			if err := write(buf, uint8(member.MemberKind())); err != nil {
 				return err
 			}
-			if err := write(buf, uint8(member.Visibility())); err != nil {
+			if err := write(buf, member.IsPublic()); err != nil {
 				return err
 			}
 			if err := sw.writeSymbolRef(buf, member.MethodRef); err != nil {

@@ -19,7 +19,7 @@ package bir
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/values"
+	"ballerina-lang-go/runtime/extern"
 )
 
 type BIRTerminator = BIRInstruction
@@ -47,7 +47,7 @@ type (
 		// CachedMethodLookupKey is used only for method calls. It ensures CachedBIRFunc
 		// matches the receiver object's resolved method lookup key for this call site.
 		CachedMethodLookupKey string
-		CachedNativeFunc      func(args []values.BalValue) (values.BalValue, error)
+		CachedNativeFunc      extern.NativeFunc
 		FpOperand             *BIROperand // For FP_CALL: the operand holding the function value
 	}
 

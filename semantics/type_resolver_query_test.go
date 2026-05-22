@@ -100,7 +100,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 		{
 			name: "from binding type incompatible",
 			query: newQueryExpr(
-				newFromClause(newIntListLiteral(1), newSimpleVarDef("x", newValueType(model.TypeKind_STRING), nil), false),
+				newFromClause(newIntListLiteral(1), newSimpleVarDef("x", newValueType(ast.TypeKind_STRING), nil), false),
 				newSelectClause(newIntLiteral(1)),
 			),
 			diagSub: "from clause variable type is incompatible with collection member type",
@@ -164,7 +164,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 		{
 			name: "let declared type incompatible",
 			clause: newLetClause(
-				newSimpleVarDef("y", newValueType(model.TypeKind_STRING), newIntLiteral(1)),
+				newSimpleVarDef("y", newValueType(ast.TypeKind_STRING), newIntLiteral(1)),
 			),
 			diagSub: "let clause variable type is incompatible with initializer expression",
 		},
@@ -236,7 +236,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 		{
 			name: "group by declared type incompatible",
 			clause: newGroupByClause(
-				newGroupingKeyVarDef(newSimpleVarDef("g", newValueType(model.TypeKind_STRING), newIntLiteral(1))),
+				newGroupingKeyVarDef(newSimpleVarDef("g", newValueType(ast.TypeKind_STRING), newIntLiteral(1))),
 			),
 			diagSub: "group by variable type is incompatible with initializer expression",
 		},
@@ -262,7 +262,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			name: "outer join without var",
 			clause: newJoinClause(
 				newIntListLiteral(1),
-				newSimpleVarDef("j", newValueType(model.TypeKind_INT), nil),
+				newSimpleVarDef("j", newValueType(ast.TypeKind_INT), nil),
 				false,
 				true,
 				newOnClause(newIntLiteral(1), newIntLiteral(1)),
@@ -352,7 +352,7 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 		newFromClause(newIntListLiteral(1), nil, true),
 		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
 	)
-	query.QueryConstructType = model.TypeKind_MAP
+	query.QueryConstructType = ast.TypeKind_MAP
 
 	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
@@ -393,7 +393,7 @@ func TestResolveQueryExprCollectClauseRejectsConstructType(t *testing.T) {
 		newFromClause(newIntListLiteral(1, 2, 3), nil, true),
 		newCollectClauseExpr(newIntLiteral(1)),
 	)
-	query.QueryConstructType = model.TypeKind_MAP
+	query.QueryConstructType = ast.TypeKind_MAP
 
 	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if ok {
@@ -552,7 +552,7 @@ func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
 		newFromClause(newIntListLiteral(1), nil, true),
 		newSelectClause(newIntLiteral(1)),
 	)
-	query.QueryConstructType = model.TypeKind_MAP
+	query.QueryConstructType = ast.TypeKind_MAP
 
 	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if ok {
@@ -706,7 +706,7 @@ func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
 			newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
 			newOnConflictClause(newIntLiteral(1)),
 		)
-		query.QueryConstructType = model.TypeKind_MAP
+		query.QueryConstructType = ast.TypeKind_MAP
 		_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 		if ok {
 			t.Fatalf("expected resolveQueryExpr to fail for invalid on conflict expression")
@@ -722,7 +722,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictNil(t *testing.T) {
 		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
 		newOnConflictClause(newNilLiteral()),
 	)
-	query.QueryConstructType = model.TypeKind_MAP
+	query.QueryConstructType = ast.TypeKind_MAP
 
 	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
@@ -744,7 +744,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictError(t *testing.T) {
 		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
 		newOnConflictClause(newErrorConstructorExpr()),
 	)
-	query.QueryConstructType = model.TypeKind_MAP
+	query.QueryConstructType = ast.TypeKind_MAP
 
 	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
 	if !ok {
@@ -789,7 +789,7 @@ func newQueryExpr(clauses ...ast.BLangNode) *ast.BLangQueryExpr {
 	return query
 }
 
-func newFromClause(collection ast.BLangExpression, varDef model.VariableDefinitionNode, declaredWithVar bool) *ast.BLangFromClause {
+func newFromClause(collection ast.BLangExpression, varDef *ast.BLangSimpleVariableDef, declaredWithVar bool) *ast.BLangFromClause {
 	fromClause := &ast.BLangFromClause{
 		BLangInputClause: ast.BLangInputClause{
 			VariableDefinitionNode: varDef,
@@ -803,7 +803,7 @@ func newFromClause(collection ast.BLangExpression, varDef model.VariableDefiniti
 
 func newJoinClause(
 	collection ast.BLangExpression,
-	varDef model.VariableDefinitionNode,
+	varDef *ast.BLangSimpleVariableDef,
 	declaredWithVar bool,
 	isOuterJoin bool,
 	onClause *ast.BLangOnClause,
@@ -830,9 +830,13 @@ func newSelectClause(expr ast.BLangExpression) *ast.BLangSelectClause {
 	return selectClause
 }
 
-func newLetClause(defs ...model.VariableDefinitionNode) *ast.BLangLetClause {
+func newLetClause(defs ...*ast.BLangSimpleVariableDef) *ast.BLangLetClause {
+	decls := make([]ast.BLangSimpleVariableDef, len(defs))
+	for i, def := range defs {
+		decls[i] = *def
+	}
 	letClause := &ast.BLangLetClause{
-		LetVarDeclarations: defs,
+		LetVarDeclarations: decls,
 	}
 	letClause.SetPosition(queryTestPos)
 	return letClause
@@ -976,7 +980,7 @@ func newSimpleVarRef(name string, symbol model.SymbolRef) *ast.BLangSimpleVarRef
 	return ref
 }
 
-func newValueType(typeKind model.TypeKind) ast.BType {
+func newValueType(typeKind ast.TypeKind) ast.BType {
 	ty := &ast.BLangValueType{
 		TypeKind: typeKind,
 	}
@@ -994,7 +998,7 @@ func newIntLiteral(value int64) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_INT, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_INT, "", 0))
 	return literal
 }
 
@@ -1014,7 +1018,7 @@ func newStringLiteral(value string) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_STRING, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_STRING, "", 0))
 	return literal
 }
 
@@ -1022,7 +1026,7 @@ func newBoolLiteral(value bool) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_BOOLEAN, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_BOOLEAN, "", 0))
 	return literal
 }
 
@@ -1030,7 +1034,7 @@ func newNilLiteral() *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(nil)
-	literal.SetValueType(ast.NewBType(model.TypeTags_NIL, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_NIL, "", 0))
 	return literal
 }
 
@@ -1044,7 +1048,7 @@ func newListLiteral(values ...ast.BLangExpression) *ast.BLangListConstructorExpr
 
 func newEmptyMappingLiteral() *ast.BLangMappingConstructorExpr {
 	mapExpr := &ast.BLangMappingConstructorExpr{
-		Fields: []model.MappingField{},
+		Fields: []ast.MappingField{},
 	}
 	mapExpr.SetPosition(queryTestPos)
 	return mapExpr

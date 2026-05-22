@@ -55,7 +55,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	queryTy := expr.GetDeterminedType()
 	basePos := expr.GetPosition()
 
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 	collRef, keysRef, lenRef, _, ok := createQueryCollectionSource(cx, &initStmts, fromClause.Collection, basePos)
 	if !ok {
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
@@ -67,11 +67,11 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 	resultVar.SetDeterminedType(queryTy)
 	switch expr.QueryConstructType {
-	case model.TypeKind_MAP:
+	case ast.TypeKind_MAP:
 		emptyMap := &ast.BLangMappingConstructorExpr{
-			Fields: []model.MappingField{},
+			Fields: []ast.MappingField{},
 		}
-		emptyMap.SetDeterminedType(queryTy)
+		emptyMap.SetDeterminedType(semtypes.Intersect(queryTy, semtypes.MAPPING))
 		resultVar.SetInitialExpression(emptyMap)
 	default:
 		emptyList := &ast.BLangListConstructorExpr{
@@ -93,7 +93,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	resultRef.SetDeterminedType(queryTy)
 
 	var seenKeysRef *ast.BLangSimpleVarRef
-	if onConflictClause != nil && expr.QueryConstructType == model.TypeKind_MAP {
+	if onConflictClause != nil && expr.QueryConstructType == ast.TypeKind_MAP {
 		seenKeysRef = createQueryMapStore(cx, &initStmts, basePos)
 	}
 
@@ -191,7 +191,7 @@ type queryOrderStageInput struct {
 
 func createQueryCollectionSource(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	collectionExpr ast.BLangExpression,
 	pos diagnostics.Location,
 ) (*ast.BLangSimpleVarRef, *ast.BLangSimpleVarRef, *ast.BLangSimpleVarRef, semtypes.SemType, bool) {
@@ -239,7 +239,7 @@ func walkQueryExprWithRows(
 ) desugaredNode[ast.BLangActionOrExpression] {
 	queryTy := expr.GetDeterminedType()
 	basePos := expr.GetPosition()
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	resultName, resultSymbol := cx.addDesugardSymbol(queryTy, model.SymbolKindVariable, false)
 	resultVar := &ast.BLangSimpleVariable{
@@ -248,11 +248,11 @@ func walkQueryExprWithRows(
 	resultVar.SetDeterminedType(queryTy)
 	if collectClause == nil {
 		switch expr.QueryConstructType {
-		case model.TypeKind_MAP:
+		case ast.TypeKind_MAP:
 			emptyMap := &ast.BLangMappingConstructorExpr{
-				Fields: []model.MappingField{},
+				Fields: []ast.MappingField{},
 			}
-			emptyMap.SetDeterminedType(queryTy)
+			emptyMap.SetDeterminedType(semtypes.Intersect(queryTy, semtypes.MAPPING))
 			resultVar.SetInitialExpression(emptyMap)
 		default:
 			emptyList := &ast.BLangListConstructorExpr{
@@ -275,7 +275,7 @@ func walkQueryExprWithRows(
 	resultRef.SetDeterminedType(queryTy)
 
 	var seenKeysRef *ast.BLangSimpleVarRef
-	if onConflictClause != nil && expr.QueryConstructType == model.TypeKind_MAP {
+	if onConflictClause != nil && expr.QueryConstructType == ast.TypeKind_MAP {
 		seenKeysRef = createQueryMapStore(cx, &initStmts, basePos)
 	}
 
@@ -347,7 +347,7 @@ func appendInitialQueryRows(
 	cx *functionContext,
 	rowsRef *ast.BLangSimpleVarRef,
 	fromClause *ast.BLangFromClause,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 ) ([]queryRowBinding, bool) {
 	loopBinding, ok := queryRowBindingFromVarDef(cx, fromClause.VariableDefinitionNode, "from")
@@ -374,7 +374,7 @@ func appendInitialQueryRows(
 	pushStmt := &ast.BLangExpressionStmt{Expr: pushRow}
 	setPositionIfMissing(pushStmt, pos)
 
-	bodyStmts := []ast.BLangStatement{
+	bodyStmts := []ast.StatementNode{
 		createQueryBindingAssignment(loopBinding, elementAccess, pos),
 		pushStmt,
 		createIncrementStmt(loopCounterRef),
@@ -400,7 +400,7 @@ func appendInitialQueryRows(
 
 func queryRowBindingFromVarDef(
 	cx *functionContext,
-	variableDefinitionNode model.VariableDefinitionNode,
+	variableDefinitionNode ast.VariableDefinitionNode,
 	clauseName string,
 ) (queryRowBinding, bool) {
 	varDef, ok := variableDefinitionNode.(*ast.BLangSimpleVariableDef)
@@ -471,11 +471,11 @@ func createQueryRowSlotAccess(
 }
 
 func appendQueryRowRestoreStmts(
-	bodyStmts []ast.BLangStatement,
+	bodyStmts []ast.StatementNode,
 	rowRef *ast.BLangSimpleVarRef,
 	bindings []queryRowBinding,
 	pos diagnostics.Location,
-) []ast.BLangStatement {
+) []ast.StatementNode {
 	for i, binding := range bindings {
 		bodyStmts = append(bodyStmts, createQueryBindingAssignment(
 			binding,
@@ -510,7 +510,7 @@ func createQueryNilLiteral(pos diagnostics.Location) *ast.BLangLiteral {
 	return nilLit
 }
 
-func appendModelStatements(bodyStmts []ast.BLangStatement, stmts []model.StatementNode) []ast.BLangStatement {
+func appendModelStatements(bodyStmts []ast.StatementNode, stmts []ast.StatementNode) []ast.StatementNode {
 	return append(bodyStmts, stmts...)
 }
 
@@ -520,7 +520,7 @@ func applyQueryLetClauseToRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangLetClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) ([]queryRowBinding, bool) {
 	rowCountRef, ok := createQueryLengthRef(cx, initStmts, rowsRef, pos)
 	if !ok {
@@ -531,17 +531,21 @@ func applyQueryLetClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	newBindings := append([]queryRowBinding{}, bindings...)
-	for _, variableDef := range clause.LetVarDeclarations {
-		binding, ok := queryRowBindingFromVarDef(cx, variableDef, "let")
+	for i := range clause.LetVarDeclarations {
+		varDef := &clause.LetVarDeclarations[i]
+		if varDef.Var == nil || varDef.Var.Expr == nil {
+			cx.internalError("query let clause bindings should have been validated during type resolution")
+			return nil, false
+		}
+		binding, ok := queryRowBindingFromVarDef(cx, varDef, "let")
 		if !ok {
 			return nil, false
 		}
 		*initStmts = append(*initStmts, createQueryBindingDeclaration(binding, pos))
-		varDef := variableDef.(*ast.BLangSimpleVariableDef)
 		letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
 		bodyStmts = appendModelStatements(bodyStmts, letResult.initStmts)
 		bodyStmts = append(bodyStmts, createQueryBindingAssignment(
@@ -582,7 +586,7 @@ func applyQueryWhereClauseToRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangWhereClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) (*ast.BLangSimpleVarRef, bool) {
 	filteredRowsRef := createQueryListStore(cx, initStmts, pos)
 	rowCountRef, ok := createQueryLengthRef(cx, initStmts, rowsRef, pos)
@@ -594,7 +598,7 @@ func applyQueryWhereClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	whereResult := walkExpression(cx, clause.Expression)
@@ -608,7 +612,7 @@ func applyQueryWhereClauseToRows(
 	setPositionIfMissing(pushStmt, pos)
 	filterIf := &ast.BLangIf{
 		Expr: whereResult.replacementNode.(ast.BLangExpression),
-		Body: ast.BLangBlockStmt{Stmts: []ast.BLangStatement{pushStmt}},
+		Body: ast.BLangBlockStmt{Stmts: []ast.StatementNode{pushStmt}},
 	}
 	filterIf.SetScope(cx.currentScope())
 	filterIf.SetDeterminedType(semtypes.NEVER)
@@ -637,7 +641,7 @@ func applyQueryGroupByClauseToRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangGroupByClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) ([]queryRowBinding, *ast.BLangSimpleVarRef, bool) {
 	keyedRowsRef := createQueryListStore(cx, initStmts, pos)
 	keyRowsRef := createQueryListStore(cx, initStmts, pos)
@@ -650,7 +654,7 @@ func applyQueryGroupByClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	groupingSymbols := make(map[model.SymbolRef]bool)
@@ -792,7 +796,7 @@ func applyQueryLimitClauseToRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangLimitClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) (*ast.BLangSimpleVarRef, bool) {
 	limitResult := walkExpression(cx, clause.Expression)
 	*initStmts = append(*initStmts, limitResult.initStmts...)
@@ -812,7 +816,7 @@ func applyQueryLimitClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	withinLimitCond := &ast.BLangBinaryExpr{
@@ -828,7 +832,7 @@ func applyQueryLimitClauseToRows(
 	pushStmt := &ast.BLangExpressionStmt{Expr: pushLimited}
 	setPositionIfMissing(pushStmt, pos)
 	limitBody := ast.BLangBlockStmt{
-		Stmts: []ast.BLangStatement{
+		Stmts: []ast.StatementNode{
 			pushStmt,
 			createIncrementStmt(limitCounterRef),
 		},
@@ -864,7 +868,7 @@ func applyQueryOrderByClauseToRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangOrderByClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) bool {
 	keyRowsRef := createQueryListStore(cx, initStmts, pos)
 	indexRowsRef := createQueryListStore(cx, initStmts, pos)
@@ -886,7 +890,7 @@ func applyQueryOrderByClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	keyTuple, keyInitStmts := buildOrderKeyTupleExpr(cx, clause, pos)
@@ -934,7 +938,7 @@ func appendQueryJoinClauseRows(
 	bindings []queryRowBinding,
 	clause *ast.BLangJoinClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) ([]queryRowBinding, *ast.BLangSimpleVarRef, bool) {
 	joinBinding, ok := queryRowBindingFromVarDef(cx, clause.VariableDefinitionNode, "join")
 	if !ok {
@@ -952,7 +956,7 @@ func appendQueryJoinClauseRows(
 	rowAccess.IndexExpr = outerCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	outerBody := []ast.BLangStatement{rowVarDef}
+	outerBody := []ast.StatementNode{rowVarDef}
 	outerBody = appendQueryRowRestoreStmts(outerBody, rowRef, bindings, pos)
 
 	lhsResult := walkExpression(cx, clause.OnClause.OnExpr)
@@ -967,19 +971,19 @@ func appendQueryJoinClauseRows(
 		matchedRef = matchedLocalRef
 	}
 
-	var joinSetup []model.StatementNode
+	var joinSetup []ast.StatementNode
 	joinCollRef, joinKeysRef, joinRowCountRef, _, ok := createQueryCollectionSource(cx, &joinSetup, clause.Collection, pos)
 	if !ok {
 		return nil, nil, false
 	}
 	outerBody = appendModelStatements(outerBody, joinSetup)
 
-	var innerSetup []model.StatementNode
+	var innerSetup []ast.StatementNode
 	innerCounterRef := createQueryCounterRef(cx, &innerSetup, pos)
 	outerBody = appendModelStatements(outerBody, innerSetup)
 
 	joinElementAccess := queryElementAccess(joinCollRef, joinKeysRef, innerCounterRef, joinBinding.valueTy)
-	innerBody := []ast.BLangStatement{createQueryBindingAssignment(joinBinding, joinElementAccess, pos)}
+	innerBody := []ast.StatementNode{createQueryBindingAssignment(joinBinding, joinElementAccess, pos)}
 
 	rhsResult := walkExpression(cx, clause.OnClause.EqualsExpr)
 	innerBody = appendModelStatements(innerBody, rhsResult.initStmts)
@@ -991,7 +995,7 @@ func appendQueryJoinClauseRows(
 	}
 	matchCond.SetDeterminedType(semtypes.BOOLEAN)
 
-	matchBodyStmts := make([]ast.BLangStatement, 0, 3)
+	matchBodyStmts := make([]ast.StatementNode, 0, 3)
 	if matchedRef != nil {
 		markMatched := &ast.BLangAssignment{
 			VarRef: createQueryVarRefAt(matchedRef, pos),
@@ -1048,7 +1052,7 @@ func appendQueryJoinClauseRows(
 		setPositionIfMissing(pushUnmatchedStmt, pos)
 		notMatchedIf := &ast.BLangIf{
 			Expr: notMatched,
-			Body: ast.BLangBlockStmt{Stmts: []ast.BLangStatement{pushUnmatchedStmt}},
+			Body: ast.BLangBlockStmt{Stmts: []ast.StatementNode{pushUnmatchedStmt}},
 		}
 		notMatchedIf.SetScope(cx.currentScope())
 		notMatchedIf.SetDeterminedType(semtypes.NEVER)
@@ -1085,7 +1089,7 @@ func appendQueryRowsSelectResultStmts(
 	onConflictClause *ast.BLangOnConflictClause,
 	seenKeysRef *ast.BLangSimpleVarRef,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) bool {
 	rowCountRef, ok := createQueryLengthRef(cx, initStmts, rowsRef, pos)
 	if !ok {
@@ -1096,7 +1100,7 @@ func appendQueryRowsSelectResultStmts(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef}
+	bodyStmts := []ast.StatementNode{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	bodyStmts, ok = appendQuerySelectResultStmts(
@@ -1138,7 +1142,7 @@ func appendQueryRowsCollectResultStmts(
 	resultRef *ast.BLangSimpleVarRef,
 	collectClause *ast.BLangCollectClause,
 	pos diagnostics.Location,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 ) bool {
 	flattenFlags := buildQueryCollectFlattenFlags(bindings, collectClause.GetPosition())
 	collectInvocation := createQueryCollectInvocation(cx, rowsRef, createIntLiteral(int64(len(bindings))), flattenFlags)
@@ -1148,7 +1152,7 @@ func appendQueryRowsCollectResultStmts(
 	collectRowDef, collectRowRef := assignToLocal(cx, collectInvocation, collectClause.GetPosition())
 	*initStmts = append(*initStmts, collectRowDef)
 
-	bodyStmts := make([]ast.BLangStatement, 0, len(bindings)+2)
+	bodyStmts := make([]ast.StatementNode, 0, len(bindings)+2)
 	for i, binding := range bindings {
 		collectBinding := binding
 		if !binding.groupAggregated {
@@ -1188,7 +1192,7 @@ func buildQueryCollectFlattenFlags(bindings []queryRowBinding, pos diagnostics.L
 
 func createQueryCounterRef(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 ) *ast.BLangSimpleVarRef {
 	counterName, counterSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
@@ -1211,7 +1215,7 @@ func createQueryCounterRef(
 
 func createQueryLengthRef(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	source ast.BLangExpression,
 	pos diagnostics.Location,
 ) (*ast.BLangSimpleVarRef, bool) {
@@ -1252,7 +1256,7 @@ func appendQueryOrderByStageStmts(
 	startClauseIndex int,
 	orderByClauseIndex int,
 	stageInput queryOrderStageInput,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	basePos diagnostics.Location,
 ) (queryOrderStageInput, bool) {
 	orderByClause := queryExpr.QueryClauseList[orderByClauseIndex].(*ast.BLangOrderByClause)
@@ -1280,7 +1284,7 @@ func appendQueryOrderByStageStmts(
 	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
 	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopBinding.valueTy)
 
-	var bodyStmts []ast.BLangStatement
+	var bodyStmts []ast.StatementNode
 	bodyStmts = append(bodyStmts, createQueryBindingAssignment(loopBinding, elementAccess, basePos))
 	for _, store := range stageInput.payloadStores {
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
@@ -1381,14 +1385,14 @@ func appendQueryFinalStageStmts(
 	selectClause *ast.BLangSelectClause,
 	onConflictClause *ast.BLangOnConflictClause,
 	seenKeysRef *ast.BLangSimpleVarRef,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	basePos diagnostics.Location,
 ) bool {
 	loopCounterRef := createQueryCounterRef(cx, initStmts, basePos)
 	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
 	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopBinding.valueTy)
 
-	var bodyStmts []ast.BLangStatement
+	var bodyStmts []ast.StatementNode
 	bodyStmts = append(bodyStmts, createQueryBindingAssignment(loopBinding, elementAccess, basePos))
 	for _, store := range stageInput.payloadStores {
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
@@ -1448,7 +1452,7 @@ func appendQueryFinalStageStmts(
 
 func createQueryListStore(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 ) *ast.BLangSimpleVarRef {
 	listName, listSymbol := cx.addDesugardSymbol(semtypes.LIST, model.SymbolKindVariable, false)
@@ -1473,11 +1477,11 @@ func createQueryListStore(
 
 func createQueryMapStore(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 ) *ast.BLangSimpleVarRef {
 	mapName, mapSymbol := cx.addDesugardSymbol(semtypes.MAPPING, model.SymbolKindVariable, false)
-	emptyMap := &ast.BLangMappingConstructorExpr{Fields: []model.MappingField{}}
+	emptyMap := &ast.BLangMappingConstructorExpr{Fields: []ast.MappingField{}}
 	emptyMap.SetDeterminedType(semtypes.MAPPING)
 	setPositionIfMissing(emptyMap, pos)
 	mapVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: mapName}}
@@ -1500,7 +1504,7 @@ func createPreOrderLetStores(
 	queryExpr *ast.BLangQueryExpr,
 	startClauseIndex int,
 	endClauseIndex int,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 ) ([]queryLetStore, bool) {
 	var stores []queryLetStore
@@ -1509,8 +1513,9 @@ func createPreOrderLetStores(
 		if !isLet {
 			continue
 		}
-		for _, variableDef := range clause.LetVarDeclarations {
-			binding, ok := queryRowBindingFromVarDef(cx, variableDef, "let")
+		for i := range clause.LetVarDeclarations {
+			varDef := &clause.LetVarDeclarations[i]
+			binding, ok := queryRowBindingFromVarDef(cx, varDef, "let")
 			if !ok {
 				return nil, false
 			}
@@ -1527,7 +1532,7 @@ func createPreOrderLetStores(
 
 func createQueryPayloadStore(
 	cx *functionContext,
-	initStmts *[]model.StatementNode,
+	initStmts *[]ast.StatementNode,
 	pos diagnostics.Location,
 	letStores []queryLetStore,
 ) (*ast.BLangSimpleVarRef, bool) {
@@ -1574,7 +1579,7 @@ func createNegativeLimitPanicIf(
 	negativeLimitIf := &ast.BLangIf{
 		Expr: negativeCond,
 		Body: ast.BLangBlockStmt{
-			Stmts: []ast.BLangStatement{panicStmt},
+			Stmts: []ast.StatementNode{panicStmt},
 		},
 	}
 	negativeLimitIf.SetScope(cx.currentScope())
@@ -1587,9 +1592,9 @@ func buildOrderKeyTupleExpr(
 	cx *functionContext,
 	orderByClause *ast.BLangOrderByClause,
 	pos diagnostics.Location,
-) (*ast.BLangListConstructorExpr, []model.StatementNode) {
+) (*ast.BLangListConstructorExpr, []ast.StatementNode) {
 	keyExprs := make([]ast.BLangExpression, 0, len(orderByClause.OrderByKeyList))
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 	for i := range orderByClause.OrderByKeyList {
 		keyResult := walkExpression(cx, orderByClause.OrderByKeyList[i].Expression)
 		initStmts = append(initStmts, keyResult.initStmts...)
@@ -1649,14 +1654,14 @@ func appendQuerySelectResultStmts(
 	onConflictClause *ast.BLangOnConflictClause,
 	seenKeysRef *ast.BLangSimpleVarRef,
 	basePos diagnostics.Location,
-	bodyStmts []ast.BLangStatement,
-) ([]ast.BLangStatement, bool) {
+	bodyStmts []ast.StatementNode,
+) ([]ast.StatementNode, bool) {
 	selectResult := walkExpression(cx, selectClause.Expression)
 	bodyStmts = append(bodyStmts, selectResult.initStmts...)
 	selectExpr := selectResult.replacementNode.(ast.BLangExpression)
 
 	switch queryExpr.QueryConstructType {
-	case model.TypeKind_MAP:
+	case ast.TypeKind_MAP:
 		selectTy := selectExpr.GetDeterminedType()
 		pairName, pairSymbol := cx.addDesugardSymbol(selectTy, model.SymbolKindVariable, false)
 		pairVar := &ast.BLangSimpleVariable{
@@ -1705,7 +1710,7 @@ func appendQuerySelectResultStmts(
 			conflictCond.SetDeterminedType(semtypes.BOOLEAN)
 
 			conflictResult := walkExpression(cx, onConflictClause.Expression)
-			conflictBody := make([]ast.BLangStatement, 0, len(conflictResult.initStmts)+2)
+			conflictBody := make([]ast.StatementNode, 0, len(conflictResult.initStmts)+2)
 			conflictBody = append(conflictBody, conflictResult.initStmts...)
 
 			conflictExpr := conflictResult.replacementNode.(ast.BLangExpression)
@@ -1729,7 +1734,7 @@ func appendQuerySelectResultStmts(
 
 			isErrorExpr := &ast.BLangTypeTestExpr{}
 			isErrorExpr.Expr = conflictRef
-			isErrorExpr.Type = model.TypeData{Type: semtypes.ERROR}
+			isErrorExpr.Type = ast.TypeData{Type: semtypes.ERROR}
 			isErrorExpr.SetDeterminedType(semtypes.BOOLEAN)
 
 			assignResult := &ast.BLangAssignment{
@@ -1740,7 +1745,7 @@ func appendQuerySelectResultStmts(
 			breakStmt := &ast.BLangBreak{}
 			breakStmt.SetDeterminedType(semtypes.NEVER)
 			errorBody := ast.BLangBlockStmt{
-				Stmts: []ast.BLangStatement{assignResult, breakStmt},
+				Stmts: []ast.StatementNode{assignResult, breakStmt},
 			}
 			errorIf := &ast.BLangIf{
 				Expr: isErrorExpr,
@@ -1781,23 +1786,23 @@ func appendQuerySelectResultStmts(
 func appendQueryIntermediateClauseStmts(
 	cx *functionContext,
 	queryExpr *ast.BLangQueryExpr,
-	idxRef ast.BLangExpression,
-	initStmts *[]model.StatementNode,
-	bodyStmts []ast.BLangStatement,
+	idxRef ast.LExpr,
+	initStmts *[]ast.StatementNode,
+	bodyStmts []ast.StatementNode,
 	startClauseIndex int,
 	endClauseIndex int,
 	declaredBindings map[model.SymbolRef]bool,
-) ([]ast.BLangStatement, bool) {
+) ([]ast.StatementNode, bool) {
 	for i := startClauseIndex; i < endClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangLetClause:
-			for _, variableDef := range clause.LetVarDeclarations {
-				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
-				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+			for i := range clause.LetVarDeclarations {
+				varDef := &clause.LetVarDeclarations[i]
+				if varDef.Var == nil || varDef.Var.Expr == nil {
 					cx.internalError("query let clause bindings should have been validated during type resolution")
 					return nil, false
 				}
-				binding, ok := queryRowBindingFromVarDef(cx, variableDef, "let")
+				binding, ok := queryRowBindingFromVarDef(cx, varDef, "let")
 				if !ok {
 					return nil, false
 				}
@@ -1825,7 +1830,7 @@ func appendQueryIntermediateClauseStmts(
 			continueStmt := &ast.BLangContinue{}
 			continueStmt.SetDeterminedType(semtypes.NEVER)
 			skipBody := ast.BLangBlockStmt{
-				Stmts: []ast.BLangStatement{
+				Stmts: []ast.StatementNode{
 					createIncrementStmt(idxRef),
 					continueStmt,
 				},
@@ -1873,7 +1878,7 @@ func appendQueryIntermediateClauseStmts(
 			continueStmt := &ast.BLangContinue{}
 			continueStmt.SetDeterminedType(semtypes.NEVER)
 			skipBody := ast.BLangBlockStmt{
-				Stmts: []ast.BLangStatement{
+				Stmts: []ast.StatementNode{
 					createIncrementStmt(idxRef),
 					continueStmt,
 				},
@@ -1904,7 +1909,7 @@ func createIntLiteral(value int64) *ast.BLangNumericLiteral {
 			Value:         value,
 			OriginalValue: fmt.Sprintf("%d", value),
 		},
-		Kind: model.NodeKind_NUMERIC_LITERAL,
+		Kind: ast.NodeKind_NUMERIC_LITERAL,
 	}
 	lit.SetDeterminedType(semtypes.INT)
 	return lit

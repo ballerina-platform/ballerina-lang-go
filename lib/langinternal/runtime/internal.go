@@ -19,6 +19,7 @@ package langinternalruntime
 import (
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
@@ -36,7 +37,7 @@ const (
 )
 
 func initInternalModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		sortKeyRows, ok := args[0].(*values.List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a list")
@@ -116,24 +117,24 @@ func initInternalModule(rt *runtime.Runtime) {
 			return false
 		})
 
-		reorderListInPlace(rowIndices, order)
-		reorderListInPlace(sortKeyRows, order)
+		reorderListInPlace(ctx, rowIndices, order)
+		reorderListInPlace(ctx, sortKeyRows, order)
 		for payloadIndex := 0; payloadIndex < payloadCount; payloadIndex++ {
-			reorderListInPlace(payloadLists[payloadIndex], order)
+			reorderListInPlace(ctx, payloadLists[payloadIndex], order)
 		}
 		return nil, nil
 	})
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryGroup", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryGroup", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		rows := args[0].(*values.List)
 		keyRows := args[1].(*values.List)
 		scalarFlags := args[2].(*values.List)
-		return queryGroup(rows, keyRows, scalarFlags)
+		return queryGroup(ctx, rows, keyRows, scalarFlags)
 	})
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		rows := args[0].(*values.List)
 		slotCount := args[1].(int64)
 		flattenFlags := args[2].(*values.List)
-		return queryCollect(rows, int(slotCount), flattenFlags)
+		return queryCollect(ctx, rows, int(slotCount), flattenFlags)
 	})
 }
 
@@ -143,7 +144,11 @@ type queryGroupState struct {
 
 type queryGroupIndex map[string]int
 
-func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
+func newQueryList(ctx *extern.Context) *values.List {
+	return values.NewList(semtypes.LIST, semtypes.ToListAtomicType(ctx.TypeCtx, semtypes.LIST), false, nil, 0, nil)
+}
+
+func queryGroup(ctx *extern.Context, rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
 	rowCount := rows.Len()
 	if keyRows.Len() != rowCount {
 		return nil, fmt.Errorf("group keys and rows length mismatch: keys=%d rows=%d", keyRows.Len(), rowCount)
@@ -154,7 +159,7 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 		scalarSlots[slot] = scalarFlags.Get(slot).(bool)
 	}
 
-	result := values.NewList(0, semtypes.LIST, nil)
+	result := newQueryList(ctx)
 	groups := make([]queryGroupState, 0)
 	groupIndices := make(queryGroupIndex)
 	expectedKeyArity := -1
@@ -171,13 +176,13 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 		}
 		groupIndex, keySignature, found := findQueryGroup(groupIndices, keyRow)
 		if !found {
-			groupRow := createQueryGroupRow(sourceRow, scalarSlots)
+			groupRow := createQueryGroupRow(ctx, sourceRow, scalarSlots)
 			groups = append(groups, queryGroupState{row: groupRow})
 			groupIndices[keySignature] = len(groups) - 1
-			result.Append(groupRow)
+			result.Append(ctx.TypeCtx, groupRow)
 			continue
 		}
-		appendQueryGroupRow(groups[groupIndex].row, sourceRow, scalarSlots)
+		appendQueryGroupRow(ctx, groups[groupIndex].row, sourceRow, scalarSlots)
 	}
 	return result, nil
 }
@@ -289,32 +294,32 @@ func writeQueryGroupMapSignature(b *strings.Builder, mapping *values.Map, visite
 	b.WriteByte('}')
 }
 
-func createQueryGroupRow(sourceRow *values.List, scalarSlots []bool) *values.List {
-	groupRow := values.NewList(0, semtypes.LIST, nil)
+func createQueryGroupRow(ctx *extern.Context, sourceRow *values.List, scalarSlots []bool) *values.List {
+	groupRow := newQueryList(ctx)
 	for slot, isScalar := range scalarSlots {
 		value := sourceRow.Get(slot)
 		if isScalar {
-			groupRow.Append(value)
+			groupRow.Append(ctx.TypeCtx, value)
 			continue
 		}
-		valuesForGroup := values.NewList(0, semtypes.LIST, nil)
-		valuesForGroup.Append(value)
-		groupRow.Append(valuesForGroup)
+		valuesForGroup := newQueryList(ctx)
+		valuesForGroup.Append(ctx.TypeCtx, value)
+		groupRow.Append(ctx.TypeCtx, valuesForGroup)
 	}
 	return groupRow
 }
 
-func appendQueryGroupRow(groupRow *values.List, sourceRow *values.List, scalarSlots []bool) {
+func appendQueryGroupRow(ctx *extern.Context, groupRow *values.List, sourceRow *values.List, scalarSlots []bool) {
 	for slot, isScalar := range scalarSlots {
 		if isScalar {
 			continue
 		}
 		valuesForGroup := groupRow.Get(slot).(*values.List)
-		valuesForGroup.Append(sourceRow.Get(slot))
+		valuesForGroup.Append(ctx.TypeCtx, sourceRow.Get(slot))
 	}
 }
 
-func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (*values.List, error) {
+func queryCollect(ctx *extern.Context, rows *values.List, slotCount int, flattenFlags *values.List) (*values.List, error) {
 	if slotCount < 0 {
 		return nil, fmt.Errorf("slot count cannot be negative")
 	}
@@ -325,9 +330,9 @@ func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (
 	for slot := 0; slot < slotCount; slot++ {
 		flattenSlots[slot] = flattenFlags.Get(slot).(bool)
 	}
-	resultRow := values.NewList(0, semtypes.LIST, nil)
+	resultRow := newQueryList(ctx)
 	for slot := 0; slot < slotCount; slot++ {
-		resultRow.Append(values.NewList(0, semtypes.LIST, nil))
+		resultRow.Append(ctx.TypeCtx, newQueryList(ctx))
 	}
 	for rowIndex := 0; rowIndex < rows.Len(); rowIndex++ {
 		row := rows.Get(rowIndex).(*values.List)
@@ -337,7 +342,7 @@ func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (
 		for slot := 0; slot < slotCount; slot++ {
 			valuesForSlot := resultRow.Get(slot).(*values.List)
 			if !flattenSlots[slot] {
-				valuesForSlot.Append(row.Get(slot))
+				valuesForSlot.Append(ctx.TypeCtx, row.Get(slot))
 				continue
 			}
 			nestedValues, ok := row.Get(slot).(*values.List)
@@ -345,20 +350,20 @@ func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (
 				return nil, fmt.Errorf("query row %d slot %d must be a list for flattening", rowIndex, slot)
 			}
 			for valueIndex := 0; valueIndex < nestedValues.Len(); valueIndex++ {
-				valuesForSlot.Append(nestedValues.Get(valueIndex))
+				valuesForSlot.Append(ctx.TypeCtx, nestedValues.Get(valueIndex))
 			}
 		}
 	}
 	return resultRow, nil
 }
 
-func reorderListInPlace(list *values.List, order []int) {
+func reorderListInPlace(ctx *extern.Context, list *values.List, order []int) {
 	old := make([]values.BalValue, list.Len())
 	for i := range list.Len() {
 		old[i] = list.Get(i)
 	}
 	for i, sourceIndex := range order {
-		list.FillingSet(i, old[sourceIndex])
+		list.FillingSet(ctx.TypeCtx, i, old[sourceIndex])
 	}
 }
 

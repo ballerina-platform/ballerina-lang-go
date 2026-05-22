@@ -39,7 +39,7 @@ type basicBlock struct {
 	children []int
 	// Nodes inside this block. Almost always these are statements but ternary expression will have expressions
 	// as children.
-	nodes []model.Node
+	nodes []ast.Node
 }
 
 type bbRef int
@@ -229,7 +229,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeBlockFunctionBody(fnBody *as
 	_ = analyzer.analyzeStatements(rootBB.ref(), fnBody.Stmts)
 }
 
-func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, statements []ast.BLangStatement) stmtEffect {
+func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, statements []ast.StatementNode) stmtEffect {
 	currentBB := curBB
 
 	for _, stmt := range statements {
@@ -278,12 +278,12 @@ func (analyzer *functionControlFlowAnalyzer) createNewBB() bbRef {
 }
 
 // addNode adds a node to a basic block
-func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node model.Node) {
+func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node ast.Node) {
 	analyzer.bbs[bb].nodes = append(analyzer.bbs[bb].nodes, node)
 }
 
 // analyzeStatement dispatches to the appropriate handler based on statement type
-func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt ast.BLangStatement) stmtEffect {
+func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt ast.StatementNode) stmtEffect {
 	ternaryChecker := &ternaryExpressionChecker{}
 	ast.Walk(ternaryChecker, stmt.(ast.BLangNode))
 	if ternaryChecker.hasTernaryExpression {
@@ -327,9 +327,6 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		loopData := analyzer.loops[len(analyzer.loops)-1]
 		analyzer.addEdge(curBB, loopData.loopHead)
 		return terminatedEffect()
-	case *ast.BLangFunction:
-		analyzer.ctx.InternalError("nested functions not supported", stmt.GetPosition())
-		panic("unreachable")
 	case *ast.BLangMatchStatement:
 		return analyzer.analyzeMatch(curBB, s)
 	default:
@@ -339,14 +336,14 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	}
 }
 
-func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 model.ExpressionNode) stmtEffect {
+func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 ast.BLangExpression) stmtEffect {
 	panic("unimplemented")
 }
 
 type ternaryExpressionChecker struct {
 	hasTernaryExpression bool
-	ifTrue               model.ExpressionNode
-	ifFalse              model.ExpressionNode
+	ifTrue               ast.BLangExpression
+	ifFalse              ast.BLangExpression
 }
 
 var _ ast.Visitor = &ternaryExpressionChecker{}
@@ -361,7 +358,7 @@ func (c *ternaryExpressionChecker) Visit(node ast.BLangNode) ast.Visitor {
 	return c
 }
 
-func (c *ternaryExpressionChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (c *ternaryExpressionChecker) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 

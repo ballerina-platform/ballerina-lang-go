@@ -368,39 +368,39 @@ type FieldDescriptor struct {
 	ty           semtypes.SemType
 	flags        FieldDescriptorFlag
 	DefaultFnRef SymbolRef
-	visibility   Visibility
+	isPublic     bool
 }
 
-func NewFieldDescriptor(name string, flags FieldDescriptorFlag, visibility Visibility) FieldDescriptor {
-	return FieldDescriptor{name: name, flags: flags, visibility: visibility}
+func NewFieldDescriptor(name string, flags FieldDescriptorFlag, isPublic bool) FieldDescriptor {
+	return FieldDescriptor{name: name, flags: flags, isPublic: isPublic}
 }
 
 func (f *FieldDescriptor) MemberName() string                { return f.name }
 func (f *FieldDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindField }
 func (f *FieldDescriptor) MemberType() semtypes.SemType      { return f.ty }
 func (f *FieldDescriptor) SetMemberType(ty semtypes.SemType) { f.ty = ty }
-func (f *FieldDescriptor) Visibility() Visibility            { return f.visibility }
+func (f *FieldDescriptor) IsPublic() bool                    { return f.isPublic }
 func (f *FieldDescriptor) IsReadonly() bool                  { return f.flags&FieldDescriptorReadonly != 0 }
 func (f *FieldDescriptor) IsOptional() bool                  { return f.flags&FieldDescriptorOptional != 0 }
 func (f *FieldDescriptor) HasDefault() bool                  { return f.flags&FieldDescriptorHasDefault != 0 }
 
 type MethodDescriptor struct {
-	name       string
-	kind       InclusionMemberKind
-	ty         semtypes.SemType
-	MethodRef  SymbolRef
-	visibility Visibility
+	name      string
+	kind      InclusionMemberKind
+	ty        semtypes.SemType
+	MethodRef SymbolRef
+	isPublic  bool
 }
 
-func NewMethodDescriptor(name string, kind InclusionMemberKind, visibility Visibility, methodRef SymbolRef) MethodDescriptor {
-	return MethodDescriptor{name: name, kind: kind, visibility: visibility, MethodRef: methodRef}
+func NewMethodDescriptor(name string, kind InclusionMemberKind, isPublic bool, methodRef SymbolRef) MethodDescriptor {
+	return MethodDescriptor{name: name, kind: kind, isPublic: isPublic, MethodRef: methodRef}
 }
 
 func (m *MethodDescriptor) MemberName() string                { return m.name }
 func (m *MethodDescriptor) MemberKind() InclusionMemberKind   { return m.kind }
 func (m *MethodDescriptor) MemberType() semtypes.SemType      { return m.ty }
 func (m *MethodDescriptor) SetMemberType(ty semtypes.SemType) { m.ty = ty }
-func (m *MethodDescriptor) Visibility() Visibility            { return m.visibility }
+func (m *MethodDescriptor) IsPublic() bool                    { return m.isPublic }
 
 type RestTypeDescriptor struct {
 	ty semtypes.SemType

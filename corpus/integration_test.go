@@ -408,12 +408,12 @@ func resolveErrorDiagnostics(result projects.DiagnosticResult, de *diagnostics.D
 func runIntegrationCase(balFile string) caseRun {
 	var stdoutBuf, stderrBuf bytes.Buffer
 
-	birPkg, diags, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
+	birPkg, tyEnv, diags, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
 	if birPkg == nil || compileErr != nil {
 		return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 	}
 
-	runInterpretPhase(birPkg, &stdoutBuf, &stderrBuf)
+	runInterpretPhase(birPkg, tyEnv, &stdoutBuf, &stderrBuf)
 	return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 }
 
@@ -428,7 +428,7 @@ func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStde
 	}
 }
 
-func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, diags []resolvedDiag, err error) {
+func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, tyEnv semtypes.Env, diags []resolvedDiag, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -443,7 +443,7 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	ballerinaEnvPath, err := getBallerinaEnvPath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
@@ -452,27 +452,28 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	tyEnv = result.Project().Environment().TypeEnv()
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
 	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	diags = resolveErrorDiagnostics(compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
-		return nil, diags, nil
+		return nil, tyEnv, diags, nil
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIR(), diags, nil
+	return backend.BIR(), tyEnv, diags, nil
 }
 
-func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
+func runInterpretPhase(birPkg *bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf, stderrBuf *bytes.Buffer) {
 	if birPkg == nil {
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf), tyEnv)
 	if err := rt.Interpret(*birPkg); err != nil {
 		// For now just write the error string to stderr to match corpus expectations
 		fmt.Fprintln(stderrBuf, err.Error())
@@ -562,16 +563,16 @@ func runProjectIntegrationCase(projectDir string) caseRun {
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 
-	birPkgs, diags, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
+	birPkgs, tyEnv, diags, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
 	if birPkgs == nil || compileErr != nil {
 		return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 	}
 
-	runProjectInterpretPhase(birPkgs, &stdoutBuf, &stderrBuf)
+	runProjectInterpretPhase(birPkgs, tyEnv, &stdoutBuf, &stderrBuf)
 	return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 }
 
-func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, diags []resolvedDiag, err error) {
+func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, tyEnv semtypes.Env, diags []resolvedDiag, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -586,7 +587,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	ballerinaEnvPath, err := getBallerinaEnvPath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
@@ -595,8 +596,9 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	tyEnv = result.Project().Environment().TypeEnv()
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
@@ -607,19 +609,19 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	diags = resolveErrorDiagnostics(compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if result.Diagnostics().HasErrors() || compilation.DiagnosticResult().HasErrors() {
-		return nil, diags, nil
+		return nil, tyEnv, diags, nil
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIRPackages(), diags, nil
+	return backend.BIRPackages(), tyEnv, diags, nil
 }
 
-func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
+func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf, stderrBuf *bytes.Buffer) {
 	if len(birPkgs) == 0 {
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())
@@ -715,6 +717,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 	project := result.Project()
+	tyEnv := project.Environment().TypeEnv()
 	currentPkg := project.CurrentPackage()
 	compilation := currentPkg.Compilation()
 
@@ -751,13 +754,13 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 			return stdoutBuf.String(), stderrBuf.String()
 		}
 
-		symBytes, err := symbolpool.Marshal(exported, dep.TypeEnv)
+		symBytes, err := symbolpool.Marshal(exported, tyEnv)
 		if err != nil {
 			fmt.Fprintf(&stdoutBuf, "symbol serialization failed: %v\n", err)
 			return stdoutBuf.String(), stderrBuf.String()
 		}
 
-		birBytes, err := bircodec.Marshal(dep)
+		birBytes, err := bircodec.Marshal(tyEnv, dep)
 		if err != nil {
 			fmt.Fprintf(&stdoutBuf, "BIR serialization failed: %v\n", err)
 			return stdoutBuf.String(), stderrBuf.String()
@@ -808,7 +811,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 
 	deserialized = append(deserialized, mainBirPkg)
 
-	runProjectInterpretPhase(deserialized, &stdoutBuf, &stderrBuf)
+	runProjectInterpretPhase(deserialized, freshEnv.GetTypeEnv(), &stdoutBuf, &stderrBuf)
 	return stdoutBuf.String(), stderrBuf.String()
 }
 

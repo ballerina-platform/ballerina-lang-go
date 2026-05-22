@@ -18,6 +18,7 @@ package errorrt
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 )
 
@@ -26,7 +27,7 @@ const (
 	moduleName = "lang.error"
 )
 
-func errorMessage(args []values.BalValue) (values.BalValue, error) {
+func errorMessage(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	err := args[0].(*values.Error)
 	return err.Message, nil
 }

@@ -95,6 +95,10 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	if !ok {
 		return
 	}
+	if semtypes.IsNever(retType) {
+		analyzeFunctionNeverReturn(ctx, fn, fnCfg)
+		return
+	}
 
 	for _, bb := range fnCfg.bbs {
 		if !bb.isTerminal() || !bb.isReachable() {
@@ -108,19 +112,42 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	}
 }
 
+func analyzeFunctionNeverReturn(ctx *context.CompilerContext, fn *ast.BLangFunction, fnCfg functionCFG) {
+	for _, bb := range fnCfg.bbs {
+		if !bb.isTerminal() || !bb.isReachable() {
+			continue
+		}
+		if terminalBlockHasPanic(bb) {
+			continue
+		}
+		ctx.SemanticError("expected panic", positionForMissingReturn(bb, fn))
+	}
+}
+
 func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	if len(bb.nodes) == 0 {
 		return false
 	}
 	last := bb.nodes[len(bb.nodes)-1]
-	k := last.GetKind()
-	if k == model.NodeKind_RETURN || k == model.NodeKind_PANIC {
+	switch last.(type) {
+	case *ast.BLangReturn, *ast.BLangPanic:
 		return true
+	case *ast.BLangExpressionStmt:
+		// The only other way a reachable block becomes terminal is via a
+		// `check`/`checkpanic` expression statement whose operand is
+		// statically a subtype of error (see analyzeStatement in
+		// control_flow_analyzer.go).
+		return true
+	default:
+		return false
 	}
-	// The only other way a reachable block becomes terminal is via a
-	// `check`/`checkpanic` expression statement whose operand is statically
-	// a subtype of error (see analyzeStatement in control_flow_analyzer.go).
-	_, ok := last.(*ast.BLangExpressionStmt)
+}
+
+func terminalBlockHasPanic(bb basicBlock) bool {
+	if len(bb.nodes) == 0 {
+		return false
+	}
+	_, ok := bb.nodes[len(bb.nodes)-1].(*ast.BLangPanic)
 	return ok
 }
 

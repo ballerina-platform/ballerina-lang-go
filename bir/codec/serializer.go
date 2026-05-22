@@ -39,11 +39,11 @@ type birWriter struct {
 	env semtypes.Env
 }
 
-func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
+func Marshal(tyEnv semtypes.Env, pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &birWriter{
 		cp:  NewConstantPool(),
 		tp:  semtypes.NewTypePool(),
-		env: pkg.TypeEnv,
+		env: tyEnv,
 	}
 	return writer.serialize(pkg)
 }
@@ -114,7 +114,6 @@ func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 		name := gv.GetName()
 		bw.writeStringCPEntry(buf, name.Value())
 		bw.writeFlags(buf, gv.Flags)
-		bw.writeOrigin(buf, gv.Origin)
 		bw.writeType(buf, gv.GetType())
 	}
 }
@@ -166,7 +165,6 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writeStringCPEntry(buf, fn.Name.Value())
 	bw.writeStringCPEntry(buf, fn.OriginalName.Value())
 	bw.writeFlags(buf, fn.Flags)
-	bw.writeOrigin(buf, fn.Origin)
 	bw.writeStringCPEntry(buf, fn.FunctionLookupKey)
 
 	bw.writeLength(buf, len(fn.RequiredParams))
@@ -255,7 +253,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
-		var tagValue = instr.Value
+		tagValue := instr.Value
 		if cv, isConstValue := instr.Value.(bir.ConstValue); isConstValue {
 			isWrapped = true
 			tagValue = cv.Value
@@ -278,6 +276,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
+		write(buf, instr.IsReadonly)
 		bw.writeLength(buf, len(instr.Values))
 		for _, v := range instr.Values {
 			bw.writeOperand(buf, v)
@@ -295,6 +294,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 	case *bir.NewMap:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
+		write(buf, instr.IsReadonly)
 		bw.writeLength(buf, len(instr.Values))
 		for _, entry := range instr.Values {
 			write(buf, entry.IsKeyValuePair())
@@ -443,20 +443,20 @@ func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	}
 }
 
-func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
+func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value any) {
 	if cv, isConstValue := value.(bir.ConstValue); isConstValue {
 		bw.writeConstValueByTag(buf, tag, cv.Value)
 		return
 	}
 
 	switch tag {
-	case model.TypeTags_INT,
-		model.TypeTags_SIGNED32_INT,
-		model.TypeTags_SIGNED16_INT,
-		model.TypeTags_SIGNED8_INT,
-		model.TypeTags_UNSIGNED32_INT,
-		model.TypeTags_UNSIGNED16_INT,
-		model.TypeTags_UNSIGNED8_INT:
+	case typeTagInt,
+		typeTagSigned32,
+		typeTagSigned16,
+		typeTagSigned8,
+		typeTagUnsigned32,
+		typeTagUnsigned16,
+		typeTagUnsigned8:
 		var val int64
 		switch v := value.(type) {
 		case int64:
@@ -473,7 +473,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected integer for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_BYTE:
+	case typeTagByte:
 		var val byte
 		switch v := value.(type) {
 		case byte:
@@ -486,7 +486,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected byte for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_FLOAT:
+	case typeTagFloat:
 		var val float64
 		switch v := value.(type) {
 		case float64:
@@ -497,7 +497,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected float for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+	case typeTagString, typeTagCharString, typeTagDecimal:
 		var val string
 		switch v := value.(type) {
 		case string:
@@ -515,7 +515,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		}
 		cpIdx := bw.cp.AddStringCPEntry(val)
 		write(buf, cpIdx)
-	case model.TypeTags_BOOLEAN:
+	case typeTagBoolean:
 		var val bool
 		switch v := value.(type) {
 		case bool:
@@ -524,7 +524,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected boolean for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_NIL:
+	case typeTagNil:
 		write(buf, int32(-1))
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
@@ -532,24 +532,24 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 }
 
 // FIXME: Remove this after implementing types
-func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
+func (bw *birWriter) inferTag(value any) (typeTag, error) {
 	switch v := value.(type) {
 	case bir.ConstValue:
 		return bw.inferTag(v.Value)
 	case int, int64, int32, int16, int8:
-		return model.TypeTags_INT, nil
+		return typeTagInt, nil
 	case float64, float32:
-		return model.TypeTags_FLOAT, nil
+		return typeTagFloat, nil
 	case string, *string:
-		return model.TypeTags_STRING, nil
+		return typeTagString, nil
 	case bool:
-		return model.TypeTags_BOOLEAN, nil
+		return typeTagBoolean, nil
 	case byte:
-		return model.TypeTags_BYTE, nil
+		return typeTagByte, nil
 	case *decimal.Decimal:
-		return model.TypeTags_DECIMAL, nil
+		return typeTagDecimal, nil
 	case nil:
-		return model.TypeTags_NIL, nil
+		return typeTagNil, nil
 	default:
 		return 0, fmt.Errorf("cannot infer tag for value %v (%T)", value, value)
 	}
@@ -559,12 +559,8 @@ func (bw *birWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
 	write(buf, uint8(kind))
 }
 
-func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags int64) {
-	write(buf, flags)
-}
-
-func (bw *birWriter) writeOrigin(buf *bytes.Buffer, origin model.SymbolOrigin) {
-	write(buf, uint8(origin))
+func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags model.Flag) {
+	write(buf, int64(flags))
 }
 
 func (bw *birWriter) writeStringCPEntry(buf *bytes.Buffer, str string) {
@@ -608,7 +604,7 @@ func (bw *birWriter) writePosition(buf *bytes.Buffer, pos bir.Location) {
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
 	var eCol int32 = math.MaxInt32
-	var sourceFileName = ""
+	sourceFileName := ""
 
 	if !bir.IsLocationEmpty(pos) {
 		sLine = int32(pos.StartLine())

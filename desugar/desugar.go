@@ -28,8 +28,8 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type desugaredNode[E model.Node] struct {
-	initStmts       []model.StatementNode
+type desugaredNode[E ast.Node] struct {
+	initStmts       []ast.StatementNode
 	replacementNode E
 }
 
@@ -114,7 +114,7 @@ type functionContext struct {
 	pkgCtx               *packageContext
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
-	loopVarStack         []ast.BLangExpression // Stack to track loop variables (nil for while, varRef for desugared foreach)
+	loopVarStack         []ast.LExpr // Stack to track loop variables (nil for while, varRef for desugared foreach)
 }
 
 var _ desugarContext = &functionContext{}
@@ -157,7 +157,7 @@ func (ctx *functionContext) currentScope() model.Scope {
 	return ctx.scopeStack[len(ctx.scopeStack)-1]
 }
 
-func (ctx *functionContext) pushLoopVar(varRef ast.BLangExpression) {
+func (ctx *functionContext) pushLoopVar(varRef ast.LExpr) {
 	ctx.loopVarStack = append(ctx.loopVarStack, varRef)
 }
 
@@ -168,7 +168,7 @@ func (ctx *functionContext) popLoopVar() {
 	ctx.loopVarStack = ctx.loopVarStack[:len(ctx.loopVarStack)-1]
 }
 
-func (ctx *functionContext) currentLoopVar() ast.BLangExpression {
+func (ctx *functionContext) currentLoopVar() ast.LExpr {
 	if len(ctx.loopVarStack) == 0 {
 		return nil
 	}
@@ -336,7 +336,7 @@ func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *dependencyVisitor) VisitTypeData(_ *model.TypeData) ast.Visitor { return v }
+func (v *dependencyVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
 
 func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleInitNode) ([]int, bool) {
 	nodeSet := make(map[model.SymbolRef]int, len(nodes))
@@ -401,7 +401,7 @@ func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleI
 	return order, true
 }
 
-func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNode) ast.BLangStatement {
+func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNode) ast.StatementNode {
 	initExpr := node.expr
 	basePos := initExpr.GetPosition()
 	varRef := &ast.BLangSimpleVarRef{
@@ -419,7 +419,7 @@ func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNo
 }
 
 func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
-	var initStmts []ast.BLangStatement
+	var initStmts []ast.StatementNode
 
 	nodes := collectModuleInitNodes(pkg)
 	order, ok := toplogicallySortInits(compilerCtx, nodes)
@@ -482,7 +482,7 @@ func newSimpleVariable(name string, ty semtypes.SemType) *ast.BLangSimpleVariabl
 func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *ast.BLangFunction {
 	retStmt := &ast.BLangReturn{Expr: defaultExpr}
 	retStmt.SetDeterminedType(semtypes.NEVER)
-	body := &ast.BLangBlockFunctionBody{Stmts: []ast.BLangStatement{retStmt}}
+	body := &ast.BLangBlockFunctionBody{Stmts: []ast.StatementNode{retStmt}}
 	body.SetDeterminedType(semtypes.NEVER)
 
 	fn := &ast.BLangFunction{}
@@ -623,7 +623,7 @@ func (r symbolRemapper) Visit(node ast.BLangNode) ast.Visitor {
 	return r
 }
 
-func (r symbolRemapper) VisitTypeData(_ *model.TypeData) ast.Visitor {
+func (r symbolRemapper) VisitTypeData(_ *ast.TypeData) ast.Visitor {
 	return r
 }
 
@@ -721,7 +721,7 @@ func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinit
 		class.InitFunction = &fn
 	}
 
-	var initStmts []ast.BLangStatement
+	var initStmts []ast.StatementNode
 	classScope := class.Scope()
 	selfRef, ok := classScope.GetSymbol("self")
 	if !ok {
@@ -783,10 +783,7 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 
 	switch body := fn.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		result := walkBlockFunctionBody(cx, body)
-		if newBody, ok := result.replacementNode.(*ast.BLangBlockFunctionBody); ok {
-			fn.Body = newBody
-		}
+		walkBlockFunctionBody(cx, body)
 	case *ast.BLangExprFunctionBody:
 		if body.Expr != nil {
 			result := walkExpression(cx, body.Expr.(ast.BLangActionOrExpression))
@@ -795,7 +792,7 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 			if len(result.initStmts) > 0 {
 				fn.Body = convertExprBodyToBlockBody(body, result)
 			} else {
-				body.Expr = result.replacementNode
+				body.Expr = result.replacementNode.(ast.BLangExpression)
 			}
 		}
 	case *ast.BLangExternFunctionBody:
@@ -817,7 +814,7 @@ func convertExprBodyToBlockBody(
 	}
 
 	// Build block with init statements + return
-	stmts := make([]ast.BLangStatement, 0, len(result.initStmts)+1)
+	stmts := make([]ast.StatementNode, 0, len(result.initStmts)+1)
 	stmts = append(stmts, result.initStmts...)
 	stmts = append(stmts, returnStmt)
 

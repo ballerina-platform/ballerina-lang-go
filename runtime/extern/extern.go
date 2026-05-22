@@ -1,0 +1,53 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// Package extern represents runtime API that is visible to extern functions.
+package extern
+
+import (
+	"ballerina-lang-go/platform/pal"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
+)
+
+// NativeFunc is the signature for extern (native) function implementations.
+// The first argument is the per-strand runtime context.
+type NativeFunc func(ctx *Context, args []values.BalValue) (values.BalValue, error)
+
+// Context represent per strand state
+type Context struct {
+	Env       *Env
+	CallStack any // opaque pointer to the call stack
+	TypeCtx   semtypes.Context
+}
+
+// Env represents shared state of the runtime. All operations on Env are (potentially) blocking
+type Env struct {
+	Platform pal.Platform
+	TypeEnv  semtypes.Env
+	Registry any // opaque pointer to the runtime registry
+}
+
+func InitEnv(pal pal.Platform, tyEnv semtypes.Env, registry any) *Env {
+	env := Env{Platform: pal, TypeEnv: tyEnv, Registry: registry}
+	return &env
+}
+
+func CreateContext(env *Env) *Context {
+	tyCtx := semtypes.ContextFrom(env.TypeEnv)
+	ctx := Context{Env: env, TypeCtx: tyCtx}
+	return &ctx
+}

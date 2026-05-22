@@ -1,0 +1,225 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// Native-CLI implementation of the pal.HTTP contract: a net/http-backed HTTP
+// client and the TLS plumbing it needs. NewPlatform (in pal.go) wires
+// NewHTTPClient into pal.HTTP.NewClient. Other PAL implementations
+// (e.g. WASM/web-editor) would supply their own version of this file.
+
+package palnative
+
+import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+
+	"ballerina-lang-go/platform/pal"
+)
+
+type httpClient struct {
+	client *http.Client
+}
+
+func (c *httpClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, url, bodyReader)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	// Set default User-Agent before caller headers so caller can override it if needed
+	req.Header.Set("User-Agent", "ballerina")
+	for k, vals := range reqHeaders {
+		if len(vals) == 0 {
+			continue
+		}
+		req.Header.Set(k, vals[0])
+		for _, v := range vals[1:] {
+			req.Header.Add(k, v)
+		}
+	}
+	// Apply contentType (derived from mediaType) after caller headers so it
+	// always takes priority over any Content-Type supplied in reqHeaders.
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	respBody, err := io.ReadAll(resp.Body)
+	return resp.StatusCode, map[string][]string(resp.Header), respBody, err
+}
+
+// NewHTTPClient is the pal.HTTP.NewClient factory for the native-CLI
+// platform. It builds a *http.Client configured from cfg and wraps it so the
+// runtime sees only the pal.HTTPClient interface.
+func NewHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
+	tlsConfig := &tls.Config{InsecureSkipVerify: cfg.TLS.InsecureSkipVerify} //nolint:gosec
+	if len(cfg.TLS.CACertPEM) > 0 {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(cfg.TLS.CACertPEM) {
+			_, _ = fmt.Fprintf(os.Stderr, "ballerina: failed to parse CA certificate PEM (no valid certificates found); custom CA not loaded\n")
+		} else {
+			tlsConfig.RootCAs = pool
+			if !cfg.TLS.InsecureSkipVerify {
+				// Go 1.15+ requires SANs for hostname verification; many self-signed and
+				// Java-issued certs only set the CN field. When a custom CA is provided
+				// we do our own verification so CN-only certs are accepted as a fallback.
+				tlsConfig.InsecureSkipVerify = true //nolint:gosec
+				tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool)
+			}
+		}
+	}
+	if len(cfg.TLS.ClientCertPEM) > 0 && len(cfg.TLS.ClientKeyPEM) > 0 {
+		if cert, err := tls.X509KeyPair(cfg.TLS.ClientCertPEM, cfg.TLS.ClientKeyPEM); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "ballerina: tls.X509KeyPair failed (client certificate not loaded): %v\n", err)
+		} else {
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+	}
+	tlsConfig.ServerName = cfg.TLS.ServerName
+	tlsConfig.SessionTicketsDisabled = cfg.TLS.DisableSessionTickets
+	tlsConfig.MinVersion = tls.VersionTLS12 // secure default; overridden below if configured
+	if cfg.TLS.MinVersion != 0 {
+		tlsConfig.MinVersion = cfg.TLS.MinVersion
+	}
+	if cfg.TLS.MaxVersion != 0 {
+		tlsConfig.MaxVersion = cfg.TLS.MaxVersion
+	}
+	if len(cfg.TLS.CipherSuiteNames) > 0 {
+		if resolved := resolveCipherSuites(cfg.TLS.CipherSuiteNames); len(resolved) > 0 {
+			tlsConfig.CipherSuites = resolved
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: no valid cipher suites resolved from cfg.TLS.CipherSuiteNames %v; keeping secure defaults\n", cfg.TLS.CipherSuiteNames)
+		}
+	}
+	transport := &http.Transport{
+		TLSClientConfig:     tlsConfig,
+		TLSHandshakeTimeout: cfg.TLS.HandshakeTimeout,
+	}
+	// Always enable HTTP/1 so default-config clients can talk to plain HTTP/1.1
+	// servers (and so ALPN can fall back to http/1.1 for HTTPS servers that
+	// don't speak h2). Add HTTP/2 + h2c on top when explicitly opted in.
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	if cfg.HTTPVersion == "2.0" {
+		protocols.SetHTTP2(true)
+		protocols.SetUnencryptedHTTP2(true)
+	}
+	transport.Protocols = protocols
+	c := &http.Client{Timeout: cfg.Timeout, Transport: transport}
+	if !cfg.FollowRedirects.Enabled {
+		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	} else {
+		maxCount := cfg.FollowRedirects.MaxCount
+		if maxCount <= 0 {
+			maxCount = 5 // Ballerina default
+		}
+		allowAuth := cfg.FollowRedirects.AllowAuthHeaders
+		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) > maxCount {
+				return http.ErrUseLastResponse
+			}
+			if allowAuth && len(via) > 0 {
+				if auth := via[0].Header.Get("Authorization"); auth != "" {
+					req.Header.Set("Authorization", auth)
+				}
+				if proxy := via[0].Header.Get("Proxy-Authorization"); proxy != "" {
+					req.Header.Set("Proxy-Authorization", proxy)
+				}
+			}
+			return nil
+		}
+	}
+	return &httpClient{client: c}
+}
+
+// resolveCipherSuites maps IANA TLS 1.2 cipher suite names to Go uint16 IDs.
+// Unknown names are silently skipped; TLS 1.3 ciphers are unaffected regardless.
+func resolveCipherSuites(names []string) []uint16 {
+	m := make(map[string]uint16, len(tls.CipherSuites())+len(tls.InsecureCipherSuites()))
+	for _, c := range tls.CipherSuites() {
+		m[c.Name] = c.ID
+	}
+	for _, c := range tls.InsecureCipherSuites() {
+		m[c.Name] = c.ID
+	}
+	ids := make([]uint16, 0, len(names))
+	for _, name := range names {
+		if id, ok := m[name]; ok {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// tlsVerifyConnectionWithCNFallback returns a VerifyConnection callback that verifies the
+// server's certificate chain against rootCAs and falls back to CN-based hostname matching
+// when no SANs are present. Go 1.15+ disabled CN-only hostname verification (RFC 6125 §2.3),
+// but many self-signed and Java-issued certificates still rely on it.
+func tlsVerifyConnectionWithCNFallback(rootCAs *x509.CertPool) func(tls.ConnectionState) error {
+	return func(cs tls.ConnectionState) error {
+		opts := x509.VerifyOptions{
+			Roots:         rootCAs,
+			Intermediates: x509.NewCertPool(),
+		}
+		for _, cert := range cs.PeerCertificates[1:] {
+			opts.Intermediates.AddCert(cert)
+		}
+		if _, err := cs.PeerCertificates[0].Verify(opts); err != nil {
+			return err
+		}
+		// cs.ServerName is the SNI hostname (no port). Try SAN-based verification first.
+		// Only fall back to CN matching for certs that genuinely have no SANs — when SANs
+		// are present but don't match, that is a real mismatch and must not be bypassed.
+		leaf := cs.PeerCertificates[0]
+		if err := leaf.VerifyHostname(cs.ServerName); err != nil {
+			if len(leaf.DNSNames) > 0 || len(leaf.IPAddresses) > 0 {
+				return err
+			}
+			return tlsMatchCN(leaf.Subject.CommonName, cs.ServerName)
+		}
+		return nil
+	}
+}
+
+// tlsMatchCN checks whether pattern (a certificate CN) matches host.
+// Supports simple wildcard patterns of the form "*.example.com".
+func tlsMatchCN(pattern, host string) error {
+	pattern = strings.ToLower(strings.TrimSuffix(pattern, "."))
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+	if pattern == host {
+		return nil
+	}
+	if strings.HasPrefix(pattern, "*.") {
+		suffix := pattern[1:] // ".example.com"
+		if strings.HasSuffix(host, suffix) && strings.Count(host, ".") == strings.Count(suffix, ".") {
+			return nil
+		}
+	}
+	return fmt.Errorf("x509: certificate CN %q does not match host %q", pattern, host)
+}
