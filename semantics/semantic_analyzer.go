@@ -942,7 +942,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			a.semanticErr("query construct types cannot be used with collect clause", clauses.collectClause.GetPosition())
 			return false
 		}
-		if !analyzeActionOrExpression(a, clauses.collectClause.Expression.(ast.BLangExpression), nil) {
+		if !analyzeActionOrExpression(a, clauses.collectClause.Expression, nil) {
 			return false
 		}
 	}

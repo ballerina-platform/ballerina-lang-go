@@ -3020,7 +3020,7 @@ func resolveQueryExpr(
 		collectTy, _, ok := resolveActionOrExpression(
 			t,
 			collectChain,
-			collectClause.Expression.(ast.BLangExpression),
+			collectClause.Expression,
 			expectedType,
 		)
 		if !ok {

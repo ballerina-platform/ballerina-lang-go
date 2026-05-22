@@ -269,7 +269,10 @@ func (b *BLangGroupingKey) GetGroupingKey() Node {
 	if b.VariableRef != nil {
 		return b.VariableRef
 	}
-	return b.VariableDef
+	if b.VariableDef != nil {
+		return b.VariableDef
+	}
+	return nil
 }
 
 func (b *BLangLimitClause) GetKind() NodeKind {

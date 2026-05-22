@@ -1165,7 +1165,7 @@ func appendQueryRowsCollectResultStmts(
 		))
 	}
 
-	collectResult := walkExpression(cx, collectClause.Expression.(ast.BLangExpression))
+	collectResult := walkExpression(cx, collectClause.Expression)
 	bodyStmts = appendModelStatements(bodyStmts, collectResult.initStmts)
 	assignResult := &ast.BLangAssignment{
 		VarRef: resultRef,
