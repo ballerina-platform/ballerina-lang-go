@@ -45,13 +45,18 @@ func builtinUnion(cx Context, ty SemType) (string, bool) {
 	if IsSameType(cx, ty, CreateAnydata(cx)) {
 		return "anydata", true
 	}
-	if IsSameType(cx, ty, createJson(cx)) {
+	if IsSameType(cx, ty, CreateJSON(cx)) {
 		return "json", true
 	}
 	return "", false
 }
 
 func (s *toStringState) semTypeToString(ty SemType) string {
+	if cst, ok := ty.(*ComplexSemType); ok {
+		if name, ok := xmlPredefinedName(s.cx, cst); ok {
+			return name
+		}
+	}
 	switch ty := ty.(type) {
 	case BasicTypeBitSet:
 		return basicTypeToString(ty)
@@ -60,6 +65,22 @@ func (s *toStringState) semTypeToString(ty SemType) string {
 	default:
 		panic("Unexpect semtype kind")
 	}
+}
+
+func xmlPredefinedName(cx Context, ty SemType) (string, bool) {
+	if IsSameType(cx, ty, XML_ELEMENT) {
+		return "xml:Element", true
+	}
+	if IsSameType(cx, ty, XML_COMMENT) {
+		return "xml:Comment", true
+	}
+	if IsSameType(cx, ty, XML_TEXT) {
+		return "xml:Text", true
+	}
+	if IsSameType(cx, ty, XML_PI) {
+		return "xml:ProcessingInstruction", true
+	}
+	return "", false
 }
 
 func basicTypeToString(ty BasicTypeBitSet) string {
@@ -123,9 +144,8 @@ func (s *toStringState) subtypeToString(sub basicSubtype) string {
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
 		}
-	case xmlSubtype:
-		name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
-		return strings.ToLower(name)
+	case *xmlSubtype:
+		return s.xmlSubtypeToString(st)
 	default:
 		panic(fmt.Sprintf("unimplemented: ToString for %s", sub.BasicTypeCode.String()))
 	}
@@ -483,7 +503,40 @@ func floatSubtypeToString(st floatSubtype) string {
 func decimalSubtypeToString(st decimalSubtype) string {
 	var parts []string
 	for _, v := range st.values {
-		parts = append(parts, v.value.FloatString(1))
+		parts = append(parts, v.value.String())
+	}
+	return strings.Join(parts, "|")
+}
+
+func (s *toStringState) xmlSubtypeToString(st *xmlSubtype) string {
+	bits := st.Primitives & ^XML_PRIMITIVE_NEVER
+	bddEvery(s.cx, st.Sequence, conjunctionNil, conjunctionNil, func(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
+		for c := pos; c != conjunctionNil; c = cx.conjunctionNext(c) {
+			if rec, ok := cx.conjunctionAtom(c).(*recAtom); ok {
+				bits |= rec.index()
+			}
+		}
+		return true
+	})
+	return "xml<" + xmlConstituentName(bits) + ">"
+}
+
+func xmlConstituentName(bits int) string {
+	if bits == 0 {
+		return "never"
+	}
+	var parts []string
+	if bits&XML_PRIMITIVE_TEXT != 0 {
+		parts = append(parts, "xml:Text")
+	}
+	if bits&(XML_PRIMITIVE_ELEMENT_RO|XML_PRIMITIVE_ELEMENT_RW) != 0 {
+		parts = append(parts, "xml:Element")
+	}
+	if bits&(XML_PRIMITIVE_COMMENT_RO|XML_PRIMITIVE_COMMENT_RW) != 0 {
+		parts = append(parts, "xml:Comment")
+	}
+	if bits&(XML_PRIMITIVE_PI_RO|XML_PRIMITIVE_PI_RW) != 0 {
+		parts = append(parts, "xml:ProcessingInstruction")
 	}
 	return strings.Join(parts, "|")
 }

@@ -133,15 +133,15 @@ func (ab *analyzerBase) tyCtx() semtypes.Context {
 	return ab.parentAnalyzer().tyCtx()
 }
 
-func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (sa *SemanticAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 
-func (fa *functionAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (fa *functionAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 
-func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (la *loopAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return la
 }
 
@@ -192,7 +192,7 @@ func (ca *constantAnalyzer) loc() diagnostics.Location {
 	return ca.constant.GetPosition()
 }
 
-func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (ca *constantAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return ca
 }
 
@@ -353,42 +353,46 @@ func isIoImport(importNode *ast.BLangImportPackage) bool {
 	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "io"
 }
 
+func isHttpImport(importNode *ast.BLangImportPackage) bool {
+	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "http"
+}
+
 func isImplicitImport(importNode *ast.BLangImportPackage) bool {
-	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map")
+	return isLangImport(importNode, "array") || isLangImport(importNode, "int") || isLangImport(importNode, "map") || isLangImport(importNode, "string")
 }
 
 func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
+func validateInitFunction(a analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if function.IsPublic() {
-		parent.semanticErr("'init' function cannot be declared as public", pos)
+		a.semanticErr("'init' function cannot be declared as public", pos)
 	}
 
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'init' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'init' function must have return type '()' or  'error?'", pos)
+		}
 	}
 
 	if len(function.RequiredParams) > 0 || function.RestParam != nil {
-		parent.semanticErr("'init' function cannot have parameters", pos)
+		a.semanticErr("'init' function cannot have parameters", pos)
 	}
 }
 
-func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
-	// Check 1: Must be public
+func validateMainFunction(a analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	if !fnSymbol.IsPublic() {
-		parent.semanticErr("'main' function must be public", pos)
+		a.semanticErr("'main' function must be public", pos)
 	}
 
-	// Check 2: Must return error?
-	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
 	actualReturnType := fnSymbol.Signature().ReturnType
 
-	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'main' function must have return type 'error?'", pos)
+	if actualReturnType != nil {
+		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
+			a.semanticErr("'main' function must have return type '()' or  'error?'", pos)
+		}
 	}
 }
 
@@ -577,12 +581,12 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangContinue:
 		ca.semanticErr("continue statement not allowed in constant expression", n.GetPosition())
 		return nil
-	case model.TypeDescriptor:
+	case ast.TypeDescriptor:
 	case *ast.BLangTypeDefinition:
 		// We have set the type at constructor
 		return nil
-	case model.ExpressionNode:
-		bLangExpr := n.(ast.BLangExpression)
+	case ast.BLangExpression:
+		bLangExpr := n
 		hasErrors := false
 		validateConstantExpr(ca.ctx(), bLangExpr, func(e ast.BLangExpression) {
 			ca.semanticErr("expression is not a constant expression", e.GetPosition())
@@ -609,6 +613,8 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		onNonConst(expr)
 	case *ast.BLangUnaryExpr:
 		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangTypeConversionExpr:
+		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangGroupExpr:
 		validateConstantExpr(ctx, e.Expression, onNonConst)
 	case *ast.BLangBinaryExpr:
@@ -730,6 +736,20 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypedescExpr:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLElementLiteral:
+		for i := range expr.Attrs {
+			attr := &expr.Attrs[i]
+			if attr.Value != nil && !analyzeActionOrExpression(a, attr.Value, semtypes.STRING) {
+				return false
+			}
+		}
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLSequenceLiteral, *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLAttribute:
+		// XML attributes are metadata on elements and should not be analyzed as standalone expressions
+		// Their values are already analyzed as part of XMLElement processing
+		return validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -838,9 +858,9 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 				return false
 			}
 		case *ast.BLangLetClause:
-			for _, variableDef := range clause.LetVarDeclarations {
-				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
-				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+			for i := range clause.LetVarDeclarations {
+				varDef := &clause.LetVarDeclarations[i]
+				if varDef.Var == nil || varDef.Var.Expr == nil {
 					a.semanticErr("let clause supports only initialized simple variable declarations", clause.GetPosition())
 					return false
 				}
@@ -865,7 +885,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	}
 
 	var selectExpectedTy semtypes.SemType
-	if queryExpr.QueryConstructType == model.TypeKind_MAP {
+	if queryExpr.QueryConstructType == ast.TypeKind_MAP {
 		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
 	}
 
@@ -874,7 +894,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	}
 
 	if clauses.onConflictClause != nil {
-		if queryExpr.QueryConstructType != model.TypeKind_MAP {
+		if queryExpr.QueryConstructType != ast.TypeKind_MAP {
 			a.semanticErr("on conflict clause is supported only for map query construct type", clauses.onConflictClause.GetPosition())
 			return false
 		}
@@ -915,7 +935,10 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 }
 
 func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent()
+	if !semtypes.SingleNumericType(targetType).IsPresent() {
+		return false
+	}
+	return semtypes.ContainsBasicType(exprTy, semtypes.INT|semtypes.FLOAT|semtypes.DECIMAL)
 }
 
 func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, expectedType semtypes.SemType) bool {
@@ -967,6 +990,13 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 			return false
 		}
 	}
+	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+		memberTy := lat.MemberAtInnerVal(i)
+		if _, ok := semtypes.FillerValue(a.tyCtx(), memberTy); !ok {
+			a.semanticErr(fmt.Sprintf("missing required member at index %d: type '%s' has no filler value", i, semtypes.ToString(a.tyCtx(), memberTy)), expr.GetPosition())
+			return false
+		}
+	}
 	return validateResolvedType(a, expr, expectedType)
 }
 
@@ -978,9 +1008,25 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 	for _, fd := range expr.FieldDefaults {
 		hasValue[fd.FieldName] = true
 	}
+	seen := make(map[string]bool, len(expr.Fields))
+	namedFields := make(map[string]bool, len(mat.Names))
+	for _, n := range mat.Names {
+		namedFields[n] = true
+	}
 	for _, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
 		keyName := recordKeyName(kv.Key)
+		if seen[keyName] {
+			a.semanticErr(fmt.Sprintf("duplicate key '%s' in mapping constructor", keyName), kv.Key.GetPosition())
+			return false
+		}
+		seen[keyName] = true
+		// For record type desc (ie len(mat.Names) > 0) if the key is not a string literal it must be
+		// nameed field
+		if kv.Key.Kind == ast.MappingKeyIdentifier && len(mat.Names) > 0 && !namedFields[keyName] {
+			a.semanticErr(fmt.Sprintf("identifier '%s' cannot be used as a key for a rest field; use a string literal instead", keyName), kv.Key.GetPosition())
+			return false
+		}
 		hasValue[keyName] = true
 		fieldExpectedType := mat.FieldInnerVal(keyName)
 		if !analyzeActionOrExpression(a, kv.ValueExpr, fieldExpectedType) {
@@ -1170,7 +1216,7 @@ type invocable interface {
 	SetResolvedSymbol(model.SymbolRef)
 	CallArgs() []ast.BLangExpression
 	SetCallArgs([]ast.BLangExpression)
-	GetName() model.IdentifierNode
+	GetName() ast.IdentifierNode
 	SetRawSymbol(model.Symbol)
 }
 
@@ -1285,6 +1331,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangXMLNS:
+		expr := n.GetNamespaceURI()
+		validateResolvedType(a, expr, semtypes.STRING)
+		validateConstantExpr(a.ctx(), expr, func(e ast.BLangExpression) {
+			a.semanticErr("expression is not a constant expression", e.GetPosition())
+		})
+		return nil
 	case *ast.BLangMatchStatement:
 		return a
 	case *ast.BLangSimpleVariableDef:
@@ -1298,7 +1351,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangCompoundAssignment:
-		if !analyzeAssignment(a, n) {
+		if !analyzeCompoundAssignment(a, n) {
 			return nil
 		}
 		return a
@@ -1334,8 +1387,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return nil
 	case *ast.BLangClassDefinition:
-		for _, f := range n.Fields {
-			field := f.(*ast.BLangSimpleVariable)
+		for _, fieldNode := range n.Fields {
+			field := fieldNode.(*ast.BLangSimpleVariable)
 			if field.Expr != nil {
 				expectedType := a.ctx().SymbolType(field.Symbol())
 				analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
@@ -1358,12 +1411,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 }
 
 type assignmentNode interface {
-	GetVariable() model.ExpressionNode
-	GetExpression() model.ExpressionNode
+	GetVariable() ast.LExpr
+	GetExpression() ast.BLangActionOrExpression
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
-	variable := assignment.GetVariable().(ast.BLangExpression)
+	variable := assignment.GetVariable()
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()
 		if !ast.SymbolIsSet(symbolNode) {
@@ -1390,8 +1443,21 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 		return false
 	}
 	expectedType := variable.GetDeterminedType()
-	expression := assignment.GetExpression().(ast.BLangActionOrExpression)
+	expression := assignment.GetExpression()
 	return analyzeActionOrExpression(a, expression, expectedType)
+}
+
+func analyzeCompoundAssignment[A analyzer](a A, assignment *ast.BLangCompoundAssignment) bool {
+	if !analyzeAssignment(a, assignment) {
+		return false
+	}
+	lhsTy := assignment.GetVariable().GetDeterminedType()
+	rhsTy := assignment.GetExpression().GetDeterminedType()
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
+		a.semanticErr("compound assignment operands cannot be nilable", assignment.GetPosition())
+		return false
+	}
+	return true
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) bool {
@@ -1562,10 +1628,11 @@ func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.
 func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 	locals := make(map[model.SymbolRef]struct{})
 	tyCtx := a.tyCtx()
+	ctx := a.ctx()
 	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangSimpleVariableDef:
-			locals[inner.Var.Symbol()] = struct{}{}
+			locals[ctx.UnnarrowedSymbol(inner.Var.Symbol())] = struct{}{}
 		case *ast.BLangInvocation:
 			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
@@ -1593,7 +1660,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			if varSym.IsConst() {
 				return true
 			}
-			if _, isLocal := locals[inner.Symbol()]; !isLocal {
+			if _, isLocal := locals[ctx.UnnarrowedSymbol(inner.Symbol())]; !isLocal {
 				a.semanticErr("access of mutable variable", inner.GetPosition())
 			}
 		}
@@ -1618,7 +1685,7 @@ func (v *everyNodeVisitor[A]) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *everyNodeVisitor[A]) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *everyNodeVisitor[A]) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return v
 }
 

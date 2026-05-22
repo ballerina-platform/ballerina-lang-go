@@ -1,0 +1,47 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+D1  1.1E+2;
+D10  decimal;
+D2  1.1E+2;
+D3  9.9E+23;
+D4  9.9000000000000000000011E+23;
+D5  9.9000000000000000000011E+23;
+D6  -9.8999999999999999999989E+23;
+D7  -9.8999999999999999999989E+23;
+D8  decimal;
+D9  decimal;
+main() -> nil{
+  bb0 {
+    %1 = println(D1) -> bb1;
+  }
+  bb1 {
+    %2 = println(D2) -> bb2;
+  }
+  bb2 {
+    %3 = println(D3) -> bb3;
+  }
+  bb3 {
+    %4 = println(D4) -> bb4;
+  }
+  bb4 {
+    %5 = println(D5) -> bb5;
+  }
+  bb5 {
+    %6 = println(D6) -> bb6;
+  }
+  bb6 {
+    %7 = println(D7) -> bb7;
+  }
+  bb7 {
+    %8 = println(D8) -> bb8;
+  }
+  bb8 {
+    %9 = println(D9) -> bb9;
+  }
+  bb9 {
+    %10 = println(D10) -> bb10;
+  }
+  bb10 {
+    return;
+  }
+}

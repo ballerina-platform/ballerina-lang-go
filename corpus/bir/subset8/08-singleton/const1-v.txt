@@ -1,0 +1,18 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+B  "blue";
+G  "green";
+R  "red";
+main() -> nil{
+  bb0 {
+    c = R;
+    c = G;
+    %2 = ConstantLoad green
+    c = %2;
+    c = B;
+    %3 = println(c) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}

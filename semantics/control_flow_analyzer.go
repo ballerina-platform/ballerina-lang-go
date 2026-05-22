@@ -39,7 +39,7 @@ type basicBlock struct {
 	children []int
 	// Nodes inside this block. Almost always these are statements but ternary expression will have expressions
 	// as children.
-	nodes []model.Node
+	nodes []ast.Node
 }
 
 type bbRef int
@@ -229,7 +229,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeBlockFunctionBody(fnBody *as
 	_ = analyzer.analyzeStatements(rootBB.ref(), fnBody.Stmts)
 }
 
-func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, statements []ast.BLangStatement) stmtEffect {
+func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, statements []ast.StatementNode) stmtEffect {
 	currentBB := curBB
 
 	for _, stmt := range statements {
@@ -278,12 +278,12 @@ func (analyzer *functionControlFlowAnalyzer) createNewBB() bbRef {
 }
 
 // addNode adds a node to a basic block
-func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node model.Node) {
+func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node ast.Node) {
 	analyzer.bbs[bb].nodes = append(analyzer.bbs[bb].nodes, node)
 }
 
 // analyzeStatement dispatches to the appropriate handler based on statement type
-func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt ast.BLangStatement) stmtEffect {
+func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt ast.StatementNode) stmtEffect {
 	ternaryChecker := &ternaryExpressionChecker{}
 	ast.Walk(ternaryChecker, stmt.(ast.BLangNode))
 	if ternaryChecker.hasTernaryExpression {
@@ -294,6 +294,12 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		return analyzer.analyzeReturn(curBB, s)
 	case *ast.BLangPanic:
 		return analyzer.analyzePanic(curBB, s)
+	case *ast.BLangExpressionStmt:
+		analyzer.addNode(curBB, stmt)
+		if expr, ok := s.Expr.(ast.BLangExpression); ok && alwaysTerminatesViaCheck(expr) {
+			return terminatedEffect()
+		}
+		return continueEffect(curBB)
 	case *ast.BLangIf:
 		return analyzer.analyzeIf(curBB, s)
 	case *ast.BLangBlockStmt:
@@ -321,9 +327,6 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		loopData := analyzer.loops[len(analyzer.loops)-1]
 		analyzer.addEdge(curBB, loopData.loopHead)
 		return terminatedEffect()
-	case *ast.BLangFunction:
-		analyzer.ctx.InternalError("nested functions not supported", stmt.GetPosition())
-		panic("unreachable")
 	case *ast.BLangMatchStatement:
 		return analyzer.analyzeMatch(curBB, s)
 	default:
@@ -333,14 +336,14 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	}
 }
 
-func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 model.ExpressionNode) stmtEffect {
+func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 ast.BLangExpression) stmtEffect {
 	panic("unimplemented")
 }
 
 type ternaryExpressionChecker struct {
 	hasTernaryExpression bool
-	ifTrue               model.ExpressionNode
-	ifFalse              model.ExpressionNode
+	ifTrue               ast.BLangExpression
+	ifFalse              ast.BLangExpression
 }
 
 var _ ast.Visitor = &ternaryExpressionChecker{}
@@ -355,7 +358,7 @@ func (c *ternaryExpressionChecker) Visit(node ast.BLangNode) ast.Visitor {
 	return c
 }
 
-func (c *ternaryExpressionChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (c *ternaryExpressionChecker) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 
@@ -370,6 +373,28 @@ func (analyzer *functionControlFlowAnalyzer) analyzeReturn(curBB bbRef, stmt *as
 func (analyzer *functionControlFlowAnalyzer) analyzePanic(curBB bbRef, stmt *ast.BLangPanic) stmtEffect {
 	analyzer.addNode(curBB, stmt)
 	return terminatedEffect()
+}
+
+// alwaysTerminatesViaCheck reports whether the expression is a `check` or
+// `checkpanic` whose operand is statically a subtype of error. In that case the
+// `check` always returns from the enclosing function and the `checkpanic`
+// always panics, so following statements are unreachable.
+func alwaysTerminatesViaCheck(expr ast.BLangExpression) bool {
+	var inner ast.BLangExpression
+	switch e := expr.(type) {
+	case *ast.BLangCheckPanickedExpr:
+		if v, ok := e.Expr.(ast.BLangExpression); ok {
+			inner = v
+		}
+	case *ast.BLangCheckedExpr:
+		if v, ok := e.Expr.(ast.BLangExpression); ok {
+			inner = v
+		}
+	}
+	if inner == nil {
+		return false
+	}
+	return semtypes.IsSubtypeSimple(inner.GetDeterminedType(), semtypes.ERROR)
 }
 
 // Branching statement handlers

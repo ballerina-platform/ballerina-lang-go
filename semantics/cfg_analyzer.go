@@ -17,12 +17,13 @@
 package semantics
 
 import (
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"sync"
 )
 
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
@@ -86,12 +87,16 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	}
 	sym := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
 	retType := sym.Signature().ReturnType
-	if semtypes.IsSubtypeSimple(retType, semtypes.NIL) {
+	if semtypes.ContainsBasicType(retType, semtypes.NIL) {
 		return
 	}
 
 	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
+		return
+	}
+	if semtypes.IsNever(retType) {
+		analyzeFunctionNeverReturn(ctx, fn, fnCfg)
 		return
 	}
 
@@ -107,13 +112,43 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 	}
 }
 
+func analyzeFunctionNeverReturn(ctx *context.CompilerContext, fn *ast.BLangFunction, fnCfg functionCFG) {
+	for _, bb := range fnCfg.bbs {
+		if !bb.isTerminal() || !bb.isReachable() {
+			continue
+		}
+		if terminalBlockHasPanic(bb) {
+			continue
+		}
+		ctx.SemanticError("expected panic", positionForMissingReturn(bb, fn))
+	}
+}
+
 func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	if len(bb.nodes) == 0 {
 		return false
 	}
 	last := bb.nodes[len(bb.nodes)-1]
-	k := last.GetKind()
-	return k == model.NodeKind_RETURN || k == model.NodeKind_PANIC
+	switch last.(type) {
+	case *ast.BLangReturn, *ast.BLangPanic:
+		return true
+	case *ast.BLangExpressionStmt:
+		// The only other way a reachable block becomes terminal is via a
+		// `check`/`checkpanic` expression statement whose operand is
+		// statically a subtype of error (see analyzeStatement in
+		// control_flow_analyzer.go).
+		return true
+	default:
+		return false
+	}
+}
+
+func terminalBlockHasPanic(bb basicBlock) bool {
+	if len(bb.nodes) == 0 {
+		return false
+	}
+	_, ok := bb.nodes[len(bb.nodes)-1].(*ast.BLangPanic)
+	return ok
 }
 
 func positionForMissingReturn(bb basicBlock, fn *ast.BLangFunction) diagnostics.Location {

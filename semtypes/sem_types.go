@@ -17,8 +17,9 @@
 package semtypes
 
 import (
-	"math/big"
 	"strings"
+
+	"ballerina-lang-go/decimal"
 )
 
 var SINT8 = intWidthSigned(8)
@@ -33,10 +34,9 @@ func decimalConstFromStringValue(value string) SemType {
 	if strings.Contains(value, "d") || strings.Contains(value, "D") {
 		value = value[:len(value)-1]
 	}
-	d := new(big.Rat)
-	d, ok := d.SetString(value)
-	if !ok {
-		panic("failed to set string to big.Rat")
+	d, err := decimal.FromString(value)
+	if err != nil {
+		panic("failed to parse decimal literal: " + err.Error())
 	}
 	return DecimalConst(*d)
 }

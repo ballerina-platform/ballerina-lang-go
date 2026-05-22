@@ -51,7 +51,13 @@ func getBIRDiff(expectedText, actualText string) string {
 	return dmp.DiffPrettyText(diffs)
 }
 
-// TestBIRGeneration tests BIR generation from .bal source files in the corpus.
+// birGenerationSkipList is the BIR-stage *additional* skip list, on top of
+// the shared test_util.UnsupportedTests baseline.
+var birGenerationSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
+
 func TestBIRGeneration(t *testing.T) {
 	flag.Parse()
 
@@ -67,6 +73,11 @@ func TestBIRGeneration(t *testing.T) {
 
 // testBIRGeneration tests BIR generation for a single .bal file.
 func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
+	if test_util.IsUnsupported(testPair.InputPath) || test_util.MatchesSkip(testPair.InputPath, birGenerationSkipList) {
+		t.Skipf("Skipping BIR generation test for %s", testPair.InputPath)
+		return
+	}
+
 	// Catch panics during BIR generation
 	defer func() {
 		if r := recover(); r != nil {
@@ -91,7 +102,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 
 	// Pretty print BIR output
 	prettyPrinter := bir.PrettyPrinter{}
-	actualBIR := prettyPrinter.Print(*result.BIRPackage)
+	actualBIR := prettyPrinter.Print(semtypes.ContextFrom(env.GetTypeEnv()), *result.BIRPackage)
 
 	// If update flag is set, update expected file
 	if *update {

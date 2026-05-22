@@ -46,11 +46,6 @@ type (
 		Pos Location
 	}
 
-	BIRDocumentableNodeBase struct {
-		BIRNodeBase
-		MarkdownDocAttachment model.MarkdownDocAttachment
-	}
-
 	// BIRAbstractInstruction
 	BIRInstructionBase struct {
 		BIRNodeBase
@@ -74,7 +69,6 @@ type (
 		InitFunction  *BIRFunction
 		ClassDefs     []BIRClassDef
 		MainFunction  *BIRFunction
-		TypeEnv       semtypes.Env
 	}
 
 	ObjectField struct {
@@ -106,18 +100,16 @@ type (
 
 	BIRGlobalVariableDcl struct {
 		birVariableDclBase
-		Flags              int64
+		Flags              model.Flag
 		PkgId              *model.PackageID
-		Origin             model.SymbolOrigin
 		GlobalVarLookupKey string
 	}
 
 	BIRFunction struct {
-		BIRDocumentableNodeBase
+		BIRNodeBase
 		Name           model.Name
 		OriginalName   model.Name
-		Flags          int64
-		Origin         model.SymbolOrigin
+		Flags          model.Flag
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int
@@ -149,7 +141,7 @@ type (
 	BIRParameter struct {
 		BIRNodeBase
 		Name  model.Name
-		Flags int64
+		Flags model.Flag
 	}
 
 	BIRFunctionParameter struct {
@@ -287,6 +279,8 @@ const (
 	INSTRUCTION_KIND_NEW_STREAM
 	INSTRUCTION_KIND_TABLE_STORE
 	INSTRUCTION_KIND_TABLE_LOAD
+	INSTRUCTION_KIND_ARRAY_FILLING_LOAD
+	INSTRUCTION_KIND_MAP_FILLING_LOAD
 )
 
 const (

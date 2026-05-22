@@ -17,15 +17,18 @@
 package exec
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
-	"fmt"
 )
 
-const maxRecursionDepth = 1000
+const maxRecursionDepth = 5000
 
-func executeFunction(ctx *Context, birFunc bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
+func executeFunction(ctx *extern.Context, birFunc bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
 	frame := createFunctionFrame(ctx, &birFunc, args, parentFrame)
 	bb := &birFunc.BasicBlocks[0]
 	if len(birFunc.ErrorTable) > 0 {
@@ -33,26 +36,41 @@ func executeFunction(ctx *Context, birFunc bir.BIRFunction, args []values.BalVal
 	} else {
 		executeFunctionNoTrap(ctx, bb, frame)
 	}
-	ctx.PopFrame()
+	popFrame(ctx)
 	return frame.locals[0]
 }
 
-func createFunctionFrame(ctx *Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) *Frame {
-	locals := initLocalsForFunction(birFunc, args)
+func popFrame(ctx *extern.Context) {
+	getCallStack(ctx).Pop()
+}
+
+func pushFrame(ctx *extern.Context, frame *Frame) {
+	getCallStack(ctx).Push(frame)
+}
+
+func callStackDepth(ctx *extern.Context) int {
+	return len(getCallStack(ctx).elements)
+}
+
+func getCallStack(ctx *extern.Context) *callStack {
+	return ctx.CallStack.(*callStack)
+}
+
+func createFunctionFrame(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) *Frame {
+	locals := initLocalsForFunction(ctx, birFunc, args)
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
-	ctx.PushFrame(frame)
-	if ctx.CallStackDepth() > maxRecursionDepth {
+	pushFrame(ctx, frame)
+	if callStackDepth(ctx) > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))
 	}
 	return frame
 }
 
-func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
+func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
-	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
 	argOffset := 0
-	if hasFunctionFlag(birFunc.Flags, model.Flag_ATTACHED) {
+	if birFunc.Flags.Has(model.FlagAttached) {
 		locals[1] = args[0]
 		argOffset = 1
 	}
@@ -61,31 +79,28 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 		locals[i+1+argOffset] = args[i+argOffset]
 	}
 
-	var offset int
 	if birFunc.RestParams != nil {
 		restArgs := args[requiredCount+argOffset:]
 		restParamIdx := requiredCount + 1 + argOffset
 		restParamType := (*localVars)[restParamIdx].GetType()
-		list := values.NewList(len(restArgs), restParamType, nil)
-		for j, arg := range restArgs {
-			list.FillingSet(j, arg)
+		atomic := semtypes.ToListAtomicType(ctx.TypeCtx, restParamType)
+		if atomic == nil {
+			panic("rest parameter type has no list atomic representation")
 		}
+		initial := make([]values.BalValue, len(restArgs))
+		copy(initial, restArgs)
+		list := values.NewList(restParamType, atomic, true, nil, len(restArgs), initial)
 		locals[restParamIdx] = list
-		offset = restParamIdx + 1
 	} else {
 		if len(args) > requiredCount+argOffset {
 			panic(values.NewErrorWithMessage("too many arguments"))
 		}
-		offset = requiredCount + 1 + argOffset
 	}
 
-	for i := offset; i < len(*localVars); i++ {
-		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
-	}
 	return locals
 }
 
-func executeFunctionWithTrap(ctx *Context, birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame) {
+func executeFunctionWithTrap(ctx *extern.Context, birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame) {
 	currentFrame := frame
 	for {
 		curBBNumber := bb.Number
@@ -115,7 +130,7 @@ func executeFunctionWithTrap(ctx *Context, birFunc *bir.BIRFunction, bb *bir.BIR
 	}
 }
 
-func executeFunctionNoTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame) {
+func executeFunctionNoTrap(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame) {
 	currentFrame := frame
 	for {
 		var nextBB *bir.BIRBasicBlock
@@ -127,7 +142,7 @@ func executeFunctionNoTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame) {
 	}
 }
 
-func executeBasicBlockWithTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
+func executeBasicBlockWithTrap(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
 	defer func() {
 		if r := recover(); r != nil {
 			recovered = r
@@ -137,7 +152,7 @@ func executeBasicBlockWithTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame
 	return nextBB, nextFrame, nil
 }
 
-func executeBasicBlock(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
+func executeBasicBlock(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
 		posProvider := inst.(interface{ GetPos() bir.Location })
 		frame.location = posProvider.GetPos()
@@ -148,7 +163,7 @@ func executeBasicBlock(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, curren
 	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame
 }
 
-func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Frame {
+func execInstruction(ctx *extern.Context, inst bir.BIRNonTerminator, frame *Frame) *Frame {
 	switch v := inst.(type) {
 	case *bir.PushScopeFrame:
 		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
@@ -172,8 +187,12 @@ func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Fra
 			execArrayStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
 			execArrayLoad(ctx, v, frame)
+		case bir.INSTRUCTION_KIND_ARRAY_FILLING_LOAD:
+			execArrayFillingLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_STORE:
 			execMapStore(ctx, v, frame)
+		case bir.INSTRUCTION_KIND_MAP_FILLING_LOAD:
+			execMapFillingLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_LOAD:
 			execMapLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_OBJECT_STORE:
@@ -255,13 +274,23 @@ func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Fra
 		execTypeTest(ctx, v, frame)
 	case *bir.FPLoad:
 		execFPLoad(ctx, v, frame)
+	case *bir.NewXMLElement:
+		execNewXMLElement(ctx, v, frame)
+	case *bir.NewXMLPI:
+		execNewXMLPI(ctx, v, frame)
+	case *bir.NewXMLComment:
+		execNewXMLComment(ctx, v, frame)
+	case *bir.NewXMLText:
+		execNewXMLText(ctx, v, frame)
+	case *bir.NewXMLSequence:
+		execNewXMLSequence(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
 	return frame
 }
 
-func execTerminator(ctx *Context, term bir.BIRTerminator, frame *Frame) *bir.BIRBasicBlock {
+func execTerminator(ctx *extern.Context, term bir.BIRTerminator, frame *Frame) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB
@@ -308,10 +337,6 @@ func execTerminator(ctx *Context, term bir.BIRTerminator, frame *Frame) *bir.BIR
 	return nil
 }
 
-func hasFunctionFlag(flags int64, flag model.Flag) bool {
-	return flags&(1<<int64(flag)) != 0
-}
-
 func panicValueToErrorValue(r any) values.BalValue {
 	// `trap` expects runtime failures to be raised as `*values.Error`.
 	// If this isn't the case, treat it as an unrecoverable interpreter issue.
@@ -343,8 +368,8 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 	return best
 }
 
-func unwindCallStackToFrame(ctx *Context, frame *Frame) {
-	for ctx.CallStackDepth() > 0 && ctx.callStack.elements[ctx.CallStackDepth()-1] != frame {
-		ctx.PopFrame()
+func unwindCallStackToFrame(ctx *extern.Context, frame *Frame) {
+	for callStackDepth(ctx) > 0 && getCallStack(ctx).elements[callStackDepth(ctx)-1] != frame {
+		popFrame(ctx)
 	}
 }

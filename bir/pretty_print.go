@@ -23,6 +23,7 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type PrettyPrinter struct {
@@ -62,10 +63,10 @@ func (p *PrettyPrinter) decreaseIndent() {
 	p.indentLevel--
 }
 
-func (p *PrettyPrinter) Print(node BIRPackage) string {
+func (p *PrettyPrinter) Print(tyCtx semtypes.Context, node BIRPackage) string {
 	// Reset the builder
 	p.sb.Reset()
-	p.cx = semtypes.TypeCheckContext(node.TypeEnv)
+	p.cx = tyCtx
 
 	p.write("module ")
 	p.write(p.PrintPackageID(node.PackageID))
@@ -199,6 +200,16 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintPushScopeFrame(instruction)
 	case *PopScopeFrame:
 		return "PopScopeFrame"
+	case *NewXMLElement:
+		return p.PrintNewXMLElement(instruction)
+	case *NewXMLPI:
+		return p.PrintNewXMLPI(instruction)
+	case *NewXMLComment:
+		return p.PrintNewXMLComment(instruction)
+	case *NewXMLText:
+		return p.PrintNewXMLText(instruction)
+	case *NewXMLSequence:
+		return p.PrintNewXMLSequence(instruction)
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -286,6 +297,8 @@ func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 		return fmt.Sprintf("%s[%s] = %s;", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.KeyOp), p.PrintOperand(*access.RhsOp))
 	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_OBJECT_LOAD:
 		return fmt.Sprintf("%s = %s[%s];", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
+	case INSTRUCTION_KIND_ARRAY_FILLING_LOAD, INSTRUCTION_KIND_MAP_FILLING_LOAD:
+		return fmt.Sprintf("%s = %s[%s] (fill);", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
 	default:
 		panic(fmt.Sprintf("unknown field access kind: %d", access.Kind))
 	}
@@ -354,7 +367,20 @@ func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
-	return fmt.Sprintf("%s = ConstantLoad %v", p.PrintOperand(*load.LhsOp), load.Value)
+	return fmt.Sprintf("%s = ConstantLoad %s", p.PrintOperand(*load.LhsOp), formatConstantValue(load.Value))
+}
+
+// formatConstantValue renders a BIR constant value for debug pretty printing.
+// Primitive values keep Go's default `%v` format so the existing BIR text
+// fixtures (which were captured with `%v`) remain stable. Composite Ballerina
+// values such as list/tuple/map fillers are routed through values.String so
+// they get a Ballerina-shaped form rather than a Go struct-pointer dump.
+func formatConstantValue(v any) string {
+	switch v.(type) {
+	case *values.List, *values.Map, *values.Error, *values.Function, *values.Object, *values.TypeDesc:
+		return values.String(v, map[uintptr]bool{})
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 func (p *PrettyPrinter) PrintUnaryOp(op *UnaryOp) string {
@@ -435,4 +461,45 @@ func (p *PrettyPrinter) PrintPackageID(packageID *model.PackageID) string {
 	pkgName := string(*packageID.PkgName)
 	version := string(*packageID.Version)
 	return fmt.Sprintf("%s.%s v %s", orgName, pkgName, version)
+}
+
+func (p *PrettyPrinter) PrintNewXMLElement(n *NewXMLElement) string {
+	children := "()"
+	if n.ChildrenOp != nil {
+		children = p.PrintOperand(*n.ChildrenOp)
+	}
+	attrs := "()"
+	if n.AttrsOp != nil {
+		attrs = p.PrintOperand(*n.AttrsOp)
+	}
+	if n.NamespacesOp != nil {
+		return fmt.Sprintf("%s = newXMLElement(%s, %s, %s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children, attrs, p.PrintOperand(*n.NamespacesOp))
+	}
+	if n.AttrsOp != nil {
+		return fmt.Sprintf("%s = newXMLElement(%s, %s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children, attrs)
+	}
+	return fmt.Sprintf("%s = newXMLElement(%s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children)
+}
+
+func (p *PrettyPrinter) PrintNewXMLPI(n *NewXMLPI) string {
+	return fmt.Sprintf("%s = newXMLPI(%s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.TargetOp), p.PrintOperand(*n.DataOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLComment(n *NewXMLComment) string {
+	return fmt.Sprintf("%s = newXMLComment(%s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.BodyOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLText(n *NewXMLText) string {
+	return fmt.Sprintf("%s = newXMLText(%s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.BodyOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLSequence(n *NewXMLSequence) string {
+	parts := strings.Builder{}
+	for i, child := range n.Children {
+		if i > 0 {
+			parts.WriteString(", ")
+		}
+		parts.WriteString(p.PrintOperand(*child))
+	}
+	return fmt.Sprintf("%s = newXMLSequence{%s}", p.PrintOperand(*n.LhsOp), parts.String())
 }

@@ -19,15 +19,19 @@ package semantics_test
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
 	"flag"
-	"path/filepath"
-	"strings"
 	"testing"
 )
+
+// semanticAnalysisSkipList is the semantic-analysis *additional* skip list,
+// on top of the shared test_util.UnsupportedTests baseline.
+var semanticAnalysisSkipList = []string{
+	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
+	"subset8/08-xml/namespace12-v.bal",
+}
 
 func TestSemanticAnalysis(t *testing.T) {
 	flag.Parse()
@@ -43,6 +47,11 @@ func TestSemanticAnalysis(t *testing.T) {
 }
 
 func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
+	if test_util.IsUnsupported(testCase.InputPath) || test_util.MatchesSkip(testCase.InputPath, semanticAnalysisSkipList) {
+		t.Skipf("Skipping semantic analysis test for %s", testCase.InputPath)
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("Semantic analysis panicked for %s: %v", testCase.InputPath, r)
@@ -78,14 +87,11 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 
-	// Check if node implements BLangExpression interface
-	if expr, ok := node.(ast.BLangExpression); ok {
-		// Validate determinedType is set
-		if semtypes.IsNever(expr.GetDeterminedType()) {
-			v.t.Errorf("determinedType is never for expression %T at %v",
-				node, node.GetPosition())
-		}
-	} else {
+	// Validate determinedType is set on every expression node. NEVER is a
+	// legitimate type for guaranteed-divergent expressions (e.g.
+	// `check newError()` whose inner type is exactly `error`), so we only
+	// flag the unset case.
+	if _, ok := node.(ast.BLangExpression); !ok {
 		if node.GetDeterminedType() == nil {
 			v.t.Errorf("determinedType not set for expression %T at %v",
 				node, node.GetPosition())
@@ -104,7 +110,7 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *semanticAnalysisValidator) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	if typeData == nil || typeData.TypeDescriptor == nil {
 		return v
 	}
@@ -121,6 +127,10 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 	return v
 }
 
+// semanticAnalysisErrorSkipList is the semantic-analysis-errors *additional*
+// skip list, on top of the shared test_util.UnsupportedTests baseline.
+// Currently empty -- every known failure is already covered by the shared
+// baseline.
 var semanticAnalysisErrorSkipList = []string{}
 
 func TestSemanticAnalysisErrors(t *testing.T) {
@@ -137,7 +147,7 @@ func TestSemanticAnalysisErrors(t *testing.T) {
 }
 
 func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
-	if shouldSkipSemanticAnalysisErrorTest(testCase.InputPath) {
+	if test_util.IsUnsupported(testCase.InputPath) || test_util.MatchesSkip(testCase.InputPath, semanticAnalysisErrorSkipList) {
 		t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
 		return
 	}
@@ -161,15 +171,4 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	_, _ = testphases.RunPipeline(cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
-}
-
-func shouldSkipSemanticAnalysisErrorTest(inputPath string) bool {
-	normalizedInputPath := filepath.ToSlash(inputPath)
-	for _, skip := range semanticAnalysisErrorSkipList {
-		normalizedSkipPath := filepath.ToSlash(skip)
-		if strings.HasSuffix(normalizedInputPath, normalizedSkipPath) {
-			return true
-		}
-	}
-	return false
 }

@@ -27,7 +27,22 @@ type Scope interface {
 	GetSymbol(name string) (SymbolRef, bool)
 	GetPrefixedSymbol(prefix, name string) (SymbolRef, bool)
 	AddSymbol(name string, symbol Symbol)
+	// LookupXMLNS returns the URI bound to the given XML namespace prefix in
+	// this scope or any enclosing scope, along with the scope where the
+	// binding is defined. Empty string prefix queries the default namespace.
+	// Compare the returned scope against the receiver to check whether the
+	// binding was defined locally vs inherited.
+	LookupXMLNS(prefix string) (uri string, scope Scope, ok bool)
+	// DefineXMLNS adds a prefix -> URI binding to this scope. Callers are
+	// responsible for any duplicate or validity checks via LookupXMLNS.
+	DefineXMLNS(prefix, uri string)
 }
+
+// XMLNSReservedPrefix is the predeclared prefix that cannot be redeclared.
+const XMLNSReservedPrefix = "xmlns"
+
+// XMLNSReservedURI is the URI bound to the predeclared `xmlns` prefix.
+const XMLNSReservedURI = "http://www.w3.org/2000/xmlns/"
 
 // SymbolSpaceProvider provides access to symbol spaces for block-level scopes
 type SymbolSpaceProvider interface {
@@ -69,13 +84,17 @@ type FunctionSymbol interface {
 	SetSignature(FunctionSignature)
 	DefaultableParams() *DefaultableParamInfo
 	SetDefaultableParams(DefaultableParamInfo)
+	IncludedRecordParams() *IncludedRecordParamInfo
+	SetIncludedRecordParams(IncludedRecordParamInfo)
 	ParamNames() []string
 }
 
-// GenericFunctionSymbol represents functions with [@typeParam] types
-type GenericFunctionSymbol interface {
+// ContainerGenericFunctionSymbol represents functions with [@typeParam] types defined for a container.
+// For these we are guranteed to get the container as a reference (**so we know the type**) to the first argument, thus we can always
+// Monomorphize the symbol type with it
+type ContainerGenericFunctionSymbol interface {
 	FunctionSymbol
-	Monomorphize(args []semtypes.SemType) SymbolRef
+	Monomorphize(containerTy semtypes.SemType) SymbolRef
 	Space() *SymbolSpace
 }
 
@@ -174,6 +193,10 @@ type (
 		Main       *SymbolSpace
 		Prefix     map[string]ExportedSymbolSpace
 		Annotation *SymbolSpace
+		// XMLNS holds module-level XML namespace prefix bindings.
+		// Key is the prefix ("" for the default namespace); value is the URI.
+		// Seeded with the predeclared `xmlns` prefix.
+		XMLNS map[string]string
 	}
 
 	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module
@@ -185,6 +208,9 @@ type (
 	BlockScopeBase struct {
 		Parent Scope
 		Main   *SymbolSpace
+		// XMLNS holds block-level XML namespace prefix bindings.
+		// Key is the prefix ("" for the default namespace); value is the URI.
+		XMLNS map[string]string
 	}
 
 	// This is a delimiter to help detect if we need to capture a symbol as a closure
@@ -213,12 +239,29 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
-		inclusionMembers []InclusionMember
+	}
+
+	// memberHolderBase carries direct + type-inclusion-inherited members
+	// (fields and optional rest-type for records; fields + methods for classes
+	// and object type aliases).
+	memberHolderBase struct {
+		members []InclusionMember
 	}
 
 	ClassSymbol struct {
 		TypeSymbol
+		memberHolderBase
 		methods map[string]SymbolRef
+	}
+
+	RecordSymbol struct {
+		TypeSymbol
+		memberHolderBase
+	}
+
+	ObjectTypeSymbol struct {
+		TypeSymbol
+		memberHolderBase
 	}
 
 	FieldDefault struct {
@@ -234,8 +277,9 @@ type (
 
 	functionSymbol struct {
 		symbolBase
-		signature         FunctionSignature
-		defaultableParams DefaultableParamInfo
+		signature            FunctionSignature
+		defaultableParams    DefaultableParamInfo
+		includedRecordParams IncludedRecordParamInfo
 	}
 
 	monomorphicFunctionSymbol struct {
@@ -243,19 +287,20 @@ type (
 		polymorhpicFn SymbolRef
 	}
 
-	genericFunctionSymbol struct {
+	containerGenericFunctionSymbol struct {
 		name          string
 		space         *SymbolSpace
-		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
+		monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef
 		paramNames    []string
 	}
 
 	dependentlyTypedFunctionSymbol struct {
 		symbolBase
-		paramNames    []string
-		nRequiredArgs int
-		Flags         FuncSymbolFlags
-		defaultable   DefaultableParamInfo
+		paramNames           []string
+		nRequiredArgs        int
+		Flags                FuncSymbolFlags
+		defaultable          DefaultableParamInfo
+		includedRecordParams IncludedRecordParamInfo
 
 		// Populated by type resolver at stage 4.
 		paramTypes []semtypes.SemType
@@ -280,6 +325,11 @@ type (
 	DefaultableParamInfo struct {
 		params      []DefaultableParam
 		defaultable []bool
+	}
+
+	IncludedRecordParamInfo struct {
+		params     []bool
+		fieldNames [][]string
 	}
 )
 
@@ -318,39 +368,39 @@ type FieldDescriptor struct {
 	ty           semtypes.SemType
 	flags        FieldDescriptorFlag
 	DefaultFnRef SymbolRef
-	visibility   Visibility
+	isPublic     bool
 }
 
-func NewFieldDescriptor(name string, flags FieldDescriptorFlag, visibility Visibility) FieldDescriptor {
-	return FieldDescriptor{name: name, flags: flags, visibility: visibility}
+func NewFieldDescriptor(name string, flags FieldDescriptorFlag, isPublic bool) FieldDescriptor {
+	return FieldDescriptor{name: name, flags: flags, isPublic: isPublic}
 }
 
 func (f *FieldDescriptor) MemberName() string                { return f.name }
 func (f *FieldDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindField }
 func (f *FieldDescriptor) MemberType() semtypes.SemType      { return f.ty }
 func (f *FieldDescriptor) SetMemberType(ty semtypes.SemType) { f.ty = ty }
-func (f *FieldDescriptor) Visibility() Visibility            { return f.visibility }
+func (f *FieldDescriptor) IsPublic() bool                    { return f.isPublic }
 func (f *FieldDescriptor) IsReadonly() bool                  { return f.flags&FieldDescriptorReadonly != 0 }
 func (f *FieldDescriptor) IsOptional() bool                  { return f.flags&FieldDescriptorOptional != 0 }
 func (f *FieldDescriptor) HasDefault() bool                  { return f.flags&FieldDescriptorHasDefault != 0 }
 
 type MethodDescriptor struct {
-	name       string
-	kind       InclusionMemberKind
-	ty         semtypes.SemType
-	MethodRef  SymbolRef
-	visibility Visibility
+	name      string
+	kind      InclusionMemberKind
+	ty        semtypes.SemType
+	MethodRef SymbolRef
+	isPublic  bool
 }
 
-func NewMethodDescriptor(name string, kind InclusionMemberKind, visibility Visibility, methodRef SymbolRef) MethodDescriptor {
-	return MethodDescriptor{name: name, kind: kind, visibility: visibility, MethodRef: methodRef}
+func NewMethodDescriptor(name string, kind InclusionMemberKind, isPublic bool, methodRef SymbolRef) MethodDescriptor {
+	return MethodDescriptor{name: name, kind: kind, isPublic: isPublic, MethodRef: methodRef}
 }
 
 func (m *MethodDescriptor) MemberName() string                { return m.name }
 func (m *MethodDescriptor) MemberKind() InclusionMemberKind   { return m.kind }
 func (m *MethodDescriptor) MemberType() semtypes.SemType      { return m.ty }
 func (m *MethodDescriptor) SetMemberType(ty semtypes.SemType) { m.ty = ty }
-func (m *MethodDescriptor) Visibility() Visibility            { return m.visibility }
+func (m *MethodDescriptor) IsPublic() bool                    { return m.isPublic }
 
 type RestTypeDescriptor struct {
 	ty semtypes.SemType
@@ -377,10 +427,15 @@ var (
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
 	_ Symbol                         = &ClassSymbol{}
+	_ Symbol                         = &RecordSymbol{}
+	_ Symbol                         = &ObjectTypeSymbol{}
+	_ MemberCarrier                  = &ClassSymbol{}
+	_ MemberCarrier                  = &RecordSymbol{}
+	_ MemberCarrier                  = &ObjectTypeSymbol{}
 	_ Symbol                         = &ValueSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
-	_ GenericFunctionSymbol          = &genericFunctionSymbol{}
+	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
 	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
 	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
 	_ Symbol                         = &SymbolRef{}
@@ -481,6 +536,12 @@ func mapToLangPrefixIfNeeded(prefix string) string {
 		return "lang.int"
 	case "array":
 		return "lang.array"
+	case "map":
+		return "lang.map"
+	case "string":
+		return "lang.string"
+	case "xml":
+		return "lang.xml"
 	default:
 		return prefix
 	}
@@ -502,6 +563,18 @@ func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) 
 
 func (ms *ModuleScope) AddSymbol(name string, symbol Symbol) {
 	ms.Main.AddSymbol(name, symbol)
+}
+
+func (ms *ModuleScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	uri, ok := ms.XMLNS[prefix]
+	if !ok {
+		return "", nil, false
+	}
+	return uri, ms, true
+}
+
+func (ms *ModuleScope) DefineXMLNS(prefix, uri string) {
+	ms.XMLNS[prefix] = uri
 }
 
 func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
@@ -557,6 +630,24 @@ func (bs *BlockScopeBase) MainSpace() *SymbolSpace {
 	return bs.Main
 }
 
+func (bs *BlockScopeBase) DefineXMLNS(prefix, uri string) {
+	bs.XMLNS[prefix] = uri
+}
+
+func (s *BlockScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	if uri, ok := s.XMLNS[prefix]; ok {
+		return uri, s, true
+	}
+	return s.Parent.LookupXMLNS(prefix)
+}
+
+func (s *FunctionScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	if uri, ok := s.XMLNS[prefix]; ok {
+		return uri, s, true
+	}
+	return s.Parent.LookupXMLNS(prefix)
+}
+
 func (ba *symbolBase) Name() string {
 	return ba.name
 }
@@ -605,19 +696,59 @@ func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
 }
 
-func (ts *TypeSymbol) InclusionMembers() []InclusionMember { return ts.inclusionMembers }
-func (ts *TypeSymbol) AddInclusionMember(m InclusionMember) {
-	ts.inclusionMembers = append(ts.inclusionMembers, m)
+// MemberCarrier is implemented by symbols that carry direct + inclusion-inherited members.
+// TypeSymbol does not implement this; only RecordSymbol, ClassSymbol, and ObjectTypeSymbol do.
+type MemberCarrier interface {
+	Members() []InclusionMember
+	AddMember(InclusionMember)
+	FieldDefaults() []FieldDefault
 }
 
-func (ts *TypeSymbol) FieldDefaults() []FieldDefault {
+func (m *memberHolderBase) Members() []InclusionMember { return m.members }
+func (m *memberHolderBase) AddMember(im InclusionMember) {
+	m.members = append(m.members, im)
+}
+
+func (m *memberHolderBase) FieldDefaults() []FieldDefault {
 	var defaults []FieldDefault
-	for _, m := range ts.inclusionMembers {
-		if fd, ok := m.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
+	for _, im := range m.members {
+		if fd, ok := im.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
 			defaults = append(defaults, FieldDefault{FieldName: fd.name, FnRef: fd.DefaultFnRef})
 		}
 	}
 	return defaults
+}
+
+func (r *RecordSymbol) Fields() iter.Seq2[string, *FieldDescriptor] {
+	return func(yield func(string, *FieldDescriptor) bool) {
+		for _, m := range r.members {
+			fd, ok := m.(*FieldDescriptor)
+			if !ok {
+				continue
+			}
+			if !yield(fd.name, fd) {
+				return
+			}
+		}
+	}
+}
+
+func (r *RecordSymbol) Field(name string) (*FieldDescriptor, bool) {
+	for _, m := range r.members {
+		if fd, ok := m.(*FieldDescriptor); ok && fd.name == name {
+			return fd, true
+		}
+	}
+	return nil, false
+}
+
+func (r *RecordSymbol) RestField() (*RestTypeDescriptor, bool) {
+	for _, m := range r.members {
+		if rd, ok := m.(*RestTypeDescriptor); ok {
+			return rd, true
+		}
+	}
+	return nil, false
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
@@ -664,6 +795,14 @@ func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
 	fs.defaultableParams = info
 }
 
+func (fs *functionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
+	return &fs.includedRecordParams
+}
+
+func (fs *functionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+	fs.includedRecordParams = info
+}
+
 func (fs *functionSymbol) ParamNames() []string {
 	return fs.Signature().ParamNames
 }
@@ -699,6 +838,50 @@ func (d *DefaultableParamInfo) SetInferredTypedesc(index int) {
 	d.params[index] = DefaultableParam{Kind: DefaultableParamKindInferredTypedesc}
 }
 
+func NewIncludedRecordParamInfo(paramCount int) IncludedRecordParamInfo {
+	return IncludedRecordParamInfo{
+		params:     make([]bool, paramCount),
+		fieldNames: make([][]string, paramCount),
+	}
+}
+
+func (i *IncludedRecordParamInfo) Set(index int) {
+	i.params[index] = true
+}
+
+func (i *IncludedRecordParamInfo) SetFields(index int, names []string) {
+	i.fieldNames[index] = names
+}
+
+func (i *IncludedRecordParamInfo) Fields(index int) []string {
+	if index >= len(i.fieldNames) {
+		return nil
+	}
+	return i.fieldNames[index]
+}
+
+func (i *IncludedRecordParamInfo) LookupField(name string) (int, bool) {
+	for idx, names := range i.fieldNames {
+		for _, n := range names {
+			if n == name {
+				return idx, true
+			}
+		}
+	}
+	return -1, false
+}
+
+func (i *IncludedRecordParamInfo) IsIncluded(index int) bool {
+	if index >= len(i.params) {
+		return false
+	}
+	return i.params[index]
+}
+
+func (i *IncludedRecordParamInfo) Len() int {
+	return len(i.params)
+}
+
 func (fs *FunctionSignature) IsIsolated() bool {
 	return fs.Flags&FuncSymbolFlagIsolated != 0
 }
@@ -729,6 +912,22 @@ func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 	}
 }
 
+func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
+	return RecordSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+	}
+}
+
+func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
+	return ObjectTypeSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+	}
+}
+
 func (c *ClassSymbol) SetMethods(methods map[string]SymbolRef) {
 	c.methods = methods
 }
@@ -738,59 +937,67 @@ func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
 	return ref, ok
 }
 
-func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
-	return &genericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef) ContainerGenericFunctionSymbol {
+	return &containerGenericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
 }
 
-func (s *genericFunctionSymbol) Name() string {
+func (s *containerGenericFunctionSymbol) Name() string {
 	return s.name
 }
 
-func (s *genericFunctionSymbol) ParamNames() []string {
+func (s *containerGenericFunctionSymbol) ParamNames() []string {
 	return s.paramNames
 }
 
-func (s *genericFunctionSymbol) Type() semtypes.SemType {
+func (s *containerGenericFunctionSymbol) Type() semtypes.SemType {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Kind() SymbolKind {
+func (s *containerGenericFunctionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
 }
 
-func (s *genericFunctionSymbol) SetType(_ semtypes.SemType) {
+func (s *containerGenericFunctionSymbol) SetType(_ semtypes.SemType) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) IsPublic() bool {
+func (s *containerGenericFunctionSymbol) IsPublic() bool {
 	return true
 }
 
-func (s *genericFunctionSymbol) Signature() FunctionSignature {
+func (s *containerGenericFunctionSymbol) Signature() FunctionSignature {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+func (s *containerGenericFunctionSymbol) SetSignature(_ FunctionSignature) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
+func (s *containerGenericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
 	return &DefaultableParamInfo{}
 }
 
-func (s *genericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
+func (s *containerGenericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Copy() Symbol {
+func (s *containerGenericFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType) SymbolRef {
-	return s.monomorphizer(s, args)
+func (s *containerGenericFunctionSymbol) SetIncludedRecordParams(_ IncludedRecordParamInfo) {
+	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Space() *SymbolSpace {
+func (s *containerGenericFunctionSymbol) Copy() Symbol {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *containerGenericFunctionSymbol) Monomorphize(containerTy semtypes.SemType) SymbolRef {
+	return s.monomorphizer(s, containerTy)
+}
+
+func (s *containerGenericFunctionSymbol) Space() *SymbolSpace {
 	return s.space
 }
 
@@ -827,6 +1034,14 @@ func (s *dependentlyTypedFunctionSymbol) DefaultableParams() *DefaultableParamIn
 
 func (s *dependentlyTypedFunctionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
 	s.defaultable = info
+}
+
+func (s *dependentlyTypedFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
+	return &s.includedRecordParams
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+	s.includedRecordParams = info
 }
 
 func (s *dependentlyTypedFunctionSymbol) ParamNames() []string { return s.paramNames }
@@ -868,9 +1083,10 @@ func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name
 	}
 	return &monomorphicFunctionSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase:        symbolBase{name: name, ty: nil, isPublic: s.isPublic},
-			signature:         sig,
-			defaultableParams: s.defaultable,
+			symbolBase:           symbolBase{name: name, ty: nil, isPublic: s.isPublic},
+			signature:            sig,
+			defaultableParams:    s.defaultable,
+			includedRecordParams: s.includedRecordParams,
 		},
 		polymorhpicFn: origRef,
 	}

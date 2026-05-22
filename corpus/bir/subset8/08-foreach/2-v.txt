@@ -41,17 +41,16 @@ class WordIterator {
       %13 = self[%14];
       %10 = %13[%11];
       val = %10;
-      %18 = ConstantLoad idx
-      %17 = self[%18];
-      %19 = %17;
-      %20 = ConstantLoad 1
-      %21 = %20;
-      %16 = + %19 %21;
-      %22 = ConstantLoad idx
-      self[%22] = %16;
-      %23 = ConstantLoad value
-      %24 = newMap {| value: string, never... |}{%23=val}
-      %0 = %24;
+      %16 = ConstantLoad idx
+      %17 = self[%16];
+      %18 = %17;
+      %19 = ConstantLoad 1
+      %20 = %19;
+      %21 = + %18 %20;
+      self[%16] = %21;
+      %22 = ConstantLoad value
+      %23 = newMap {| value: string, never... |}{%22=val}
+      %0 = %23;
       return;
     }
   }
@@ -64,7 +63,7 @@ class Words {
       %2 = ConstantLoad hello
       %3 = ConstantLoad world
       %4 = ConstantLoad 2
-      %5 = newArray [string, string, never...][%4]{%2, %3}
+      %5 = newArray [string...][%4]{%2, %3}
       %6 = ConstantLoad data
       self[%6] = %5;
       return;

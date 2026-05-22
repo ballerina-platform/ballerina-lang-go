@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 
 	"ballerina-lang-go/model"
@@ -205,10 +204,39 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printMarkDownDeprecatedParametersDocumentation(t)
 	case *BLangMarkdownReferenceDocumentation:
 		p.printMarkdownReferenceDocumentation(t)
+	case *BLangXMLSequenceLiteral:
+		p.printXMLSequenceLiteral(t)
+	case *BLangXMLElementLiteral:
+		p.printXMLElementLiteral(t)
+	case *BLangXMLAttribute:
+		p.printXMLAttribute(t)
+	case *BLangXMLPILiteral:
+		p.printXMLPILiteral(t)
+	case *BLangXMLCommentLiteral:
+		p.printXMLCommentLiteral(t)
+	case *BLangXMLTextLiteral:
+		p.printXMLTextLiteral(t)
+	case *BLangXMLNS:
+		p.printXMLNS(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
 	}
+}
+
+func (p *PrettyPrinter) printXMLNS(node *BLangXMLNS) {
+	p.startNode()
+	p.printString("xmlns")
+	p.indentLevel++
+	if uri := node.GetNamespaceURI(); uri != nil {
+		p.PrintInner(uri.(BLangNode))
+	}
+	if prefix := node.GetPrefix(); prefix != nil {
+		p.printString("as")
+		p.printString(prefix.GetValue())
+	}
+	p.indentLevel--
+	p.endNode()
 }
 
 func (p *PrettyPrinter) printCompoundAssignment(t *BLangCompoundAssignment) {
@@ -257,6 +285,17 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printSourceKind(sourceKind SourceKind) {
+	switch sourceKind {
+	case SourceKind_REGULAR_SOURCE:
+		p.printString("regular-source")
+	case SourceKind_TEST_SOURCE:
+		p.printString("test-source")
+	default:
+		panic(fmt.Sprintf("Unsupported source kind: %d", int(sourceKind)))
+	}
+}
+
 func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	p.startNode()
 	p.printString("package")
@@ -288,17 +327,6 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 
 func (p *PrettyPrinter) printBLangNodeBase(node *bLangNodeBase) {
 	// no-op
-}
-
-func (p *PrettyPrinter) printSourceKind(sourceKind model.SourceKind) {
-	switch sourceKind {
-	case model.SourceKind_REGULAR_SOURCE:
-		p.printString("regular-source")
-	case model.SourceKind_TEST_SOURCE:
-		p.printString("test-source")
-	default:
-		panic("Unsupported source kind: " + strconv.Itoa(int(sourceKind)))
-	}
 }
 
 func (p *PrettyPrinter) startNode() {
@@ -348,8 +376,68 @@ func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
 	p.printString(string(opKind))
 }
 
-func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
+func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
 	p.printString(string(typeKind))
+}
+
+func (p *PrettyPrinter) printXMLSequenceLiteral(node *BLangXMLSequenceLiteral) {
+	p.startNode()
+	p.printString("xml-sequence-literal")
+	p.indentLevel++
+	for _, child := range node.Children {
+		p.PrintInner(child.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLElementLiteral(node *BLangXMLElementLiteral) {
+	p.startNode()
+	p.printString("xml-element-literal")
+	p.printString(node.Name)
+	p.indentLevel++
+	for i := range node.Attrs {
+		p.PrintInner(&node.Attrs[i])
+	}
+	if node.Content != nil {
+		p.PrintInner(node.Content.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLAttribute(node *BLangXMLAttribute) {
+	p.startNode()
+	p.printString("xml-attribute")
+	p.printString(node.Name)
+	if node.Value != nil {
+		p.indentLevel++
+		p.PrintInner(node.Value.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLPILiteral(node *BLangXMLPILiteral) {
+	p.startNode()
+	p.printString("xml-pi-literal")
+	p.printString(node.Target)
+	p.printString(node.Data)
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLCommentLiteral(node *BLangXMLCommentLiteral) {
+	p.startNode()
+	p.printString("xml-comment-literal")
+	p.printString(node.Body)
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLTextLiteral(node *BLangXMLTextLiteral) {
+	p.startNode()
+	p.printString("xml-text-literal")
+	p.printString(node.Body)
+	p.endNode()
 }
 
 // Literal and basic expression printers
@@ -622,12 +710,6 @@ func (p *PrettyPrinter) printSimpleVariableDef(node *BLangSimpleVariableDef) {
 	p.printString("var-def")
 	p.indentLevel++
 	p.PrintInner(node.Var)
-	if node.IsInFork {
-		p.printString("in-fork")
-	}
-	if node.IsWorker {
-		p.printString("is-worker")
-	}
 	p.indentLevel--
 	p.endNode()
 }
@@ -686,7 +768,7 @@ func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
 	p.printString("from-clause")
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
-		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+		p.PrintInner(node.VariableDefinitionNode)
 	}
 	if node.Collection != nil {
 		p.PrintInner(node.Collection)
@@ -704,7 +786,7 @@ func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
 	}
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
-		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+		p.PrintInner(node.VariableDefinitionNode)
 	}
 	if node.Collection != nil {
 		p.PrintInner(node.Collection)
@@ -721,7 +803,7 @@ func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
 	p.printString("let-clause")
 	p.indentLevel++
 	for i := range node.LetVarDeclarations {
-		p.PrintInner(node.LetVarDeclarations[i].(BLangNode))
+		p.PrintInner(&node.LetVarDeclarations[i])
 	}
 	p.indentLevel--
 	p.endNode()
@@ -871,9 +953,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 
 	// Print markdown documentation if present
 	if node.MarkdownDocumentationAttachment != nil {
-		if doc, ok := node.MarkdownDocumentationAttachment.(*BLangMarkdownDocumentation); ok {
+		if bn, ok := node.MarkdownDocumentationAttachment.(BLangNode); ok {
 			p.indentLevel++
-			p.PrintInner(doc)
+			p.PrintInner(bn)
 			p.indentLevel--
 			p.addSpaceBeforeNode = true
 		}
@@ -1211,7 +1293,7 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 	if node.ReturnType != nil {
 		p.printString("(return-type")
 		p.indentLevel++
-		p.PrintInner(node.ReturnType.(BLangNode))
+		p.PrintInner(node.ReturnType)
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -1430,13 +1512,13 @@ func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
 		p.printString("isolated")
 	}
 	switch node.NetworkQuals {
-	case model.ObjectNetworkQualsClient:
+	case ObjectNetworkQualsClient:
 		p.printString("client")
-	case model.ObjectNetworkQualsService:
+	case ObjectNetworkQualsService:
 		p.printString("service")
 	}
 	p.indentLevel++
-	members := slices.SortedFunc(node.Members(), func(a, b model.ObjectMember) int {
+	members := slices.SortedFunc(node.Members(), func(a, b ObjectMember) int {
 		return cmp.Compare(a.Name(), b.Name())
 	})
 	for _, member := range members {
@@ -1450,7 +1532,7 @@ func (p *PrettyPrinter) printObjectField(node *BObjectField) {
 	p.startNode()
 	p.printString("field")
 	p.printString(node.Name())
-	if node.Visibility() == model.VisibilityPublic {
+	if node.IsPublic() {
 		p.printString("public")
 	}
 	p.indentLevel++
@@ -1463,7 +1545,7 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 	p.startNode()
 	p.printString("method-decl")
 	p.printString(node.Name())
-	if node.Visibility() == model.VisibilityPublic {
+	if node.IsPublic() {
 		p.printString("public")
 	}
 	p.printString("(")
@@ -1714,7 +1796,7 @@ func (p *PrettyPrinter) printMatchClause(node *BLangMatchClause) {
 		p.startNode()
 		p.printString("match-guard")
 		p.indentLevel++
-		p.PrintInner(node.Guard.(BLangNode))
+		p.PrintInner(node.Guard)
 		p.indentLevel--
 		p.endNode()
 	}

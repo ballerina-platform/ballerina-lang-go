@@ -34,7 +34,7 @@ main() -> nil{
   }
   bb1 {
     $desugar$1 = %8;
-    %10 = newMap error|{| int... |}{}
+    %10 = newMap {| int... |}{}
     $desugar$2 = %10;
     %12 = newMap mapping{}
     $desugar$3 = %12;
@@ -105,7 +105,7 @@ main() -> nil{
   }
   bb10 {
     $desugar$8 = %22;
-    %24 = newMap error|{| int... |}{}
+    %24 = newMap {| int... |}{}
     $desugar$9 = %24;
     %26 = newMap mapping{}
     $desugar$10 = %26;

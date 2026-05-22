@@ -28,8 +28,8 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type desugaredNode[E model.Node] struct {
-	initStmts       []model.StatementNode
+type desugaredNode[E ast.Node] struct {
+	initStmts       []ast.StatementNode
 	replacementNode E
 }
 
@@ -114,7 +114,7 @@ type functionContext struct {
 	pkgCtx               *packageContext
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
-	loopVarStack         []ast.BLangExpression // Stack to track loop variables (nil for while, varRef for desugared foreach)
+	loopVarStack         []ast.LExpr // Stack to track loop variables (nil for while, varRef for desugared foreach)
 }
 
 var _ desugarContext = &functionContext{}
@@ -157,7 +157,7 @@ func (ctx *functionContext) currentScope() model.Scope {
 	return ctx.scopeStack[len(ctx.scopeStack)-1]
 }
 
-func (ctx *functionContext) pushLoopVar(varRef ast.BLangExpression) {
+func (ctx *functionContext) pushLoopVar(varRef ast.LExpr) {
 	ctx.loopVarStack = append(ctx.loopVarStack, varRef)
 }
 
@@ -168,7 +168,7 @@ func (ctx *functionContext) popLoopVar() {
 	ctx.loopVarStack = ctx.loopVarStack[:len(ctx.loopVarStack)-1]
 }
 
-func (ctx *functionContext) currentLoopVar() ast.BLangExpression {
+func (ctx *functionContext) currentLoopVar() ast.LExpr {
 	if len(ctx.loopVarStack) == 0 {
 		return nil
 	}
@@ -262,54 +262,179 @@ func (ctx *functionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 	return name, ref
 }
 
-func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
-	var initStmts []ast.BLangStatement
+// moduleInitNode is a unified handle over either a module-level constant or a
+// module-level variable for the purpose of building the synthetic init function
+// in dependency order.
+type moduleInitNode struct {
+	sym  model.SymbolRef
+	expr ast.BLangExpression // nil if the declaration has no initializer
+	name *ast.BLangIdentifier
+}
 
+func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
+	nodes := make([]moduleInitNode, 0, len(pkg.GlobalVars)+len(pkg.Constants))
 	for i := range pkg.GlobalVars {
-		globalVar := &pkg.GlobalVars[i]
-		if globalVar.Expr == nil {
-			continue
+		gv := &pkg.GlobalVars[i]
+		var expr ast.BLangExpression
+		if gv.Expr != nil {
+			expr = gv.Expr.(ast.BLangExpression)
 		}
-		initExpr := globalVar.Expr.(ast.BLangExpression)
-		basePos := initExpr.GetPosition()
-		varRef := &ast.BLangSimpleVarRef{
-			VariableName: globalVar.Name,
-		}
-		varRef.SetSymbol(globalVar.Symbol())
-		varRef.SetDeterminedType(globalVar.GetDeterminedType())
-		assignment := &ast.BLangAssignment{
-			VarRef: varRef,
-			Expr:   initExpr,
-		}
-		assignment.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(assignment, basePos)
-
-		initStmts = append(initStmts, assignment)
-		globalVar.Expr = nil
+		nodes = append(nodes, moduleInitNode{
+			sym:  gv.Symbol(),
+			expr: expr,
+			name: gv.Name,
+		})
 	}
-
 	for i := range pkg.Constants {
-		constant := &pkg.Constants[i]
-		if constant.Expr == nil {
+		c := &pkg.Constants[i]
+		var expr ast.BLangExpression
+		if c.Expr != nil {
+			expr = c.Expr.(ast.BLangExpression)
+		}
+		nodes = append(nodes, moduleInitNode{
+			sym:  c.Symbol(),
+			expr: expr,
+			name: c.Name,
+		})
+	}
+	return nodes
+}
+
+// We desugar by moving all these to the init function, so they should no longer be there
+func clearModuleInitExprs(pkg *ast.BLangPackage) {
+	for i := range pkg.GlobalVars {
+		pkg.GlobalVars[i].Expr = nil
+	}
+	for i := range pkg.Constants {
+		pkg.Constants[i].Expr = nil
+	}
+}
+
+// Accumulate all the nodes referred by a given node. Assume all references to be valid
+// (semantic analysis should have cought any invalid cases) and is agnostic towards the exact expression
+type dependencyVisitor struct {
+	compilerCtx *context.CompilerContext
+	nodeSet     map[model.SymbolRef]int // symbol → index into nodes slice
+	deps        map[int]struct{}
+}
+
+// mark current node depnds on on the given
+func (v *dependencyVisitor) depends(ref model.SymbolRef) {
+	unnarrowed := v.compilerCtx.UnnarrowedSymbol(ref)
+	if idx, ok := v.nodeSet[unnarrowed]; ok {
+		v.deps[idx] = struct{}{}
+	}
+}
+
+func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.BLangConstRef:
+		v.depends(n.Symbol())
+	case *ast.BLangSimpleVarRef:
+		v.depends(n.Symbol())
+	}
+	return v
+}
+
+func (v *dependencyVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
+
+func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleInitNode) ([]int, bool) {
+	nodeSet := make(map[model.SymbolRef]int, len(nodes))
+	for i, n := range nodes {
+		nodeSet[n.sym] = i
+	}
+
+	deps := make([][]int, len(nodes))
+	for i := range nodes {
+		if nodes[i].expr == nil {
 			continue
 		}
-		initExpr := constant.Expr.(ast.BLangExpression)
-		basePos := initExpr.GetPosition()
-		varRef := &ast.BLangSimpleVarRef{
-			VariableName: constant.Name,
+		v := &dependencyVisitor{
+			compilerCtx: compilerCtx,
+			nodeSet:     nodeSet,
+			deps:        make(map[int]struct{}),
 		}
-		varRef.SetSymbol(constant.Symbol())
-		varRef.SetDeterminedType(constant.GetDeterminedType())
-		assignment := &ast.BLangAssignment{
-			VarRef: varRef,
-			Expr:   initExpr,
+		ast.Walk(v, nodes[i].expr)
+		for d := range v.deps {
+			deps[i] = append(deps[i], d)
 		}
-		assignment.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(assignment, basePos)
-
-		initStmts = append(initStmts, assignment)
-		constant.Expr = nil
 	}
+
+	// https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search
+	const (
+		unvisited = 0
+		inStack   = 1
+		done      = 2
+	)
+	state := make([]int, len(nodes))
+	order := make([]int, 0, len(nodes))
+
+	var visit func(i int) bool
+	visit = func(i int) bool {
+		switch state[i] {
+		case inStack:
+			compilerCtx.InternalError(
+				fmt.Sprintf("invalid cycle detected for %s", nodes[i].name.GetValue()),
+				nodes[i].name.GetPosition(),
+			)
+			return false
+		case done:
+			return true
+		default:
+			state[i] = inStack
+			for _, d := range deps[i] {
+				if !visit(d) {
+					return false
+				}
+			}
+			state[i] = done
+			order = append(order, i)
+			return true
+		}
+	}
+
+	for i := range nodes {
+		if !visit(i) {
+			return nil, false
+		}
+	}
+	return order, true
+}
+
+func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNode) ast.StatementNode {
+	initExpr := node.expr
+	basePos := initExpr.GetPosition()
+	varRef := &ast.BLangSimpleVarRef{
+		VariableName: node.name,
+	}
+	varRef.SetSymbol(node.sym)
+	varRef.SetDeterminedType(compilerCtx.SymbolType(node.sym))
+	assignment := &ast.BLangAssignment{
+		VarRef: varRef,
+		Expr:   initExpr,
+	}
+	assignment.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(assignment, basePos)
+	return assignment
+}
+
+func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
+	var initStmts []ast.StatementNode
+
+	nodes := collectModuleInitNodes(pkg)
+	order, ok := toplogicallySortInits(compilerCtx, nodes)
+	if !ok {
+		pkgCtx.internalError("module init dependency ordering failed")
+		return
+	}
+	for _, idx := range order {
+		node := nodes[idx]
+		if node.expr == nil {
+			continue
+		}
+		initStmts = append(initStmts, buildInitAssignment(compilerCtx, node))
+	}
+	clearModuleInitExprs(pkg)
 
 	if len(initStmts) == 0 && pkg.InitFunction == nil {
 		return
@@ -357,7 +482,7 @@ func newSimpleVariable(name string, ty semtypes.SemType) *ast.BLangSimpleVariabl
 func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *ast.BLangFunction {
 	retStmt := &ast.BLangReturn{Expr: defaultExpr}
 	retStmt.SetDeterminedType(semtypes.NEVER)
-	body := &ast.BLangBlockFunctionBody{Stmts: []ast.BLangStatement{retStmt}}
+	body := &ast.BLangBlockFunctionBody{Stmts: []ast.StatementNode{retStmt}}
 	body.SetDeterminedType(semtypes.NEVER)
 
 	fn := &ast.BLangFunction{}
@@ -498,7 +623,7 @@ func (r symbolRemapper) Visit(node ast.BLangNode) ast.Visitor {
 	return r
 }
 
-func (r symbolRemapper) VisitTypeData(_ *model.TypeData) ast.Visitor {
+func (r symbolRemapper) VisitTypeData(_ *ast.TypeData) ast.Visitor {
 	return r
 }
 
@@ -596,7 +721,7 @@ func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinit
 		class.InitFunction = &fn
 	}
 
-	var initStmts []ast.BLangStatement
+	var initStmts []ast.StatementNode
 	classScope := class.Scope()
 	selfRef, ok := classScope.GetSymbol("self")
 	if !ok {
@@ -658,10 +783,7 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 
 	switch body := fn.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		result := walkBlockFunctionBody(cx, body)
-		if newBody, ok := result.replacementNode.(*ast.BLangBlockFunctionBody); ok {
-			fn.Body = newBody
-		}
+		walkBlockFunctionBody(cx, body)
 	case *ast.BLangExprFunctionBody:
 		if body.Expr != nil {
 			result := walkExpression(cx, body.Expr.(ast.BLangActionOrExpression))
@@ -670,7 +792,7 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 			if len(result.initStmts) > 0 {
 				fn.Body = convertExprBodyToBlockBody(body, result)
 			} else {
-				body.Expr = result.replacementNode
+				body.Expr = result.replacementNode.(ast.BLangExpression)
 			}
 		}
 	case *ast.BLangExternFunctionBody:
@@ -692,7 +814,7 @@ func convertExprBodyToBlockBody(
 	}
 
 	// Build block with init statements + return
-	stmts := make([]ast.BLangStatement, 0, len(result.initStmts)+1)
+	stmts := make([]ast.StatementNode, 0, len(result.initStmts)+1)
 	stmts = append(stmts, result.initStmts...)
 	stmts = append(stmts, returnStmt)
 

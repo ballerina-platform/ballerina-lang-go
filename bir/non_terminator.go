@@ -61,22 +61,27 @@ type (
 		Kind  InstructionKind
 		KeyOp *BIROperand
 		RhsOp *BIROperand
+		// Filler is set for filling load instructions on maps so the
+		// runtime can insert a fresh filler value for absent keys.
+		Filler values.FillerFactory
 	}
 
 	NewArray struct {
 		BIRInstructionBase
-		SizeOp *BIROperand
-		Type   semtypes.SemType
-		Values []*BIROperand
-		Filler values.BalValue
+		SizeOp     *BIROperand
+		Type       semtypes.SemType
+		Values     []*BIROperand
+		Filler     values.FillerFactory
+		IsReadonly bool
 	}
 
 	// JBallerina call this NewStruct but prints as NewMap
 	NewMap struct {
 		BIRInstructionBase
-		Type     semtypes.SemType
-		Values   []MappingConstructorEntry
-		Defaults []MappingConstructorDefaultEntry
+		Type       semtypes.SemType
+		Values     []MappingConstructorEntry
+		Defaults   []MappingConstructorDefaultEntry
+		IsReadonly bool
 	}
 
 	MappingConstructorDefaultEntry struct {
@@ -128,6 +133,35 @@ type (
 	PopScopeFrame struct {
 		BIRInstructionBase
 	}
+
+	NewXMLElement struct {
+		BIRInstructionBase
+		NameOp       *BIROperand
+		ChildrenOp   *BIROperand
+		AttrsOp      *BIROperand
+		NamespacesOp *BIROperand
+	}
+
+	NewXMLPI struct {
+		BIRInstructionBase
+		TargetOp *BIROperand
+		DataOp   *BIROperand
+	}
+
+	NewXMLComment struct {
+		BIRInstructionBase
+		BodyOp *BIROperand
+	}
+
+	NewXMLText struct {
+		BIRInstructionBase
+		BodyOp *BIROperand
+	}
+
+	NewXMLSequence struct {
+		BIRInstructionBase
+		Children []*BIROperand
+	}
 )
 
 type (
@@ -152,6 +186,11 @@ var (
 	_ BIRAssignInstruction    = &FPLoad{}
 	_ BIRInstruction          = &PushScopeFrame{}
 	_ BIRInstruction          = &PopScopeFrame{}
+	_ BIRAssignInstruction    = &NewXMLElement{}
+	_ BIRAssignInstruction    = &NewXMLPI{}
+	_ BIRAssignInstruction    = &NewXMLComment{}
+	_ BIRAssignInstruction    = &NewXMLText{}
+	_ BIRAssignInstruction    = &NewXMLSequence{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -268,7 +307,7 @@ func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
 }
 
-func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue, pos Location) *NewArray {
+func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.FillerFactory, isReadonly bool, pos Location) *NewArray {
 	return &NewArray{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -276,10 +315,11 @@ func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values
 			},
 			LhsOp: lhsOp,
 		},
-		Type:   typ,
-		SizeOp: sizeOp,
-		Values: values,
-		Filler: filler,
+		Type:       typ,
+		SizeOp:     sizeOp,
+		Values:     values,
+		Filler:     filler,
+		IsReadonly: isReadonly,
 	}
 }
 
@@ -337,7 +377,7 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
-func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, pos Location) *NewMap {
+func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, isReadonly bool, pos Location) *NewMap {
 	return &NewMap{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -345,9 +385,10 @@ func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []Mapping
 			},
 			LhsOp: lhsOp,
 		},
-		Type:     typ,
-		Values:   values,
-		Defaults: defaults,
+		Type:       typ,
+		Values:     values,
+		Defaults:   defaults,
+		IsReadonly: isReadonly,
 	}
 }
 
@@ -445,4 +486,73 @@ func (m *MappingConstructorKeyValueEntry) ValueOp() *BIROperand {
 
 func (m *MappingConstructorKeyValueEntry) KeyOp() *BIROperand {
 	return m.keyOp
+}
+
+func (n *NewXMLElement) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLElement) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_ELEMENT }
+
+func NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, namespacesOp *BIROperand, pos Location) *NewXMLElement {
+	return &NewXMLElement{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		NameOp:       nameOp,
+		ChildrenOp:   childrenOp,
+		AttrsOp:      attrsOp,
+		NamespacesOp: namespacesOp,
+	}
+}
+
+func (n *NewXMLPI) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLPI) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_PI }
+
+func NewXMLPIInstr(lhsOp, targetOp, dataOp *BIROperand, pos Location) *NewXMLPI {
+	return &NewXMLPI{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		TargetOp: targetOp,
+		DataOp:   dataOp,
+	}
+}
+
+func (n *NewXMLComment) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLComment) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_COMMENT }
+
+func NewXMLCommentInstr(lhsOp, bodyOp *BIROperand, pos Location) *NewXMLComment {
+	return &NewXMLComment{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		BodyOp: bodyOp,
+	}
+}
+
+func (n *NewXMLText) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLText) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_TEXT }
+
+func NewXMLTextInstr(lhsOp, bodyOp *BIROperand, pos Location) *NewXMLText {
+	return &NewXMLText{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		BodyOp: bodyOp,
+	}
+}
+
+func (n *NewXMLSequence) GetLhsOperand() *BIROperand { return n.LhsOp }
+func (n *NewXMLSequence) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_SEQUENCE }
+
+func NewXMLSequenceInstr(lhsOp *BIROperand, children []*BIROperand, pos Location) *NewXMLSequence {
+	return &NewXMLSequence{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		Children: children,
+	}
 }

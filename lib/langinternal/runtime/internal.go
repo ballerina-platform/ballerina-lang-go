@@ -18,6 +18,7 @@ package langinternalruntime
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
 	"fmt"
 	"sort"
@@ -29,7 +30,7 @@ const (
 )
 
 func initInternalModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		sortKeyRows, ok := args[0].(*values.List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be a list")
@@ -109,22 +110,22 @@ func initInternalModule(rt *runtime.Runtime) {
 			return false
 		})
 
-		reorderListInPlace(rowIndices, order)
-		reorderListInPlace(sortKeyRows, order)
+		reorderListInPlace(ctx, rowIndices, order)
+		reorderListInPlace(ctx, sortKeyRows, order)
 		for payloadIndex := 0; payloadIndex < payloadCount; payloadIndex++ {
-			reorderListInPlace(payloadLists[payloadIndex], order)
+			reorderListInPlace(ctx, payloadLists[payloadIndex], order)
 		}
 		return nil, nil
 	})
 }
 
-func reorderListInPlace(list *values.List, order []int) {
+func reorderListInPlace(ctx *extern.Context, list *values.List, order []int) {
 	old := make([]values.BalValue, list.Len())
 	for i := range list.Len() {
 		old[i] = list.Get(i)
 	}
 	for i, sourceIndex := range order {
-		list.FillingSet(i, old[sourceIndex])
+		list.FillingSet(ctx.TypeCtx, i, old[sourceIndex])
 	}
 }
 

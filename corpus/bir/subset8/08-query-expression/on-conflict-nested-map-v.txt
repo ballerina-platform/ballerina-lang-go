@@ -173,7 +173,7 @@ main() -> nil{
   }
   bb21 {
     $desugar$17 = %48;
-    %50 = newMap error|{| int... |}{}
+    %50 = newMap {| int... |}{}
     $desugar$18 = %50;
     %52 = newMap mapping{}
     $desugar$19 = %52;
