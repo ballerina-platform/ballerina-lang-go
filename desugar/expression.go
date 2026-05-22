@@ -600,7 +600,9 @@ func desugarListConstructorWithSpread(
 			if pushMember == nil {
 				return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 			}
-			initStmts = append(initStmts, &ast.BLangExpressionStmt{Expr: pushMember})
+			pushStmt := &ast.BLangExpressionStmt{Expr: pushMember}
+			setPositionIfMissing(pushStmt, pos)
+			initStmts = append(initStmts, pushStmt)
 			continue
 		}
 		initStmts = appendSpreadListPushStmts(cx, initStmts, resultRef, memberExpr, pos)
@@ -641,8 +643,10 @@ func appendSpreadListPushStmts(
 	if pushMember == nil {
 		return initStmts
 	}
+	pushStmt := &ast.BLangExpressionStmt{Expr: pushMember}
+	setPositionIfMissing(pushStmt, pos)
 	bodyStmts := []ast.BLangStatement{
-		&ast.BLangExpressionStmt{Expr: pushMember},
+		pushStmt,
 		createIncrementStmt(counterRef),
 	}
 	cond := &ast.BLangBinaryExpr{

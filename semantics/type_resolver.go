@@ -3512,7 +3512,7 @@ func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLang
 	spreadMembers := make([]bool, len(expr.Exprs))
 	hasSpread := false
 	for i, memberExpr := range expr.Exprs {
-		isSpread := isQueryAggregatedVariableReference(chain, memberExpr)
+		isSpread := expr.IsSpreadMember(i) || isQueryAggregatedVariableReference(chain, memberExpr)
 		memberTy, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
@@ -3546,7 +3546,7 @@ func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLang
 func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	spreadMembers := make([]bool, len(expr.Exprs))
 	for i, memberExpr := range expr.Exprs {
-		spreadMembers[i] = isQueryAggregatedVariableReference(chain, memberExpr)
+		spreadMembers[i] = expr.IsSpreadMember(i) || isQueryAggregatedVariableReference(chain, memberExpr)
 		if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil); !ok {
 			return nil, expressionEffect{}, false
 		}

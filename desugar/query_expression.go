@@ -1205,6 +1205,7 @@ func createQueryCounterRef(
 	counterRef := &ast.BLangSimpleVarRef{VariableName: counterVar.Name}
 	counterRef.SetSymbol(counterSymbol)
 	counterRef.SetDeterminedType(semtypes.INT)
+	setPositionIfMissing(counterRef, pos)
 	return counterRef
 }
 
@@ -2056,5 +2057,6 @@ func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, val
 	inv.ArgExprs = []ast.BLangExpression{listExpr, valueExpr}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
+	setPositionIfMissing(inv, listExpr.GetPosition())
 	return inv
 }

@@ -2762,6 +2762,7 @@ func (n *NodeBuilder) TransformTrapExpression(trapExpressionNode *tree.TrapExpre
 
 func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressionNode *tree.ListConstructorExpressionNode) BLangNode {
 	argExprList := make([]BLangExpression, 0)
+	spreadMemberIndexes := make([]int, 0)
 	listConstructorExpr := &BLangListConstructorExpr{}
 
 	expressions := listConstructorExpressionNode.Expressions()
@@ -2769,7 +2770,9 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
 		if listMember.Kind() == common.SPREAD_MEMBER {
-			panic("spread member expression handling not yet implemented")
+			spreadMember := listMember.(*tree.SpreadMemberNode)
+			memberExpr = n.createExpression(spreadMember.Expression())
+			spreadMemberIndexes = append(spreadMemberIndexes, len(argExprList))
 		} else {
 			memberExpr = n.createExpression(listMember)
 		}
@@ -2777,6 +2780,9 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 	}
 
 	listConstructorExpr.Exprs = argExprList
+	for _, index := range spreadMemberIndexes {
+		listConstructorExpr.SetSpreadMember(index)
+	}
 	listConstructorExpr.pos = getPosition(n.de(), listConstructorExpressionNode)
 	return listConstructorExpr
 }
@@ -4405,7 +4411,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformSpreadMember(spreadMemberNode *tree.SpreadMemberNode) BLangNode {
-	panic("TransformSpreadMember unimplemented")
+	return n.createExpression(spreadMemberNode.Expression()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformClientResourceAccessAction(clientResourceAccessActionNode *tree.ClientResourceAccessActionNode) BLangNode {
