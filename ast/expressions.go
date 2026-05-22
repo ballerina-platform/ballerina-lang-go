@@ -888,7 +888,7 @@ func (b *BLangListConstructorExpr) SetSpreadMember(index int) {
 }
 
 func (b *BLangListConstructorExpr) IsSpreadMember(index int) bool {
-	return index < len(b.SpreadMembers) && b.SpreadMembers[index]
+	return index >= 0 && index < len(b.SpreadMembers) && b.SpreadMembers[index]
 }
 
 func (b *BLangListConstructorExpr) HasSpreadMembers() bool {
