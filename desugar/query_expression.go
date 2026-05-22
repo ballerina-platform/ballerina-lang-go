@@ -2018,16 +2018,8 @@ func createLangInternalInvocation(
 	pos diagnostics.Location,
 ) *ast.BLangInvocation {
 	pkgName := langinternal.PackageName
-	space, ok := cx.getImportedSymbolSpace(pkgName)
-	if !ok {
-		cx.internalError(pkgName + " symbol space not found")
-		return nil
-	}
-	symbolRef, ok := space.GetSymbol(name)
-	if !ok {
-		cx.internalError(pkgName + ":" + name + " symbol not found")
-		return nil
-	}
+	space, _ := cx.getImportedSymbolSpace(pkgName)
+	symbolRef, _ := space.GetSymbol(name)
 	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
 		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "__internal"}},

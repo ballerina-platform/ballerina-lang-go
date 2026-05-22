@@ -124,39 +124,15 @@ func initInternalModule(rt *runtime.Runtime) {
 		return nil, nil
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryGroup", func(args []values.BalValue) (values.BalValue, error) {
-		if len(args) != 3 {
-			return nil, fmt.Errorf("queryGroup expects 3 arguments, got %d", len(args))
-		}
-		rows, ok := args[0].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a list")
-		}
-		keyRows, ok := args[1].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("second argument must be a list")
-		}
-		scalarFlags, ok := args[2].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("third argument must be a list")
-		}
+		rows := args[0].(*values.List)
+		keyRows := args[1].(*values.List)
+		scalarFlags := args[2].(*values.List)
 		return queryGroup(rows, keyRows, scalarFlags)
 	})
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "queryCollect", func(args []values.BalValue) (values.BalValue, error) {
-		if len(args) != 3 {
-			return nil, fmt.Errorf("queryCollect expects 3 arguments, got %d", len(args))
-		}
-		rows, ok := args[0].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a list")
-		}
-		slotCount, ok := args[1].(int64)
-		if !ok {
-			return nil, fmt.Errorf("second argument must be an int")
-		}
-		flattenFlags, ok := args[2].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("third argument must be a list")
-		}
+		rows := args[0].(*values.List)
+		slotCount := args[1].(int64)
+		flattenFlags := args[2].(*values.List)
 		return queryCollect(rows, int(slotCount), flattenFlags)
 	})
 }
@@ -175,11 +151,7 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 	slotCount := scalarFlags.Len()
 	scalarSlots := make([]bool, slotCount)
 	for slot := 0; slot < slotCount; slot++ {
-		isScalar, ok := scalarFlags.Get(slot).(bool)
-		if !ok {
-			return nil, fmt.Errorf("group scalar flag %d must be a bool", slot)
-		}
-		scalarSlots[slot] = isScalar
+		scalarSlots[slot] = scalarFlags.Get(slot).(bool)
 	}
 
 	result := values.NewList(0, semtypes.LIST, nil)
@@ -187,17 +159,11 @@ func queryGroup(rows *values.List, keyRows *values.List, scalarFlags *values.Lis
 	groupIndices := make(queryGroupIndex)
 	expectedKeyArity := -1
 	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
-		sourceRow, ok := rows.Get(rowIndex).(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("query row %d must be a list", rowIndex)
-		}
+		sourceRow := rows.Get(rowIndex).(*values.List)
 		if sourceRow.Len() != slotCount {
 			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, sourceRow.Len(), slotCount)
 		}
-		keyRow, ok := keyRows.Get(rowIndex).(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("group key row %d must be a list", rowIndex)
-		}
+		keyRow := keyRows.Get(rowIndex).(*values.List)
 		if expectedKeyArity == -1 {
 			expectedKeyArity = keyRow.Len()
 		} else if keyRow.Len() != expectedKeyArity {
@@ -357,21 +323,14 @@ func queryCollect(rows *values.List, slotCount int, flattenFlags *values.List) (
 	}
 	flattenSlots := make([]bool, slotCount)
 	for slot := 0; slot < slotCount; slot++ {
-		flatten, ok := flattenFlags.Get(slot).(bool)
-		if !ok {
-			return nil, fmt.Errorf("collect flatten flag %d must be a bool", slot)
-		}
-		flattenSlots[slot] = flatten
+		flattenSlots[slot] = flattenFlags.Get(slot).(bool)
 	}
 	resultRow := values.NewList(0, semtypes.LIST, nil)
 	for slot := 0; slot < slotCount; slot++ {
 		resultRow.Append(values.NewList(0, semtypes.LIST, nil))
 	}
 	for rowIndex := 0; rowIndex < rows.Len(); rowIndex++ {
-		row, ok := rows.Get(rowIndex).(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("query row %d must be a list", rowIndex)
-		}
+		row := rows.Get(rowIndex).(*values.List)
 		if row.Len() != slotCount {
 			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, row.Len(), slotCount)
 		}
