@@ -1565,7 +1565,39 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 }
 
 func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree.ListenerDeclarationNode) BLangNode {
-	panic("TransformListenerDeclaration unimplemented")
+	metadata := listenerDeclarationNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		panic("TransformListenerDeclaration: metadata not yet supported")
+	}
+
+	pos := getPositionWithoutMetadata(n.de(), listenerDeclarationNode)
+	nameToken := listenerDeclarationNode.VariableName()
+	namePos := getPosition(n.de(), nameToken)
+	identifier := createIdentifierFromToken(namePos, nameToken)
+
+	bLSimpleVar := createSimpleVariableNode()
+	bLSimpleVar.SetName(&identifier)
+	bLSimpleVar.pos = pos
+
+	typeDesc := listenerDeclarationNode.TypeDescriptor()
+	if typeDesc != nil && !typeDesc.IsMissing() {
+		bLSimpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+	} else {
+		bLSimpleVar.IsDeclaredWithVar = true
+	}
+
+	if initializer := listenerDeclarationNode.Initializer(); initializer != nil {
+		bLSimpleVar.SetInitialExpression(n.createExpression(initializer))
+	}
+
+	if visQual := listenerDeclarationNode.VisibilityQualifier(); visQual != nil && visQual.Kind() == common.PUBLIC_KEYWORD {
+		bLSimpleVar.SetPublic()
+	}
+
+	// Listeners are final (the binding cannot be reassigned).
+	bLSimpleVar.SetFinal()
+	bLSimpleVar.SetListener()
+	return bLSimpleVar
 }
 
 func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefinitionNode) BLangNode {
@@ -1601,7 +1633,139 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 }
 
 func (n *NodeBuilder) TransformServiceDeclaration(serviceDeclarationNode *tree.ServiceDeclarationNode) BLangNode {
-	panic("TransformServiceDeclaration unimplemented")
+	metadata := serviceDeclarationNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		panic("TransformServiceDeclaration: metadata not yet supported")
+	}
+
+	service := NewBLangService()
+	service.pos = getPositionWithoutMetadata(n.de(), serviceDeclarationNode)
+
+	n.populateServiceQualifiers(&service, serviceDeclarationNode)
+	n.populateServiceAttachPoint(&service, serviceDeclarationNode)
+	n.populateServiceAttachedExprs(&service, serviceDeclarationNode)
+
+	members := n.collectClassDefnMembers(serviceDeclarationNode.Members())
+	service.Fields = members.Fields
+	service.Methods = members.Methods
+	service.InitFunction = members.InitFunction
+	service.ResourceMethods = members.ResourceMethods
+	for _, each := range members.UnresolvedInclusions {
+		// Parser should catch these
+		n.cx.InternalError("unexpected inclusions in service decl", each.pos)
+	}
+
+	return &service
+}
+
+// populateServiceQualifiers reads the user-controllable qualifiers from the
+// service declaration. The `service` flag is already set by NewBLangService.
+func (n *NodeBuilder) populateServiceQualifiers(service *BLangService, node *tree.ServiceDeclarationNode) {
+	quals := node.Qualifiers()
+	for qual := range quals.Iterator() {
+		if qual.Kind() == common.ISOLATED_KEYWORD {
+			service.SetIsolated()
+		}
+	}
+}
+
+func (n *NodeBuilder) populateServiceAttachPoint(service *BLangService, node *tree.ServiceDeclarationNode) {
+	paths := node.AbsoluteResourcePath()
+	if node.HasDiagnostics() {
+		n.reportSyntaxDiagnostics(node)
+		return
+	}
+	for i := 0; i < paths.Size(); i++ {
+		seg := paths.Get(i)
+		tok, ok := seg.(tree.Token)
+		if !ok {
+			n.cx.InternalError("unexpected node in service attach point", getPosition(n.de(), seg))
+			continue
+		}
+		switch tok.Kind() {
+		case common.STRING_LITERAL:
+			lit, ok := n.createExpression(tok).(*BLangLiteral)
+			if !ok {
+				n.cx.InternalError("invalid service attach point literal", getPosition(n.de(), tok))
+				continue
+			}
+			if _, isString := lit.GetValue().(string); !isString {
+				n.cx.InternalError("service attach point literal must be a string", getPosition(n.de(), tok))
+				continue
+			}
+			service.AttachPointLiteral = lit
+		case common.IDENTIFIER_TOKEN:
+			ident := createIdentifierFromToken(getPosition(n.de(), tok), tok)
+			service.AbsoluteResourcePath = append(service.AbsoluteResourcePath, ident)
+		case common.SLASH_TOKEN:
+			// Slash tokens between segments are ignored.
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected token in service attach point: %v", tok.Kind()), getPosition(n.de(), tok))
+		}
+	}
+}
+
+func (n *NodeBuilder) populateServiceAttachedExprs(service *BLangService, node *tree.ServiceDeclarationNode) {
+	exprs := node.Expressions()
+	for i := 0; i < exprs.Size(); i++ {
+		service.AttachedExprs = append(service.AttachedExprs, n.createExpression(exprs.Get(i)))
+	}
+}
+
+type classDefnMembers struct {
+	Fields               []SimpleVariableNode
+	Methods              map[string]*BLangFunction
+	InitFunction         *BLangFunction
+	ResourceMethods      []*BLangResourceMethod
+	UnresolvedInclusions []*BLangUserDefinedType
+}
+
+func newClassDefnMembers() classDefnMembers {
+	return classDefnMembers{Methods: map[string]*BLangFunction{}}
+}
+
+func (n *NodeBuilder) collectClassDefnMembers(memberNodes tree.NodeList[tree.Node]) classDefnMembers {
+	members := newClassDefnMembers()
+	for i := 0; i < memberNodes.Size(); i++ {
+		member := memberNodes.Get(i)
+		switch member.Kind() {
+		case common.OBJECT_FIELD:
+			field := n.transformClassField(member.(*tree.ObjectFieldNode))
+			members.Fields = append(members.Fields, field)
+		case common.FUNCTION_DEFINITION, common.OBJECT_METHOD_DEFINITION:
+			n.addCollectedMethod(&members, member.(*tree.FunctionDefinition))
+		case common.RESOURCE_ACCESSOR_DEFINITION:
+			rm := n.createResourceMethodNode(member.(*tree.FunctionDefinition))
+			members.ResourceMethods = append(members.ResourceMethods, rm)
+		case common.TYPE_REFERENCE:
+			typeRef := member.(*tree.TypeReferenceNode)
+			members.UnresolvedInclusions = append(members.UnresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
+		default:
+			panic("collectClassDefnMembers: unsupported member kind")
+		}
+	}
+	return members
+}
+
+func (n *NodeBuilder) addCollectedMethod(members *classDefnMembers, funcDef *tree.FunctionDefinition) {
+	bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
+	bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
+	bLFunction.SetAttached()
+
+	funcName := bLFunction.Name.Value
+	if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
+		members.InitFunction = bLFunction
+		return
+	}
+	if bLFunction.IsRemote() {
+		funcName = model.RemoteMethodName(funcName)
+		bLFunction.Name.Value = funcName
+	}
+	if _, exists := members.Methods[funcName]; exists {
+		n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
+		return
+	}
+	members.Methods[funcName] = bLFunction
 }
 
 func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree.AssignmentStatementNode) BLangNode {
@@ -2436,7 +2600,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
 					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type()).(BType)
 				} else {
-					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: TypeKind_NIL}
+					nilRet := &BLangValueType{TypeKind: TypeKind_NIL}
+					nilRet.pos = diagnostics.NewBuiltinLocation()
+					bMethod.ReturnTypeDescriptor = nilRet
 				}
 			}
 
@@ -4788,44 +4954,12 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 	// Handle class type qualifiers
 	n.setClassQualifiers(&blangClass, classDefinitionNode.ClassTypeQualifiers())
 
-	// Process members
-	members := classDefinitionNode.Members()
-	for i := 0; i < members.Size(); i++ {
-		member := members.Get(i)
-		switch member.Kind() {
-		case common.OBJECT_FIELD:
-			field := n.transformClassField(member.(*tree.ObjectFieldNode))
-			blangClass.AddField(field)
-		case common.FUNCTION_DEFINITION, common.OBJECT_METHOD_DEFINITION:
-			funcDef := member.(*tree.FunctionDefinition)
-			bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
-			bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
-			bLFunction.SetAttached()
-
-			funcName := bLFunction.Name.Value
-			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
-				blangClass.InitFunction = bLFunction
-			} else {
-				if bLFunction.IsRemote() {
-					funcName = model.RemoteMethodName(funcName)
-					bLFunction.Name.Value = funcName
-				}
-				if blangClass.GetMethod(funcName) != nil {
-					n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
-				}
-				blangClass.AddMethod(funcName, bLFunction)
-			}
-		case common.RESOURCE_ACCESSOR_DEFINITION:
-			funcDef := member.(*tree.FunctionDefinition)
-			rm := n.createResourceMethodNode(funcDef)
-			blangClass.ResourceMethods = append(blangClass.ResourceMethods, rm)
-		case common.TYPE_REFERENCE:
-			typeRef := member.(*tree.TypeReferenceNode)
-			blangClass.unresolvedInclusions = append(blangClass.unresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
-		default:
-			panic("TransformClassDefinition: unsupported member kind")
-		}
-	}
+	members := n.collectClassDefnMembers(classDefinitionNode.Members())
+	blangClass.Fields = members.Fields
+	blangClass.Methods = members.Methods
+	blangClass.InitFunction = members.InitFunction
+	blangClass.ResourceMethods = members.ResourceMethods
+	blangClass.unresolvedInclusions = members.UnresolvedInclusions
 
 	return &blangClass
 }

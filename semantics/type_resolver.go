@@ -478,6 +478,7 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 			t.classSymbolByType[t.semtypeInterner.Intern(ty)] = classDef.Symbol()
 		}
 	}
+
 	for _, importedSpace := range t.importedSymbols {
 		for i, sym := range importedSpace.Main.Symbols() {
 			if _, ok := sym.(model.ClassSymbol); ok {
@@ -567,6 +568,7 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 		mat := semtypes.ToObjectAtomicType(t.typeContext(), semType)
 		t.setClassAtomSymbol(mat, classDef.Symbol())
 	}
+
 	for _, symbolSpace := range importedSymbols {
 		for ref, sym := range symbolSpace.PublicMainSymbols() {
 			if sym.Kind() != model.SymbolKindType {
@@ -595,24 +597,31 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	fns := packageFunctionDecls(pkg)
 
 	allImports := make(map[string]ast.BLangImportPackage)
-	for i := range pkg.ClassDefinitions {
-		classDef := &pkg.ClassDefinitions[i]
+	resolveFieldInitsInScope := func(scope model.Scope, fields []ast.SimpleVariableNode) {
 		ft := &functionTypeResolver{
 			parentResolver:      p,
 			tyCtx:               semtypes.ContextFrom(p.typeEnv()),
 			implicitImports:     make(map[string]ast.BLangImportPackage),
 			mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
 			monoCounters:        make(map[string]int),
-			scope:               classDef.Scope(),
+			scope:               scope,
 			mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		}
-		for _, fieldNode := range classDef.Fields {
+		for _, fieldNode := range fields {
 			field := fieldNode.(*ast.BLangSimpleVariable)
 			if field.Expr != nil {
 				resolveActionOrExpression(ft, nil, field.Expr.(ast.BLangExpression), field.GetDeterminedType())
 			}
 		}
 		maps.Copy(allImports, ft.implicitImports)
+	}
+	for i := range pkg.ClassDefinitions {
+		c := &pkg.ClassDefinitions[i]
+		resolveFieldInitsInScope(c.Scope(), c.Fields)
+	}
+	for i := range pkg.Services {
+		s := &pkg.Services[i]
+		resolveFieldInitsInScope(s.Scope(), s.Fields)
 	}
 
 	resolvers := make([]*functionTypeResolver, len(fns))
@@ -665,15 +674,24 @@ func packageFunctionDecls(pkg *ast.BLangPackage) []functionDecl {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		if classDef.InitFunction != nil {
-			fns = append(fns, classDef.InitFunction)
-		}
-		for name := range classDef.Methods {
-			fns = append(fns, classDef.Methods[name])
-		}
-		for _, rm := range classDef.ResourceMethods {
-			fns = append(fns, rm)
-		}
+		fns = appendClassBodyMethodDecls(fns, classDef.InitFunction, classDef.Methods, classDef.ResourceMethods)
+	}
+	for i := range pkg.Services {
+		s := &pkg.Services[i]
+		fns = appendClassBodyMethodDecls(fns, s.InitFunction, s.Methods, s.ResourceMethods)
+	}
+	return fns
+}
+
+func appendClassBodyMethodDecls(fns []functionDecl, initFn *ast.BLangFunction, methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod) []functionDecl {
+	if initFn != nil {
+		fns = append(fns, initFn)
+	}
+	for name := range methods {
+		fns = append(fns, methods[name])
+	}
+	for _, rm := range resourceMethods {
+		fns = append(fns, rm)
 	}
 	return fns
 }
@@ -775,6 +793,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		classDef := &pkg.ClassDefinitions[i]
 		t.typeDefnNodes[classDef.Symbol()] = classDef
 	}
+
 	for i := range pkg.Constants {
 		t.packageConstants[pkg.Constants[i].Symbol()] = &pkg.Constants[i]
 	}
@@ -791,6 +810,11 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		if _, ok := resolveTypeDefinition(t, classDef, 0); !ok {
+			return
+		}
+	}
+	for i := range pkg.Services {
+		if !resolveServiceType(t, &pkg.Services[i], 0) {
 			return
 		}
 	}
@@ -832,6 +856,9 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		classDef.SetDeterminedType(semtypes.NEVER)
 		classDef.Name.SetDeterminedType(semtypes.NEVER)
 	}
+	for i := range pkg.Services {
+		pkg.Services[i].SetDeterminedType(semtypes.NEVER)
+	}
 	pkg.SetDeterminedType(semtypes.NEVER)
 	for i := range pkg.CompUnits {
 		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
@@ -841,6 +868,12 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 	detectGlobalVarInitCycles(t, pkg)
+	attachPointBound := listenerAttachPointBound(t.typeContext())
+	validateListenerVars(t, pkg, attachPointBound)
+	for i := range pkg.Services {
+		resolveServiceAttachedExpressions(t, &pkg.Services[i])
+		validateServiceDeclaration(t, &pkg.Services[i], attachPointBound)
+	}
 	for i := range pkg.XmlnsList {
 		resolveXMLNS(t, nil, &pkg.XmlnsList[i])
 	}
@@ -1697,11 +1730,50 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		t.setSymbolType(classDef.Symbol(), recTy)
 		return recTy, true
 	}
+
+	isClient := classDef.IsClient()
+	isService := classDef.IsService()
 	od := semtypes.NewObjectDefinition()
 	classDef.Definition = &od
 
-	// Resolve field types
-	for _, fieldNode := range classDef.Fields {
+	return finishResolveObjectDefinitionType(t, &od, classDef.Fields, classDef.Methods, classDef.ResourceMethods, classDef.InitFunction, classDef.Inclusions, classDef.GetPosition(), depth, classDef.IsIsolated(), isClient, isService)
+}
+
+func resolveServiceType(t typeResolver, svc *ast.BLangService, depth int) bool {
+	if !semtypes.IsZero(svc.GetDeterminedType()) {
+		return true
+	}
+	if svc.Definition != nil {
+		return true
+	}
+
+	od := semtypes.NewObjectDefinition()
+	svc.Definition = &od
+
+	semType, ok := finishResolveObjectDefinitionType(t, &od, svc.Fields, svc.Methods, svc.ResourceMethods, svc.InitFunction,
+		nil, svc.GetPosition(), depth, svc.IsIsolated(), false, true)
+	if !ok {
+		return false
+	}
+
+	svc.SetDeterminedType(semType)
+	typeData := svc.GetTypeData()
+	typeData.Type = semType
+	svc.SetTypeData(typeData)
+	if selfRef, ok := svc.Scope().GetSymbol("self"); ok {
+		t.setSymbolType(selfRef, semType)
+	}
+	t.ensureNotEmpty(semType, func() {
+		t.semanticError("service definition is empty", svc.GetPosition())
+	})
+	return true
+}
+
+func finishResolveObjectDefinitionType(t typeResolver, od *semtypes.ObjectDefinition, fields []ast.SimpleVariableNode,
+	methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod, initFn *ast.BLangFunction, inclusions []model.SymbolRef,
+	pos diagnostics.Location, depth int, isIsolated, isClient, isService bool,
+) (semtypes.SemType, bool) {
+	for _, fieldNode := range fields {
 		field := fieldNode.(*ast.BLangSimpleVariable)
 		fieldTy, ok := resolveBType(t, field.TypeNode(), depth+1)
 		if !ok {
@@ -1712,18 +1784,16 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		field.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
-	// Resolve init function signature
-	if classDef.InitFunction != nil {
-		if _, ok := resolveFunctionSignature(t, classDef.InitFunction); !ok {
+	if initFn != nil {
+		if _, ok := resolveFunctionSignature(t, initFn); !ok {
 			return semtypes.SemType{}, false
 		}
-		classDef.InitFunction.SetDeterminedType(semtypes.NEVER)
-		classDef.InitFunction.Name.SetDeterminedType(semtypes.NEVER)
+		initFn.SetDeterminedType(semtypes.NEVER)
+		initFn.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
-	// Resolve method signatures
-	for name := range classDef.Methods {
-		method := classDef.Methods[name]
+	for name := range methods {
+		method := methods[name]
 		if _, ok := resolveFunctionSignature(t, method); !ok {
 			return semtypes.SemType{}, false
 		}
@@ -1731,33 +1801,52 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		method.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
-	// Resolve resource method signatures and path types
-	for _, rm := range classDef.ResourceMethods {
-		if !resolveResourceMethodSignature(t, classDef, rm) {
+	for _, rm := range resourceMethods {
+		if !resolveResourceMethodSignature(t, isClient, isService, rm) {
 			return semtypes.SemType{}, false
 		}
 		rm.SetDeterminedType(semtypes.NEVER)
 		rm.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
-	// Collect included members from symbols
-	includedMembers := make(map[string][]semtypes.Member)
-	incMembers, err := collectIncludedMembers(t, classDef.Inclusions, depth)
-	if err {
-		t.semanticError("error resolving type inclusion", classDef.GetPosition())
+	includedMembers, ok := collectObjectIncludedMembers(t, inclusions, pos, depth)
+	if !ok {
 		return semtypes.SemType{}, false
+	}
+
+	directMembers, ok := buildObjectDirectMembers(t, fields, methods, initFn, isClient, isService)
+	if !ok {
+		return semtypes.SemType{}, false
+	}
+
+	members, ok := validateOverridesAndMerge(t, directMembers, includedMembers, pos, false)
+	if !ok {
+		return semtypes.SemType{}, false
+	}
+
+	return defineObjectSemType(t, od, isIsolated, isClient, isService, members), true
+}
+
+func collectObjectIncludedMembers(t typeResolver, inclusions []model.SymbolRef, pos diagnostics.Location, depth int) (map[string][]semtypes.Member, bool) {
+	includedMembers := make(map[string][]semtypes.Member)
+	incMembers, err := collectIncludedMembers(t, inclusions, depth)
+	if err {
+		t.semanticError("error resolving type inclusion", pos)
+		return nil, false
 	}
 	for _, m := range incMembers {
 		if m.MemberKind() == model.InclusionMemberKindRestType {
-			t.internalError("unexpected rest inclusion", classDef.GetPosition())
+			t.internalError("unexpected rest inclusion", pos)
 		}
 		member := inclusionMemberToSemtypeMember(m)
 		includedMembers[member.Name] = append(includedMembers[member.Name], member)
 	}
+	return includedMembers, true
+}
 
-	// Build direct members
+func buildObjectDirectMembers(t typeResolver, fields []ast.SimpleVariableNode, methods map[string]*ast.BLangFunction, initFn *ast.BLangFunction, isClient bool, isService bool) ([]directMember, bool) {
 	var directMembers []directMember
-	for _, fieldNode := range classDef.Fields {
+	for _, fieldNode := range fields {
 		field := fieldNode.(*ast.BLangSimpleVariable)
 		fieldTy := field.GetDeterminedType()
 		vis := semtypes.VisibilityPrivate
@@ -1774,39 +1863,10 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		})
 	}
 
-	// TODO: clean this up
-	if classDef.InitFunction != nil {
-		initFnSymbol := t.getSymbol(classDef.InitFunction.Symbol()).(model.FunctionSymbol)
-		sig := initFnSymbol.Signature()
-		tyCtx := t.typeContext()
-		if !semtypes.IsSubtype(tyCtx, sig.ReturnType, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
-			t.semanticError("invalid return type for init function", classDef.InitFunction.GetPosition())
-		}
-		directMembers = append(directMembers, directMember{
-			name:       "init",
-			valueTy:    t.symbolType(classDef.InitFunction.Symbol()),
-			kind:       semtypes.MemberKindMethod,
-			visibility: semtypes.VisibilityPublic,
-			immutable:  true,
-			pos:        classDef.InitFunction.GetPosition(),
-		})
-	} else {
-		// Add implicit init member with no parameters and return type ()
-		paramListDefn := semtypes.NewListDefinition()
-		paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-		functionDefn := semtypes.NewFunctionDefinition()
-		initFnType := functionDefn.Define(t.typeEnv(), paramListTy, semtypes.NIL,
-			semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
-		directMembers = append(directMembers, directMember{
-			name:       "init",
-			valueTy:    initFnType,
-			kind:       semtypes.MemberKindMethod,
-			visibility: semtypes.VisibilityPublic,
-			immutable:  true,
-		})
-	}
-	for name := range classDef.Methods {
-		method := classDef.Methods[name]
+	directMembers = append(directMembers, initDirectMember(t, initFn))
+
+	for name := range methods {
+		method := methods[name]
 		methodTy := methodMemberType(t, method.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if method.IsPublic() {
@@ -1814,9 +1874,9 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		}
 		memberKind := semtypes.MemberKindMethod
 		if method.IsRemote() {
-			if !classDef.IsClient() && !classDef.IsService() {
+			if !isClient && !isService {
 				t.semanticError("remote methods are only allowed in client or service classes", method.GetPosition())
-				return semtypes.SemType{}, false
+				return nil, false
 			}
 			memberKind = semtypes.MemberKindRemoteMethod
 		} else if method.IsResource() {
@@ -1831,23 +1891,52 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 			pos:        method.GetPosition(),
 		})
 	}
+	return directMembers, true
+}
 
-	members, ok := validateOverridesAndMerge(t, directMembers, includedMembers, classDef.GetPosition(), false)
-	if !ok {
-		return semtypes.SemType{}, false
+// initDirectMember returns the init function member (explicit or implicit).
+func initDirectMember(t typeResolver, initFn *ast.BLangFunction) directMember {
+	if initFn != nil {
+		initFnSymbol := t.getSymbol(initFn.Symbol()).(model.FunctionSymbol)
+		sig := initFnSymbol.Signature()
+		tyCtx := t.typeContext()
+		if !semtypes.IsSubtype(tyCtx, sig.ReturnType, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+			t.semanticError("invalid return type for init function", initFn.GetPosition())
+		}
+		return directMember{
+			name:       "init",
+			valueTy:    t.symbolType(initFn.Symbol()),
+			kind:       semtypes.MemberKindMethod,
+			visibility: semtypes.VisibilityPublic,
+			immutable:  true,
+			pos:        initFn.GetPosition(),
+		}
 	}
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	functionDefn := semtypes.NewFunctionDefinition()
+	initFnType := functionDefn.Define(t.typeEnv(), paramListTy, semtypes.NIL,
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
+	return directMember{
+		name:       "init",
+		valueTy:    initFnType,
+		kind:       semtypes.MemberKindMethod,
+		visibility: semtypes.VisibilityPublic,
+		immutable:  true,
+	}
+}
 
-	// Define the object type
-	isolated := classDef.IsIsolated()
+// defineObjectSemType finalises the object semtype using the class/service
+// qualifiers and resolved members.
+func defineObjectSemType(t typeResolver, od *semtypes.ObjectDefinition, isolated bool, isClient bool, isService bool, members []semtypes.Member) semtypes.SemType {
 	networkQual := semtypes.NetworkQualifierNone
-	if classDef.IsClient() {
+	if isClient {
 		networkQual = semtypes.NetworkQualifierClient
-	} else if classDef.IsService() {
+	} else if isService {
 		networkQual = semtypes.NetworkQualifierService
 	}
 	qualifiers := semtypes.ObjectQualifiersFrom(isolated, false, networkQual)
-	semType := od.Define(t.typeEnv(), qualifiers, members)
-	return semType, true
+	return od.Define(t.typeEnv(), qualifiers, members)
 }
 
 func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) bool {
@@ -2261,8 +2350,119 @@ func resolveGlobalVarInit(t typeResolver, node *ast.BLangSimpleVariable) bool {
 	if semtypes.IsZero(semType) {
 		return false
 	}
-	_, _, ok := resolveActionOrExpression(t, nil, node.Expr, semType)
+	expectedType := semType
+	if node.IsListener() {
+		// A listener-decl is allowed to have an init expression whose type
+		// includes error; module init performs the runtime `is error` check
+		// and panics if the value is an error.
+		expectedType = semtypes.Union(semType, semtypes.ERROR)
+	}
+	_, _, ok := resolveActionOrExpression(t, nil, node.Expr, expectedType)
 	return ok
+}
+
+// resolveServiceAttachedExpressions type-checks the listener expressions in
+// a service's `on` clause so subsequent validation can read each expression's
+// determined type.
+func resolveServiceAttachedExpressions(t typeResolver, svc *ast.BLangService) {
+	for _, expr := range svc.AttachedExprs {
+		resolveActionOrExpression(t, nil, expr, semtypes.SemType{})
+	}
+}
+
+// validateListenerVars verifies each module-level listener variable's
+// resolved type is a subtype of the global LISTENER top type. Reports a
+// semantic error otherwise.
+func validateListenerVars(t typeResolver, pkg *ast.BLangPackage, attachPointBound semtypes.SemType) {
+	tyCtx := t.typeContext()
+	for i := range pkg.GlobalVars {
+		gv := &pkg.GlobalVars[i]
+		if !gv.IsListener() {
+			continue
+		}
+		ty := gv.GetDeterminedType()
+		if semtypes.IsZero(ty) {
+			t.internalError("listener variable has no determined type", gv.GetPosition())
+			continue
+		}
+		if _, _, ok := validateListenerType(tyCtx, ty, attachPointBound); !ok {
+			t.semanticError("listener initializer is not a listener", gv.GetPosition())
+		}
+	}
+}
+
+// validateServiceDeclaration implements the type-resolver rules from the
+// service/listener design: the `on` expression list must consist of
+// listener variables, the attach-point type must be a subtype of the
+// listeners' attach-point union, and the service body must be a subtype
+// of the listeners' target object union (or the user-supplied service
+// type when present).
+func validateServiceDeclaration(t typeResolver, svc *ast.BLangService, attachPointBound semtypes.SemType) {
+	tyCtx := t.typeContext()
+
+	var expectedT semtypes.SemType = semtypes.NEVER
+	var expectedA semtypes.SemType = semtypes.NEVER
+	for _, expr := range svc.AttachedExprs {
+		targetTy, attachTy, ok := validateListenerOnExpression(t, expr, attachPointBound)
+		if !ok {
+			return
+		}
+		expectedT = semtypes.Union(expectedT, targetTy)
+		expectedA = semtypes.Union(expectedA, attachTy)
+	}
+
+	attachPointTy := serviceAttachPointType(t, svc)
+	if !semtypes.IsSubtype(tyCtx, attachPointTy, expectedA) {
+		t.semanticError("attach point is not assignable to listener's attach-point type", svc.GetPosition())
+	}
+
+	bodyTy := svc.Definition.GetSemType(t.typeEnv())
+	if !semtypes.IsSubtype(tyCtx, bodyTy, expectedT) {
+		t.semanticError("service body is not a subtype of the listener's expected service type", svc.GetPosition())
+	}
+}
+
+func validateListenerOnExpression(t typeResolver, expr ast.BLangExpression, attachPointBound semtypes.SemType) (semtypes.SemType, semtypes.SemType, bool) {
+	varRef, ok := expr.(*ast.BLangSimpleVarRef)
+	if !ok {
+		t.unimplemented("inline listener expression in service `on` clause is not supported", expr.GetPosition())
+		return semtypes.SemType{}, semtypes.SemType{}, false
+	}
+	sym := t.getSymbol(varRef.Symbol())
+	vs, ok := sym.(*model.ValueSymbol)
+	if !ok || !vs.IsListener() {
+		t.semanticError("expression in 'on' clause must be a listener variable", expr.GetPosition())
+		return semtypes.SemType{}, semtypes.SemType{}, false
+	}
+	exprTy := expr.GetDeterminedType()
+	if semtypes.IsZero(exprTy) {
+		return semtypes.SemType{}, semtypes.SemType{}, false
+	}
+	targetTy, attachTy, ok := validateListenerType(t.typeContext(), exprTy, attachPointBound)
+	if !ok {
+		t.semanticError("expression is not a listener", expr.GetPosition())
+		return semtypes.SemType{}, semtypes.SemType{}, false
+	}
+	return targetTy, attachTy, true
+}
+
+func serviceAttachPointType(t typeResolver, svc *ast.BLangService) semtypes.SemType {
+	if svc.AttachPointLiteral != nil {
+		if value, ok := svc.AttachPointLiteral.GetValue().(string); ok {
+			return semtypes.StringConst(value)
+		}
+		t.internalError("non-string service attach point literal reached type resolver", svc.AttachPointLiteral.GetPosition())
+		return semtypes.NEVER
+	}
+	if len(svc.AbsoluteResourcePath) == 0 {
+		return semtypes.NIL
+	}
+	segmentTypes := make([]semtypes.SemType, len(svc.AbsoluteResourcePath))
+	for i := range svc.AbsoluteResourcePath {
+		segmentTypes[i] = semtypes.StringConst(svc.AbsoluteResourcePath[i].Value)
+	}
+	listDefn := semtypes.NewListDefinition()
+	return listDefn.DefineListTypeWrapped(t.typeEnv(), segmentTypes, len(segmentTypes), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 }
 
 func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimpleVariable) bool {
@@ -4848,8 +5048,8 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 	return symbolRef, retTy, defaultExpressionEffect(chain), true
 }
 
-func resolveResourceMethodSignature(t typeResolver, classDef *ast.BLangClassDefinition, method *ast.BLangResourceMethod) bool {
-	if !classDef.IsClient() && !classDef.IsService() {
+func resolveResourceMethodSignature(t typeResolver, isClient bool, isService bool, method *ast.BLangResourceMethod) bool {
+	if !isClient && !isService {
 		t.semanticError("resource methods are only allowed in client or service classes", method.GetPosition())
 		return false
 	}

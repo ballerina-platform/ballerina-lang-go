@@ -199,13 +199,9 @@ type ServiceNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() *BLangIdentifier
-	SetName(name *BLangIdentifier)
-	IsAnonymousService() bool
 	GetAttachedExprs() []BLangExpression
-	GetServiceClass() ClassDefinition
 	GetAbsolutePath() []*BLangIdentifier
-	GetServiceNameLiteral() LiteralNode
+	GetAttachPointLiteral() LiteralNode
 }
 
 // Type-definition node (carries either a BLangTypeDefinition or a

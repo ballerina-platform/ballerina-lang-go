@@ -92,6 +92,9 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangNewExpression:
 		return walkNewExpression(cx, expr)
+	case *BLangServiceInit:
+		// Desugar-introduced node; nothing to rewrite further.
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangNamedArgsExpression:
 		result := walkExpression(cx, expr.Expr)
 		expr.Expr = result.replacementNode.(ast.BLangExpression)
@@ -869,28 +872,33 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 	// Create temp var: $desugar$N = <inner expr>
 	tempName, tempSymbol := cx.addDesugardSymbol(innerTy, model.SymbolKindVariable, false)
 	tempVarName := &ast.BLangIdentifier{Value: tempName}
+	tempVarName.SetPosition(basePos)
 	tempVar := &ast.BLangSimpleVariable{Name: tempVarName}
 	tempVar.SetDeterminedType(innerTy)
 	tempVar.SetInitialExpression(expr.Expr)
 	tempVar.SetSymbol(tempSymbol)
+	tempVar.SetPosition(basePos)
 	tempVarDef := &ast.BLangSimpleVariableDef{Var: tempVar}
-	setPositionIfMissing(tempVarDef, basePos)
+	tempVarDef.SetPosition(basePos)
 	initStmts = append(initStmts, tempVarDef)
 
 	// Type test: $desugar$N is error
 	tempVarRefForTest := &ast.BLangSimpleVarRef{VariableName: tempVarName}
 	tempVarRefForTest.SetSymbol(tempSymbol)
 	tempVarRefForTest.SetDeterminedType(innerTy)
+	tempVarRefForTest.SetPosition(basePos)
 
 	typeTestExpr := &ast.BLangTypeTestExpr{}
 	typeTestExpr.Expr = tempVarRefForTest
 	typeTestExpr.Type = ast.TypeData{Type: semtypes.ERROR}
 	typeTestExpr.SetDeterminedType(semtypes.BOOLEAN)
+	typeTestExpr.SetPosition(basePos)
 
 	// If body: return or panic
 	tempVarRefForBody := &ast.BLangSimpleVarRef{VariableName: tempVarName}
 	tempVarRefForBody.SetSymbol(tempSymbol)
 	tempVarRefForBody.SetDeterminedType(innerTy)
+	tempVarRefForBody.SetPosition(basePos)
 
 	var bodyStmt ast.StatementNode
 	if isPanic {
@@ -898,25 +906,27 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 		panicStmt.SetPosition(expr.GetPosition())
 		bodyStmt = panicStmt
 	} else {
-		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
+		returnStmt := &ast.BLangReturn{Expr: tempVarRefForBody}
+		returnStmt.SetPosition(basePos)
+		bodyStmt = returnStmt
 	}
-	setPositionIfMissing(bodyStmt.(ast.BLangNode), basePos)
 
 	ifBody := ast.BLangBlockStmt{
 		Stmts: []ast.StatementNode{bodyStmt},
 	}
+	ifBody.SetPosition(basePos)
 	ifStmt := &ast.BLangIf{
 		Expr: typeTestExpr,
 		Body: ifBody,
 	}
+	ifStmt.SetPosition(basePos)
 	initStmts = append(initStmts, ifStmt)
-	setPositionIfMissing(ifStmt, basePos)
 
 	// Replacement: var ref typed as non-error type
 	replacementVarRef := &ast.BLangSimpleVarRef{VariableName: tempVarName}
 	replacementVarRef.SetSymbol(tempSymbol)
 	replacementVarRef.SetDeterminedType(resultTy)
-	setPositionIfMissing(replacementVarRef, basePos)
+	replacementVarRef.SetPosition(basePos)
 
 	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,

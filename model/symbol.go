@@ -74,9 +74,20 @@ type symbolTypeSetter interface {
 
 type FuncSymbolFlags uint8
 
+type valueSymbolFlags uint8
+
 const (
 	FuncSymbolFlagIsolated FuncSymbolFlags = 1 << iota
 	FuncSymbolFlagTransactional
+)
+
+const (
+	valueSymbolFlagConst valueSymbolFlags = 1 << iota
+	valueSymbolFlagParameter
+	valueSymbolFlagIsolated
+	valueSymbolFlagFinal
+	valueSymbolFlagConfigurable
+	valueSymbolFlagListener
 )
 
 type FunctionSymbol interface {
@@ -271,11 +282,7 @@ type (
 
 	ValueSymbol struct {
 		symbolBase
-		isConst        bool
-		isParameter    bool
-		isIsolated     bool
-		isFinal        bool
-		isConfigurable bool
+		flags valueSymbolFlags
 	}
 
 	functionSymbol struct {
@@ -521,12 +528,15 @@ func (space *SymbolSpace) Symbols() iter.Seq2[int, Symbol] {
 }
 
 func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
-	pkg := PackageIdentifier{
-		Organization: packageID.OrgName.Value(),
-		Package:      packageID.PkgName.Value(),
-		Version:      packageID.Version.Value(),
+	return &SymbolSpace{index: index, Pkg: PackageIdentifierFromID(&packageID), lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
+}
+
+func PackageIdentifierFromID(id *PackageID) PackageIdentifier {
+	return PackageIdentifier{
+		Organization: id.OrgName.Value(),
+		Package:      id.PkgName.Value(),
+		Version:      id.Version.Value(),
 	}
-	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -770,32 +780,40 @@ func (r *RecordSymbol) RestField() (*RestTypeDescriptor, bool) {
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
-	if vs.isConst {
+	if vs.hasFlag(valueSymbolFlagConst) {
 		return SymbolKindConstant
 	}
-	if vs.isParameter {
+	if vs.hasFlag(valueSymbolFlagParameter) {
 		return SymbolKindParemeter
 	}
 	return SymbolKindVariable
 }
 
 func (vs *ValueSymbol) IsConst() bool {
-	return vs.isConst || vs.isParameter
+	return vs.hasFlag(valueSymbolFlagConst) || vs.hasFlag(valueSymbolFlagParameter)
 }
 
-func (vs *ValueSymbol) IsParameter() bool { return vs.isParameter }
+func (vs *ValueSymbol) IsParameter() bool { return vs.hasFlag(valueSymbolFlagParameter) }
 
-func (vs *ValueSymbol) IsIsolated() bool { return vs.isIsolated }
+func (vs *ValueSymbol) IsIsolated() bool { return vs.hasFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) SetIsolated() { vs.isIsolated = true }
+func (vs *ValueSymbol) SetIsolated() { vs.setFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) IsFinal() bool { return vs.isFinal }
+func (vs *ValueSymbol) IsFinal() bool { return vs.hasFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) SetFinal() { vs.isFinal = true }
+func (vs *ValueSymbol) SetFinal() { vs.setFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) IsConfigurable() bool { return vs.isConfigurable }
+func (vs *ValueSymbol) IsConfigurable() bool { return vs.hasFlag(valueSymbolFlagConfigurable) }
 
-func (vs *ValueSymbol) SetConfigurable() { vs.isConfigurable = true }
+func (vs *ValueSymbol) SetConfigurable() { vs.setFlag(valueSymbolFlagConfigurable) }
+
+func (vs *ValueSymbol) IsListener() bool { return vs.hasFlag(valueSymbolFlagListener) }
+
+func (vs *ValueSymbol) SetListener() { vs.setFlag(valueSymbolFlagListener) }
+
+func (vs *ValueSymbol) hasFlag(flag valueSymbolFlags) bool { return vs.flags&flag != 0 }
+
+func (vs *ValueSymbol) setFlag(flag valueSymbolFlags) { vs.flags |= flag }
 
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs
@@ -921,10 +939,16 @@ func (fs *FunctionSignature) IsTransactional() bool {
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
+	var flags valueSymbolFlags
+	if isConst {
+		flags |= valueSymbolFlagConst
+	}
+	if isParameter {
+		flags |= valueSymbolFlagParameter
+	}
 	return ValueSymbol{
-		symbolBase:  symbolBase{name: name, isPublic: isPublic},
-		isConst:     isConst,
-		isParameter: isParameter,
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
+		flags:      flags,
 	}
 }
 

@@ -1,0 +1,4 @@
+-- stdout --
+listner-> attached
+trigger-> foo
+-- stderr --
