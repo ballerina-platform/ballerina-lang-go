@@ -677,7 +677,7 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 // `typedesc param = <>` slot. The monomorphized signature's param type is
 // typedesc<T>; we unwrap it to recover T as the constraint.
 func synthesizeInferredTypedescArg(cx *functionContext, tdTy semtypes.SemType, pos diagnostics.Location) *ast.BLangTypedescExpr {
-	tyCtx := semtypes.ContextFrom(cx.pkgCtx.typeEnv())
+	tyCtx := cx.typeCtx()
 	tdExpr := &ast.BLangTypedescExpr{Constraint: semtypes.TypedescConstraint(tyCtx, tdTy)}
 	tdExpr.SetPosition(pos)
 	tdExpr.SetDeterminedType(tdTy)

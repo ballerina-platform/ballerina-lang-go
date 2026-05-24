@@ -34,6 +34,11 @@ type desugaredNode[E ast.Node] struct {
 }
 
 // packageContext holds shared state for desugaring a single package.
+//
+// IMPORTANT: typeContext on packageContext must only be used from the goroutine
+// that owns the package-level desugar flow (the main goroutine in DesugarPackage).
+// Worker goroutines (per-function/class/service) must use their own non-shared
+// typeContext via functionContext.typeCtx().
 type packageContext struct {
 	compilerCtx          *context.CompilerContext
 	pkg                  *ast.BLangPackage
@@ -41,6 +46,7 @@ type packageContext struct {
 	importMu             sync.Mutex
 	addedImplicitImports map[string]bool
 	desugarSymbolCounter int
+	typeContext          semtypes.Context
 }
 
 var _ desugarContext = &packageContext{}
@@ -51,7 +57,12 @@ func newPackageContext(compilerCtx *context.CompilerContext, pkg *ast.BLangPacka
 		pkg:                  pkg,
 		importedSymbols:      importedSymbols,
 		addedImplicitImports: make(map[string]bool),
+		typeContext:          semtypes.ContextFrom(compilerCtx.GetTypeEnv()),
 	}
+}
+
+func (ctx *packageContext) typeCtx() semtypes.Context {
+	return ctx.typeContext
 }
 
 func (ctx *packageContext) addImplicitImport(pkgName string, imp ast.BLangImportPackage) {
@@ -122,6 +133,19 @@ type functionContext struct {
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
 	loopVarStack         []ast.LExpr // Stack to track loop variables (nil for while, varRef for desugared foreach)
+	// typeContext is the non-shared type context for this function. It is owned
+	// by the goroutine desugaring this function and must not be shared.
+	typeContext semtypes.Context
+}
+
+// typeCtx returns the function-local type context, lazily creating it on first
+// use. Because functionContext is confined to a single goroutine, this needs no
+// synchronization.
+func (ctx *functionContext) typeCtx() semtypes.Context {
+	if ctx.typeContext == nil {
+		ctx.typeContext = semtypes.ContextFrom(ctx.pkgCtx.typeEnv())
+	}
+	return ctx.typeContext
 }
 
 var _ desugarContext = &functionContext{}
@@ -617,7 +641,7 @@ func createInitFunction(compilerCtx *context.CompilerContext, pkg *ast.BLangPack
 const moduleListenersGlobalName = "$moduleListeners"
 
 func addModuleListenersGlobal(pkgCtx *packageContext, pkg *ast.BLangPackage, pos diagnostics.Location) (*ast.BLangSimpleVarRef, ast.StatementNode) {
-	tyCtx := semtypes.ContextFrom(pkgCtx.typeEnv())
+	tyCtx := pkgCtx.typeCtx()
 	env := pkgCtx.typeEnv()
 	var listnerTop semtypes.SemType
 	{
@@ -764,7 +788,7 @@ func buildListenerAttachInvocation(pkgCtx *packageContext, svc *ast.BLangService
 		pkgCtx.internalError("listener expression has no determined type at desugar")
 		return nil
 	}
-	tyCtx := semtypes.ContextFrom(pkgCtx.typeEnv())
+	tyCtx := pkgCtx.typeCtx()
 	attachFnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("attach"), listenerTy)
 	if semtypes.IsZero(attachFnTy) {
 		pkgCtx.internalError("listener type has no attach method type at desugar")
@@ -846,7 +870,7 @@ func buildAttachPointExpression(pkgCtx *packageContext, svc *ast.BLangService) a
 	}
 	ld := semtypes.NewListDefinition()
 	listTy := ld.DefineListTypeWrapped(pkgCtx.typeEnv(), tupleMembers, len(tupleMembers), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
-	lat := semtypes.ToListAtomicType(semtypes.ContextFrom(pkgCtx.typeEnv()), listTy)
+	lat := semtypes.ToListAtomicType(pkgCtx.typeCtx(), listTy)
 	arr := &ast.BLangListConstructorExpr{Exprs: elements, AtomicType: *lat}
 	arr.SetDeterminedType(listTy)
 	arr.SetPosition(svc.GetPosition())
