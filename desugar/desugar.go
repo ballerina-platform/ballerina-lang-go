@@ -1100,11 +1100,15 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 		})
 	}
 	for i := range pkg.Services {
+		ensureServiceDefaultInitFunction(pkgCtx, &pkg.Services[i])
+	}
+
+	desugarInitFn(pkgCtx, compilerCtx, pkg)
+
+	for i := range pkg.Services {
 		desugarServiceConcurrently(&pkg.Services[i])
 	}
 
-	// Desugar init, start, stop functions
-	desugarInitFn(pkgCtx, compilerCtx, pkg)
 	if pkg.StartFunction != nil {
 		desugarFn(pkg.StartFunction)
 	}
@@ -1121,34 +1125,43 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 }
 
 func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinition) {
-	desugarClassBodyInit(pkgCtx, class.Scope(), class.Fields, &class.InitFunction, class.GetPosition())
+	if class.InitFunction == nil {
+		class.InitFunction = synthesizeDefaultInitFunction(pkgCtx, class.Scope(), class.GetPosition())
+	}
+	desugarClassBodyInit(pkgCtx, class.Scope(), class.Fields, class.InitFunction)
 }
 
 func desugarServiceDefinition(pkgCtx *packageContext, svc *ast.BLangService) {
-	desugarClassBodyInit(pkgCtx, svc.Scope(), svc.Fields, &svc.InitFunction, svc.GetPosition())
+	// svc.InitFunction is guaranteed non-nil by the ensureServiceDefaultInitFunction pre-pass.
+	desugarClassBodyInit(pkgCtx, svc.Scope(), svc.Fields, svc.InitFunction)
 }
 
-// desugarClassBodyInit synthesizes a default init function when missing and
-// prepends statements that assign each field's declared initializer to the
-// corresponding `self.<field>`. Shared between class and service desugaring.
-func desugarClassBodyInit(pkgCtx *packageContext, classScope model.Scope, fields []ast.SimpleVariableNode, initFnSlot **ast.BLangFunction, pos diagnostics.Location) {
-	if *initFnSlot == nil {
-		fn := ast.BLangFunction{}
-		fn.SetAttached()
-		fn.Name = ast.BLangIdentifier{Value: "init"}
-		body := &ast.BLangBlockFunctionBody{}
-		body.SetPosition(pos)
-		fn.Body = body
-		fn.SetDeterminedType(semtypes.NEVER)
-		fn.SetScope(pkgCtx.newFunctionScope(classScope))
-		fn.SetPosition(pos)
-		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
-		classScope.AddSymbol("init", initSymbol)
-		symRef, _ := classScope.GetSymbol("init")
-		fn.SetSymbol(symRef)
-		*initFnSlot = &fn
-	}
+func synthesizeDefaultInitFunction(pkgCtx *packageContext, classScope model.Scope, pos diagnostics.Location) *ast.BLangFunction {
+	fn := ast.BLangFunction{}
+	fn.SetAttached()
+	fn.Name = ast.BLangIdentifier{Value: "init"}
+	body := &ast.BLangBlockFunctionBody{}
+	body.SetPosition(pos)
+	fn.Body = body
+	fn.SetDeterminedType(semtypes.NEVER)
+	fn.SetScope(pkgCtx.newFunctionScope(classScope))
+	fn.SetPosition(pos)
+	initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
+	classScope.AddSymbol("init", initSymbol)
+	symRef, _ := classScope.GetSymbol("init")
+	fn.SetSymbol(symRef)
+	return &fn
+}
 
+// We are doing this seperately unlike class to avoid race conditions, service init it needed for module init
+func ensureServiceDefaultInitFunction(pkgCtx *packageContext, svc *ast.BLangService) {
+	if svc.InitFunction != nil {
+		return
+	}
+	svc.InitFunction = synthesizeDefaultInitFunction(pkgCtx, svc.Scope(), svc.GetPosition())
+}
+
+func desugarClassBodyInit(pkgCtx *packageContext, classScope model.Scope, fields []ast.SimpleVariableNode, initFn *ast.BLangFunction) {
 	selfRef, ok := classScope.GetSymbol("self")
 	if !ok {
 		pkgCtx.internalError("self symbol not found in class scope")
@@ -1190,7 +1203,7 @@ func desugarClassBodyInit(pkgCtx *packageContext, classScope model.Scope, fields
 	}
 
 	if len(initStmts) > 0 {
-		body := (*initFnSlot).Body.(*ast.BLangBlockFunctionBody)
+		body := initFn.Body.(*ast.BLangBlockFunctionBody)
 		body.Stmts = append(initStmts, body.Stmts...)
 	}
 }
