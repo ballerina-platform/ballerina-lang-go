@@ -154,7 +154,6 @@ type (
 		typeData                        TypeData
 		Definition                      semtypes.Definition
 		CycleDepth                      int
-		precedence                      int
 	}
 
 	BLangClassDefinition struct {
@@ -299,7 +298,6 @@ type (
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
 		flags                           model.Flag
-		precedence                      int
 		CycleDepth                      int
 		isBuiltinTypeDef                bool
 		hasCyclicReference              bool
@@ -742,14 +740,6 @@ func (b *classDefnBase) SetMarkdownDocumentationAttachment(documentationNode Mar
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (b *classDefnBase) GetPrecedence() int {
-	return b.precedence
-}
-
-func (b *classDefnBase) SetPrecedence(precedence int) {
-	b.precedence = precedence
-}
-
 func (b *classDefnBase) GetTypeData() TypeData {
 	return b.typeData
 }
@@ -827,13 +817,6 @@ func (b *BLangConstant) GetAssociatedType() semtypes.SemType {
 		return b.TypeNode().GetTypeData().Type
 	}
 	return semtypes.SemType{}
-}
-
-func (b *BLangConstant) GetPrecedence() int {
-	return 0
-}
-
-func (b *BLangConstant) SetPrecedence(precedence int) {
 }
 
 func (b *BLangSimpleVariable) GetName() *BLangIdentifier {
@@ -1228,14 +1211,6 @@ func (b *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNo
 	} else {
 		panic("documentationNode is not a BLangMarkdownDocumentation")
 	}
-}
-
-func (b *BLangTypeDefinition) GetPrecedence() int {
-	return b.precedence
-}
-
-func (b *BLangTypeDefinition) SetPrecedence(precedence int) {
-	b.precedence = precedence
 }
 
 func (b *BLangTypeDefinition) GetCycleDepth() int {
