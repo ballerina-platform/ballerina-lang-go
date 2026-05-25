@@ -305,7 +305,7 @@ func TestResolveQueryExprMapCollection(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map collection")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
 	}
 }
@@ -323,7 +323,7 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map construct type")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.MAPPING) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.MAPPING) {
 		t.Fatalf("expected query result type to be mapping, got %v", queryTy)
 	}
 	if len(cx.Diagnostics()) > 0 {
@@ -360,7 +360,7 @@ func TestResolveQueryExprOrderByClause(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for order by clause")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
 	}
 	if len(cx.Diagnostics()) > 0 {
@@ -387,7 +387,7 @@ func TestResolveQueryExprJoinClause(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for join clause")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
 	}
 	if len(cx.Diagnostics()) > 0 {
@@ -409,7 +409,7 @@ func TestResolveQueryExprMultipleOrderByConsecutive(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for consecutive order by clauses")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
 	}
 	if len(cx.Diagnostics()) > 0 {
@@ -432,7 +432,7 @@ func TestResolveQueryExprMultipleOrderByNonConsecutive(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for non-consecutive order by clauses")
 	}
-	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+	if !semtypes.IsSubtype(semtypes.ContextFrom(cx.GetTypeEnv()), queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
 	}
 	if len(cx.Diagnostics()) > 0 {

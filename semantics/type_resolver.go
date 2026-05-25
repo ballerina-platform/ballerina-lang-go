@@ -1269,7 +1269,7 @@ func buildReturnTypeOp(t typeResolver, params map[string]param, node ast.BLangNo
 		return &model.BinaryTypeOp{Kind: model.TypeOpIntersection, Lhs: lhs, Rhs: rhs}, true
 	case *ast.BLangUserDefinedType:
 		if n.PkgAlias.Value == "" {
-			if p, ok := params[n.TypeName.Value]; ok && semtypes.IsSubtypeSimple(p.ty, semtypes.TYPEDESC) {
+			if p, ok := params[n.TypeName.Value]; ok && semtypes.IsSubtype(t.typeContext(), p.ty, semtypes.TYPEDESC) {
 				return &model.RefTypeOp{Index: p.index}, true
 			}
 		}
@@ -2366,7 +2366,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 // synthesized into a call-site argument list, expectedType is the inferred
 // typedesc<T>. In either case the determined type becomes expectedType.
 func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLangInferredTypedescDefault, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	if expectedType == nil || !semtypes.IsSubtypeSimple(expectedType, semtypes.TYPEDESC) {
+	if expectedType == nil || !semtypes.IsSubtype(t.typeContext(), expectedType, semtypes.TYPEDESC) {
 		t.semanticError("inferred typedesc default '<>' is only allowed as the default for a typedesc parameter", e.GetPosition())
 		return nil, expressionEffect{}, false
 	}
@@ -2419,7 +2419,7 @@ func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSe
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
-		if !semtypes.IsSubtypeSimple(childTy, semtypes.XML) {
+		if !semtypes.IsSubtype(t.typeContext(), childTy, semtypes.XML) {
 			t.semanticError(fmt.Sprintf("expected xml value, got %s", semtypes.ToString(t.typeContext(), childTy)), child.GetPosition())
 			return nil, expressionEffect{}, false
 		}
@@ -2876,8 +2876,8 @@ func isLogicalExpression(opExpr opExpr) bool {
 	}
 }
 
-func isNumericType(ty semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(ty, semtypes.NUMBER)
+func isNumericType(cx semtypes.Context, ty semtypes.SemType) bool {
+	return semtypes.IsSubtype(cx, ty, semtypes.NUMBER)
 }
 
 func resolveGroupExpr(t typeResolver, chain *binding, expr *ast.BLangGroupExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
@@ -3018,14 +3018,14 @@ func resolveQueryCollectionElementType(
 	pos diagnostics.Location,
 ) (semtypes.SemType, bool) {
 	switch {
-	case semtypes.IsSubtypeSimple(collectionTy, semtypes.LIST):
+	case semtypes.IsSubtype(t.typeContext(), collectionTy, semtypes.LIST):
 		memberTypes := semtypes.ListAllMemberTypesInner(t.typeContext(), collectionTy)
 		var result semtypes.SemType = semtypes.NEVER
 		for _, each := range memberTypes.SemTypes {
 			result = semtypes.Union(result, each)
 		}
 		return result, true
-	case semtypes.IsSubtypeSimple(collectionTy, semtypes.MAPPING):
+	case semtypes.IsSubtype(t.typeContext(), collectionTy, semtypes.MAPPING):
 		return semtypes.MappingMemberTypeInnerValProj(t.typeContext(), collectionTy, semtypes.STRING), true
 	default:
 		t.unimplemented("query from clause currently supports only list or map collections", pos)
@@ -3144,7 +3144,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 			if !ok {
 				return nil, false
 			}
-			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
+			if !semtypes.IsSubtype(t.typeContext(), whereTy, semtypes.BOOLEAN) {
 				t.semanticError("where clause expression must be boolean", clause.GetPosition())
 				return nil, false
 			}
@@ -3155,7 +3155,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 			if !ok {
 				return nil, false
 			}
-			if !semtypes.IsSubtypeSimple(limitTy, semtypes.INT) {
+			if !semtypes.IsSubtype(t.typeContext(), limitTy, semtypes.INT) {
 				t.semanticError("limit clause expression must be int", clause.GetPosition())
 				return nil, false
 			}
@@ -3334,7 +3334,7 @@ func resolveErrorConstructorExpr(t typeResolver, chain *binding, expr *ast.BLang
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
-		if !semtypes.IsSubtypeSimple(refTy, semtypes.ERROR) {
+		if !semtypes.IsSubtype(t.typeContext(), refTy, semtypes.ERROR) {
 			t.semanticError("error type parameter must be a subtype of error", expr.ErrorTypeRef.GetPosition())
 			return nil, expressionEffect{}, false
 		} else {
@@ -3394,7 +3394,7 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 		resultTy = underlyingTy
 
 	case model.OperatorKind_BITWISE_COMPLEMENT:
-		if !semtypes.IsSubtypeSimple(underlyingTy, semtypes.INT) {
+		if !semtypes.IsSubtype(t.typeContext(), underlyingTy, semtypes.INT) {
 			t.semanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
@@ -3415,7 +3415,7 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 		}
 
 	case model.OperatorKind_NOT:
-		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
+		if semtypes.IsSubtype(t.typeContext(), exprTy, semtypes.BOOLEAN) {
 			if semtypes.IsSameType(t.typeContext(), exprTy, semtypes.BOOLEAN) {
 				resultTy = semtypes.BOOLEAN
 			} else {
@@ -3459,7 +3459,7 @@ func negateNumericType(exprTy semtypes.SemType) semtypes.SemType {
 
 func additiveSingletonType(t typeResolver, lhsTy, rhsTy semtypes.SemType, op model.OperatorKind, loc diagnostics.Location) (semtypes.SemType, bool) {
 	bothSameType := func(ty semtypes.BasicTypeBitSet) bool {
-		return semtypes.IsSubtypeSimple(lhsTy, ty) && semtypes.IsSubtypeSimple(rhsTy, ty)
+		return semtypes.IsSubtype(t.typeContext(), lhsTy, ty) && semtypes.IsSubtype(t.typeContext(), rhsTy, ty)
 	}
 	switch {
 	case bothSameType(semtypes.XML):
@@ -3744,7 +3744,7 @@ func resolveMultiplicativeExprInner(t typeResolver, chain *binding, lhsTy semtyp
 
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-	if !isNumericType(lhsBasicTy) || !isNumericType(rhsBasicTy) {
+	if !isNumericType(t.typeContext(), lhsBasicTy) || !isNumericType(t.typeContext(), rhsBasicTy) {
 		t.semanticError(fmt.Sprintf("expect numeric types for %s", string(op)), pos)
 		return nil, expressionEffect{}, false
 	}
@@ -4060,11 +4060,12 @@ func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangInde
 	}
 
 	var resultTy semtypes.SemType
+	tyCtx := t.typeContext()
 
-	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
+	if semtypes.IsSubtype(tyCtx, containerExprTy, semtypes.LIST) {
 		resultTy = semtypes.ListMemberTypeInnerVal(t.typeContext(), containerExprTy, keyExprTy)
-	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL) {
-		containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+	} else if semtypes.IsSubtype(tyCtx, containerExprTy, semtypes.MAPPING|semtypes.NIL) {
+		containerNilable := !semtypes.IsSubtype(t.typeContext(), containerExprTy, semtypes.MAPPING)
 		mappingTy := containerExprTy
 		if containerNilable {
 			mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
@@ -4075,7 +4076,7 @@ func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangInde
 			memberTy = semtypes.Union(semtypes.Diff(memberTy, semtypes.UNDEF), semtypes.NIL)
 		}
 		resultTy = memberTy
-	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
+	} else if semtypes.IsSubtype(tyCtx, containerExprTy, semtypes.STRING) {
 		resultTy = semtypes.STRING
 	} else {
 		t.semanticError("unsupported container type for index based access", expr.GetPosition())
@@ -4096,14 +4097,14 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 
 	var memberTy semtypes.SemType
 	switch {
-	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT):
+	case semtypes.IsSubtype(tyCtx, containerExprTy, semtypes.OBJECT):
 		memberTy = semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(key), containerExprTy)
 		if memberTy == nil {
 			t.semanticError("field not found in object type", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-	case semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING|semtypes.NIL):
-		containerNilable := !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING)
+	case semtypes.IsSubtype(tyCtx, containerExprTy, semtypes.MAPPING|semtypes.NIL):
+		containerNilable := !semtypes.IsSubtype(t.typeContext(), containerExprTy, semtypes.MAPPING)
 		mappingTy := containerExprTy
 		if containerNilable {
 			mappingTy = semtypes.Diff(containerExprTy, semtypes.NIL)
@@ -4193,21 +4194,21 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	if semtypes.IsSubtypeSimple(recieverTy, semtypes.OBJECT) {
+	if semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.OBJECT) {
 		return resolveObjectMethodCall(t, chain, expr, methodSymbol, expectedType)
 	}
 	var symbolRef model.SymbolRef
 	var pkgAlias ast.BLangIdentifier
 	switch {
-	case semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST):
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.LIST):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, array.PackageName, methodSymbol.name, expr)
-	case semtypes.IsSubtypeSimple(recieverTy, semtypes.INT):
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.INT):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bInt.PackageName, methodSymbol.name, expr)
-	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.MAPPING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bMap.PackageName, methodSymbol.name, expr)
-	case semtypes.IsSubtypeSimple(recieverTy, semtypes.ERROR):
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.ERROR):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bError.PackageName, methodSymbol.name, expr)
-	case semtypes.IsSubtypeSimple(recieverTy, semtypes.STRING):
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.STRING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bString.PackageName, methodSymbol.name, expr)
 	default:
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bValue.PackageName, methodSymbol.name, expr)
@@ -4250,7 +4251,7 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 	methodSymbol *deferredMethodSymbol, argExprs []ast.BLangExpression, node ast.BLangNode,
 ) (model.SymbolRef, semtypes.SemType, expressionEffect, bool) {
 	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodName), receiverTy)
-	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+	if fnTy == nil || !semtypes.IsSubtype(t.typeContext(), fnTy, semtypes.FUNCTION) {
 		remoteMethodName := model.RemoteMethodName(methodName)
 		if methodName != remoteMethodName && isRemoteMethod(t, receiverTy, remoteMethodName) {
 			t.semanticError("remote methods must be invoked using '->' notation", node.GetPosition())
@@ -4405,7 +4406,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 			t.internalError("function symbol has no type", inv.GetPosition())
 			return nil, narrowedSymbol, chain, false
 		}
-		if !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+		if !semtypes.IsSubtype(t.typeContext(), fnTy, semtypes.FUNCTION) {
 			t.semanticError("not a function value", inv.GetPosition())
 			return nil, narrowedSymbol, chain, false
 		}
@@ -4772,7 +4773,7 @@ func resolveFixedArraySize(t typeResolver, lenExp ast.BLangExpression) (int, boo
 		return 0, false
 	}
 	sizeTy := lenExp.GetDeterminedType()
-	if sizeTy == nil || !semtypes.IsSubtypeSimple(sizeTy, semtypes.INT) {
+	if sizeTy == nil || !semtypes.IsSubtype(t.typeContext(), sizeTy, semtypes.INT) {
 		t.semanticError("fixed-length array size must be a singleton int", lenExp.GetPosition())
 		return 0, false
 	}
@@ -4972,7 +4973,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				if !ok {
 					return nil, false
 				}
-				if !semtypes.IsSubtypeSimple(constraint, semtypes.XML) {
+				if !semtypes.IsSubtype(t.typeContext(), constraint, semtypes.XML) {
 					t.semanticError(fmt.Sprintf("xml type constraint must be a subtype of xml, got %s", semtypes.ToString(t.typeContext(), constraint)), ty.GetPosition())
 					return nil, false
 				}

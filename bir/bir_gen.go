@@ -446,7 +446,7 @@ func compoundAssignmentToMember(ctx *stmtContext, curBB *BIRBasicBlock, stmt *as
 	indexEffect := handleActionOrExpression(ctx, containerEffect.block, ref.IndexExpr)
 	curBB = indexEffect.block
 
-	loadKind, storeKind := memberAccessInstructionKinds(ref.Expr.GetDeterminedType())
+	loadKind, storeKind := memberAccessInstructionKinds(ctx.birCx.TypeContext(), ref.Expr.GetDeterminedType())
 
 	lhsValue := ctx.addTempVar(ref.GetDeterminedType())
 	load := NewFieldAccess(loadKind, lhsValue, indexEffect.result, containerEffect.result, pos)
@@ -469,12 +469,12 @@ func compoundAssignmentToMember(ctx *stmtContext, curBB *BIRBasicBlock, stmt *as
 	}
 }
 
-func memberAccessInstructionKinds(containerType semtypes.SemType) (loadKind, storeKind InstructionKind) {
+func memberAccessInstructionKinds(tyCtx semtypes.Context, containerType semtypes.SemType) (loadKind, storeKind InstructionKind) {
 	containerType = semtypes.Diff(containerType, semtypes.NIL)
 	switch {
-	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+	case semtypes.IsSubtype(tyCtx, containerType, semtypes.LIST):
 		return INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_ARRAY_STORE
-	case semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT):
+	case semtypes.IsSubtype(tyCtx, containerType, semtypes.OBJECT):
 		return INSTRUCTION_KIND_OBJECT_LOAD, INSTRUCTION_KIND_OBJECT_STORE
 	default:
 		return INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_MAP_STORE
@@ -581,7 +581,7 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 	currBB = containerRefEffect.block
 	indexEffect := handleActionOrExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
-	_, storeKind := memberAccessInstructionKinds(varRef.Expr.GetDeterminedType())
+	_, storeKind := memberAccessInstructionKinds(ctx.birCx.TypeContext(), varRef.Expr.GetDeterminedType())
 	fieldAccess := NewFieldAccess(storeKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return statementEffect{
@@ -815,7 +815,7 @@ type expressionEffect struct {
 // of an expression dont' affect the other.
 func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos Location) expressionEffect {
 	op := effect.result
-	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && hasNoStorageIdentity(op.VariableDcl.GetType()) {
+	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && hasNoStorageIdentity(ctx.birCx.TypeContext(), op.VariableDcl.GetType()) {
 		tempOp := ctx.addTempVar(op.VariableDcl.GetType())
 		effect.block.Instructions = append(effect.block.Instructions, NewMove(op, tempOp, pos))
 		effect.result = tempOp
@@ -1196,12 +1196,13 @@ func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.
 	// inner lookup nominally yields `T?`). After filling, the container is
 	// guaranteed non-nil, so we strip `()` before classifying.
 	containerType := semtypes.Diff(inner.Expr.GetDeterminedType(), semtypes.NIL)
+	tyCtx := ctx.birCx.TypeContext()
 	var fillingKind InstructionKind
 	var filler values.FillerFactory
 	switch {
-	case semtypes.IsSubtypeSimple(containerType, semtypes.LIST):
+	case semtypes.IsSubtype(tyCtx, containerType, semtypes.LIST):
 		fillingKind = INSTRUCTION_KIND_ARRAY_FILLING_LOAD
-	case semtypes.IsSubtypeSimple(containerType, semtypes.MAPPING):
+	case semtypes.IsSubtype(tyCtx, containerType, semtypes.MAPPING):
 		fillingKind = INSTRUCTION_KIND_MAP_FILLING_LOAD
 		tyCx := semtypes.TypeCheckContext(ctx.birCx.CompilerContext.GetTypeEnv())
 		valueType := semtypes.MappingMemberTypeInnerVal(tyCx, containerType, semtypes.STRING)
@@ -1224,7 +1225,7 @@ func assignmentContainerReference(ctx *stmtContext, bb *BIRBasicBlock, expr ast.
 func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
 	// Assignment is handled in assignmentStatement to this is always a load
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	loadKind, _ := memberAccessInstructionKinds(expr.Expr.GetDeterminedType())
+	loadKind, _ := memberAccessInstructionKinds(ctx.birCx.TypeContext(), expr.Expr.GetDeterminedType())
 	indexEffect := handleActionOrExpression(ctx, bb, expr.IndexExpr)
 	containerRefEffect := handleActionOrExpression(ctx, indexEffect.block, expr.Expr)
 	currBB := containerRefEffect.block
@@ -1641,6 +1642,6 @@ func appendIfNotNil[T any](slice []T, item *T) []T {
 	return slice
 }
 
-func hasNoStorageIdentity(ty semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(ty, semtypes.SIMPLE_BASIC)
+func hasNoStorageIdentity(tyCtx semtypes.Context, ty semtypes.SemType) bool {
+	return semtypes.IsSubtype(tyCtx, ty, semtypes.SIMPLE_BASIC)
 }

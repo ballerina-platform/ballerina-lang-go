@@ -195,9 +195,10 @@ func createQueryCollectionSource(
 
 	lengthSource := ast.BLangExpression(collRef)
 	var keysRef *ast.BLangSimpleVarRef
+	tyCtx := semtypes.ContextFrom(cx.typeEnv())
 	switch {
-	case semtypes.IsSubtypeSimple(collTy, semtypes.LIST):
-	case semtypes.IsSubtypeSimple(collTy, semtypes.MAPPING):
+	case semtypes.IsSubtype(tyCtx, collTy, semtypes.LIST):
+	case semtypes.IsSubtype(tyCtx, collTy, semtypes.MAPPING):
 		keysInvocation := createKeysInvocation(cx, collRef)
 		if keysInvocation == nil {
 			return nil, nil, nil, nil, false
