@@ -1,0 +1,60 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package extern
+
+import "ballerina-lang-go/values"
+
+// MethodHandle is an opaque reference to a resolved method on a Ballerina
+// object. Obtain one from Context.LookupObjectMethod,
+// Context.LookupRemoteMethod, or Context.LookupResourceMethod and pass it
+// to Context.InvokeMethod. Callers outside the runtime cannot read or
+// construct the inner payload.
+type MethodHandle struct {
+	impl any
+}
+
+// DispatchHandles carry the runtime's method-resolution and invocation
+// implementations. They are installed once by InitEnv and used by the
+// Context.Lookup*/InvokeMethod methods. Lookup hooks return the resolved
+// payload along with a found bool; Context methods forward both.
+type DispatchHandles struct {
+	LookupObject func(*Context, *values.Object, string) (any, bool)
+	LookupRemote func(*Context, *values.Object, string) (any, bool)
+	Invoke       func(*Context, any, []values.BalValue) (values.BalValue, error)
+}
+
+// LookupObjectMethod resolves a regular method on obj. The second return is
+// false if obj has no such method. Remote methods are not resolved through
+// this entry point.
+func (c *Context) LookupObjectMethod(obj *values.Object, name string) (MethodHandle, bool) {
+	impl, ok := c.Env.dispatch.LookupObject(c, obj, name)
+	return MethodHandle{impl: impl}, ok
+}
+
+// LookupRemoteMethod resolves a remote method on obj. Pass the bare method
+// name; the runtime applies the remote-method mangling internally. The
+// second return is false if obj has no such remote method.
+func (c *Context) LookupRemoteMethod(obj *values.Object, name string) (MethodHandle, bool) {
+	impl, ok := c.Env.dispatch.LookupRemote(c, obj, name)
+	return MethodHandle{impl: impl}, ok
+}
+
+// InvokeMethod calls the method captured by h. args is the full argument
+// list including the receiver at index 0 for object and remote methods.
+func (c *Context) InvokeMethod(h MethodHandle, args []values.BalValue) (values.BalValue, error) {
+	return c.Env.dispatch.Invoke(c, h.impl, args)
+}

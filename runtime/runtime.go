@@ -27,6 +27,12 @@ import (
 	"ballerina-lang-go/values"
 )
 
+var dispatchHooks = extern.DispatchHandles{
+	LookupObject: exec.LookupObjectMethod,
+	LookupRemote: exec.LookupRemoteMethod,
+	Invoke:       exec.InvokeMethod,
+}
+
 // Runtime represents a Ballerina runtime instance that owns a module registry
 // and is used as the execution context for interpreting BIR packages.
 type Runtime struct {
@@ -43,7 +49,7 @@ var moduleInitializers []ModuleInitializer
 // registered module initializers.
 func NewRuntime(platform pal.Platform, tyEnv semtypes.Env) *Runtime {
 	registry := modules.NewRegistry()
-	env := extern.InitEnv(platform, tyEnv, registry)
+	env := extern.InitEnv(platform, tyEnv, registry, dispatchHooks)
 	rt := &Runtime{env}
 	for _, init := range moduleInitializers {
 		init(rt)

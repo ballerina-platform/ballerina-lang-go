@@ -17,53 +17,47 @@
 package exec
 
 import (
-	"ballerina-lang-go/bir"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
-// MethodHandle is an opaque, non-nil reference to a resolved object method
-// (BIR or native). Obtain one from LookupObjectMethod and pass it to
-// InvokeObjectMethod.
-type MethodHandle struct {
-	lookupKey string
-	birFunc   *bir.BIRFunction
-	nativeFn  extern.NativeFunc
+// LookupObjectMethod resolves a regular method named methodName on obj. The
+// second return is false if obj has no such method. Remote methods are not
+// resolved through this entry point; use LookupRemoteMethod for those.
+func LookupObjectMethod(ctx *extern.Context, obj *values.Object, methodName string) (any, bool) {
+	return lookupByMethodName(ctx, obj, methodName)
 }
 
-// LookupObjectMethod resolves methodName on obj. Returns nil if obj has no
-// such method.
-func LookupObjectMethod(ctx *extern.Context, obj *values.Object, methodName string) *MethodHandle {
+// LookupRemoteMethod resolves the remote method named methodName on obj.
+// The second return is false if obj has no such remote method. Callers pass
+// the declared method name not the mangled method name;
+func LookupRemoteMethod(ctx *extern.Context, obj *values.Object, methodName string) (any, bool) {
+	return lookupByMethodName(ctx, obj, model.RemoteMethodName(methodName))
+}
+
+// InvokeMethod calls the closure captured by the handle returned from one of
+// the Lookup* functions.
+func InvokeMethod(ctx *extern.Context, h any, args []values.BalValue) (values.BalValue, error) {
+	return h.(*methodHandleImpl).invoke(ctx, args)
+}
+
+func lookupByMethodName(ctx *extern.Context, obj *values.Object, methodName string) (any, bool) {
 	lookupKey, found := obj.MethodLookupKey(methodName)
 	if !found {
-		return nil
+		return nil, false
 	}
-	reg := ctx.Env.Registry.(*modules.Registry)
-	handle := &MethodHandle{lookupKey: lookupKey}
-	if fn := reg.GetBIRFunction(lookupKey); fn != nil {
-		handle.birFunc = fn
-		return handle
-	}
-	if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
-		handle.nativeFn = externFn.Impl
-		return handle
-	}
-	return nil
+	return lookupByKey(ctx, lookupKey)
 }
 
-// InvokeObjectMethod calls a previously looked up method. args is the full
-// argument list including the receiver as args[0].
-func InvokeObjectMethod(ctx *extern.Context, h *MethodHandle, args []values.BalValue) values.BalValue {
-	if h.birFunc != nil {
-		return executeFunction(ctx, *h.birFunc, args, nil)
+func lookupByKey(ctx *extern.Context, lookupKey string) (any, bool) {
+	reg := ctx.Env.Registry.(*modules.Registry)
+	if fn := reg.GetBIRFunction(lookupKey); fn != nil {
+		return newBIRHandle(fn), true
 	}
-	if h.nativeFn != nil {
-		result, err := h.nativeFn(ctx, args)
-		if err != nil {
-			panic(err)
-		}
-		return result
+	if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
+		return newNativeHandle(externFn.Impl), true
 	}
-	panic(values.NewErrorWithMessage("unexpected function handle: " + h.lookupKey))
+	return nil, false
 }
