@@ -115,7 +115,7 @@ func (b *benchmark) run() error {
 }
 
 func (b *benchmark) checkoutWorktree(ref string) (string, error) {
-	path := filepath.Join(b.workRoot, "worktree"+sanitize(ref))
+	path := filepath.Join(b.workRoot, "worktree-"+sanitize(ref)+"-"+sanitize(filepath.Base(b.workRoot)))
 	b.removeWorktree(path)
 
 	if err := runCmd(".", "git", "worktree", "add", "--detach", path, ref); err != nil {
