@@ -14,10 +14,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int notAListener = 5;
+import ballerina/io;
 
-service on notAListener { // @error expression in 'on' clause is not a listener
+class SimpleListener {
+    function init() {
+        io:println("listener initialized"); // @output listener initialized
+    }
+
+    public function attach(service object {} svc, () attachPoint = ()) returns () {
+        var _ = svc;
+        var _ = attachPoint;
+    }
+
+    public function detach(service object {} svc) returns error? {
+        var _ = svc;
+    }
+
+    public function 'start() returns error? {
+    }
+
+    public function gracefulStop() returns error? {
+    }
+
+    public function immediateStop() returns error? {
+    }
 }
+
+public listener SimpleListener l = new ();
 
 public function main() {
 }

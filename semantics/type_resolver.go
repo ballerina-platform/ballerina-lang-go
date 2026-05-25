@@ -2423,24 +2423,15 @@ func validateServiceDeclaration(t typeResolver, svc *ast.BLangService, attachPoi
 }
 
 func validateListenerOnExpression(t typeResolver, expr ast.BLangExpression, attachPointBound semtypes.SemType) (semtypes.SemType, semtypes.SemType, bool) {
-	varRef, ok := expr.(*ast.BLangSimpleVarRef)
-	if !ok {
-		t.unimplemented("inline listener expression in service `on` clause is not supported", expr.GetPosition())
-		return semtypes.SemType{}, semtypes.SemType{}, false
-	}
-	sym := t.getSymbol(varRef.Symbol())
-	vs, ok := sym.(*model.ValueSymbol)
-	if !ok || !vs.IsListener() {
-		t.semanticError("expression in 'on' clause must be a listener variable", expr.GetPosition())
-		return semtypes.SemType{}, semtypes.SemType{}, false
-	}
 	exprTy := expr.GetDeterminedType()
 	if semtypes.IsZero(exprTy) {
+		t.internalError("listener expression has no determined type", expr.GetPosition())
 		return semtypes.SemType{}, semtypes.SemType{}, false
 	}
-	targetTy, attachTy, ok := validateListenerType(t.typeContext(), exprTy, attachPointBound)
+	checkedTy := semtypes.Diff(exprTy, semtypes.ERROR)
+	targetTy, attachTy, ok := validateListenerType(t.typeContext(), checkedTy, attachPointBound)
 	if !ok {
-		t.semanticError("expression is not a listener", expr.GetPosition())
+		t.semanticError("expression in 'on' clause is not a listener", expr.GetPosition())
 		return semtypes.SemType{}, semtypes.SemType{}, false
 	}
 	return targetTy, attachTy, true

@@ -14,9 +14,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int notAListener = 5;
+class FailingListener {
+    public function attach(service object {} svc, () attachPoint = ()) returns error? {
+        var _ = svc;
+        var _ = attachPoint;
+        return error("attach failed");
+    }
 
-service on notAListener { // @error expression in 'on' clause is not a listener
+    public function detach(service object {} svc) returns error? {
+        var _ = svc;
+    }
+
+    public function 'start() returns error? {
+    }
+
+    public function gracefulStop() returns error? {
+    }
+
+    public function immediateStop() returns error? {
+    }
+}
+
+service on new FailingListener() { // @panic attach failed
 }
 
 public function main() {

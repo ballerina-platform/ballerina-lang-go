@@ -1,7 +1,0 @@
--- stdout --
--- stderr --
-fatal[UNIMPLEMENTED_ERROR]: inline listener expression in service `on` clause is not supported
-  --> service-on-new-listener1-fv.bal:45:12
-   |
-45 | service on new SimpleListener() { // @error inline listener expression in service `on` clause is not supported
-   |            ^^^^^^^^^^^^^^^^^^^^

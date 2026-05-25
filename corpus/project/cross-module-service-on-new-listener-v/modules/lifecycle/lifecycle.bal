@@ -14,10 +14,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int notAListener = 5;
+public type ServiceLifeCycle service object {
+    public function onAttach(string message);
+    public function onDetach(string message);
+};
 
-service on notAListener { // @error expression in 'on' clause is not a listener
-}
+public class MyListener {
+    public function attach(ServiceLifeCycle svc, () attachPoint = ()) returns () {
+        var _ = svc;
+        var _ = attachPoint;
+        svc.onAttach("attached");
+    }
 
-public function main() {
+    public function detach(ServiceLifeCycle svc) returns error? {
+        var _ = svc;
+        svc.onDetach("detached");
+    }
+
+    public function 'start() returns error? {
+    }
+
+    public function gracefulStop() returns error? {
+    }
+
+    public function immediateStop() returns error? {
+    }
 }

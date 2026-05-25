@@ -14,9 +14,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int notAListener = 5;
+import ballerina/io;
 
-service on notAListener { // @error expression in 'on' clause is not a listener
+import testorg/crossmoduleserviceonnewlistener.lifecycle;
+
+service on new lifecycle:MyListener() {
+    public function onAttach(string message) {
+        io:println("listener-> ", message); // @output listener-> attached
+    }
+
+    public function onDetach(string message) {
+        io:println("listener-> ", message);
+    }
 }
 
 public function main() {

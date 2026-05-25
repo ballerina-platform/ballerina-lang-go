@@ -1,7 +1,0 @@
--- stdout --
--- stderr --
-fatal[UNIMPLEMENTED_ERROR]: inline listener expression in service `on` clause is not supported
-  --> service-on-new-listener-attach-error1-fp.bal:38:12
-   |
-38 | service on new FailingListener() { // @error inline listener expression in service `on` clause is not supported
-   |            ^^^^^^^^^^^^^^^^^^^^^

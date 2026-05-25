@@ -14,18 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
 class SimpleListener {
     function init() returns error? {
-        io:println("listener initialized");
-        return ();
+        return error("listener init failed");
     }
 
     public function attach(service object {} svc, () attachPoint = ()) returns () {
         var _ = svc;
         var _ = attachPoint;
-        io:println("attached");
     }
 
     public function detach(service object {} svc) returns error? {
@@ -42,7 +38,7 @@ class SimpleListener {
     }
 }
 
-service on new SimpleListener() { // @error inline listener expression in service `on` clause is not supported
+service on new SimpleListener() { // @panic listener init failed
 }
 
 public function main() {

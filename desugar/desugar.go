@@ -520,13 +520,9 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 		widenInitReturnTypeToErrorOptional(compilerCtx, pkg.InitFunction)
 	}
 
-	hasListeners := false
-	for _, n := range nodes {
-		if vs, ok := compilerCtx.GetSymbol(n.sym).(*model.ValueSymbol); ok && vs.IsListener() {
-			hasListeners = true
-			break
-		}
-	}
+	// by definition any service must have at least one listner
+	// hasModuleListenerVar(compilerCtx, nodes) part maybe removed after https://github.com/ballerina-platform/ballerina-lang-go/issues/439
+	hasListeners := len(pkg.Services) > 0 || hasModuleListenerVar(compilerCtx, nodes)
 
 	var initStmts []ast.StatementNode
 	var moduleListenersRef *ast.BLangSimpleVarRef
@@ -557,10 +553,20 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	if initFnCreated {
 		body.Stmts = initStmts
 	} else {
+		// We prepend desugard statements before users init statments.
 		body.Stmts = append(initStmts, body.Stmts...)
 	}
 
 	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
+}
+
+func hasModuleListenerVar(compilerCtx *context.CompilerContext, nodes []moduleInitNode) bool {
+	for _, n := range nodes {
+		if vs, ok := compilerCtx.GetSymbol(n.sym).(*model.ValueSymbol); ok && vs.IsListener() {
+			return true
+		}
+	}
+	return false
 }
 
 func buildListnerInit(pkgCtx *packageContext, node moduleInitNode, moduleListenersRef *ast.BLangSimpleVarRef) []ast.StatementNode {
@@ -703,7 +709,7 @@ func buildServiceInitStmts(pkgCtx *packageContext, pkg *ast.BLangPackage, svc *a
 	initExpr.SetDeterminedType(serviceInitResultType(pkgCtx, svc, svcTy))
 	initExpr.SetPosition(svc.GetPosition())
 
-	varDef, svcRef := createServiceVariable(pkgCtx, pkg.InitFunction.Scope(), svcTy, wrapInCheck(initExpr), svc.GetPosition())
+	varDef, svcRef := createDesugaredLocal(pkgCtx, pkg.InitFunction.Scope(), svcTy, wrapInCheck(initExpr), svc.GetPosition())
 	stmts := []ast.StatementNode{varDef}
 
 	for _, listenerExpr := range svc.AttachedExprs {
@@ -717,12 +723,54 @@ func buildServiceInitStmts(pkgCtx *packageContext, pkg *ast.BLangPackage, svc *a
 	return stmts
 }
 
-// createServiceVariable creates a synthetic local variable in the init function
-// scope that holds the value produced by `initExpr` and returns its variable
-// definition statement together with a var-ref bound to the local.
-func createServiceVariable(pkgCtx *packageContext, scope model.Scope, svcTy semtypes.SemType, initExpr ast.BLangExpression, pos diagnostics.Location) (*ast.BLangSimpleVariableDef, *ast.BLangSimpleVarRef) {
+// hoistInlineServiceListeners replaces each inline listener expression in
+// the `on` clause of a service with a reference to a synthetic module-level
+// `listener` variable initialized to that expression.
+func hoistInlineServiceListeners(pkgCtx *packageContext, pkg *ast.BLangPackage) {
+	for i := range pkg.Services {
+		svc := &pkg.Services[i]
+		for j, listenerExpr := range svc.AttachedExprs {
+			_, ok := listenerExpr.(*ast.BLangSimpleVarRef)
+			if ok {
+				continue
+			}
+
+			pos := listenerExpr.GetPosition()
+			exprTy := listenerExpr.GetDeterminedType()
+			if semtypes.IsZero(exprTy) {
+				pkgCtx.internalError("inline listener expression has no determined type at desugar")
+				return
+			}
+			ty := semtypes.Diff(exprTy, semtypes.ERROR)
+			name := pkgCtx.nextDesugarSymbolName()
+			sym := model.NewValueSymbol(name, false, false, false)
+			sym.SetListener()
+			symRef := pkgCtx.addModuleSymbol(name, &sym)
+			pkgCtx.setSymbolType(symRef, ty)
+
+			ident := &ast.BLangIdentifier{Value: name}
+			ident.SetDeterminedType(semtypes.NEVER)
+			ident.SetPosition(pos)
+
+			gv := &ast.BLangSimpleVariable{Name: ident}
+			gv.SetDeterminedType(ty)
+			gv.SetSymbol(symRef)
+			gv.SetInitialExpression(listenerExpr)
+			gv.SetPosition(pos)
+			pkg.AddGlobalVariable(gv)
+
+			ref := &ast.BLangSimpleVarRef{VariableName: ident}
+			ref.SetSymbol(symRef)
+			ref.SetDeterminedType(ty)
+			ref.SetPosition(pos)
+			svc.AttachedExprs[j] = ref
+		}
+	}
+}
+
+func createDesugaredLocal(pkgCtx *packageContext, scope model.Scope, ty semtypes.SemType, initExpr ast.BLangExpression, pos diagnostics.Location) (*ast.BLangSimpleVariableDef, *ast.BLangSimpleVarRef) {
 	name := pkgCtx.nextDesugarSymbolName()
-	sym := &desugaredSymbol{name: name, ty: svcTy, kind: model.SymbolKindVariable}
+	sym := &desugaredSymbol{name: name, ty: ty, kind: model.SymbolKindVariable}
 	scope.AddSymbol(name, sym)
 	symRef, _ := scope.GetSymbol(name)
 
@@ -731,7 +779,7 @@ func createServiceVariable(pkgCtx *packageContext, scope model.Scope, svcTy semt
 	ident.SetPosition(pos)
 
 	variable := &ast.BLangSimpleVariable{Name: ident}
-	variable.SetDeterminedType(svcTy)
+	variable.SetDeterminedType(ty)
 	variable.SetSymbol(symRef)
 	variable.SetInitialExpression(initExpr)
 	variable.SetPosition(pos)
@@ -742,7 +790,7 @@ func createServiceVariable(pkgCtx *packageContext, scope model.Scope, svcTy semt
 
 	ref := &ast.BLangSimpleVarRef{VariableName: ident}
 	ref.SetSymbol(symRef)
-	ref.SetDeterminedType(svcTy)
+	ref.SetDeterminedType(ty)
 	ref.SetPosition(pos)
 	return varDef, ref
 }
@@ -816,11 +864,11 @@ func buildListenerAttachInvocation(pkgCtx *packageContext, svc *ast.BLangService
 // symbol spaces of every imported module for one whose symbol's type
 // matches receiverTy, then returns its `methodName` symbol.
 func findClassMethodSymbol(pkgCtx *packageContext, receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	tc := semtypes.ContextFrom(pkgCtx.typeEnv())
+	tyCtx := pkgCtx.typeCtx()
 	for i := range pkgCtx.pkg.ClassDefinitions {
 		classDef := &pkgCtx.pkg.ClassDefinitions[i]
 		classSymRef := classDef.Symbol()
-		if !semtypes.IsSameType(tc, pkgCtx.getSymbolType(classSymRef), receiverTy) {
+		if !semtypes.IsSameType(tyCtx, pkgCtx.getSymbolType(classSymRef), receiverTy) {
 			continue
 		}
 		classSym, ok := pkgCtx.getSymbol(classSymRef).(model.ClassSymbol)
@@ -836,7 +884,7 @@ func findClassMethodSymbol(pkgCtx *packageContext, receiverTy semtypes.SemType, 
 			if !ok {
 				continue
 			}
-			if !semtypes.IsSameType(tc, sym.Type(), receiverTy) {
+			if !semtypes.IsSameType(tyCtx, sym.Type(), receiverTy) {
 				continue
 			}
 			return classSym.MethodSymbol(methodName)
@@ -1127,6 +1175,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 		ensureServiceDefaultInitFunction(pkgCtx, &pkg.Services[i])
 	}
 
+	hoistInlineServiceListeners(pkgCtx, pkg)
 	desugarInitFn(pkgCtx, compilerCtx, pkg)
 
 	for i := range pkg.Services {

@@ -1707,7 +1707,7 @@ func (n *NodeBuilder) populateServiceAttachPoint(service *BLangService, node *tr
 
 func (n *NodeBuilder) populateServiceAttachedExprs(service *BLangService, node *tree.ServiceDeclarationNode) {
 	exprs := node.Expressions()
-	for i := 0; i < exprs.Size(); i++ {
+	for i := 0; i < exprs.Size(); i += 2 {
 		service.AttachedExprs = append(service.AttachedExprs, n.createExpression(exprs.Get(i)))
 	}
 }

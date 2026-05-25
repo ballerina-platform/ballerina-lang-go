@@ -14,9 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int notAListener = 5;
+function notAListener() returns int {
+    return 5;
+}
 
-service on notAListener { // @error expression in 'on' clause is not a listener
+service on notAListener() { // @error expression in 'on' clause is not a listener
 }
 
 public function main() {
