@@ -98,6 +98,9 @@ func MappingAlternativeAllowsFields(cx Context, alt MappingAlternative, fields [
 			for _, name := range pos.Names {
 				for {
 					if i >= n {
+						if pos.IsOptional(cx, name) {
+							continue names
+						}
 						return false
 					}
 					fieldName := fields[i].Name
@@ -114,6 +117,9 @@ func MappingAlternativeAllowsFields(cx Context, alt MappingAlternative, fields [
 						continue names
 					}
 					if fieldName > name {
+						if pos.IsOptional(cx, name) {
+							continue names
+						}
 						return false
 					}
 					// in < case only type check is needed and FieldInnerVal give the rest type correctly
