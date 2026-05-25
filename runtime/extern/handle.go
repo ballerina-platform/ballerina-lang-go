@@ -32,9 +32,10 @@ type MethodHandle struct {
 // Context.Lookup*/InvokeMethod methods. Lookup hooks return the resolved
 // payload along with a found bool; Context methods forward both.
 type DispatchHandles struct {
-	LookupObject func(*Context, *values.Object, string) (any, bool)
-	LookupRemote func(*Context, *values.Object, string) (any, bool)
-	Invoke       func(*Context, any, []values.BalValue) (values.BalValue, error)
+	LookupObject   func(*Context, *values.Object, string) (any, bool)
+	LookupRemote   func(*Context, *values.Object, string) (any, bool)
+	LookupResource func(*Context, *values.Object, string, []values.BalValue) (any, bool) // resourceMethodName, path
+	Invoke         func(*Context, any, []values.BalValue) (values.BalValue, error)
 }
 
 // LookupObjectMethod resolves a regular method on obj. The second return is
@@ -53,8 +54,21 @@ func (c *Context) LookupRemoteMethod(obj *values.Object, name string) (MethodHan
 	return MethodHandle{impl: impl}, ok
 }
 
-// InvokeMethod calls the method captured by h. args is the full argument
-// list including the receiver at index 0 for object and remote methods.
+// LookupResourceMethod resolves a resource method for given method name and path parameters.
+// The second return is false if no candidate matches or if more than one
+// candidate matches (ambiguous dispatch).
+//
+// path carries a value for every segment of the source-level resource
+// access expression, including literal segments.
+func (c *Context) LookupResourceMethod(obj *values.Object, resourceMethodName string, path []values.BalValue) (MethodHandle, bool) {
+	impl, ok := c.Env.dispatch.LookupResource(c, obj, resourceMethodName, path)
+	return MethodHandle{impl: impl}, ok
+}
+
+// InvokeMethod calls the method captured by h. For object and remote
+// handles args is the full argument list including the receiver at
+// index 0. For resource handles the receiver and path are already baked
+// into the handle; args is only the user-supplied call arguments.
 func (c *Context) InvokeMethod(h MethodHandle, args []values.BalValue) (values.BalValue, error) {
 	return c.Env.dispatch.Invoke(c, h.impl, args)
 }

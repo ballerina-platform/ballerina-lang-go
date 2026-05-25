@@ -44,3 +44,12 @@ func newNativeHandle(fn extern.NativeFunc) *methodHandleImpl {
 		},
 	}
 }
+
+func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *methodHandleImpl {
+	return &methodHandleImpl{
+		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			full := buildResourceCallArgs(ctx, receiver, match, path, args)
+			return lookupAndExecute(ctx, nil, full, match.FunctionLookupKey)
+		},
+	}
+}

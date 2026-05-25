@@ -37,6 +37,23 @@ func LookupRemoteMethod(ctx *extern.Context, obj *values.Object, methodName stri
 	return lookupByMethodName(ctx, obj, model.RemoteMethodName(methodName))
 }
 
+// LookupResourceMethod resolves a resource method named resourceMethodName
+// on obj. The second return is false if no candidate matches or if more
+// than one candidate matches (ambiguous dispatch).
+//
+// path contains a value for every path segment of the source-level
+// resource access expression (literal AND computed). The matcher compares
+// each value's shape against the candidate's segment types; the invoked
+// function only receives the computed-segment values plus the rest list,
+// as constructed by buildResourceCallArgs.
+func LookupResourceMethod(ctx *extern.Context, obj *values.Object, resourceMethodName string, path []values.BalValue) (any, bool) {
+	matches := resourceFnCandidates(ctx, obj, resourceMethodName, path)
+	if len(matches) != 1 {
+		return nil, false
+	}
+	return newResourceHandle(obj, matches[0], path), true
+}
+
 // InvokeMethod calls the closure captured by the handle returned from one of
 // the Lookup* functions.
 func InvokeMethod(ctx *extern.Context, h any, args []values.BalValue) (values.BalValue, error) {
