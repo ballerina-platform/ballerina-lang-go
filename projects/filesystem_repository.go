@@ -165,9 +165,7 @@ func (r *FileSystemRepository) Exists(ctx context.Context, org, name, version st
 // findPlatformDir resolves the platform-specific subdirectory of a versioned
 // bala directory. Priority order:
 //  1. "any" — platform-agnostic balas win when present.
-//  2. Highest "go*" directory (e.g. "go1.26") — Go-targeted balas, biased to
-//     the lexicographically greatest entry so newer Go toolchain versions
-//     are preferred when multiple are present.
+//  2. First valid "go*" directory found — Go-targeted balas.
 //
 // A directory only qualifies when it contains either a Bala.toml (new format)
 // or a package.json (legacy v3 format) — the marker the bala loader uses to
@@ -186,18 +184,13 @@ func (r *FileSystemRepository) findPlatformDir(versionDir string) (string, bool,
 		}
 		return "", false, err
 	}
-	var goCandidates []string
 	for _, entry := range entries {
 		if entry.IsDir() && strings.HasPrefix(entry.Name(), platformGoPrefix) {
-			goCandidates = append(goCandidates, entry.Name())
-		}
-	}
-	sort.Sort(sort.Reverse(sort.StringSlice(goCandidates)))
-	for _, name := range goCandidates {
-		if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, name)); err != nil {
-			return "", false, err
-		} else if ok {
-			return dir, true, nil
+			if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, entry.Name())); err != nil {
+				return "", false, err
+			} else if ok {
+				return dir, true, nil
+			}
 		}
 	}
 	return "", false, nil

@@ -40,9 +40,7 @@ const (
 )
 
 // writeBala builds the bala zip at outputDir/<org>-<name>-any-<ver>.bala.
-// The public entry point is BallerinaBackend.EmitBala; this is its private
-// implementation. resolution may be nil; when it is, Dependencies.toml falls
-// back to direct manifest deps only (legacy/test path).
+// The public entry point is BallerinaBackend.EmitBala; this is its private implementation.
 func writeBala(pkg *Package, resolution *PackageResolution, outputDir string) (string, error) {
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", fmt.Errorf("writeBala: create output directory: %w", err)

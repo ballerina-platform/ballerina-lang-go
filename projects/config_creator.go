@@ -90,6 +90,27 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 	}
 	manifest := newManifestBuilder(toml, balaPath).Build()
 
+	deps, err := readDependenciesTomlDeps(fsys, balaPath, manifest.PackageDescriptor())
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+	manifest = NewPackageManifestFromParams(PackageManifestParams{
+		PackageDesc:      manifest.PackageDescriptor(),
+		Dependencies:     deps,
+		BuildOptions:     manifest.BuildOptions(),
+		Diagnostics:      manifest.Diagnostics(),
+		License:          manifest.License(),
+		Authors:          manifest.Authors(),
+		Keywords:         manifest.Keywords(),
+		ExportedModules:  manifest.ExportedModules(),
+		Repository:       manifest.Repository(),
+		BallerinaVersion: manifest.BallerinaVersion(),
+		Visibility:       manifest.Visibility(),
+		Icon:             manifest.Icon(),
+		Readme:           manifest.Readme(),
+		Description:      manifest.Description(),
+	})
+
 	platform, err := readBalaTomlPlatform(fsys, balaPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
@@ -205,6 +226,70 @@ func readBalaTomlPlatform(fsys fs.FS, balaPath string) (string, error) {
 		return v, nil
 	}
 	return BalaPlatformAny, nil
+}
+
+// readDependenciesTomlDeps reads Dependencies.toml from a TOML-format bala and
+// returns the direct dependencies of desc. Returns an error if the file is absent
+// since Dependencies.toml is required in every valid TOML-format bala.
+func readDependenciesTomlDeps(fsys fs.FS, balaPath string, desc PackageDescriptor) ([]Dependency, error) {
+	depsPath := path.Join(balaPath, DependenciesTomlFile)
+	t, err := tomlparser.Read(fsys, depsPath)
+	if err != nil {
+		return nil, &ProjectError{Message: "failed to read " + DependenciesTomlFile + ": " + err.Error()}
+	}
+
+	packages, ok := t.GetTables("package")
+	if !ok {
+		return nil, nil
+	}
+
+	// Build version lookup: "org/name" → version string
+	versions := make(map[string]string, len(packages))
+	for _, pkg := range packages {
+		o, _ := pkg.GetString("org")
+		n, _ := pkg.GetString("name")
+		v, _ := pkg.GetString("version")
+		if o != "" && n != "" && v != "" {
+			versions[o+"/"+n] = v
+		}
+	}
+
+	// Find the entry for desc and extract its direct deps
+	wantOrg := desc.Org().Value()
+	wantName := desc.Name().Value()
+	wantVer := desc.Version().String()
+	for _, pkg := range packages {
+		o, _ := pkg.GetString("org")
+		n, _ := pkg.GetString("name")
+		v, _ := pkg.GetString("version")
+		if o != wantOrg || n != wantName || v != wantVer {
+			continue
+		}
+		rawDeps, ok := pkg.GetArray("dependencies")
+		if !ok {
+			return nil, nil
+		}
+		var deps []Dependency
+		for _, raw := range rawDeps {
+			entry, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			depOrg, _ := entry["org"].(string)
+			depName, _ := entry["name"].(string)
+			depVer := versions[depOrg+"/"+depName]
+			if depOrg == "" || depName == "" || depVer == "" {
+				continue
+			}
+			ver, err := NewPackageVersionFromString(depVer)
+			if err != nil {
+				continue
+			}
+			deps = append(deps, NewDependency(NewPackageOrg(depOrg), NewPackageName(depName), ver))
+		}
+		return deps, nil
+	}
+	return nil, nil
 }
 
 // readBalaPackageJSON reads and parses the package.json file.
