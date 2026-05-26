@@ -842,7 +842,7 @@ func compileSingleFileModule(
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}
 	cu := ast.GetCompilationUnit(cx, st)
-	pkg := ast.ToPackage(cu)
+	pkg := ast.ToPackage(cx, cu)
 	pkg.PackageID = cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
 
 	langlibs, err := langlib.Build(cx, publicSymbols)

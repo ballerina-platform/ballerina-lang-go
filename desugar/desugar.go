@@ -1190,13 +1190,6 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 		desugarServiceConcurrently(&pkg.Services[i])
 	}
 
-	if pkg.StartFunction != nil {
-		desugarFn(pkg.StartFunction)
-	}
-	if pkg.StopFunction != nil {
-		desugarFn(pkg.StopFunction)
-	}
-
 	wg.Wait()
 	if panicErr != nil {
 		panic(panicErr)

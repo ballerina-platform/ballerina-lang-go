@@ -848,7 +848,7 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	// Build package from compilation units
 	var pkg *ast.BLangPackage
 	if len(syntaxTrees) == 1 {
-		pkg = ast.ToPackage(syntaxTrees[0])
+		pkg = ast.ToPackage(cx, syntaxTrees[0])
 	} else {
 		pkg = &ast.BLangPackage{}
 		for _, cu := range syntaxTrees {
@@ -874,7 +874,7 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 				case *ast.BLangXMLNS:
 					pkg.XmlnsList = append(pkg.XmlnsList, *n)
 				default:
-					pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
+					cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
 				}
 			}
 		}
