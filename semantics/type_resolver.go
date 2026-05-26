@@ -1148,7 +1148,10 @@ func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbo
 			return false
 		}
 		var fieldNames []string
-		for name := range recSym.Fields() {
+		for name, field := range recSym.Fields() {
+			if semtypes.IsNever(field.MemberType()) {
+				continue
+			}
 			for j, pname := range paramNames {
 				if j == i {
 					continue
