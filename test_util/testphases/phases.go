@@ -177,7 +177,7 @@ func RunPipelineWithContent(env *context.CompilerEnvironment, cx *context.Compil
 	if result.CompilationUnit == nil || cx.HasDiagnostics() {
 		return nil, fmt.Errorf("AST generation failed: compilation unit is nil")
 	}
-	result.Package = ast.ToPackage(result.CompilationUnit)
+	result.Package = ast.ToPackage(cx, result.CompilationUnit)
 	if phase == PhaseAST {
 		return result, nil
 	}
