@@ -19,6 +19,7 @@ package exec
 import (
 	"fmt"
 	"math"
+	"unsafe"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/decimal"
@@ -339,6 +340,24 @@ func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Fra
 		namespaces = getOperandValue(ctx, instr.NamespacesOp, frame).(*values.Map)
 	}
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children})
+}
+
+func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, frame *Frame) {
+	if instr.Kind != bir.TemplateKindString {
+		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
+	}
+	n := len(instr.Insertions)
+	buf := make([]byte, 0, instr.LiteralsTotalLen+8*n)
+	for i := 0; i < n; i++ {
+		buf = append(buf, instr.Strings[i]...)
+		buf = append(buf, values.String(getOperandValue(ctx, instr.Insertions[i], frame), nil)...)
+	}
+	buf = append(buf, instr.Strings[n]...)
+	var result string
+	if len(buf) > 0 {
+		result = unsafe.String(&buf[0], len(buf))
+	}
+	setOperandValue(ctx, instr.LhsOp, frame, result)
 }
 
 func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *Frame) {

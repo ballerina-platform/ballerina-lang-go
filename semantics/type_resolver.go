@@ -2353,6 +2353,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
 	case *ast.BLangXMLSequenceLiteral:
 		return resolveXMLSequenceLiteral(t, chain, e, expectedType)
+	case *ast.BLangTemplateExpr:
+		return resolveTemplateExpr(t, chain, e)
 	case *ast.BLangXMLElementLiteral:
 		return resolveXMLElementLiteral(t, chain, e)
 	case *ast.BLangXMLPILiteral:
@@ -2417,6 +2419,22 @@ func resolveXMLElementLiteral(t typeResolver, chain *binding, e *ast.BLangXMLEle
 		}
 	}
 	ty := semtypes.XML_ELEMENT
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveTemplateExpr(t typeResolver, chain *binding, e *ast.BLangTemplateExpr) (semtypes.SemType, expressionEffect, bool) {
+	var ty semtypes.SemType
+	if len(e.Insertions) == 0 {
+		ty = semtypes.StringConst(e.Strings[0])
+	} else {
+		for _, ins := range e.Insertions {
+			if _, _, ok := resolveActionOrExpression(t, chain, ins, templateInsertionAllowedTypes); !ok {
+				return nil, expressionEffect{}, false
+			}
+		}
+		ty = semtypes.STRING
+	}
 	setExpectedType(e, ty)
 	return ty, defaultExpressionEffect(chain), true
 }
