@@ -14,6 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public function dummy() returns int {
-    return 42;
+import testorg/v4pkg;
+import testorg/legacypkg;
+import ballerina/io;
+
+public function main() {
+    io:println(v4pkg:greet());
+    io:println(legacypkg:greet());
 }

@@ -497,10 +497,10 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// ballerina/lang.* bind to compiler-intrinsic symbols. All other
-		// ballerina/* packages — io, http, and the rest — will fall through to
-		// the publicSymbols path once their bala bundles are in place. io and
-		// http are handled as intrinsics below temporarily.
+		// ballerina/lang.* bind to compiler-intrinsic symbols. io and http are
+		// also handled as intrinsics below until their bala bundles are introduced
+		// in dedicated PRs; at that point they will resolve through publicSymbols
+		// like all other ballerina/* packages.
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
 			if isIoImport(&imp) {
 				bindIntrinsicImport(&imp, "io", io.GetIoSymbols(ctx), result)

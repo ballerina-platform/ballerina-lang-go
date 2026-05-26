@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"ballerina-lang-go/common/tomlparser"
@@ -55,6 +56,7 @@ type balaDependencyPackage struct {
 type balaProjectConfigResult struct {
 	PackageConfig PackageConfig
 	Platform      string
+	SchemaVersion int // bala schema version; 3 for legacy (package.json), 4+ for Bala.toml
 }
 
 // createBalaProjectConfig creates a PackageConfig by scanning an extracted
@@ -111,7 +113,7 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 		Description:      manifest.Description(),
 	})
 
-	platform, err := readBalaTomlPlatform(fsys, balaPath)
+	balaToml, err := readBalaToml(fsys, balaPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
 	}
@@ -150,7 +152,8 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 
 	return balaProjectConfigResult{
 		PackageConfig: config,
-		Platform:      platform,
+		Platform:      balaToml.platform,
+		SchemaVersion: balaToml.schemaVersion,
 	}, nil
 }
 
@@ -209,23 +212,44 @@ func createBalaProjectConfigLegacy(fsys fs.FS, balaPath string) (balaProjectConf
 	return balaProjectConfigResult{
 		PackageConfig: config,
 		Platform:      pkgJSON.Platform,
+		SchemaVersion: 3,
 	}, nil
 }
 
-// readBalaTomlPlatform reads Bala.toml and returns the [build].platform
-// string. Defaults to "any" when missing.
-func readBalaTomlPlatform(fsys fs.FS, balaPath string) (string, error) {
+// balaTomlData holds the fields extracted from a single parse of Bala.toml.
+type balaTomlData struct {
+	platform      string
+	schemaVersion int
+}
+
+// readBalaToml parses Bala.toml once and returns platform and schema version.
+// platform defaults to "any" and schemaVersion defaults to 4 when absent.
+func readBalaToml(fsys fs.FS, balaPath string) (balaTomlData, error) {
 	tomlPath := path.Join(balaPath, BalaTomlFile)
 	t, err := tomlparser.Read(fsys, tomlPath)
 	if err != nil {
-		return "", &ProjectError{
+		return balaTomlData{}, &ProjectError{
 			Message: "failed to read " + BalaTomlFile + ": " + err.Error(),
 		}
 	}
+
+	platform := BalaPlatformAny
 	if v, ok := t.GetString("build.platform"); ok && v != "" {
-		return v, nil
+		platform = v
 	}
-	return BalaPlatformAny, nil
+
+	schemaVersion := 4
+	if v, ok := t.GetString("bala.schema_version"); ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return balaTomlData{}, &ProjectError{
+				Message: "invalid bala.schema_version in " + BalaTomlFile + ": " + v,
+			}
+		}
+		schemaVersion = n
+	}
+
+	return balaTomlData{platform: platform, schemaVersion: schemaVersion}, nil
 }
 
 // readDependenciesTomlDeps reads Dependencies.toml from a TOML-format bala and
@@ -273,17 +297,17 @@ func readDependenciesTomlDeps(fsys fs.FS, balaPath string, desc PackageDescripto
 		for _, raw := range rawDeps {
 			entry, ok := raw.(map[string]any)
 			if !ok {
-				continue
+				return nil, &ProjectError{Message: "malformed dependency entry in " + DependenciesTomlFile}
 			}
 			depOrg, _ := entry["org"].(string)
 			depName, _ := entry["name"].(string)
 			depVer := versions[depOrg+"/"+depName]
 			if depOrg == "" || depName == "" || depVer == "" {
-				continue
+				return nil, &ProjectError{Message: "incomplete dependency entry in " + DependenciesTomlFile}
 			}
 			ver, err := NewPackageVersionFromString(depVer)
 			if err != nil {
-				continue
+				return nil, &ProjectError{Message: "invalid dependency version in " + DependenciesTomlFile + ": " + err.Error()}
 			}
 			deps = append(deps, NewDependency(NewPackageOrg(depOrg), NewPackageName(depName), ver))
 		}

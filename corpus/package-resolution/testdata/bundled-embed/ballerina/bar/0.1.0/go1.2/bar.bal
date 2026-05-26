@@ -14,11 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/foo;
-import ballerina/bar;
-import ballerina/io;
-
-public function main() {
-    io:println(foo:add(3, 4));
-    io:println(bar:value());
+public function value() returns int {
+    return 1;
 }

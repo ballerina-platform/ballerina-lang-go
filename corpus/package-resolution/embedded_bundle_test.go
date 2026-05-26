@@ -26,6 +26,9 @@ import (
 	"testing"
 
 	_ "ballerina-lang-go/lib/rt" // register stdlib runtime functions (io.println, etc.)
+	// foo has native code; bar is pure Ballerina. foo's native must be registered
+	// so the interpreter can dispatch foo:add() at runtime.
+	_ "ballerina-lang-go/corpus/package-resolution/testdata/bundled-embed/ballerina/foo/0.1.0/go1.2/native"
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
@@ -51,43 +54,43 @@ func bundledEmbedRepo(t *testing.T) *projects.FileSystemRepository {
 	return projects.NewFileSystemRepository(sub, ".")
 }
 
-// TestBundledRepository_LoadsEmbeddedPackage drives the full path that a real
-// bundled stdlib will take at runtime: a compile-time embed.FS handed to
-// FileSystemRepository, which walks <org>/<name>/<version>/<platform>/ and
-// loads a TOML-format bala (Bala.toml + Ballerina.toml + Dependencies.toml)
-// into a usable *Package.
+// TestBundledRepository_LoadsEmbeddedPackage verifies that both a pure-Ballerina
+// package (bar) and a native package (foo) can be loaded from the embedded FS.
 func TestBundledRepository_LoadsEmbeddedPackage(t *testing.T) {
 	repo := bundledEmbedRepo(t)
 	ctx := context.Background()
 	opts := projects.ResolutionOptions{}
 
-	versions, err := repo.GetPackageVersions(ctx, "ballerina", "dummypkg", opts)
-	if err != nil {
-		t.Fatalf("GetPackageVersions: %v", err)
-	}
-	if len(versions) != 1 || versions[0].String() != "0.1.0" {
-		t.Fatalf("versions = %v, want [0.1.0]", versions)
+	for _, tc := range []struct {
+		name    string
+		version string
+	}{
+		{"foo", "0.1.0"}, // has native code
+		{"bar", "0.1.0"}, // pure Ballerina
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			versions, err := repo.GetPackageVersions(ctx, "ballerina", tc.name, opts)
+			if err != nil {
+				t.Fatalf("GetPackageVersions: %v", err)
+			}
+			if len(versions) != 1 || versions[0].String() != tc.version {
+				t.Fatalf("versions = %v, want [%s]", versions, tc.version)
+			}
+
+			pkg, err := repo.GetPackage(ctx, "ballerina", tc.name, tc.version, opts)
+			if err != nil {
+				t.Fatalf("GetPackage: %v", err)
+			}
+			if pkg == nil {
+				t.Fatal("GetPackage returned nil")
+			}
+			if got := pkg.Descriptor().Name().Value(); got != tc.name {
+				t.Errorf("name = %q, want %q", got, tc.name)
+			}
+		})
 	}
 
-	pkg, err := repo.GetPackage(ctx, "ballerina", "dummypkg", "0.1.0", opts)
-	if err != nil {
-		t.Fatalf("GetPackage: %v", err)
-	}
-	if pkg == nil {
-		t.Fatal("GetPackage returned nil")
-	}
-	if got := pkg.Descriptor().Org().Value(); got != "ballerina" {
-		t.Errorf("org = %q, want ballerina", got)
-	}
-	if got := pkg.Descriptor().Name().Value(); got != "dummypkg" {
-		t.Errorf("name = %q, want dummypkg", got)
-	}
-	if got := pkg.Descriptor().Version().String(); got != "0.1.0" {
-		t.Errorf("version = %q, want 0.1.0", got)
-	}
-
-	// Misses must report cleanly so the real resolver can fall through to
-	// the next repository in the chain.
+	// Misses must report cleanly so the real resolver can fall through.
 	missing, err := repo.GetPackage(ctx, "ballerina", "unknown", "0.1.0", opts)
 	if err != nil {
 		t.Fatalf("GetPackage(unknown): %v", err)
@@ -97,34 +100,30 @@ func TestBundledRepository_LoadsEmbeddedPackage(t *testing.T) {
 	}
 }
 
-// TestBundledRepository_ResolverChainServesEmbedded wires the embed-backed
-// repo through ProjectEnvironmentBuilder, exercising the same PackageResolver
-// path that production uses. ResolveByName should return the embedded package
-// with no central cache configured.
+// TestBundledRepository_ResolverChainServesEmbedded verifies both packages
+// resolve through the ProjectEnvironmentBuilder resolver chain.
 func TestBundledRepository_ResolverChainServesEmbedded(t *testing.T) {
 	env := projects.NewProjectEnvironmentBuilder(bundledEmbedFS).
 		WithRepositories([]projects.Repository{bundledEmbedRepo(t)}).
 		Build()
 
-	pkgs := env.PackageResolver().ResolveByName(
-		context.Background(), "ballerina", "dummypkg", env.ResolutionOptions(),
-	)
-	if len(pkgs) != 1 {
-		t.Fatalf("ResolveByName returned %d packages, want 1", len(pkgs))
-	}
-	if got := pkgs[0].Descriptor().Name().Value(); got != "dummypkg" {
-		t.Errorf("resolved name = %q, want dummypkg", got)
-	}
-	if got := pkgs[0].Descriptor().Version().String(); got != "0.1.0" {
-		t.Errorf("resolved version = %q, want 0.1.0", got)
+	for _, name := range []string{"foo", "bar"} {
+		pkgs := env.PackageResolver().ResolveByName(
+			context.Background(), "ballerina", name, env.ResolutionOptions(),
+		)
+		if len(pkgs) != 1 {
+			t.Fatalf("ResolveByName(%q) returned %d packages, want 1", name, len(pkgs))
+		}
+		if got := pkgs[0].Descriptor().Name().Value(); got != name {
+			t.Errorf("resolved name = %q, want %q", got, name)
+		}
 	}
 }
 
 // TestBundledRepository_ConsumerProjectRuns is the end-to-end check: a user
-// project imports `ballerina/dummypkg` and calls `dummypkg:dummy()`. The
-// resolver chain is restricted to the test bundled repo, so a successful run
-// proves the full pipeline — embed.FS resolution, bala loader, compilation,
-// BIR generation, and interpretation — works for a bundled stdlib.
+// project imports ballerina/foo (native) and ballerina/bar (pure Ballerina).
+// foo:add(3, 4) exercises native dispatch; bar:value() exercises pure Ballerina.
+// Expected stdout: "7\n1\n"
 func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
 	projectFs := os.DirFS("testdata/userProject")
 
@@ -138,12 +137,7 @@ func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
 		t.Fatalf("load diagnostics: %v", diag.Diagnostics())
 	}
 
-	pkg := result.Project().CurrentPackage()
-	if pkg == nil {
-		t.Fatal("loaded project has no current package")
-	}
-
-	compilation := pkg.Compilation()
+	compilation := result.Project().CurrentPackage().Compilation()
 	if diag := compilation.DiagnosticResult(); diag.HasErrors() {
 		t.Fatalf("compilation diagnostics: %v", diag.Diagnostics())
 	}
@@ -168,7 +162,10 @@ func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
 		}
 	}
 
-	if got := strings.TrimSpace(stdout.String()); got != "42" {
-		t.Errorf("stdout = %q, want %q", got, "42")
+	// foo:add(3, 4) = 7 (native dispatch), bar:value() = 1 (pure Ballerina)
+	got := strings.TrimSpace(stdout.String())
+	want := "7\n1"
+	if got != want {
+		t.Errorf("stdout = %q, want %q", got, want)
 	}
 }

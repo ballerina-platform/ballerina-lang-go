@@ -114,7 +114,7 @@ func (l *ProjectLoader) loadBalaProjectWithEnv(projectPath string, cfg ProjectLo
 		env = l.createEnvironmentWithRepositories(cfg, buildOpts)
 	}
 
-	project := newBalaProjectWithEnv(projectPath, buildOpts, result.Platform, env)
+	project := newBalaProjectWithEnv(projectPath, buildOpts, result.Platform, result.SchemaVersion, env)
 
 	compilationOptions := buildOpts.CompilationOptions()
 	pkg := NewPackageFromConfig(project, result.PackageConfig, compilationOptions)

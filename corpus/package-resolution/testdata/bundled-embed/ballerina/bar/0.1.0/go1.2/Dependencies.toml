@@ -3,5 +3,5 @@ dependencies-toml-version = "2"
 
 [[package]]
 org     = "ballerina"
-name    = "dummypkg"
+name    = "bar"
 version = "0.1.0"
