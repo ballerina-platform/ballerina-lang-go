@@ -427,10 +427,13 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 	fnSymRef := function.Symbol()
 	fnSym := cx.GetSymbol(fnSymRef).(model.FunctionSymbol)
 	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
-	inclInfo := model.NewIncludedRecordParamInfo(len(function.RequiredParams))
+	var inclInfo *model.IncludedRecordParamInfo
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
 		if param.IsIncludedRecordParam() {
+			if inclInfo == nil {
+				inclInfo = model.NewIncludedRecordParamInfo(len(function.RequiredParams))
+			}
 			inclInfo.Set(i)
 			continue
 		}
