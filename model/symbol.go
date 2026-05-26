@@ -85,7 +85,7 @@ type FunctionSymbol interface {
 	DefaultableParams() *DefaultableParamInfo
 	SetDefaultableParams(DefaultableParamInfo)
 	IncludedRecordParams() *IncludedRecordParamInfo
-	SetIncludedRecordParams(IncludedRecordParamInfo)
+	SetIncludedRecordParams(*IncludedRecordParamInfo)
 	ParamNames() []string
 }
 
@@ -279,7 +279,7 @@ type (
 		symbolBase
 		signature            FunctionSignature
 		defaultableParams    DefaultableParamInfo
-		includedRecordParams IncludedRecordParamInfo
+		includedRecordParams *IncludedRecordParamInfo
 	}
 
 	monomorphicFunctionSymbol struct {
@@ -300,7 +300,7 @@ type (
 		nRequiredArgs        int
 		Flags                FuncSymbolFlags
 		defaultable          DefaultableParamInfo
-		includedRecordParams IncludedRecordParamInfo
+		includedRecordParams *IncludedRecordParamInfo
 
 		// Populated by type resolver at stage 4.
 		paramTypes []semtypes.SemType
@@ -796,10 +796,10 @@ func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
 }
 
 func (fs *functionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
-	return &fs.includedRecordParams
+	return fs.includedRecordParams
 }
 
-func (fs *functionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+func (fs *functionSymbol) SetIncludedRecordParams(info *IncludedRecordParamInfo) {
 	fs.includedRecordParams = info
 }
 
@@ -838,8 +838,8 @@ func (d *DefaultableParamInfo) SetInferredTypedesc(index int) {
 	d.params[index] = DefaultableParam{Kind: DefaultableParamKindInferredTypedesc}
 }
 
-func NewIncludedRecordParamInfo(paramCount int) IncludedRecordParamInfo {
-	return IncludedRecordParamInfo{
+func NewIncludedRecordParamInfo(paramCount int) *IncludedRecordParamInfo {
+	return &IncludedRecordParamInfo{
 		params:     make([]bool, paramCount),
 		fieldNames: make([][]string, paramCount),
 	}
@@ -985,7 +985,7 @@ func (s *containerGenericFunctionSymbol) IncludedRecordParams() *IncludedRecordP
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *containerGenericFunctionSymbol) SetIncludedRecordParams(_ IncludedRecordParamInfo) {
+func (s *containerGenericFunctionSymbol) SetIncludedRecordParams(_ *IncludedRecordParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
@@ -1037,10 +1037,10 @@ func (s *dependentlyTypedFunctionSymbol) SetDefaultableParams(info DefaultablePa
 }
 
 func (s *dependentlyTypedFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
-	return &s.includedRecordParams
+	return s.includedRecordParams
 }
 
-func (s *dependentlyTypedFunctionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+func (s *dependentlyTypedFunctionSymbol) SetIncludedRecordParams(info *IncludedRecordParamInfo) {
 	s.includedRecordParams = info
 }
 

@@ -379,9 +379,12 @@ func (sr *symbolReader) readDefaultableParams(paramCount int, space *model.Symbo
 	return info
 }
 
-func (sr *symbolReader) readIncludedRecordParams(paramCount int) model.IncludedRecordParamInfo {
+func (sr *symbolReader) readIncludedRecordParams(paramCount int) *model.IncludedRecordParamInfo {
 	var count int64
 	read(sr.r, &count)
+	if count == 0 {
+		return nil
+	}
 	info := model.NewIncludedRecordParamInfo(paramCount)
 	for i := int64(0); i < count; i++ {
 		var idx int64

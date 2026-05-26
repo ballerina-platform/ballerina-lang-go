@@ -1125,7 +1125,7 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 
 func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbol model.FunctionSymbol) bool {
 	info := fnSymbol.IncludedRecordParams()
-	if info.Len() == 0 {
+	if info == nil {
 		return true
 	}
 	paramNames := fnSymbol.ParamNames()
@@ -4467,10 +4467,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 
 	var inclInfo *model.IncludedRecordParamInfo
 	if supportsIncludedRecords(sym) {
-		info := sym.IncludedRecordParams()
-		if info.Len() > 0 {
-			inclInfo = info
-		}
+		inclInfo = sym.IncludedRecordParams()
 	}
 
 	slots := make([]argSlot, nRequired)
@@ -4508,24 +4505,30 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 			}
 
 			if inclInfo != nil {
-				if idx, ok := inclInfo.LookupField(name); ok {
-					switch s := slots[idx].(type) {
-					case nil:
-						slots[idx] = &mappingSlot{
-							recordTy: paramTypes[idx],
-							fields:   []mappingField{{name: name, expr: a.Expr}},
-						}
-					case *valueSlot:
-						t.semanticError(
-							fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
-							a.GetPosition())
-						return nil, chain, false
-					case *mappingSlot:
-						s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
-					}
-					a.Name.DeterminedType = semtypes.NEVER
-					continue
+				argTy, _, ok := resolveActionOrExpression(t, chain, a.Expr, nil)
+				if !ok {
+					return nil, chain, false
 				}
+				idx, ok := includedRecordArgIndex(t, inclInfo, paramTypes, name, argTy, a.GetPosition())
+				if !ok {
+					return nil, chain, false
+				}
+				switch s := slots[idx].(type) {
+				case nil:
+					slots[idx] = &mappingSlot{
+						recordTy: paramTypes[idx],
+						fields:   []mappingField{{name: name, expr: a.Expr}},
+					}
+				case *valueSlot:
+					t.semanticError(
+						fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
+						a.GetPosition())
+					return nil, chain, false
+				case *mappingSlot:
+					s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
+				}
+				a.Name.DeterminedType = semtypes.NEVER
+				continue
 			}
 
 			t.semanticError(fmt.Sprintf("no such parameter %s", name), a.GetPosition())
@@ -4626,6 +4629,49 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	return tys, chain, true
 }
 
+func includedRecordArgIndex(t typeResolver, inclInfo *model.IncludedRecordParamInfo, paramTypes []semtypes.SemType, name string, argTy semtypes.SemType, pos diagnostics.Location) (int, bool) {
+	var explicitMatches []int
+	var restMatches []int
+	keyTy := semtypes.StringConst(name)
+	for i := 0; i < inclInfo.Len(); i++ {
+		if !inclInfo.IsIncluded(i) {
+			continue
+		}
+		memberTy := semtypes.MappingMemberTypeInnerVal(t.typeContext(), paramTypes[i], keyTy)
+		if semtypes.IsEmpty(t.typeContext(), memberTy) || !semtypes.IsSubtype(t.typeContext(), argTy, memberTy) {
+			continue
+		}
+		if includedRecordParamHasField(inclInfo, i, name) {
+			explicitMatches = append(explicitMatches, i)
+		} else {
+			restMatches = append(restMatches, i)
+		}
+	}
+	matches := explicitMatches
+	if len(matches) == 0 {
+		matches = restMatches
+	}
+	switch len(matches) {
+	case 0:
+		t.semanticError(fmt.Sprintf("no included record parameter accepts named argument '%s'", name), pos)
+		return -1, false
+	case 1:
+		return matches[0], true
+	default:
+		t.semanticError(fmt.Sprintf("named argument '%s' matches multiple included record parameters", name), pos)
+		return -1, false
+	}
+}
+
+func includedRecordParamHasField(inclInfo *model.IncludedRecordParamInfo, index int, name string) bool {
+	for _, fieldName := range inclInfo.Fields(index) {
+		if fieldName == name {
+			return true
+		}
+	}
+	return false
+}
+
 func paramIndexOf(paramNames []string, name string) int {
 	for i, each := range paramNames {
 		if each == name {
@@ -4685,12 +4731,26 @@ func supportsIncludedRecords(sym model.FunctionSymbol) bool {
 
 // I don't like this. But we are doing this to avoid having to do this in both desugar and semantic analysis. Ideally this should be in the desugar
 func rewriteCallArgsForIncludedRecords(inv invocable, origArgs []ast.BLangExpression, slots []argSlot, paramNames []string, inclInfo *model.IncludedRecordParamInfo) {
+	consumedFields := make(map[*ast.BLangNamedArgsExpression]bool)
+	for i := 0; i < inclInfo.Len(); i++ {
+		ms, ok := slots[i].(*mappingSlot)
+		if !ok {
+			continue
+		}
+		for _, field := range ms.fields {
+			for _, arg := range origArgs {
+				if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && named.Expr == field.expr && named.Name.Value == field.name {
+					consumedFields[named] = true
+					break
+				}
+			}
+		}
+	}
+
 	newArgs := make([]ast.BLangExpression, 0, len(origArgs))
 	for _, arg := range origArgs {
-		if named, ok := arg.(*ast.BLangNamedArgsExpression); ok {
-			if _, isField := inclInfo.LookupField(named.Name.Value); isField {
-				continue
-			}
+		if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && consumedFields[named] {
+			continue
 		}
 		newArgs = append(newArgs, arg)
 	}
