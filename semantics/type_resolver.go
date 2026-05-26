@@ -969,18 +969,23 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.StatementNod
 	case *ast.BLangBlockStmt:
 		return resolveBlockStatements(t, chain, s.Stmts)
 	case *ast.BLangForeach:
-		if s.VariableDef != nil {
-			variable := s.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
-			if !resolveSimpleVariable(t, chain, variable) {
+		collectionTy, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil)
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		variable := s.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+		if s.GetIsDeclaredWithVar() {
+			variableTy, ok := resolveForeachVariableType(t, s.Collection, collectionTy)
+			if !ok {
 				return defaultStmtEffect(chain), false
 			}
-			s.VariableDef.SetDeterminedType(semtypes.NEVER)
+			variable.Name.SetDeterminedType(semtypes.NEVER)
+			setExpectedType(variable, variableTy)
+			updateSymbolType(t, variable, variableTy)
+		} else if !resolveSimpleVariable(t, chain, variable) {
+			return defaultStmtEffect(chain), false
 		}
-		if s.Collection != nil {
-			if _, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil); !ok {
-				return defaultStmtEffect(chain), false
-			}
-		}
+		s.VariableDef.SetDeterminedType(semtypes.NEVER)
 		// foreach may run zero times, so the post-loop chain starts from the
 		// loop-entry chain. Body completion and any break paths are merged in.
 		loopT := &loopTypeResolver{parentResolver: t}
@@ -3030,6 +3035,36 @@ func resolveQueryCollectionElementType(
 	default:
 		t.unimplemented("query from clause currently supports only list or map collections", pos)
 		return nil, false
+	}
+}
+
+func resolveForeachVariableType(t typeResolver, collection ast.BLangActionOrExpression, collectionTy semtypes.SemType) (semtypes.SemType, bool) {
+	if binaryExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binaryExpr) {
+		return semtypes.INT, true
+	}
+	ctx := t.typeContext()
+	switch {
+	case semtypes.IsSubtype(ctx, collectionTy, semtypes.LIST):
+		return semtypes.ListMemberTypeInnerVal(ctx, collectionTy, semtypes.INT), true
+	case semtypes.IsSubtype(ctx, collectionTy, semtypes.MAPPING):
+		return semtypes.MappingMemberTypeInnerVal(ctx, collectionTy, semtypes.STRING), true
+	default:
+		ld := semtypes.NewListDefinition()
+		emptyListTy := ld.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		iteratorFnTy := semtypes.ObjectMemberType(ctx, semtypes.StringConst("iterator"), collectionTy)
+		if iteratorFnTy == nil || !semtypes.IsSubtype(ctx, iteratorFnTy, semtypes.FUNCTION) {
+			t.semanticError("foreach collection is not iterable", collection.GetPosition())
+			return nil, false
+		}
+		iteratorTy := semtypes.FunctionReturnType(ctx, iteratorFnTy, emptyListTy)
+		nextFnTy := semtypes.ObjectMemberType(ctx, semtypes.StringConst("next"), iteratorTy)
+		if nextFnTy == nil || !semtypes.IsSubtype(ctx, nextFnTy, semtypes.FUNCTION) {
+			t.semanticError("foreach iterator does not have a next method", collection.GetPosition())
+			return nil, false
+		}
+		nextReturnTy := semtypes.FunctionReturnType(ctx, nextFnTy, emptyListTy)
+		valueRecordTy := semtypes.Diff(semtypes.Diff(nextReturnTy, semtypes.NIL), semtypes.ERROR)
+		return semtypes.MappingMemberTypeInnerVal(ctx, valueRecordTy, semtypes.StringConst("value")), true
 	}
 }
 
