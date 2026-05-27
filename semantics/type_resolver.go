@@ -969,18 +969,23 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.StatementNod
 	case *ast.BLangBlockStmt:
 		return resolveBlockStatements(t, chain, s.Stmts)
 	case *ast.BLangForeach:
-		if s.VariableDef != nil {
-			variable := s.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
-			if !resolveSimpleVariable(t, chain, variable) {
+		collectionTy, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil)
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		variable := s.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+		if s.GetIsDeclaredWithVar() {
+			variableTy, ok := resolveForeachVariableType(t, s.Collection, collectionTy)
+			if !ok {
 				return defaultStmtEffect(chain), false
 			}
-			s.VariableDef.SetDeterminedType(semtypes.NEVER)
+			variable.Name.SetDeterminedType(semtypes.NEVER)
+			setExpectedType(variable, variableTy)
+			updateSymbolType(t, variable, variableTy)
+		} else if !resolveSimpleVariable(t, chain, variable) {
+			return defaultStmtEffect(chain), false
 		}
-		if s.Collection != nil {
-			if _, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil); !ok {
-				return defaultStmtEffect(chain), false
-			}
-		}
+		s.VariableDef.SetDeterminedType(semtypes.NEVER)
 		// foreach may run zero times, so the post-loop chain starts from the
 		// loop-entry chain. Body completion and any break paths are merged in.
 		loopT := &loopTypeResolver{parentResolver: t}
@@ -1125,7 +1130,7 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 
 func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbol model.FunctionSymbol) bool {
 	info := fnSymbol.IncludedRecordParams()
-	if info.Len() == 0 {
+	if info == nil {
 		return true
 	}
 	paramNames := fnSymbol.ParamNames()
@@ -1148,7 +1153,10 @@ func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbo
 			return false
 		}
 		var fieldNames []string
-		for name := range recSym.Fields() {
+		for name, field := range recSym.Fields() {
+			if semtypes.IsNever(field.MemberType()) {
+				continue
+			}
 			for j, pname := range paramNames {
 				if j == i {
 					continue
@@ -3073,6 +3081,36 @@ func resolveQueryCollectionElementType(
 	}
 }
 
+func resolveForeachVariableType(t typeResolver, collection ast.BLangActionOrExpression, collectionTy semtypes.SemType) (semtypes.SemType, bool) {
+	if binaryExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binaryExpr) {
+		return semtypes.INT, true
+	}
+	ctx := t.typeContext()
+	switch {
+	case semtypes.IsSubtype(ctx, collectionTy, semtypes.LIST):
+		return semtypes.ListMemberTypeInnerVal(ctx, collectionTy, semtypes.INT), true
+	case semtypes.IsSubtype(ctx, collectionTy, semtypes.MAPPING):
+		return semtypes.MappingMemberTypeInnerVal(ctx, collectionTy, semtypes.STRING), true
+	default:
+		ld := semtypes.NewListDefinition()
+		emptyListTy := ld.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		iteratorFnTy := semtypes.ObjectMemberType(ctx, semtypes.StringConst("iterator"), collectionTy)
+		if iteratorFnTy == nil || !semtypes.IsSubtype(ctx, iteratorFnTy, semtypes.FUNCTION) {
+			t.semanticError("foreach collection is not iterable", collection.GetPosition())
+			return nil, false
+		}
+		iteratorTy := semtypes.FunctionReturnType(ctx, iteratorFnTy, emptyListTy)
+		nextFnTy := semtypes.ObjectMemberType(ctx, semtypes.StringConst("next"), iteratorTy)
+		if nextFnTy == nil || !semtypes.IsSubtype(ctx, nextFnTy, semtypes.FUNCTION) {
+			t.semanticError("foreach iterator does not have a next method", collection.GetPosition())
+			return nil, false
+		}
+		nextReturnTy := semtypes.FunctionReturnType(ctx, nextFnTy, emptyListTy)
+		valueRecordTy := semtypes.Diff(semtypes.Diff(nextReturnTy, semtypes.NIL), semtypes.ERROR)
+		return semtypes.MappingMemberTypeInnerVal(ctx, valueRecordTy, semtypes.StringConst("value")), true
+	}
+}
+
 func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
 	return mapQuerySelectExpectedTypeWithValue(env, semtypes.Union(semtypes.ANY, semtypes.ERROR))
 }
@@ -4827,10 +4865,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 
 	var inclInfo *model.IncludedRecordParamInfo
 	if supportsIncludedRecords(sym) {
-		info := sym.IncludedRecordParams()
-		if info.Len() > 0 {
-			inclInfo = info
-		}
+		inclInfo = sym.IncludedRecordParams()
 	}
 
 	slots := make([]argSlot, nRequired)
@@ -4868,24 +4903,30 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 			}
 
 			if inclInfo != nil {
-				if idx, ok := inclInfo.LookupField(name); ok {
-					switch s := slots[idx].(type) {
-					case nil:
-						slots[idx] = &mappingSlot{
-							recordTy: paramTypes[idx],
-							fields:   []mappingField{{name: name, expr: a.Expr}},
-						}
-					case *valueSlot:
-						t.semanticError(
-							fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
-							a.GetPosition())
-						return nil, chain, false
-					case *mappingSlot:
-						s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
-					}
-					a.Name.DeterminedType = semtypes.NEVER
-					continue
+				argTy, _, ok := resolveActionOrExpression(t, chain, a.Expr, nil)
+				if !ok {
+					return nil, chain, false
 				}
+				idx, ok := includedRecordArgIndex(t, inclInfo, paramTypes, name, argTy, a.GetPosition())
+				if !ok {
+					return nil, chain, false
+				}
+				switch s := slots[idx].(type) {
+				case nil:
+					slots[idx] = &mappingSlot{
+						recordTy: paramTypes[idx],
+						fields:   []mappingField{{name: name, expr: a.Expr}},
+					}
+				case *valueSlot:
+					t.semanticError(
+						fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
+						a.GetPosition())
+					return nil, chain, false
+				case *mappingSlot:
+					s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
+				}
+				a.Name.DeterminedType = semtypes.NEVER
+				continue
 			}
 
 			t.semanticError(fmt.Sprintf("no such parameter %s", name), a.GetPosition())
@@ -4986,6 +5027,49 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	return tys, chain, true
 }
 
+func includedRecordArgIndex(t typeResolver, inclInfo *model.IncludedRecordParamInfo, paramTypes []semtypes.SemType, name string, argTy semtypes.SemType, pos diagnostics.Location) (int, bool) {
+	var explicitMatches []int
+	var restMatches []int
+	keyTy := semtypes.StringConst(name)
+	for i := 0; i < inclInfo.Len(); i++ {
+		if !inclInfo.IsIncluded(i) {
+			continue
+		}
+		memberTy := semtypes.MappingMemberTypeInnerVal(t.typeContext(), paramTypes[i], keyTy)
+		if semtypes.IsEmpty(t.typeContext(), memberTy) || !semtypes.IsSubtype(t.typeContext(), argTy, memberTy) {
+			continue
+		}
+		if includedRecordParamHasField(inclInfo, i, name) {
+			explicitMatches = append(explicitMatches, i)
+		} else {
+			restMatches = append(restMatches, i)
+		}
+	}
+	matches := explicitMatches
+	if len(matches) == 0 {
+		matches = restMatches
+	}
+	switch len(matches) {
+	case 0:
+		t.semanticError(fmt.Sprintf("no included record parameter accepts named argument '%s'", name), pos)
+		return -1, false
+	case 1:
+		return matches[0], true
+	default:
+		t.semanticError(fmt.Sprintf("named argument '%s' matches multiple included record parameters", name), pos)
+		return -1, false
+	}
+}
+
+func includedRecordParamHasField(inclInfo *model.IncludedRecordParamInfo, index int, name string) bool {
+	for _, fieldName := range inclInfo.Fields(index) {
+		if fieldName == name {
+			return true
+		}
+	}
+	return false
+}
+
 func paramIndexOf(paramNames []string, name string) int {
 	for i, each := range paramNames {
 		if each == name {
@@ -5045,12 +5129,26 @@ func supportsIncludedRecords(sym model.FunctionSymbol) bool {
 
 // I don't like this. But we are doing this to avoid having to do this in both desugar and semantic analysis. Ideally this should be in the desugar
 func rewriteCallArgsForIncludedRecords(inv invocable, origArgs []ast.BLangExpression, slots []argSlot, paramNames []string, inclInfo *model.IncludedRecordParamInfo) {
+	consumedFields := make(map[*ast.BLangNamedArgsExpression]bool)
+	for i := 0; i < inclInfo.Len(); i++ {
+		ms, ok := slots[i].(*mappingSlot)
+		if !ok {
+			continue
+		}
+		for _, field := range ms.fields {
+			for _, arg := range origArgs {
+				if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && named.Expr == field.expr && named.Name.Value == field.name {
+					consumedFields[named] = true
+					break
+				}
+			}
+		}
+	}
+
 	newArgs := make([]ast.BLangExpression, 0, len(origArgs))
 	for _, arg := range origArgs {
-		if named, ok := arg.(*ast.BLangNamedArgsExpression); ok {
-			if _, isField := inclInfo.LookupField(named.Name.Value); isField {
-				continue
-			}
+		if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && consumedFields[named] {
+			continue
 		}
 		newArgs = append(newArgs, arg)
 	}
