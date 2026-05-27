@@ -21,7 +21,7 @@ import ballerina/io;
 public function main() {
     http:Client c = new ("http://foo");
     string res1 = checkpanic c->get("bar");
-    io:println(res1); // @output "string response"
+    io:println(res1); // @output string response
     int res2 = checkpanic c->get("bar");
     io:println(res2); // @output 2
     int res3 = checkpanic c->get("bar");

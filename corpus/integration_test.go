@@ -40,6 +40,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/langlib"
+	"ballerina-lang-go/test_util/testharness"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
 
@@ -133,35 +134,27 @@ type caseRun struct {
 }
 
 func TestIntegration(t *testing.T) {
-	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
-		return true
-	})
-
-	for _, testPair := range testPairs {
-		t.Run(testPair.Name, func(t *testing.T) {
+	cases, err := testharness.GetSingleFileTestCases("../corpus/bal", test_util.Integration, test_util.SuffixAny)
+	if err != nil {
+		t.Fatalf("discovery: %v", err)
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			testIntegration(t, testPair)
+			runHarnessCase(t, tc)
 		})
 	}
 }
 
 func TestProjectIntegration(t *testing.T) {
-	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
-		return
+	cases, err := testharness.GetProjectTestCases("../corpus/project", test_util.Integration, test_util.SuffixAny)
+	if err != nil {
+		t.Fatalf("discovery: %v", err)
 	}
-
-	projectDirs := findProjectDirs(corpusProjectBaseDir)
-
-	for _, projDir := range projectDirs {
-		dirName := filepath.Base(projDir)
-		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
-
-		t.Run(dirName, func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(filepath.Base(tc.InputPath), func(t *testing.T) {
 			t.Parallel()
-			if isProjectTestSkipped(dirName) {
-				t.Skipf("Skipping project integration test for %s", dirName)
-			}
-			testProjectIntegration(t, dirName, projDir, txtarPath)
+			runHarnessCase(t, tc)
 		})
 	}
 }
@@ -174,73 +167,42 @@ func TestProjectIntegration(t *testing.T) {
 // projects.Load auto-detects the workspace and WorkspaceProject.CurrentPackage
 // returns that first member, so the existing project pipeline works as-is.
 func TestWorkspaceIntegration(t *testing.T) {
-	if _, err := os.Stat(corpusWorkspaceBaseDir); os.IsNotExist(err) {
-		return
+	cases, err := testharness.GetProjectTestCases("../corpus/workspace", test_util.Integration, test_util.SuffixAny)
+	if err != nil {
+		t.Fatalf("discovery: %v", err)
 	}
-
-	workspaceDirs := findProjectDirs(corpusWorkspaceBaseDir)
-
-	for _, wsDir := range workspaceDirs {
-		dirName := filepath.Base(wsDir)
-		txtarPath := filepath.Join(corpusWorkspaceIntegrationBaseDir, dirName+".txtar")
-
-		t.Run(dirName, func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(filepath.Base(tc.InputPath), func(t *testing.T) {
 			t.Parallel()
-			testProjectIntegration(t, dirName, wsDir, txtarPath)
+			runHarnessCase(t, tc)
 		})
 	}
 }
 
-func testIntegration(t *testing.T, testPair test_util.TestCase) {
-	if isTestSkipped(testPair) {
-		t.Skipf("Skipping integration test for %s", testPair.InputPath)
+// runHarnessCase wires Run + Validate/Update for one TestCase, applying the
+// integration-level skip lists before invoking the harness.
+func runHarnessCase(t *testing.T, tc test_util.TestCase) {
+	if harnessSkip(tc) {
+		t.Skipf("Skipping integration test for %s", tc.Name)
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("panic while running %s: %v", testPair.InputPath, r)
-		}
-	}()
-
-	run := runIntegrationCase(testPair.InputPath)
+	pal := testharness.NewTestPal()
+	testharness.Run(t, tc, pal, nil)
 	if *update {
-		normalizedStderr := normalizeIntegrationStderr(run.stderr)
-		checkExpectedOutputInvariants(t, testPair.Name, run.stdout, normalizedStderr, false)
-		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(run.stdout, normalizedStderr)) {
-			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
-		}
+		testharness.Update(t, tc, pal)
 		return
 	}
+	testharness.Validate(t, tc, pal)
+}
 
-	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
-	if err != nil {
-		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
-	}
-	checkExpectedOutputInvariants(t, testPair.Name, expectedStdout, expectedStderr, false)
-
-	result := evaluateTestResult(expectedStdout, expectedStderr, run.stdout, run.stderr)
-	assertAnnotations(t, collectSingleFileSources(testPair.InputPath), testPair.Name, run.stdout, run.stderr, run.diags)
-	if result.success {
-		return
-	}
-
-	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := result.expectedStderr != normalizeIntegrationStderr(result.actualStderr)
-
-	var msg strings.Builder
-	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
-	}
-	if stderrMismatch {
-		if msg.Len() > 0 {
-			msg.WriteString("\n\n")
+func harnessSkip(tc test_util.TestCase) bool {
+	if tc.IsProject {
+		dir := filepath.Base(tc.InputPath)
+		if isProjectTestSkipped(dir) {
+			return true
 		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(
-			normalizeIntegrationStderr(result.expectedStderr),
-			normalizeIntegrationStderr(result.actualStderr),
-		))
+		return isSkipKey("project/" + dir)
 	}
-	t.Errorf("%s", msg.String())
+	return isTestSkipped(tc)
 }
 
 // suffixOf returns the trailing -v / -e / -p / -fv / -fe / -fp marker on a
@@ -476,7 +438,7 @@ func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf,
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf), tyEnv)
+	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			// For now just write the error string to stderr to match corpus expectations
@@ -627,7 +589,7 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, std
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf), tyEnv)
+	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())

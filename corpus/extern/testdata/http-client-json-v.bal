@@ -21,6 +21,6 @@ public function main() returns error? {
     http:Client c = check new ("https://httpbun.com");
     http:Response r = check c->get("/json");
     json|error payload = r.getJsonPayload();
-    io:println(payload is json);
+    io:println(payload is json); // @output true
     return;
 }
