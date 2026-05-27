@@ -22,7 +22,6 @@ import (
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
-	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -38,61 +37,28 @@ const (
 
 func initInternalModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "querySort", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		sortKeyRows, ok := args[0].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be a list")
-		}
-		sortDirections, ok := args[1].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("second argument must be a list")
-		}
-		rowIndices, ok := args[2].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("third argument must be a list")
-		}
-		payloadRows, ok := args[3].(*values.List)
-		if !ok {
-			return nil, fmt.Errorf("fourth argument must be a list")
-		}
+		sortKeyRows := args[0].(*values.List)
+		sortDirections := args[1].(*values.List)
+		rowIndices := args[2].(*values.List)
+		payloadRows := args[3].(*values.List)
 
 		rowCount := rowIndices.Len()
-		if sortKeyRows.Len() != rowCount {
-			return nil, fmt.Errorf("sort keys and row indices length mismatch: keys=%d indices=%d", sortKeyRows.Len(), rowCount)
-		}
 		keyCount := sortDirections.Len()
 
 		directionFlags := make([]bool, keyCount)
 		for keyIndex := 0; keyIndex < keyCount; keyIndex++ {
-			isAscending, ok := sortDirections.Get(keyIndex).(bool)
-			if !ok {
-				return nil, fmt.Errorf("sort direction %d must be a bool", keyIndex)
-			}
-			directionFlags[keyIndex] = isAscending
+			directionFlags[keyIndex] = sortDirections.Get(keyIndex).(bool)
 		}
 
 		keyRows := make([]*values.List, rowCount)
 		for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
-			rowKeys, ok := sortKeyRows.Get(rowIndex).(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("sort key row %d must be a list", rowIndex)
-			}
-			if rowKeys.Len() != keyCount {
-				return nil, fmt.Errorf("sort key row %d length mismatch: got %d, expected %d", rowIndex, rowKeys.Len(), keyCount)
-			}
-			keyRows[rowIndex] = rowKeys
+			keyRows[rowIndex] = sortKeyRows.Get(rowIndex).(*values.List)
 		}
 
 		payloadCount := payloadRows.Len()
 		payloadLists := make([]*values.List, payloadCount)
 		for payloadIndex := 0; payloadIndex < payloadCount; payloadIndex++ {
-			payloadList, ok := payloadRows.Get(payloadIndex).(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("payload row %d must be a list", payloadIndex)
-			}
-			if payloadList.Len() != rowCount {
-				return nil, fmt.Errorf("payload row %d length mismatch: got %d, expected %d", payloadIndex, payloadList.Len(), rowCount)
-			}
-			payloadLists[payloadIndex] = payloadList
+			payloadLists[payloadIndex] = payloadRows.Get(payloadIndex).(*values.List)
 		}
 
 		order := make([]int, rowCount)
@@ -150,9 +116,6 @@ func newQueryList(ctx *extern.Context) *values.List {
 
 func queryGroup(ctx *extern.Context, rows *values.List, keyRows *values.List, scalarFlags *values.List) (*values.List, error) {
 	rowCount := rows.Len()
-	if keyRows.Len() != rowCount {
-		return nil, fmt.Errorf("group keys and rows length mismatch: keys=%d rows=%d", keyRows.Len(), rowCount)
-	}
 	slotCount := scalarFlags.Len()
 	scalarSlots := make([]bool, slotCount)
 	for slot := 0; slot < slotCount; slot++ {
@@ -162,18 +125,9 @@ func queryGroup(ctx *extern.Context, rows *values.List, keyRows *values.List, sc
 	result := newQueryList(ctx)
 	groups := make([]queryGroupState, 0)
 	groupIndices := make(queryGroupIndex)
-	expectedKeyArity := -1
 	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
 		sourceRow := rows.Get(rowIndex).(*values.List)
-		if sourceRow.Len() != slotCount {
-			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, sourceRow.Len(), slotCount)
-		}
 		keyRow := keyRows.Get(rowIndex).(*values.List)
-		if expectedKeyArity == -1 {
-			expectedKeyArity = keyRow.Len()
-		} else if keyRow.Len() != expectedKeyArity {
-			return nil, fmt.Errorf("group key row %d length mismatch: got %d, expected %d", rowIndex, keyRow.Len(), expectedKeyArity)
-		}
 		groupIndex, keySignature, found := findQueryGroup(groupIndices, keyRow)
 		if !found {
 			groupRow := createQueryGroupRow(ctx, sourceRow, scalarSlots)
@@ -320,12 +274,6 @@ func appendQueryGroupRow(ctx *extern.Context, groupRow *values.List, sourceRow *
 }
 
 func queryCollect(ctx *extern.Context, rows *values.List, slotCount int, flattenFlags *values.List) (*values.List, error) {
-	if slotCount < 0 {
-		return nil, fmt.Errorf("slot count cannot be negative")
-	}
-	if flattenFlags.Len() != slotCount {
-		return nil, fmt.Errorf("collect flatten flags length mismatch: flags=%d slots=%d", flattenFlags.Len(), slotCount)
-	}
 	flattenSlots := make([]bool, slotCount)
 	for slot := 0; slot < slotCount; slot++ {
 		flattenSlots[slot] = flattenFlags.Get(slot).(bool)
@@ -336,19 +284,13 @@ func queryCollect(ctx *extern.Context, rows *values.List, slotCount int, flatten
 	}
 	for rowIndex := 0; rowIndex < rows.Len(); rowIndex++ {
 		row := rows.Get(rowIndex).(*values.List)
-		if row.Len() != slotCount {
-			return nil, fmt.Errorf("query row %d length mismatch: got %d, expected %d", rowIndex, row.Len(), slotCount)
-		}
 		for slot := 0; slot < slotCount; slot++ {
 			valuesForSlot := resultRow.Get(slot).(*values.List)
 			if !flattenSlots[slot] {
 				valuesForSlot.Append(ctx.TypeCtx, row.Get(slot))
 				continue
 			}
-			nestedValues, ok := row.Get(slot).(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("query row %d slot %d must be a list for flattening", rowIndex, slot)
-			}
+			nestedValues := row.Get(slot).(*values.List)
 			for valueIndex := 0; valueIndex < nestedValues.Len(); valueIndex++ {
 				valuesForSlot.Append(ctx.TypeCtx, nestedValues.Get(valueIndex))
 			}
