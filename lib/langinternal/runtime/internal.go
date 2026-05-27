@@ -174,7 +174,8 @@ func writeQueryGroupValueSignature(b *strings.Builder, v values.BalValue, visite
 		writeQueryGroupStringSignature(b, "string", typedValue)
 	case *decimal.Decimal:
 		b.WriteString("decimal:")
-		writeQueryGroupFloatSignature(b, typedValue.Float64())
+		b.WriteString(typedValue.String())
+		b.WriteByte(';')
 	case *values.List:
 		writeQueryGroupListSignature(b, typedValue, visited)
 	case *values.Map:
