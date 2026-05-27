@@ -301,8 +301,9 @@ type (
 
 	BLangListConstructorExpr struct {
 		bLangExpressionBase
-		Exprs      []BLangExpression
-		AtomicType semtypes.ListAtomicType
+		Exprs         []BLangExpression
+		AtomicType    semtypes.ListAtomicType
+		SpreadMembers []bool
 	}
 
 	BLangErrorConstructorExpr struct {
@@ -877,6 +878,26 @@ func (b *BLangListConstructorExpr) GetExpressions() []BLangExpression {
 	result := make([]BLangExpression, len(b.Exprs))
 	copy(result, b.Exprs)
 	return result
+}
+
+func (b *BLangListConstructorExpr) SetSpreadMember(index int) {
+	if len(b.SpreadMembers) != len(b.Exprs) {
+		b.SpreadMembers = make([]bool, len(b.Exprs))
+	}
+	b.SpreadMembers[index] = true
+}
+
+func (b *BLangListConstructorExpr) IsSpreadMember(index int) bool {
+	return index >= 0 && index < len(b.SpreadMembers) && b.SpreadMembers[index]
+}
+
+func (b *BLangListConstructorExpr) HasSpreadMembers() bool {
+	for _, isSpread := range b.SpreadMembers {
+		if isSpread {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *BLangErrorConstructorExpr) GetPositionalArgs() []BLangExpression {

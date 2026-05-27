@@ -2736,6 +2736,7 @@ func (n *NodeBuilder) TransformTrapExpression(trapBLangExpression *tree.TrapExpr
 
 func (n *NodeBuilder) TransformListConstructorExpression(listConstructorBLangExpression *tree.ListConstructorExpressionNode) BLangNode {
 	argExprList := make([]BLangExpression, 0)
+	spreadMemberIndexes := make([]int, 0)
 	listConstructorExpr := &BLangListConstructorExpr{}
 
 	expressions := listConstructorBLangExpression.Expressions()
@@ -2743,7 +2744,9 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorBLangExp
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
 		if listMember.Kind() == common.SPREAD_MEMBER {
-			panic("spread member expression handling not yet implemented")
+			spreadMember := listMember.(*tree.SpreadMemberNode)
+			memberExpr = n.createExpression(spreadMember.Expression())
+			spreadMemberIndexes = append(spreadMemberIndexes, len(argExprList))
 		} else {
 			memberExpr = n.createExpression(listMember)
 		}
@@ -2751,6 +2754,9 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorBLangExp
 	}
 
 	listConstructorExpr.Exprs = argExprList
+	for _, index := range spreadMemberIndexes {
+		listConstructorExpr.SetSpreadMember(index)
+	}
 	listConstructorExpr.pos = getPosition(n.de(), listConstructorBLangExpression)
 	return listConstructorExpr
 }
@@ -3308,7 +3314,12 @@ func (n *NodeBuilder) TransformSelectClause(selectClauseNode *tree.SelectClauseN
 }
 
 func (n *NodeBuilder) TransformCollectClause(collectClauseNode *tree.CollectClauseNode) BLangNode {
-	panic("TransformCollectClause unimplemented")
+	collectClause := &BLangCollectClause{
+		NonGroupingKeys: &balCommon.UnorderedSet[string]{},
+	}
+	collectClause.pos = getPosition(n.de(), collectClauseNode)
+	collectClause.SetExpression(n.createExpression(collectClauseNode.Expression()))
+	return collectClause
 }
 
 func (n *NodeBuilder) TransformQueryExpression(queryBLangExpression *tree.QueryExpressionNode) BLangNode {
@@ -3336,18 +3347,19 @@ func (n *NodeBuilder) TransformQueryExpression(queryBLangExpression *tree.QueryE
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
-		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
+		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE,
+			common.GROUP_BY_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
 			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
-			n.cx.Unimplemented("only from + join + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
+			n.cx.Unimplemented("only from + join + let + where + group by + order by + limit + select/collect query clauses are supported for now", getPosition(n.de(), clause))
 		}
 	}
 
 	resultClause := queryBLangExpression.ResultClause()
-	if resultClause != nil && resultClause.Kind() == common.SELECT_CLAUSE {
+	if resultClause != nil && (resultClause.Kind() == common.SELECT_CLAUSE || resultClause.Kind() == common.COLLECT_CLAUSE) {
 		queryExpr.AddQueryClause(n.TransformSyntaxNode(resultClause))
 	} else if resultClause != nil {
-		n.cx.Unimplemented("only select result clauses are supported for now", getPosition(n.de(), resultClause))
+		n.cx.Unimplemented("only select/collect result clauses are supported for now", getPosition(n.de(), resultClause))
 	}
 
 	if queryBLangExpression.OnConflictClause() != nil {
@@ -4072,11 +4084,61 @@ func (n *NodeBuilder) TransformOrderKey(orderKeyNode *tree.OrderKeyNode) BLangNo
 }
 
 func (n *NodeBuilder) TransformGroupByClause(groupByClauseNode *tree.GroupByClauseNode) BLangNode {
-	panic("TransformGroupByClause unimplemented")
+	groupByClause := &BLangGroupByClause{
+		NonGroupingKeys: &balCommon.UnorderedSet[string]{},
+	}
+	groupByClause.pos = getPosition(n.de(), groupByClauseNode)
+
+	groupingKeys := groupByClauseNode.GroupingKey()
+	for node := range groupingKeys.Iterator() {
+		if node.Kind() == common.COMMA_TOKEN {
+			continue
+		}
+		groupingKey := &BLangGroupingKey{}
+		groupingKey.pos = getPosition(n.de(), node)
+		if node.Kind() == common.SIMPLE_NAME_REFERENCE || node.Kind() == common.IDENTIFIER_TOKEN {
+			varRef, ok := n.createExpression(node).(*BLangSimpleVarRef)
+			if !ok {
+				panic("expected grouping key variable reference to be a simple variable reference")
+			}
+			groupingKey.SetGroupingKey(varRef)
+		} else {
+			keyNode, ok := n.TransformGroupingKeyVarDeclaration(node.(*tree.GroupingKeyVarDeclarationNode)).(*BLangGroupingKey)
+			if !ok {
+				panic("expected grouping key declaration to produce a BLangGroupingKey")
+			}
+			groupingKey = keyNode
+		}
+		groupByClause.AddGroupingKey(groupingKey)
+	}
+	return groupByClause
 }
 
 func (n *NodeBuilder) TransformGroupingKeyVarDeclaration(groupingKeyVarDeclarationNode *tree.GroupingKeyVarDeclarationNode) BLangNode {
-	panic("TransformGroupingKeyVarDeclaration unimplemented")
+	pos := getPosition(n.de(), groupingKeyVarDeclarationNode)
+	groupingKey := &BLangGroupingKey{}
+	groupingKey.pos = pos
+
+	variableNode := n.getBLangVariableNode(groupingKeyVarDeclarationNode.SimpleBindingPattern(), pos)
+	simpleVar, ok := variableNode.(*BLangSimpleVariable)
+	if !ok {
+		panic("expected grouping key declaration to create a simple variable reference")
+	}
+	simpleVar.SetPosition(pos)
+	simpleVar.SetInitialExpression(n.createExpression(groupingKeyVarDeclarationNode.Expression()))
+
+	typeDesc := groupingKeyVarDeclarationNode.TypeDescriptor()
+	if isDeclaredWithVar(typeDesc) {
+		simpleVar.SetIsDeclaredWithVar(true)
+	} else {
+		simpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+	}
+
+	varDef := &BLangSimpleVariableDef{}
+	varDef.pos = pos
+	varDef.SetVariable(simpleVar)
+	groupingKey.SetGroupingKey(varDef)
+	return groupingKey
 }
 
 func (n *NodeBuilder) TransformOnFailClause(onFailClauseNode *tree.OnFailClauseNode) BLangNode {
@@ -4325,7 +4387,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformSpreadMember(spreadMemberNode *tree.SpreadMemberNode) BLangNode {
-	panic("TransformSpreadMember unimplemented")
+	return n.createExpression(spreadMemberNode.Expression()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformClientResourceAccessAction(clientResourceAccessActionNode *tree.ClientResourceAccessActionNode) BLangNode {

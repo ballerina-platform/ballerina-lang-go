@@ -518,6 +518,7 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
+	setPositionIfMissing(inv, basePos)
 	return inv
 }
 

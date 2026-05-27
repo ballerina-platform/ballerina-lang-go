@@ -752,6 +752,18 @@ type OnClauseNode interface {
 	SetEqualsExpression(expression BLangExpression)
 }
 
+type GroupByClauseNode interface {
+	Node
+	AddGroupingKey(groupingKey GroupingKeyNode)
+	GetGroupingKeyList() []GroupingKeyNode
+}
+
+type GroupingKeyNode interface {
+	Node
+	GetGroupingKey() Node
+	SetGroupingKey(groupingKey Node)
+}
+
 type SelectClauseNode interface {
 	Node
 	GetExpression() BLangExpression

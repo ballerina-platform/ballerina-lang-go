@@ -31,18 +31,26 @@ import (
 func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[ast.BLangActionOrExpression] {
 	fromClause := expr.QueryClauseList[0].(*ast.BLangFromClause)
 
-	selectClauseIndex := len(expr.QueryClauseList) - 1
+	finalClauseIndex := len(expr.QueryClauseList) - 1
 	var onConflictClause *ast.BLangOnConflictClause
-	if clause, isOnConflict := expr.QueryClauseList[selectClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
+	if clause, isOnConflict := expr.QueryClauseList[finalClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
 		onConflictClause = clause
-		selectClauseIndex--
+		finalClauseIndex--
 	}
 
-	selectClause := expr.QueryClauseList[selectClauseIndex].(*ast.BLangSelectClause)
-	if queryExprHasJoin(expr, 1, selectClauseIndex) {
-		return walkQueryExprWithJoins(cx, expr, fromClause, selectClause, selectClauseIndex, onConflictClause)
+	var (
+		selectClause  *ast.BLangSelectClause
+		collectClause *ast.BLangCollectClause
+	)
+	if clause, ok := expr.QueryClauseList[finalClauseIndex].(*ast.BLangSelectClause); ok {
+		selectClause = clause
+	} else {
+		collectClause = expr.QueryClauseList[finalClauseIndex].(*ast.BLangCollectClause)
 	}
-	orderByClauseIndices := queryOrderByClauseIndices(expr, 1, selectClauseIndex)
+	if collectClause != nil || queryExprNeedsRowPipeline(expr, 1, finalClauseIndex) {
+		return walkQueryExprWithRows(cx, expr, fromClause, selectClause, collectClause, finalClauseIndex, onConflictClause)
+	}
+	orderByClauseIndices := queryOrderByClauseIndices(expr, 1, finalClauseIndex)
 
 	queryTy := expr.GetDeterminedType()
 	basePos := expr.GetPosition()
@@ -123,7 +131,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		keysRef,
 		loopBinding,
 		stageStart,
-		selectClauseIndex,
+		finalClauseIndex,
 		stageInput,
 		resultRef,
 		selectClause,
@@ -143,9 +151,10 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 }
 
-func queryExprHasJoin(queryExpr *ast.BLangQueryExpr, startClauseIndex int, endClauseIndex int) bool {
+func queryExprNeedsRowPipeline(queryExpr *ast.BLangQueryExpr, startClauseIndex int, endClauseIndex int) bool {
 	for i := startClauseIndex; i < endClauseIndex; i++ {
-		if _, isJoin := queryExpr.QueryClauseList[i].(*ast.BLangJoinClause); isJoin {
+		switch queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangJoinClause, *ast.BLangGroupByClause:
 			return true
 		}
 	}
@@ -168,9 +177,10 @@ type queryLetStore struct {
 }
 
 type queryRowBinding struct {
-	varName *ast.BLangIdentifier
-	symbol  model.SymbolRef
-	valueTy semtypes.SemType
+	varName         *ast.BLangIdentifier
+	symbol          model.SymbolRef
+	valueTy         semtypes.SemType
+	groupAggregated bool
 }
 
 type queryOrderStageInput struct {
@@ -219,12 +229,13 @@ func createQueryCollectionSource(
 	return collRef, keysRef, lenRef, collTy, true
 }
 
-func walkQueryExprWithJoins(
+func walkQueryExprWithRows(
 	cx *functionContext,
 	expr *ast.BLangQueryExpr,
 	fromClause *ast.BLangFromClause,
 	selectClause *ast.BLangSelectClause,
-	selectClauseIndex int,
+	collectClause *ast.BLangCollectClause,
+	finalClauseIndex int,
 	onConflictClause *ast.BLangOnConflictClause,
 ) desugaredNode[ast.BLangActionOrExpression] {
 	queryTy := expr.GetDeterminedType()
@@ -236,20 +247,22 @@ func walkQueryExprWithJoins(
 		Name: &ast.BLangIdentifier{Value: resultName},
 	}
 	resultVar.SetDeterminedType(queryTy)
-	switch expr.QueryConstructType {
-	case ast.TypeKind_MAP:
-		emptyMap := &ast.BLangMappingConstructorExpr{
-			Fields: []ast.MappingField{},
+	if collectClause == nil {
+		switch expr.QueryConstructType {
+		case ast.TypeKind_MAP:
+			emptyMap := &ast.BLangMappingConstructorExpr{
+				Fields: []ast.MappingField{},
+			}
+			emptyMap.SetDeterminedType(semtypes.Intersect(queryTy, semtypes.MAPPING))
+			resultVar.SetInitialExpression(emptyMap)
+		default:
+			emptyList := &ast.BLangListConstructorExpr{
+				Exprs: []ast.BLangExpression{},
+			}
+			emptyList.SetDeterminedType(semtypes.LIST)
+			emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
+			resultVar.SetInitialExpression(emptyList)
 		}
-		emptyMap.SetDeterminedType(semtypes.Intersect(queryTy, semtypes.MAPPING))
-		resultVar.SetInitialExpression(emptyMap)
-	default:
-		emptyList := &ast.BLangListConstructorExpr{
-			Exprs: []ast.BLangExpression{},
-		}
-		emptyList.SetDeterminedType(semtypes.LIST)
-		emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
-		resultVar.SetInitialExpression(emptyList)
 	}
 	resultVar.SetSymbol(resultSymbol)
 	resultVarDef := &ast.BLangSimpleVariableDef{Var: resultVar}
@@ -273,7 +286,7 @@ func walkQueryExprWithJoins(
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
 
-	for i := 1; i < selectClauseIndex; i++ {
+	for i := 1; i < finalClauseIndex; i++ {
 		switch clause := expr.QueryClauseList[i].(type) {
 		case *ast.BLangJoinClause:
 			bindings, rowsRef, ok = appendQueryJoinClauseRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
@@ -281,6 +294,8 @@ func walkQueryExprWithJoins(
 			bindings, ok = applyQueryLetClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
 		case *ast.BLangWhereClause:
 			rowsRef, ok = applyQueryWhereClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
+		case *ast.BLangGroupByClause:
+			bindings, rowsRef, ok = applyQueryGroupByClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
 		case *ast.BLangLimitClause:
 			rowsRef, ok = applyQueryLimitClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
 		case *ast.BLangOrderByClause:
@@ -294,18 +309,30 @@ func walkQueryExprWithJoins(
 		}
 	}
 
-	ok = appendQueryRowsSelectResultStmts(
-		cx,
-		rowsRef,
-		bindings,
-		expr,
-		resultRef,
-		selectClause,
-		onConflictClause,
-		seenKeysRef,
-		basePos,
-		&initStmts,
-	)
+	if selectClause != nil {
+		ok = appendQueryRowsSelectResultStmts(
+			cx,
+			rowsRef,
+			bindings,
+			expr,
+			resultRef,
+			selectClause,
+			onConflictClause,
+			seenKeysRef,
+			basePos,
+			&initStmts,
+		)
+	} else {
+		ok = appendQueryRowsCollectResultStmts(
+			cx,
+			rowsRef,
+			bindings,
+			resultRef,
+			collectClause,
+			basePos,
+			&initStmts,
+		)
+	}
 	if !ok {
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
@@ -607,6 +634,161 @@ func applyQueryWhereClauseToRows(
 	setPositionIfMissing(whileStmt, pos)
 	*initStmts = append(*initStmts, whileStmt)
 	return filteredRowsRef, true
+}
+
+func applyQueryGroupByClauseToRows(
+	cx *functionContext,
+	rowsRef *ast.BLangSimpleVarRef,
+	bindings []queryRowBinding,
+	clause *ast.BLangGroupByClause,
+	pos diagnostics.Location,
+	initStmts *[]ast.StatementNode,
+) ([]queryRowBinding, *ast.BLangSimpleVarRef, bool) {
+	keyedRowsRef := createQueryListStore(cx, initStmts, pos)
+	keyRowsRef := createQueryListStore(cx, initStmts, pos)
+	rowCountRef, ok := createQueryLengthRef(cx, initStmts, rowsRef, pos)
+	if !ok {
+		return nil, nil, false
+	}
+	loopCounterRef := createQueryCounterRef(cx, initStmts, pos)
+	rowAccess := createQueryRowSlotAccess(rowsRef, 0, semtypes.LIST, pos)
+	rowAccess.IndexExpr = loopCounterRef
+	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
+
+	bodyStmts := []ast.StatementNode{rowVarDef}
+	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
+
+	groupingSymbols := make(map[model.SymbolRef]bool)
+	newBindings := append([]queryRowBinding{}, bindings...)
+	keyExprs := make([]ast.BLangExpression, 0, len(clause.GroupingKeyList))
+	for i := range clause.GroupingKeyList {
+		groupingKey := &clause.GroupingKeyList[i]
+		switch {
+		case groupingKey.VariableRef != nil:
+			symbol := cx.pkgCtx.compilerCtx.UnnarrowedSymbol(groupingKey.VariableRef.Symbol())
+			groupingSymbols[symbol] = true
+			keyResult := walkExpression(cx, groupingKey.VariableRef)
+			bodyStmts = appendModelStatements(bodyStmts, keyResult.initStmts)
+			keyExprs = append(keyExprs, keyResult.replacementNode.(ast.BLangExpression))
+		case groupingKey.VariableDef != nil:
+			varDef := groupingKey.VariableDef
+			keyResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
+			bodyStmts = appendModelStatements(bodyStmts, keyResult.initStmts)
+			keyExpr := keyResult.replacementNode.(ast.BLangExpression)
+			if queryVarDefHasBindableSymbol(varDef) {
+				binding, ok := queryRowBindingFromVarDef(cx, varDef, "group by")
+				if !ok {
+					return nil, nil, false
+				}
+				*initStmts = append(*initStmts, createQueryBindingDeclaration(binding, pos))
+				bodyStmts = append(bodyStmts, createQueryBindingAssignment(binding, keyExpr, pos))
+				pushGroupVar := createPushInvocation(cx, rowRef, createQueryBindingVarRef(binding))
+				if pushGroupVar == nil {
+					return nil, nil, false
+				}
+				bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushGroupVar})
+				groupingSymbols[binding.symbol] = true
+				newBindings = append(newBindings, binding)
+				keyExpr = createQueryBindingVarRef(binding)
+			}
+			keyExprs = append(keyExprs, keyExpr)
+		default:
+			cx.internalError("query group by clause keys should have been validated during type resolution")
+			return nil, nil, false
+		}
+	}
+
+	keyTuple := &ast.BLangListConstructorExpr{Exprs: keyExprs}
+	keyTuple.SetDeterminedType(semtypes.LIST)
+	keyTuple.AtomicType = semtypes.LIST_ATOMIC_INNER
+	setPositionIfMissing(keyTuple, clause.GetPosition())
+	pushKey := createPushInvocation(cx, keyRowsRef, keyTuple)
+	pushRow := createPushInvocation(cx, keyedRowsRef, rowRef)
+	if pushKey == nil || pushRow == nil {
+		return nil, nil, false
+	}
+	bodyStmts = append(bodyStmts,
+		&ast.BLangExpressionStmt{Expr: pushKey},
+		&ast.BLangExpressionStmt{Expr: pushRow},
+		createIncrementStmt(loopCounterRef),
+	)
+
+	cond := &ast.BLangBinaryExpr{
+		LhsExpr: loopCounterRef,
+		RhsExpr: rowCountRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	cond.SetDeterminedType(semtypes.BOOLEAN)
+	whileStmt := &ast.BLangWhile{
+		Expr: cond,
+		Body: ast.BLangBlockStmt{Stmts: bodyStmts},
+	}
+	whileStmt.SetScope(cx.currentScope())
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, pos)
+	*initStmts = append(*initStmts, whileStmt)
+
+	scalarFlags := buildQueryGroupScalarFlags(newBindings, groupingSymbols, clause.GetPosition())
+	groupInvocation := createQueryGroupInvocation(cx, keyedRowsRef, keyRowsRef, scalarFlags)
+	if groupInvocation == nil {
+		return nil, nil, false
+	}
+	groupedRowsDef, groupedRowsRef := assignToLocal(cx, groupInvocation, clause.GetPosition())
+	*initStmts = append(*initStmts, groupedRowsDef)
+	return queryGroupOutputBindings(cx, newBindings, groupingSymbols), groupedRowsRef, true
+}
+
+func queryVarDefHasBindableSymbol(varDef *ast.BLangSimpleVariableDef) bool {
+	return varDef != nil &&
+		varDef.Var != nil &&
+		varDef.Var.Name != nil &&
+		varDef.Var.Name.Value != "_" &&
+		ast.SymbolIsSet(varDef.Var)
+}
+
+func queryGroupOutputBindings(
+	cx *functionContext,
+	bindings []queryRowBinding,
+	groupingSymbols map[model.SymbolRef]bool,
+) []queryRowBinding {
+	result := make([]queryRowBinding, 0, len(bindings))
+	for _, binding := range bindings {
+		if groupingSymbols[binding.symbol] {
+			result = append(result, binding)
+			continue
+		}
+		binding.valueTy = queryListValueType(cx.typeEnv(), binding.valueTy, true)
+		binding.groupAggregated = true
+		result = append(result, binding)
+	}
+	return result
+}
+
+func buildQueryGroupScalarFlags(
+	bindings []queryRowBinding,
+	groupingSymbols map[model.SymbolRef]bool,
+	pos diagnostics.Location,
+) *ast.BLangListConstructorExpr {
+	flags := make([]ast.BLangExpression, 0, len(bindings))
+	for _, binding := range bindings {
+		flags = append(flags, createBoolLiteral(groupingSymbols[binding.symbol], pos))
+	}
+	listExpr := &ast.BLangListConstructorExpr{Exprs: flags}
+	listExpr.SetDeterminedType(semtypes.LIST)
+	listExpr.AtomicType = semtypes.LIST_ATOMIC_INNER
+	setPositionIfMissing(listExpr, pos)
+	return listExpr
+}
+
+func queryListValueType(env semtypes.Env, elemTy semtypes.SemType, nonEmpty bool) semtypes.SemType {
+	if elemTy == nil {
+		elemTy = semtypes.ANY
+	}
+	ld := semtypes.NewListDefinition()
+	if nonEmpty {
+		return ld.DefineListTypeWrapped(env, []semtypes.SemType{elemTy}, 1, elemTy, semtypes.CellMutability_CELL_MUT_LIMITED)
+	}
+	return ld.DefineListTypeWrappedWithEnvSemType(env, elemTy)
 }
 
 func applyQueryLimitClauseToRows(
@@ -954,6 +1136,61 @@ func appendQueryRowsSelectResultStmts(
 	return true
 }
 
+func appendQueryRowsCollectResultStmts(
+	cx *functionContext,
+	rowsRef *ast.BLangSimpleVarRef,
+	bindings []queryRowBinding,
+	resultRef *ast.BLangSimpleVarRef,
+	collectClause *ast.BLangCollectClause,
+	pos diagnostics.Location,
+	initStmts *[]ast.StatementNode,
+) bool {
+	flattenFlags := buildQueryCollectFlattenFlags(bindings, collectClause.GetPosition())
+	collectInvocation := createQueryCollectInvocation(cx, rowsRef, createIntLiteral(int64(len(bindings))), flattenFlags)
+	if collectInvocation == nil {
+		return false
+	}
+	collectRowDef, collectRowRef := assignToLocal(cx, collectInvocation, collectClause.GetPosition())
+	*initStmts = append(*initStmts, collectRowDef)
+
+	bodyStmts := make([]ast.StatementNode, 0, len(bindings)+2)
+	for i, binding := range bindings {
+		collectBinding := binding
+		if !binding.groupAggregated {
+			collectBinding.valueTy = queryListValueType(cx.typeEnv(), binding.valueTy, false)
+		}
+		bodyStmts = append(bodyStmts, createQueryBindingAssignment(
+			collectBinding,
+			createQueryRowSlotAccess(collectRowRef, i, collectBinding.valueTy, pos),
+			pos,
+		))
+	}
+
+	collectResult := walkExpression(cx, collectClause.Expression)
+	bodyStmts = appendModelStatements(bodyStmts, collectResult.initStmts)
+	assignResult := &ast.BLangAssignment{
+		VarRef: resultRef,
+		Expr:   collectResult.replacementNode.(ast.BLangExpression),
+	}
+	assignResult.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(assignResult, collectClause.GetPosition())
+	bodyStmts = append(bodyStmts, assignResult)
+	*initStmts = append(*initStmts, bodyStmts...)
+	return true
+}
+
+func buildQueryCollectFlattenFlags(bindings []queryRowBinding, pos diagnostics.Location) *ast.BLangListConstructorExpr {
+	flags := make([]ast.BLangExpression, 0, len(bindings))
+	for _, binding := range bindings {
+		flags = append(flags, createBoolLiteral(binding.groupAggregated, pos))
+	}
+	listExpr := &ast.BLangListConstructorExpr{Exprs: flags}
+	listExpr.SetDeterminedType(semtypes.LIST)
+	listExpr.AtomicType = semtypes.LIST_ATOMIC_INNER
+	setPositionIfMissing(listExpr, pos)
+	return listExpr
+}
+
 func createQueryCounterRef(
 	cx *functionContext,
 	initStmts *[]ast.StatementNode,
@@ -973,6 +1210,7 @@ func createQueryCounterRef(
 	counterRef := &ast.BLangSimpleVarRef{VariableName: counterVar.Name}
 	counterRef.SetSymbol(counterSymbol)
 	counterRef.SetDeterminedType(semtypes.INT)
+	setPositionIfMissing(counterRef, pos)
 	return counterRef
 }
 
@@ -1759,6 +1997,50 @@ func createQuerySortInvocation(
 	return inv
 }
 
+func createQueryGroupInvocation(
+	cx *functionContext,
+	rowsExpr ast.BLangExpression,
+	keysExpr ast.BLangExpression,
+	scalarFlagsExpr ast.BLangExpression,
+) *ast.BLangInvocation {
+	return createLangInternalInvocation(cx, "queryGroup", semtypes.LIST,
+		[]ast.BLangExpression{rowsExpr, keysExpr, scalarFlagsExpr}, rowsExpr.GetPosition())
+}
+
+func createQueryCollectInvocation(
+	cx *functionContext,
+	rowsExpr ast.BLangExpression,
+	slotCountExpr ast.BLangExpression,
+	flattenFlagsExpr ast.BLangExpression,
+) *ast.BLangInvocation {
+	return createLangInternalInvocation(cx, "queryCollect", semtypes.LIST,
+		[]ast.BLangExpression{rowsExpr, slotCountExpr, flattenFlagsExpr}, rowsExpr.GetPosition())
+}
+
+func createLangInternalInvocation(
+	cx *functionContext,
+	name string,
+	returnTy semtypes.SemType,
+	args []ast.BLangExpression,
+	pos diagnostics.Location,
+) *ast.BLangInvocation {
+	pkgName := langinternal.PackageName
+	space, _ := cx.getImportedSymbolSpace(pkgName)
+	symbolRef, _ := space.GetSymbol(name)
+	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
+		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "__internal"}},
+		Alias:        &ast.BLangIdentifier{Value: pkgName},
+	})
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: name}
+	inv.ArgExprs = args
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(returnTy)
+	setPositionIfMissing(inv, pos)
+	return inv
+}
+
 func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
 	pkgName := array.PackageName
 	space, ok := cx.getImportedSymbolSpace(pkgName)
@@ -1781,5 +2063,6 @@ func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, val
 	inv.ArgExprs = []ast.BLangExpression{listExpr, valueExpr}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
+	setPositionIfMissing(inv, listExpr.GetPosition())
 	return inv
 }
