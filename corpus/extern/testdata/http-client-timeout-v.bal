@@ -22,6 +22,6 @@ public function main() returns error? {
         timeout: 1
     });
     http:Response|error result = c->get("/delay/5");
-    io:println(result is error);
+    io:println(result is error); // @output true
     return;
 }

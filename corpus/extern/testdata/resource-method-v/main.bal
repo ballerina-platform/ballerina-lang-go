@@ -21,7 +21,7 @@ import ballerina/io;
 public function main() {
     api:Client c = new ();
     string a = c->/items/["foo"];
-    io:println(a);
+    io:println(a); // @output items/foo
     int b = c->/items/["bar"]/sub/[7];
-    io:println(b);
+    io:println(b); // @output 14
 }

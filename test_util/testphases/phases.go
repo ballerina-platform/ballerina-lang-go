@@ -110,7 +110,7 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 		if cu == nil || cx.HasDiagnostics() {
 			continue
 		}
-		pkg := ast.ToPackage(cu)
+		pkg := ast.ToPackage(cx, cu)
 		pkg.PackageID = cx.NewPackageID(
 			model.Name(entry.org),
 			[]model.Name{model.Name(entry.name)},

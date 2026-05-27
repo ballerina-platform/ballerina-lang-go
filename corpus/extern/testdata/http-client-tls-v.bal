@@ -22,6 +22,6 @@ public function main() returns error? {
     // allowing connection to the httptest.NewTLSServer self-signed endpoint.
     http:Client c = check new http:Client("http://testserver", {secureSocket: {enable: false}});
     http:Response r = check c->get("/hello");
-    io:println(r.statusCode);
+    io:println(r.statusCode); // @output 200
     return;
 }
