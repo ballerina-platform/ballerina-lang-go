@@ -296,7 +296,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		return analyzer.analyzePanic(curBB, s)
 	case *ast.BLangExpressionStmt:
 		analyzer.addNode(curBB, stmt)
-		if expr, ok := s.Expr.(ast.BLangExpression); ok && alwaysTerminatesViaCheck(expr) {
+		if expr, ok := s.Expr.(ast.BLangExpression); ok && alwaysTerminatesViaCheck(analyzer.tyCtx, expr) {
 			return terminatedEffect()
 		}
 		return continueEffect(curBB)
@@ -379,7 +379,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzePanic(curBB bbRef, stmt *ast
 // `checkpanic` whose operand is statically a subtype of error. In that case the
 // `check` always returns from the enclosing function and the `checkpanic`
 // always panics, so following statements are unreachable.
-func alwaysTerminatesViaCheck(expr ast.BLangExpression) bool {
+func alwaysTerminatesViaCheck(tyCtx semtypes.Context, expr ast.BLangExpression) bool {
 	var inner ast.BLangExpression
 	switch e := expr.(type) {
 	case *ast.BLangCheckPanickedExpr:
@@ -394,7 +394,7 @@ func alwaysTerminatesViaCheck(expr ast.BLangExpression) bool {
 	if inner == nil {
 		return false
 	}
-	return semtypes.IsSubtypeSimple(inner.GetDeterminedType(), semtypes.ERROR)
+	return semtypes.IsSubtype(tyCtx, inner.GetDeterminedType(), semtypes.ERROR)
 }
 
 // Branching statement handlers

@@ -1,0 +1,41 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo([string...]|{| a: string, b: string, never... |}) -> nil{
+  bb0 {
+    %2 = input is [string...]
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %3 = ConstantLoad <nil>
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %4 = ConstantLoad A is: 
+    %6 = ConstantLoad a
+    %5 = input[%6];
+    %7 = println(%4,%5) -> bb3;
+  }
+  bb3 {
+    %8 = ConstantLoad B is: 
+    %10 = ConstantLoad b
+    %9 = input[%10];
+    %11 = println(%8,%9) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad a
+    %2 = ConstantLoad Value A
+    %3 = ConstantLoad b
+    %4 = ConstantLoad Value B
+    %5 = newMap {| a: string, b: string, never... |}{%1=%2, %3=%4}
+    %6 = foo(%5) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
