@@ -54,6 +54,7 @@ type symbolResolver interface {
 	GetPkgID() model.PackageID
 	GetScope() model.Scope
 	GetCtx() *context.CompilerContext
+	TypeContext() semtypes.Context
 	GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition
 }
 
@@ -70,6 +71,7 @@ type (
 
 	moduleSymbolResolver struct {
 		ctx            *context.CompilerContext
+		tyCtx          semtypes.Context
 		scope          *model.ModuleScope
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]ast.TypeDefinition
@@ -101,6 +103,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 	}
 	return &moduleSymbolResolver{
 		ctx:       ctx,
+		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
 		scope:     scope,
 		pkgID:     pkgID,
 		typeDefns: make(map[model.SymbolRef]ast.TypeDefinition),
@@ -155,6 +158,10 @@ func (ms *moduleSymbolResolver) GetCtx() *context.CompilerContext {
 	return ms.ctx
 }
 
+func (ms *moduleSymbolResolver) TypeContext() semtypes.Context {
+	return ms.tyCtx
+}
+
 func (ms *moduleSymbolResolver) nextDefaultSymbolName() string {
 	name := fmt.Sprintf("$default$%d", ms.defaultCounter)
 	ms.defaultCounter++
@@ -193,6 +200,10 @@ func (bs *blockSymbolResolver) GetCtx() *context.CompilerContext {
 	return bs.parent.GetCtx()
 }
 
+func (bs *blockSymbolResolver) TypeContext() semtypes.Context {
+	return bs.parent.TypeContext()
+}
+
 func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition {
 	return bs.parent.GetTypeDefns()
 }
@@ -221,7 +232,7 @@ func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedTyp
 			return false
 		}
 		ty := ms.ctx.GetSymbol(symRef).Type()
-		return ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.TYPEDESC)
+		return ty != nil && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
 	}
 	symRef, _, ok := ms.GetSymbol(typeName)
 	if !ok {
@@ -986,7 +997,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			case *model.ClassSymbol:
 				carrier = s
 			case *model.ObjectTypeSymbol:
-				if s.Type() == nil || !semtypes.IsSubtypeSimple(s.Type(), semtypes.OBJECT) {
+				if s.Type() == nil || !semtypes.IsSubtype(resolver.TypeContext(), s.Type(), semtypes.OBJECT) {
 					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 					continue
 				}
@@ -1032,7 +1043,7 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 		} else {
 			sym := ctx.GetSymbol(symRef)
 			recSym, ok := sym.(*model.RecordSymbol)
-			if !ok || recSym.Type() == nil || !semtypes.IsSubtypeSimple(recSym.Type(), semtypes.MAPPING) {
+			if !ok || recSym.Type() == nil || !semtypes.IsSubtype(resolver.TypeContext(), recSym.Type(), semtypes.MAPPING) {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
 			}

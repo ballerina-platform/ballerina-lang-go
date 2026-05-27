@@ -99,7 +99,7 @@ func returnFound(a analyzer, returnStmt *ast.BLangReturn) bool {
 		return false
 	}
 	if returnStmt.Expr == nil {
-		if !semtypes.IsSubtypeSimple(retTy, semtypes.NIL) {
+		if !semtypes.IsSubtype(a.tyCtx(), retTy, semtypes.NIL) {
 			a.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
 			return false
 		}
@@ -1012,11 +1012,11 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 
 	var keyExprExpectedType semtypes.SemType
 	ctx := a.tyCtx()
-	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) ||
-		semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) ||
-		semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
+	if semtypes.IsSubtype(ctx, containerExprTy, semtypes.LIST) ||
+		semtypes.IsSubtype(ctx, containerExprTy, semtypes.STRING) ||
+		semtypes.IsSubtype(ctx, containerExprTy, semtypes.XML) {
 		keyExprExpectedType = semtypes.INT
-	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.TABLE) {
+	} else if semtypes.IsSubtype(ctx, containerExprTy, semtypes.TABLE) {
 		a.unimplementedErr("table not supported", expr.GetPosition())
 		return false
 	} else if semtypes.IsSubtype(ctx, containerExprTy, semtypes.Union(semtypes.NIL, semtypes.MAPPING)) {
@@ -1190,12 +1190,12 @@ func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedTy
 
 	switch unaryExpr.GetOperatorKind() {
 	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
-		if !isNumericType(underlyingTy) {
+		if !isNumericType(a.tyCtx(), underlyingTy) {
 			a.semanticErr(fmt.Sprintf("expect numeric type for %s", string(unaryExpr.GetOperatorKind())), unaryExpr.GetPosition())
 			return false
 		}
 	case model.OperatorKind_NOT:
-		if !semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
+		if !semtypes.IsSubtype(a.tyCtx(), exprTy, semtypes.BOOLEAN) {
 			a.semanticErr(fmt.Sprintf("expect boolean type for %s", string(unaryExpr.GetOperatorKind())), unaryExpr.GetPosition())
 			return false
 		}
@@ -1242,7 +1242,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 	} else if isRangeExpr(binaryExpr) {
-		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.INT) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.INT) {
+		if !semtypes.IsSubtype(a.tyCtx(), lhsTy, semtypes.INT) || !semtypes.IsSubtype(a.tyCtx(), rhsTy, semtypes.INT) {
 			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())
 			return false
 		}
@@ -1251,7 +1251,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 	} else if isLogicalExpression(binaryExpr) {
-		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.BOOLEAN) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.BOOLEAN) {
+		if !semtypes.IsSubtype(a.tyCtx(), lhsTy, semtypes.BOOLEAN) || !semtypes.IsSubtype(a.tyCtx(), rhsTy, semtypes.BOOLEAN) {
 			a.semanticErr(fmt.Sprintf("expect boolean types for %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())
 			return false
 		}
@@ -1364,7 +1364,7 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	variable := simpleVariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	expectedType := variable.GetDeterminedType()
 	if variable.GetName().GetValue() == string(model.IGNORE) {
-		if !semtypes.IsSubtypeSimple(expectedType, semtypes.ANY) {
+		if !semtypes.IsSubtype(a.tyCtx(), expectedType, semtypes.ANY) {
 			a.semanticErr("wildcard binding pattern type must be a subtype of 'any'", variable.GetPosition())
 			return false
 		}
@@ -1552,7 +1552,7 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 	variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	variableType := a.ctx().SymbolType(variable.Symbol())
 	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
-		if !semtypes.IsSubtypeSimple(variableType, semtypes.INT) {
+		if !semtypes.IsSubtype(a.tyCtx(), variableType, semtypes.INT) {
 			a.semanticErr("foreach variable must be a subtype of int for range expression", collection.GetPosition())
 			return false
 		}
@@ -1560,14 +1560,14 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 		collectionType := collection.GetDeterminedType()
 		var expectedValueType semtypes.SemType
 		switch {
-		case semtypes.IsSubtypeSimple(collectionType, semtypes.LIST):
+		case semtypes.IsSubtype(a.tyCtx(), collectionType, semtypes.LIST):
 			memberTypes := semtypes.ListAllMemberTypesInner(a.tyCtx(), collectionType)
 			var result semtypes.SemType = semtypes.NEVER
 			for _, each := range memberTypes.SemTypes {
 				result = semtypes.Union(result, each)
 			}
 			expectedValueType = result
-		case semtypes.IsSubtypeSimple(collectionType, semtypes.MAPPING):
+		case semtypes.IsSubtype(a.tyCtx(), collectionType, semtypes.MAPPING):
 			expectedValueType = semtypes.MappingMemberTypeInnerVal(a.tyCtx(), collectionType, semtypes.STRING)
 		default:
 			tyCtx := a.tyCtx()
