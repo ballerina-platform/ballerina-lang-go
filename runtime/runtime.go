@@ -32,6 +32,7 @@ var dispatchHooks = extern.DispatchHandles{
 	LookupRemote:   exec.LookupRemoteMethod,
 	LookupResource: exec.LookupResourceMethod,
 	Invoke:         exec.InvokeMethod,
+	Start:          exec.StartMethod,
 }
 
 // Runtime represents a Ballerina runtime instance that owns a module registry

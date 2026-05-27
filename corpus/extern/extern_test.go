@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -280,6 +281,102 @@ func TestListenerDispatch(t *testing.T) {
 			}},
 	}
 	runExtern(t, projectCase("listener-dispatch-v"), testharness.NewTestPal(), externs)
+}
+
+func TestStartMethod(t *testing.T) {
+	externs := []testharness.ExternRegistration{
+		{Org: "testorg", Module: "startmethod.lst", FuncName: "Listener.attach",
+			Impl: func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				args[0].(*values.Object).Put("svc", args[1].(*values.Object))
+				return nil, nil
+			}},
+		{Org: "testorg", Module: "startmethod.lst", FuncName: "Listener.trigger",
+			Impl: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				receiver := args[0].(*values.Object)
+				svcVal, ok := receiver.Get("svc")
+				if !ok {
+					return nil, fmt.Errorf("listener has no attached service")
+				}
+				svc := svcVal.(*values.Object)
+
+				rh, ok := ctx.LookupResourceMethod(svc, "get", []values.BalValue{"greeting", "world"})
+				if !ok {
+					return nil, fmt.Errorf("resource method 'get greeting/[name]' not found")
+				}
+				resCh, err := ctx.StartMethod(rh, nil)
+				if err != nil {
+					return nil, err
+				}
+
+				mh, ok := ctx.LookupRemoteMethod(svc, "shutdown")
+				if !ok {
+					return nil, fmt.Errorf("remote method 'shutdown' not found")
+				}
+				remCh, err := ctx.StartMethod(mh, []values.BalValue{svc})
+				if err != nil {
+					return nil, err
+				}
+
+				_, _ = ctx.Env.Platform.IO.Stdout([]byte(values.String(<-resCh, nil) + "\n"))
+				_, _ = ctx.Env.Platform.IO.Stdout([]byte(values.String(<-remCh, nil) + "\n"))
+				return nil, nil
+			}},
+	}
+	runExtern(t, projectCase("start-method-v"), testharness.NewTestPal(), externs)
+}
+
+func TestStartMethodError(t *testing.T) {
+	externs := []testharness.ExternRegistration{
+		{Org: "testorg", Module: "startmethoderror.lst", FuncName: "Listener.attach",
+			Impl: func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				args[0].(*values.Object).Put("svc", args[1].(*values.Object))
+				return nil, nil
+			}},
+		{Org: "testorg", Module: "startmethoderror", FuncName: "$service$0." + model.RemoteMethodName("boom"),
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return nil, fmt.Errorf("boom")
+			}},
+		{Org: "testorg", Module: "startmethoderror.lst", FuncName: "Listener.trigger",
+			Impl: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				receiver := args[0].(*values.Object)
+				svcVal, ok := receiver.Get("svc")
+				if !ok {
+					return nil, fmt.Errorf("listener has no attached service")
+				}
+				svc := svcVal.(*values.Object)
+
+				boomH, ok := ctx.LookupRemoteMethod(svc, "boom")
+				if !ok {
+					return nil, fmt.Errorf("remote method 'boom' not found")
+				}
+				boomCh, err := ctx.StartMethod(boomH, []values.BalValue{svc})
+				if err != nil {
+					return nil, err
+				}
+				boomVal := <-boomCh
+				boomErr, ok := boomVal.(*values.Error)
+				if !ok {
+					return nil, fmt.Errorf("expected *values.Error, got %T", boomVal)
+				}
+				if !strings.Contains(boomErr.Message, "boom") {
+					return nil, fmt.Errorf("expected message to contain 'boom', got %q", boomErr.Message)
+				}
+				_, _ = ctx.Env.Platform.IO.Stdout([]byte("got error: " + boomErr.Message + "\n"))
+
+				// A follow-up StartMethod after an error-returning strand still works.
+				okH, ok := ctx.LookupRemoteMethod(svc, "ok")
+				if !ok {
+					return nil, fmt.Errorf("remote method 'ok' not found")
+				}
+				okCh, err := ctx.StartMethod(okH, []values.BalValue{svc})
+				if err != nil {
+					return nil, err
+				}
+				_, _ = ctx.Env.Platform.IO.Stdout([]byte(values.String(<-okCh, nil) + "\n"))
+				return nil, nil
+			}},
+	}
+	runExtern(t, projectCase("start-method-error-v"), testharness.NewTestPal(), externs)
 }
 
 func TestExternHandle(t *testing.T) {
