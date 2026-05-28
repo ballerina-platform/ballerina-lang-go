@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"ballerina-lang-go/bir"
 	bircodec "ballerina-lang-go/bir/codec"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/semtypes"
@@ -35,7 +36,19 @@ import (
 // list, on top of the shared test_util.UnsupportedTests baseline (which is
 // applied via isTestSkipped below). Currently empty -- every known failure
 // is already covered by the shared baseline.
-var birSerializationRoundtripSkipList = []string{}
+// birSerializationRoundtripSkipList skips tests whose BIR cannot be
+// round-tripped in isolation because they depend on stdlib modules whose
+// Ballerina-level functions (e.g. http:Client.init) live in the http BIR
+// rather than being registered as native Go functions. Running only the
+// deserialized consumer BIR in a fresh env would panic on those calls.
+var birSerializationRoundtripSkipList = []string{
+	"subset8/08-network/http-client-v.bal",
+	"subset8/08-network/http-client-post-v.bal",
+	"subset8/08-network/http-client-methods-v.bal",
+	"subset8/08-network/http-client-tls-v.bal",
+	"subset8/08-network/http-client-response-headers-v.bal",
+	"subset8/08-network/http-client-response-payload-v.bal",
+}
 
 func TestBIRSerializationRoundtrip(t *testing.T) {
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
@@ -67,13 +80,15 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 1: Compile .bal to BIR.
 	var stdoutBuf, stderrBuf bytes.Buffer
-	birPkg, tyEnv, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
-	if birPkg == nil || compileErr != nil {
+	birPkgs, tyEnv, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
+	if len(birPkgs) == 0 || compileErr != nil {
 		t.Fatalf("compilation failed for %s: %v", testPair.InputPath, compileErr)
 	}
+	// The consumer's BIR is the last package in topological order.
+	consumerPkg := birPkgs[len(birPkgs)-1]
 
 	// Step 2: Serialize BIR.
-	serialized, err := bircodec.Marshal(tyEnv, birPkg)
+	serialized, err := bircodec.Marshal(tyEnv, consumerPkg)
 	if err != nil {
 		t.Fatalf("BIR serialization failed for %s: %v", testPair.InputPath, err)
 	}
@@ -88,7 +103,7 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 4: Execute the deserialized BIR.
 	var rtStdoutBuf, rtStderrBuf bytes.Buffer
-	runInterpretPhase(deserialized, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
+	runInterpretPhase([]*bir.BIRPackage{deserialized}, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
 
 	// Step 5: Compare against expected output.
 	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)

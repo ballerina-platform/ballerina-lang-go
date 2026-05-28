@@ -408,12 +408,12 @@ func resolveErrorDiagnostics(result projects.DiagnosticResult, de *diagnostics.D
 func runIntegrationCase(balFile string) caseRun {
 	var stdoutBuf, stderrBuf bytes.Buffer
 
-	birPkg, tyEnv, diags, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
-	if birPkg == nil || compileErr != nil {
+	birPkgs, tyEnv, diags, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
+	if len(birPkgs) == 0 || compileErr != nil {
 		return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 	}
 
-	runInterpretPhase(birPkg, tyEnv, &stdoutBuf, &stderrBuf)
+	runInterpretPhase(birPkgs, tyEnv, &stdoutBuf, &stderrBuf)
 	return caseRun{stdout: stdoutBuf.String(), stderr: stderrBuf.String(), diags: diags}
 }
 
@@ -428,7 +428,7 @@ func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStde
 	}
 }
 
-func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, tyEnv semtypes.Env, diags []resolvedDiag, err error) {
+func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, tyEnv semtypes.Env, diags []resolvedDiag, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -465,18 +465,21 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIR(), tyEnv, diags, nil
+	return backend.BIRPackages(), tyEnv, diags, nil
 }
 
-func runInterpretPhase(birPkg *bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf, stderrBuf *bytes.Buffer) {
-	if birPkg == nil {
+func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf, stderrBuf *bytes.Buffer) {
+	if len(birPkgs) == 0 {
 		return
 	}
 
 	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf), tyEnv)
-	if err := rt.Interpret(*birPkg); err != nil {
-		// For now just write the error string to stderr to match corpus expectations
-		fmt.Fprintln(stderrBuf, err.Error())
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			// For now just write the error string to stderr to match corpus expectations
+			fmt.Fprintln(stderrBuf, err.Error())
+			return
+		}
 	}
 }
 

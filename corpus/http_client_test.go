@@ -129,7 +129,7 @@ func TestHttpClientGet(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 
@@ -146,8 +146,10 @@ func TestHttpClientGet(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "200\nhello with test-header-value\n"
@@ -200,7 +202,7 @@ func TestHttpClientPost(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
@@ -214,8 +216,10 @@ func TestHttpClientPost(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "200\nbody: hello post, ct: text/plain\n200\nbody: {\"msg\":\"hello\"}, ct: application/json\n"
@@ -275,7 +279,7 @@ func TestHttpClientMethods(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
@@ -289,8 +293,10 @@ func TestHttpClientMethods(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "" +
@@ -345,7 +351,7 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
@@ -365,8 +371,10 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "200\n"
@@ -408,7 +416,7 @@ func TestHttpClientPublicGet(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
@@ -417,8 +425,10 @@ func TestHttpClientPublicGet(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	if strings.TrimSpace(stdoutBuf.String()) != "200" {
@@ -456,7 +466,7 @@ func TestHttpClientRedirect(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
@@ -465,8 +475,10 @@ func TestHttpClientRedirect(t *testing.T) {
 	}
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	if strings.TrimSpace(stdoutBuf.String()) != "200" {
@@ -511,14 +523,16 @@ func runNetworkBal(t *testing.T, balFile string) string {
 		t.Fatal("compilation had errors")
 	}
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
 	testPal.HTTP = pal.HTTP{NewClient: palnative.NewHTTPClient}
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 	return strings.TrimSpace(stdoutBuf.String())
 }
@@ -695,14 +709,16 @@ public function main() returns error? {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	testPal := test_util.TestPal(stdoutBuf, os.Stderr)
 	testPal.HTTP = pal.HTTP{NewClient: palnative.NewHTTPClient}
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	if strings.TrimSpace(stdoutBuf.String()) != "200" {

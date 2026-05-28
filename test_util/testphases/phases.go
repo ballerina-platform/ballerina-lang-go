@@ -20,12 +20,14 @@ package testphases
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/desugar"
+	"ballerina-lang-go/lib/stdlibs"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
@@ -66,6 +68,75 @@ type PipelineResult struct {
 	BIRPackage      *bir.BIRPackage
 }
 
+// stdlibEntry describes one embedded standard-library package to pre-compile.
+type stdlibEntry struct {
+	org     string
+	name    string
+	version string
+}
+
+// builtinStdlibs is the ordered list of standard-library packages baked into the
+// binary. They are compiled with no imports of their own, so order is irrelevant.
+var builtinStdlibs = []stdlibEntry{
+	{"ballerina", "io", "0.0.1"},
+	{"ballerina", "http", "0.0.1"},
+}
+
+// loadBuiltinPublicSymbols compiles the embedded standard-library packages into a
+// sibling CompilerContext that shares the same CompilerEnvironment (and thus the
+// same type-env and symbol table) as mainCx. The returned map can be merged
+// directly into the publicSymbols passed to semantics.ResolveImports.
+func loadBuiltinPublicSymbols(mainCx *context.CompilerContext) map[semantics.PackageIdentifier]model.ExportedSymbolSpace {
+	env := mainCx.GetEnvironment()
+	result := make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
+
+	for _, entry := range builtinStdlibs {
+		balPath := fmt.Sprintf("ballerina/%s/%s/go1.2/%s.bal", entry.name, entry.version, entry.name)
+		contentBytes, err := fs.ReadFile(stdlibs.FS, balPath)
+		if err != nil {
+			continue
+		}
+		content := string(contentBytes)
+
+		cx := context.NewCompilerContext(env)
+		virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", entry.name)
+		cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(content))
+
+		st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, content)
+		if err != nil || cx.HasDiagnostics() {
+			continue
+		}
+
+		cu := ast.GetCompilationUnit(cx, st)
+		if cu == nil || cx.HasDiagnostics() {
+			continue
+		}
+		pkg := ast.ToPackage(cu)
+		pkg.PackageID = cx.NewPackageID(
+			model.Name(entry.org),
+			[]model.Name{model.Name(entry.name)},
+			model.DEFAULT_VERSION,
+		)
+
+		// The stdlib packages have no imports of their own.
+		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+			make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), entry.org)
+		exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+		if cx.HasErrors() {
+			continue
+		}
+
+		semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
+		if cx.HasErrors() {
+			continue
+		}
+
+		result[semantics.PackageIdentifier{OrgName: entry.org, ModuleName: entry.name}] = exported
+	}
+
+	return result
+}
+
 // RunPipeline runs the frontend compilation pipeline up to the specified phase.
 // It returns a PipelineResult containing the outputs relevant to that phase.
 func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
@@ -96,8 +167,12 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 		return result, nil
 	}
 
+	// Pre-compile the embedded standard-library packages so that imports like
+	// ballerina/io and ballerina/http resolve correctly during symbol resolution.
+	stdlibSymbols := loadBuiltinPublicSymbols(cx)
+
 	// Phase 3: Symbol Resolution
-	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), "")
+	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), stdlibSymbols, "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil
@@ -144,3 +219,4 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	result.BIRPackage = bir.GenBir(cx, result.Package)
 	return result, nil
 }
+
