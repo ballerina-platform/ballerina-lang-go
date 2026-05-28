@@ -2685,6 +2685,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveClientResourceAccessAction(t, chain, e, expectedType)
 	case *ast.BLangInferredTypedescDefault:
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
+	case *ast.BLangTypedescExpr:
+		return resolveTypedescExpr(t, chain, e, expectedType)
 	case *ast.BLangXMLSequenceLiteral:
 		return resolveXMLSequenceLiteral(t, chain, e, expectedType)
 	case *ast.BLangTemplateExpr:
@@ -2719,6 +2721,27 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 	}
 	setExpectedType(e, expectedType)
 	return expectedType, defaultExpressionEffect(chain), true
+}
+
+func resolveTypedescExpr(t typeResolver, chain *binding, e *ast.BLangTypedescExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	typeDesc, ok := e.GetTypeDescriptor().(ast.BType)
+	if !ok {
+		t.internalError("typedesc expression has no type descriptor", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	constraint, ok := resolveBType(t, typeDesc, 0)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	e.Constraint = constraint
+	ty := semtypes.TypedescContaining(t.typeEnv(), constraint)
+	if expectedType != nil && !semtypes.IsSubtype(t.typeContext(), ty, expectedType) {
+		t.semanticError(fmt.Sprintf("incompatible types: expected '%s', found '%s'",
+			semtypes.ToString(t.typeContext(), expectedType), semtypes.ToString(t.typeContext(), ty)), e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
 }
 
 func resolveXMLTextLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLTextLiteral) (semtypes.SemType, expressionEffect, bool) {
@@ -5588,7 +5611,13 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				}
 				ctx := t.typeContext()
 				T := semtypes.TypedescConstraint(ctx, paramTypes[i])
-				S := semtypes.Intersect(T, callExpectedType)
+				S := semtypes.Diff(callExpectedType, semtypes.ERROR)
+				if semtypes.IsEmpty(ctx, S) {
+					S = callExpectedType
+				}
+				if !semtypes.IsSubtype(ctx, S, T) {
+					S = semtypes.Intersect(T, S)
+				}
 				if semtypes.IsEmpty(ctx, S) {
 					t.semanticError(fmt.Sprintf("cannot infer maximal type such that it is a subtype of both %s and %s", semtypes.ToString(ctx, T), semtypes.ToString(ctx, callExpectedType)), loc)
 					return nil, chain, false

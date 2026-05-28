@@ -1725,6 +1725,21 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 		}
 	}
 
+	if sym.Kind() == model.SymbolKindType {
+		typeTy := ctx.birCx.CompilerContext.SymbolType(symRef)
+		resultTy := expr.GetDeterminedType()
+		if resultTy == nil || !semtypes.IsSubtype(ctx.birCx.typeCtx, resultTy, semtypes.TYPEDESC) {
+			resultTy = semtypes.TypedescContaining(ctx.birCx.CompilerContext.GetTypeEnv(), typeTy)
+		}
+		resultOperand := ctx.addTempVar(resultTy)
+		td := &values.TypeDesc{Type: typeTy}
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.loc(expr.GetPosition())))
+		return expressionEffect{
+			result: resultOperand,
+			block:  curBB,
+		}
+	}
+
 	// Global variable reference
 	pkgId := packageIDFromIdentifier(ctx.compilerContext(), ctx.symbolPackage(symRef))
 	gv := &BIRGlobalVariableDcl{}

@@ -93,6 +93,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSimpleVariableDef(t)
 	case *BLangGroupExpr:
 		p.printGroupExpr(t)
+	case *BLangTypedescExpr:
+		p.printTypedescExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
 	case *BLangLock:
@@ -545,6 +547,17 @@ func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
 		p.PrintString(node.VariableName.Value)
 	}
 	p.EndNode()
+}
+
+func (p *PrettyPrinter) printTypedescExpr(node *BLangTypedescExpr) {
+	p.startNode()
+	p.printString("typedesc-expr")
+	if td := node.GetTypeDescriptor(); td != nil {
+		p.indentLevel++
+		p.PrintInner(td.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
 }
 
 // Binary and complex expression printers

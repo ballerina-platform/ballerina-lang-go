@@ -160,7 +160,13 @@ type RefTypeOp struct {
 }
 
 func (ref *RefTypeOp) Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType {
-	return semtypes.TypedescConstraint(ctx, args[ref.Index])
+	if ref.Index >= len(args) {
+		return nil
+	}
+	if td := semtypes.TypedescConstraint(ctx, args[ref.Index]); td != nil {
+		return td
+	}
+	return args[ref.Index]
 }
 
 type SymbolKind uint
