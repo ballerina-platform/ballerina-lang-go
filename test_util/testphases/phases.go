@@ -219,4 +219,3 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	result.BIRPackage = bir.GenBir(cx, result.Package)
 	return result, nil
 }
-
