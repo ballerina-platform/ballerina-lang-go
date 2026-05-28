@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package packageresolution
+package corpus
 
 import (
 	"bytes"
@@ -22,36 +22,57 @@ import (
 	"embed"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	_ "ballerina-lang-go/lib/rt" // register stdlib runtime functions (io.println, etc.)
 	// foo has native code; bar is pure Ballerina. foo's native must be registered
 	// so the interpreter can dispatch foo:add() at runtime.
+	"ballerina-lang-go/bir"
 	_ "ballerina-lang-go/corpus/package-resolution/testdata/bundled-embed/ballerina/foo/0.1.0/go1.2/native"
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semtypes"
 )
+
+const packageResolutionTestDataDir = "package-resolution/testdata"
 
 // bundledEmbedFS mirrors how lib/stdlibs/embed.go bakes the production stdlib
 // tree: a compile-time embedded fs.FS rooted at <org>/<name>/<version>/<plat>/.
-// Holding the fixture under this package's testdata exercises the same
+// Holding the fixture under corpus/package-resolution/testdata exercises the same
 // FileSystemRepository path against an embedded FS without seeding the real
 // lib/stdlibs/ballerina/ tree with placeholder content.
 //
-//go:embed testdata/bundled-embed/ballerina
+//go:embed package-resolution/testdata/bundled-embed/ballerina
 var bundledEmbedFS embed.FS
 
-// bundledEmbedRepo returns a FileSystemRepository over the test embed.FS rooted
-// at the ballerina org dir, matching how production wires the real stdlib FS.
 func bundledEmbedRepo(t *testing.T) *projects.FileSystemRepository {
 	t.Helper()
-	sub, err := fs.Sub(bundledEmbedFS, "testdata/bundled-embed")
+	sub, err := fs.Sub(bundledEmbedFS, packageResolutionTestDataDir+"/bundled-embed")
 	if err != nil {
 		t.Fatalf("fs.Sub: %v", err)
 	}
 	return projects.NewFileSystemRepository(sub, ".")
+}
+
+func interpretBIRPackagesStdout(t *testing.T, typeEnv semtypes.Env, birPkgs []*bir.BIRPackage) string {
+	t.Helper()
+	var stdout bytes.Buffer
+	testPal := pal.Platform{
+		IO: pal.IO{
+			Stdout: func(p []byte) (int, error) { return stdout.Write(p) },
+			Stderr: func(p []byte) (int, error) { return len(p), nil },
+		},
+	}
+	rt := runtime.NewRuntime(testPal, typeEnv)
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			t.Fatalf("Interpret(%v): %v", birPkg.PackageID, err)
+		}
+	}
+	return strings.TrimSpace(stdout.String())
 }
 
 // TestBundledRepository_LoadsEmbeddedPackage verifies that both a pure-Ballerina
@@ -90,7 +111,6 @@ func TestBundledRepository_LoadsEmbeddedPackage(t *testing.T) {
 		})
 	}
 
-	// Misses must report cleanly so the real resolver can fall through.
 	missing, err := repo.GetPackage(ctx, "ballerina", "unknown", "0.1.0", opts)
 	if err != nil {
 		t.Fatalf("GetPackage(unknown): %v", err)
@@ -125,7 +145,7 @@ func TestBundledRepository_ResolverChainServesEmbedded(t *testing.T) {
 // foo:add(3, 4) exercises native dispatch; bar:value() exercises pure Ballerina.
 // Expected stdout: "7\n1\n"
 func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
-	projectFs := os.DirFS("testdata/userProject")
+	projectFs := os.DirFS(filepath.Join(packageResolutionTestDataDir, "userProject"))
 
 	result, err := projects.Load(projectFs, ".", projects.ProjectLoadConfig{
 		Repositories: []projects.Repository{bundledEmbedRepo(t)},
@@ -147,23 +167,7 @@ func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
 		t.Fatal("backend produced no BIR packages")
 	}
 
-	var stdout bytes.Buffer
-	testPal := pal.Platform{
-		IO: pal.IO{
-			Stdout: func(p []byte) (int, error) { return stdout.Write(p) },
-			Stderr: func(p []byte) (int, error) { return len(p), nil },
-		},
-	}
-
-	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
-			t.Fatalf("Interpret(%v): %v", birPkg.PackageID, err)
-		}
-	}
-
-	// foo:add(3, 4) = 7 (native dispatch), bar:value() = 1 (pure Ballerina)
-	got := strings.TrimSpace(stdout.String())
+	got := interpretBIRPackagesStdout(t, result.Project().Environment().TypeEnv(), birPkgs)
 	want := "7\n1"
 	if got != want {
 		t.Errorf("stdout = %q, want %q", got, want)

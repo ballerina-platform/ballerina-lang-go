@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extern_test
+package corpus
 
 import (
 	"bytes"
@@ -99,14 +99,17 @@ func TestHttpClientGet(t *testing.T) {
 	}))
 	defer server.Close()
 
-	balFile := filepath.Join(testDataDir, "http-client-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -167,14 +170,17 @@ func TestHttpClientPost(t *testing.T) {
 	}))
 	defer server.Close()
 
-	balFile := filepath.Join(testDataDir, "http-client-post-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-post-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -239,14 +245,17 @@ func TestHttpClientMethods(t *testing.T) {
 	}))
 	defer server.Close()
 
-	balFile := filepath.Join(testDataDir, "http-client-methods-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-methods-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -306,14 +315,17 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 	}))
 	defer server.Close()
 
-	balFile := filepath.Join(testDataDir, "http-client-tls-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-tls-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -365,19 +377,22 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 
 // TestHttpClientPublicGet exercises palnative.NewHTTPClient against a real
 // public endpoint, ensuring the full Ballerina → PAL → palnative path is
-// covered. Skipped when EXTERN_SKIP_NETWORK=1 or no network is available.
+// covered. Skipped when CORPUS_SKIP_NETWORK=1 or no network is available.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientPublicGet(t *testing.T) {
 	skipIfNoNetwork(t)
 
-	balFile := filepath.Join(testDataDir, "http-client-public-get-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-public-get-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -415,14 +430,17 @@ func TestHttpClientPublicGet(t *testing.T) {
 func TestHttpClientRedirect(t *testing.T) {
 	skipIfNoNetwork(t)
 
-	balFile := filepath.Join(testDataDir, "http-client-redirect-v.bal")
+	balFile := filepath.Join(externTestDataDir, "http-client-redirect-v.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -456,11 +474,11 @@ func TestHttpClientRedirect(t *testing.T) {
 	}
 }
 
-// skipIfNoNetwork skips the test when EXTERN_SKIP_NETWORK is set or when
+// skipIfNoNetwork skips the test when CORPUS_SKIP_NETWORK is set or when
 // running under WASM (js/wasm), which has no outbound TCP access.
 func skipIfNoNetwork(t *testing.T) {
 	t.Helper()
-	if os.Getenv("EXTERN_SKIP_NETWORK") != "" || goruntime.GOOS == "js" {
+	if os.Getenv("CORPUS_SKIP_NETWORK") != "" || goruntime.GOOS == "js" {
 		t.Skip("skipping network-dependent test")
 	}
 }
@@ -475,7 +493,10 @@ func runNetworkBal(t *testing.T, balFile string) string {
 		t.Fatal(err)
 	}
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
@@ -507,7 +528,7 @@ func runNetworkBal(t *testing.T, balFile string) string {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientJson(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-json-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-json-v.bal"))
 	if out != "true" {
 		t.Errorf("expected getJsonPayload() result to be json, got: %q", out)
 	}
@@ -517,7 +538,7 @@ func TestHttpClientJson(t *testing.T) {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientText(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-text-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-text-v.bal"))
 	if out != "true" {
 		t.Errorf("expected getTextPayload() to return non-empty string, got: %q", out)
 	}
@@ -527,7 +548,7 @@ func TestHttpClientText(t *testing.T) {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientBinary(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-binary-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-binary-v.bal"))
 	if out != "true" {
 		t.Errorf("expected getBinaryPayload() to return non-empty byte[], got: %q", out)
 	}
@@ -538,7 +559,7 @@ func TestHttpClientBinary(t *testing.T) {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientPublicMethods(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-public-methods-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-public-methods-v.bal"))
 	if out != "200\n200\n200\n200" {
 		t.Errorf("expected four 200 status codes, got: %q", out)
 	}
@@ -550,7 +571,7 @@ func TestHttpClientPublicMethods(t *testing.T) {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientTimeout(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-timeout-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-timeout-v.bal"))
 	if out != "true" {
 		t.Errorf("expected timeout to produce an error value, got: %q", out)
 	}
@@ -561,7 +582,7 @@ func TestHttpClientTimeout(t *testing.T) {
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientConnectionError(t *testing.T) {
 	skipIfNoNetwork(t)
-	out := runNetworkBal(t, filepath.Join(testDataDir, "http-client-connection-error-v.bal"))
+	out := runNetworkBal(t, filepath.Join(externTestDataDir, "http-client-connection-error-v.bal"))
 	if out != "true" {
 		t.Errorf("expected connection error to produce an error value, got: %q", out)
 	}
@@ -655,7 +676,10 @@ public function main() returns error? {
 		t.Fatal(err)
 	}
 	fsys := os.DirFS(filepath.Dir(absPath))
-	ballerinaEnvPath := getBallerinaEnvPath(t)
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		t.Fatal(err)
+	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
 	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
