@@ -497,74 +497,88 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// Check if this is ballerina import
+		// ballerina/lang.* bind to compiler-intrinsic symbols. io and http are
+		// also handled as intrinsics below until their bala bundles are introduced
+		// in dedicated PRs; at that point they will resolve through publicSymbols
+		// like all other ballerina/* packages.
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
 			if isIoImport(&imp) {
-				// Use alias if available, otherwise use package name
-				key := "io"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = io.GetIoSymbols(ctx)
-			} else if isLangImport(&imp, "array") {
-				key := "array"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = array.GetArraySymbols(ctx)
-			} else if isLangImport(&imp, "map") {
-				key := "map"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bMap.GetMapSymbols(ctx)
-			} else if isLangImport(&imp, "error") {
-				key := "error"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bError.GetErrorSymbols(ctx)
-			} else if isLangImport(&imp, "string") {
-				key := "string"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bString.GetStringSymbols(ctx)
-			} else if isLangImport(&imp, "value") {
-				key := "value"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bValue.GetValueSymbols(ctx)
-			} else if isHttpImport(&imp) {
-				key := "http"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bHttp.GetHttpSymbols(ctx)
-			} else {
-				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+				bindIntrinsicImport(&imp, "io", io.GetIoSymbols(ctx), result)
+				continue
 			}
-		} else {
-			id := resolveImportPackageIdentifier(&imp, defaultOrg)
-			if symbols, ok := publicSymbols[id]; ok {
-				var key string
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				} else {
-					comps := imp.GetPackageName()
-					key = comps[len(comps)-1].GetValue()
-				}
-				result[key] = symbols
-			} else {
-				ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
+			if isLangImport(&imp, "array") {
+				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "map") {
+				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "error") {
+				bindIntrinsicImport(&imp, "error", bError.GetErrorSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "string") {
+				bindIntrinsicImport(&imp, "string", bString.GetStringSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "value") {
+				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
+				continue
+			}
+			if isHttpImport(&imp) {
+				bindIntrinsicImport(&imp, "http", bHttp.GetHttpSymbols(ctx), result)
+				continue
 			}
 		}
+		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
 
 	maps.Copy(result, implicitImports)
 
 	return result
+}
+
+// bindIntrinsicImport binds a compiler-intrinsic symbol space under either the
+// import's alias or the given default name.
+func bindIntrinsicImport(
+	imp *ast.BLangImportPackage,
+	defaultName string,
+	symbols model.ExportedSymbolSpace,
+	result map[string]model.ExportedSymbolSpace,
+) {
+	key := defaultName
+	if imp.Alias != nil {
+		key = imp.Alias.Value
+	}
+	result[key] = symbols
+}
+
+// resolveExternalImport looks up the import's exported symbols in publicSymbols
+// (populated as each dependency's module is compiled) and binds them to the
+// import alias or the last name component. Reports an "Unknown import" error
+// when the package was not resolved upstream.
+func resolveExternalImport(
+	ctx *context.CompilerContext,
+	imp *ast.BLangImportPackage,
+	defaultOrg string,
+	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace,
+	result map[string]model.ExportedSymbolSpace,
+) {
+	id := resolveImportPackageIdentifier(imp, defaultOrg)
+	symbols, ok := publicSymbols[id]
+	if !ok {
+		ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
+		return
+	}
+	var key string
+	if imp.Alias != nil {
+		key = imp.Alias.Value
+	} else {
+		comps := imp.GetPackageName()
+		key = comps[len(comps)-1].GetValue()
+	}
+	result[key] = symbols
 }
 
 type PackageIdentifier struct {
