@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 const (
@@ -581,6 +582,16 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value 
 		write(buf, val)
 	case typeTagNil:
 		write(buf, int32(-1))
+	case typeTagTypedesc:
+		td := value.(*values.TypeDesc)
+		targetType := td.Type
+		tyCtx := semtypes.TypeCheckContext(bw.env)
+		if semtypes.IsSubtypeSimple(targetType, semtypes.TYPEDESC) {
+			if constraint := semtypes.TypedescConstraint(tyCtx, targetType); constraint != nil {
+				targetType = constraint
+			}
+		}
+		bw.writeType(buf, targetType)
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
 	}
@@ -603,6 +614,8 @@ func (bw *birWriter) inferTag(value any) (typeTag, error) {
 		return typeTagByte, nil
 	case *decimal.Decimal:
 		return typeTagDecimal, nil
+	case *values.TypeDesc:
+		return typeTagTypedesc, nil
 	case nil:
 		return typeTagNil, nil
 	default:
@@ -651,7 +664,23 @@ func (bw *birWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) {
 		write(buf, int32(-1))
 		return
 	}
-	write(buf, int32(bw.tp.Put(ty)))
+	tyCtx := semtypes.TypeCheckContext(bw.env)
+	serializedType := ty
+	if semtypes.IsSubtypeSimple(serializedType, semtypes.TYPEDESC) {
+		if constraint := semtypes.TypedescConstraint(tyCtx, serializedType); constraint != nil {
+			serializedType = constraint
+		} else {
+			serializedType = semtypes.VAL
+		}
+	} else if semtypes.ContainsBasicType(serializedType, semtypes.TYPEDESC) {
+		withoutTypedesc := semtypes.Diff(serializedType, semtypes.TYPEDESC)
+		if !semtypes.IsEmpty(tyCtx, withoutTypedesc) {
+			serializedType = withoutTypedesc
+		} else {
+			serializedType = semtypes.VAL
+		}
+	}
+	write(buf, int32(bw.tp.Put(serializedType)))
 }
 
 func (bw *birWriter) writePosition(buf *bytes.Buffer, pos bir.Location) {

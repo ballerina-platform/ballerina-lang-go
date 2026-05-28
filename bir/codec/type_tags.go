@@ -29,6 +29,7 @@ const (
 	typeTagString     typeTag = 5
 	typeTagBoolean    typeTag = 6
 	typeTagNil        typeTag = 10
+	typeTagTypedesc   typeTag = 13
 	typeTagSigned32   typeTag = 39
 	typeTagSigned16   typeTag = 40
 	typeTagSigned8    typeTag = 41

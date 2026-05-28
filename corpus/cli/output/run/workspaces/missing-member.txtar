@@ -1,6 +1,9 @@
 -- stdout --
 -- stderr --
 ballerina: no package found at path
-within workspace
+notamember within workspace
+
+USAGE:
+    run [<source-file.bal> | <package-dir> | .]
 -- exitcode --
 1
