@@ -19,6 +19,7 @@ package semantics
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 
 	"ballerina-lang-go/ast"
@@ -29,9 +30,7 @@ import (
 
 	array "ballerina-lang-go/lib/array/compile"
 	bError "ballerina-lang-go/lib/error/compile"
-	bHttp "ballerina-lang-go/lib/http/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
-	io "ballerina-lang-go/lib/io/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
 	bString "ballerina-lang-go/lib/string/compile"
@@ -502,10 +501,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 		// in dedicated PRs; at that point they will resolve through publicSymbols
 		// like all other ballerina/* packages.
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if isIoImport(&imp) {
-				bindIntrinsicImport(&imp, "io", io.GetIoSymbols(ctx), result)
-				continue
-			}
 			if isLangImport(&imp, "array") {
 				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
 				continue
@@ -524,10 +519,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 			}
 			if isLangImport(&imp, "value") {
 				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
-				continue
-			}
-			if isHttpImport(&imp) {
-				bindIntrinsicImport(&imp, "http", bHttp.GetHttpSymbols(ctx), result)
 				continue
 			}
 		}
@@ -1201,7 +1192,10 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
 	}
 
-	for _, method := range classDef.Methods {
+	// Iterate in sorted order so that default-param symbol counter assignments
+	// are deterministic regardless of Go's map iteration order.
+	for _, methodName := range slices.Sorted(maps.Keys(classDef.Methods)) {
+		method := classDef.Methods[methodName]
 		methodResolver := newFunctionResolver(classResolver, method)
 		method.SetScope(methodResolver.scope)
 		resolveFunction(methodResolver, method)
@@ -1212,6 +1206,9 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
 	for name, method := range classDef.Methods {
 		methodTable[name] = method.Symbol()
+	}
+	if classDef.InitFunction != nil {
+		methodTable["init"] = classDef.InitFunction.Symbol()
 	}
 	classSym.SetMethods(methodTable)
 }

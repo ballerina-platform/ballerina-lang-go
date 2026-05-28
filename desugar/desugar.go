@@ -601,6 +601,11 @@ func desugarTopLevelFunctionDefaults(pkgCtx *packageContext, pkg *ast.BLangPacka
 func desugarClassMethodDefaults(pkgCtx *packageContext, pkg *ast.BLangPackage) {
 	for i := range pkg.ClassDefinitions {
 		class := &pkg.ClassDefinitions[i]
+		if class.InitFunction != nil {
+			for _, fn := range desugarFunctionParamDefaults(pkgCtx, class.InitFunction) {
+				pkg.Functions = append(pkg.Functions, *fn)
+			}
+		}
 		for _, method := range class.Methods {
 			for _, fn := range desugarFunctionParamDefaults(pkgCtx, method) {
 				pkg.Functions = append(pkg.Functions, *fn)
