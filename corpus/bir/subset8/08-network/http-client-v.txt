@@ -5,7 +5,7 @@ main() -> nil|error{
   bb0 {
     %1 = newObject ballerina/http:Client
     %2 = ConstantLoad https://example.com
-    %3 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{}
+    %3 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %4 = init(%1,%2,%3) -> bb1;
   }
   bb1 {
@@ -33,7 +33,7 @@ main() -> nil|error{
     c1 = $desugar$0;
     %10 = ConstantLoad /path
     $desugar$1 = %10;
-    %12 = $Client.get$default$1($desugar$1) -> bb7;
+    %12 = $default$10($desugar$1) -> bb7;
   }
   bb7 {
     $desugar$2 = %12;
@@ -64,7 +64,7 @@ main() -> nil|error{
     %27 = ConstantLoad enabled
     %28 = ConstantLoad false
     %29 = newMap {| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}{%27=%28}
-    %30 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%24=%25, %26=%29}
+    %30 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%24=%25, %26=%29} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %31 = init(%22,%23,%30) -> bb12;
   }
   bb12 {
@@ -92,7 +92,7 @@ main() -> nil|error{
     c2 = $desugar$4;
     %37 = ConstantLoad /path
     $desugar$5 = %37;
-    %39 = $Client.get$default$1($desugar$5) -> bb18;
+    %39 = $default$10($desugar$5) -> bb18;
   }
   bb18 {
     $desugar$6 = %39;
@@ -123,7 +123,7 @@ main() -> nil|error{
   bb24 {
     %51 = ConstantLoad https://example.com
     $desugar$8 = %51;
-    %53 = $Client.init$default$1($desugar$8) -> bb25;
+    %53 = $default$4($desugar$8) -> bb25;
   }
   bb25 {
     $desugar$9 = %53;
@@ -155,7 +155,7 @@ main() -> nil|error{
     c3 = $desugar$10;
     %62 = ConstantLoad /path
     $desugar$11 = %62;
-    %64 = $Client.get$default$1($desugar$11) -> bb32;
+    %64 = $default$10($desugar$11) -> bb32;
   }
   bb32 {
     $desugar$12 = %64;
@@ -180,7 +180,7 @@ main() -> nil|error{
   bb36 {
     %74 = ConstantLoad https://example.com
     $desugar$14 = %74;
-    %76 = $Client.init$default$1($desugar$14) -> bb37;
+    %76 = $default$4($desugar$14) -> bb37;
   }
   bb37 {
     $desugar$15 = %76;
@@ -237,7 +237,7 @@ main() -> nil|error{
     %98 = ConstantLoad https://example.com
     %99 = ConstantLoad httpVersion
     %100 = ConstantLoad 1.1
-    %101 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%99=%100}
+    %101 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%99=%100} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %102 = init(%97,%98,%101) -> bb48;
   }
   bb48 {
@@ -265,7 +265,7 @@ main() -> nil|error{
     c5 = $desugar$18;
     %108 = ConstantLoad /path
     $desugar$19 = %108;
-    %110 = $Client.get$default$1($desugar$19) -> bb54;
+    %110 = $default$10($desugar$19) -> bb54;
   }
   bb54 {
     $desugar$20 = %110;
@@ -292,7 +292,7 @@ main() -> nil|error{
     %121 = ConstantLoad https://example.com
     %122 = ConstantLoad httpVersion
     %123 = ConstantLoad 2.0
-    %124 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%122=%123}
+    %124 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%122=%123} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %125 = init(%120,%121,%124) -> bb59;
   }
   bb59 {
@@ -320,7 +320,7 @@ main() -> nil|error{
     c6 = $desugar$22;
     %131 = ConstantLoad /path
     $desugar$23 = %131;
-    %133 = $Client.get$default$1($desugar$23) -> bb65;
+    %133 = $default$10($desugar$23) -> bb65;
   }
   bb65 {
     $desugar$24 = %133;

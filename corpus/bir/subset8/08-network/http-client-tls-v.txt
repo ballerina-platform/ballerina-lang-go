@@ -8,8 +8,8 @@ main() -> nil|error{
     %3 = ConstantLoad secureSocket
     %4 = ConstantLoad enable
     %5 = ConstantLoad false
-    %6 = newMap {| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%4=%5}
-    %7 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%3=%6}
+    %6 = newMap {| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%4=%5} defaults{protocol=ballerina/http:$desugar$0, certValidation=ballerina/http:$desugar$1}
+    %7 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%3=%6} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %8 = init(%1,%2,%7) -> bb1;
   }
   bb1 {
@@ -37,7 +37,7 @@ main() -> nil|error{
     c1 = $desugar$0;
     %14 = ConstantLoad /path
     $desugar$1 = %14;
-    %16 = $Client.get$default$1($desugar$1) -> bb7;
+    %16 = $default$10($desugar$1) -> bb7;
   }
   bb7 {
     $desugar$2 = %16;
@@ -74,11 +74,11 @@ main() -> nil|error{
     %37 = ConstantLoad ciphers
     %38 = ConstantLoad TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
     %39 = ConstantLoad 1
-    %40 = newArray list[%39]{%38}
+    %40 = newArray [string...][%39]{%38}
     %41 = ConstantLoad handshakeTimeout
     %42 = ConstantLoad 10
-    %43 = newMap {| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%29=%30, %31=%32, %33=%34, %35=%36, %37=%40, %41=%42}
-    %44 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%28=%43}
+    %43 = newMap {| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%29=%30, %31=%32, %33=%34, %35=%36, %37=%40, %41=%42} defaults{protocol=ballerina/http:$desugar$0, certValidation=ballerina/http:$desugar$1}
+    %44 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%28=%43} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %45 = init(%26,%27,%44) -> bb12;
   }
   bb12 {
@@ -106,7 +106,7 @@ main() -> nil|error{
     c2 = $desugar$4;
     %51 = ConstantLoad /path
     $desugar$5 = %51;
-    %53 = $Client.get$default$1($desugar$5) -> bb18;
+    %53 = $default$10($desugar$5) -> bb18;
   }
   bb18 {
     $desugar$6 = %53;
@@ -141,10 +141,10 @@ main() -> nil|error{
     %72 = ConstantLoad TLSv1.2
     %73 = ConstantLoad TLSv1.3
     %74 = ConstantLoad 2
-    %75 = newArray list[%74]{%72, %73}
-    %76 = newMap {| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}{%69=%70, %71=%75}
-    %77 = newMap {| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%66=%67, %68=%76}
-    %78 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| cacheSize: int, cacheValidityPeriod: int, type: "OCSP_CRL"|"OCSP_STAPLING", never... |}, ciphers: list, enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: list, never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%65=%77}
+    %75 = newArray [string...][%74]{%72, %73}
+    %76 = newMap {| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}{%69=%70, %71=%75}
+    %77 = newMap {| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}{%66=%67, %68=%76} defaults{protocol=ballerina/http:$desugar$0, certValidation=ballerina/http:$desugar$1}
+    %78 = newMap {| followRedirects: nil|{| allowAuthHeaders: boolean, enabled: boolean, maxCount: int, never... |}, httpVersion: "1.1"|"2.0", secureSocket: nil|{| cert: string, certValidation: nil|{| 'type: "OCSP_CRL"|"OCSP_STAPLING", cacheSize: int, cacheValidityPeriod: int, never... |}, ciphers: [string...], enable: boolean, handshakeTimeout: decimal, key: {| certFile: string, keyFile: string, keyPassword: string, never... |}, protocol: nil|{| name: "DTLS"|"SSL"|"TLS", versions: [string...], never... |}, serverName: string, sessionTimeout: decimal, shareSession: boolean, verifyHostName: boolean, never... |}, timeout: decimal, never... |}{%65=%77} defaults{followRedirects=ballerina/http:$desugar$2, secureSocket=ballerina/http:$desugar$3}
     %79 = init(%63,%64,%78) -> bb23;
   }
   bb23 {
@@ -172,7 +172,7 @@ main() -> nil|error{
     c3 = $desugar$8;
     %85 = ConstantLoad /path
     $desugar$9 = %85;
-    %87 = $Client.get$default$1($desugar$9) -> bb29;
+    %87 = $default$10($desugar$9) -> bb29;
   }
   bb29 {
     $desugar$10 = %87;

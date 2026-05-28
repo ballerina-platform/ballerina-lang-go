@@ -12,7 +12,7 @@
           (literal https://example.com))))
       (var-def
         (variable $desugar$1 (expr
-          (invocation $Client.init$default$1 (
+          (invocation $default$4 (
             (simple-var-ref $desugar$0))))))
       (var-def
         (variable $desugar$2 (expr
@@ -34,7 +34,7 @@
           (literal /path))))
       (var-def
         (variable $desugar$4 (expr
-          (invocation $Client.get$default$1 (
+          (invocation $default$10 (
             (simple-var-ref $desugar$3))))))
       (var-def
         (variable $desugar$5 (expr
@@ -57,7 +57,7 @@
           (literal x-absent))))
       (var-def
         (variable $desugar$7 (expr
-          (invocation $Response.hasHeader$default$1 (
+          (invocation $default$3 (
             (simple-var-ref $desugar$6))))))
       (expression-stmt
         (invocation io println (
@@ -67,7 +67,7 @@
             (simple-var-ref $desugar$7))))))
       (var-def
         (variable $desugar$8 (expr
-          (invocation $Response.getHeaderNames$default$0 ()))))
+          (invocation $default$1 ()))))
       (expression-stmt
         (invocation io println (
           (invocation lang.array length (
