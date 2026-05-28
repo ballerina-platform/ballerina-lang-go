@@ -14,19 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package packageresolution
+package corpus
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	_ "ballerina-lang-go/lib/rt" // register stdlib runtime functions (io.println etc.)
-	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/runtime"
 )
 
 // TestMixedBalaFormat verifies that a user project depending on both a v4 bala
@@ -34,8 +30,8 @@ import (
 // and runs correctly. main() calls greet() from each dependency and prints the
 // results. Expected stdout: "v4\nlegacy"
 func TestMixedBalaFormat(t *testing.T) {
-	repoPath := filepath.Join("testdata", "mixed-bala-format", "repo")
-	userProjectPath := filepath.Join("testdata", "mixed-bala-format", "userProject")
+	repoPath := filepath.Join(packageResolutionTestDataDir, "mixed-bala-format", "repo")
+	userProjectPath := filepath.Join(packageResolutionTestDataDir, "mixed-bala-format", "userProject")
 
 	repo := projects.NewFileSystemRepository(os.DirFS(repoPath), ".")
 
@@ -63,23 +59,7 @@ func TestMixedBalaFormat(t *testing.T) {
 		t.Fatal("backend produced no BIR packages")
 	}
 
-	var stdout bytes.Buffer
-	testPal := pal.Platform{
-		IO: pal.IO{
-			Stdout: func(p []byte) (int, error) { return stdout.Write(p) },
-			Stderr: func(p []byte) (int, error) { return len(p), nil },
-		},
-	}
-
-	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
-	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
-			t.Fatalf("Interpret(%v): %v", birPkg.PackageID, err)
-		}
-	}
-
-	// v4pkg:greet() = "v4", legacypkg:greet() = "legacy"
-	got := strings.TrimSpace(stdout.String())
+	got := interpretBIRPackagesStdout(t, result.Project().Environment().TypeEnv(), birPkgs)
 	want := "v4\nlegacy"
 	if got != want {
 		t.Errorf("stdout = %q, want %q", got, want)
