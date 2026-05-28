@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 
+	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
@@ -76,6 +77,14 @@ func (d *documentContext) registrationKey() string {
 // parseContent parses the content string and returns a SyntaxTree.
 // The textDoc parameter is passed to avoid circular dependency with TextDocument().
 func (d *documentContext) parseContent(content string, textDoc text.TextDocument) *tree.SyntaxTree {
+	// Dependency files (diagKeyPrefix != "") are not the user's own source, so
+	// suppress debug dump output (DUMP_TOKENS, DUMP_ST) for them.
+	if d.diagKeyPrefix != "" {
+		saved := debugcommon.DebugFlags()
+		debugcommon.InitDebug(0, debugcommon.DebugWriter())
+		defer debugcommon.InitDebug(saved, debugcommon.DebugWriter())
+	}
+
 	// Create CharReader from content
 	charReader := text.CharReaderFromText(content)
 

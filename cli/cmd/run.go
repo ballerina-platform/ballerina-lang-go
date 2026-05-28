@@ -258,12 +258,17 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(os.Stderr, compilation.StatsReport())
 	}
 
-	// Dump BIR if requested
+	// Dump BIR if requested — skip stdlib/dependency packages (ballerina org)
+	// so the output only contains the user's own code.
 	tyEnv := project.Environment().TypeEnv()
 	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
 		tyCtx := semtypes.ContextFrom(tyEnv)
 		for _, birPkg := range birPkgs {
+			if birPkg.PackageID != nil && birPkg.PackageID.OrgName != nil &&
+				birPkg.PackageID.OrgName.Value() == "ballerina" {
+				continue
+			}
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
 			fmt.Fprintln(os.Stderr, strings.TrimSpace(prettyPrinter.Print(tyCtx, *birPkg)))
