@@ -14676,6 +14676,22 @@ func (b *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 	return (((token.Kind() == common.MAP_KEYWORD) || (token.Kind() == common.START_KEYWORD)) || (token.Kind() == common.JOIN_KEYWORD))
 }
 
+// GetSyntaxTreeFromContent parses Ballerina source from an in-memory string.
+// virtualPath is used only for diagnostic messages; no file I/O is performed.
+func GetSyntaxTreeFromContent(ctx *context.CompilerContext, virtualPath, content string) (*tree.SyntaxTree, error) {
+	reader := text.CharReaderFromText(content)
+	lexer := NewLexer(reader)
+	tokenReader := CreateTokenReader(lexer)
+	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)
+	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
+	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
+	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, nil, virtualPath, false)
+	if syntaxTree.HasDiagnostics() {
+		ctx.SyntaxError("syntax error at", diagnostics.Location{})
+	}
+	return &syntaxTree, nil
+}
+
 // TODO: clean this interface we should only need compiler context.
 func GetSyntaxTree(ctx *context.CompilerContext, fileName string) (*tree.SyntaxTree, error) {
 	content, err := os.ReadFile(fileName)
