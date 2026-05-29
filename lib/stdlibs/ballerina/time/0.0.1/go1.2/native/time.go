@@ -416,6 +416,31 @@ func getStringArg(args []values.BalValue, idx int) string {
 	return ""
 }
 
+// getStoredLocation retrieves the *time.Location stored in a TimeZone object.
+func getStoredLocation(obj *values.Object) *time.Location {
+	v, _ := obj.Get("$location")
+	if loc, ok := v.(*time.Location); ok {
+		return loc
+	}
+	return time.UTC
+}
+
+// civilMapToGoTimeInLocation converts a Civil map to a time.Time using a specific location.
+func civilMapToGoTimeInLocation(m *values.Map, loc *time.Location) (time.Time, error) {
+	year := int(mapInt(m, "year"))
+	month := int(mapInt(m, "month"))
+	day := int(mapInt(m, "day"))
+	hour := int(mapInt(m, "hour"))
+	minute := int(mapInt(m, "minute"))
+	second := mapDecimal(m, "second")
+	intSec, nanos := decimalToSecNano(second)
+	t := time.Date(year, time.Month(month), day, hour, minute, intSec, nanos, loc)
+	if t.Day() != day || int(t.Month()) != month || t.Year() != year {
+		return time.Time{}, fmt.Errorf("invalid date: %04d-%02d-%02d", year, month, day)
+	}
+	return t, nil
+}
+
 func initTimeModule(rt *runtime.Runtime) {
 	env := rt.GetTypeEnv()
 
@@ -649,6 +674,123 @@ func initTimeModule(rt *runtime.Runtime) {
 				time.Duration(duSecond.Float64()*float64(time.Second)))
 
 			return buildCivil(ctx.TypeCtx, t), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.initNative",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self, _ := args[0].(*values.Object)
+			var zoneIdStr string
+			isString := false
+			if len(args) > 1 && args[1] != nil {
+				if s, ok := args[1].(string); ok {
+					zoneIdStr = s
+					isString = true
+				}
+			}
+
+			var loc *time.Location
+			if !isString {
+				loc = time.Local
+				zoneIdStr = time.Local.String()
+			} else {
+				switch {
+				case zoneIdStr == "Z" || zoneIdStr == "UTC":
+					loc = time.UTC
+				case isNumericOffset(zoneIdStr):
+					offsetSecs, err := parseNumericOffset(zoneIdStr)
+					if err != nil {
+						return newFormatError(fmt.Sprintf("invalid time zone offset: %s", zoneIdStr)), nil
+					}
+					loc = time.FixedZone(zoneIdStr, offsetSecs)
+				default:
+					var err error
+					loc, err = time.LoadLocation(zoneIdStr)
+					if err != nil {
+						return newFormatError(fmt.Sprintf("invalid time zone ID: %s", zoneIdStr)), nil
+					}
+				}
+			}
+
+			self.Put("$location", loc)
+			self.Put("$zoneId", zoneIdStr)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.fixedOffset",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self, _ := args[0].(*values.Object)
+			zoneIdVal, _ := self.Get("$zoneId")
+			zoneId, _ := zoneIdVal.(string)
+
+			switch {
+			case isNumericOffset(zoneId):
+				offsetSecs, err := parseNumericOffset(zoneId)
+				if err != nil {
+					return nil, nil
+				}
+				return buildZoneOffset(ctx.TypeCtx, offsetSecs), nil
+			case zoneId == "Z" || zoneId == "UTC":
+				return buildZoneOffset(ctx.TypeCtx, 0), nil
+			default:
+				return nil, nil
+			}
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.utcFromCivil",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self, _ := args[0].(*values.Object)
+			civil, _ := args[1].(*values.Map)
+
+			if civil == nil {
+				return newFormatError("civil value is nil"), nil
+			}
+			if _, hasAbbrev := civil.Get("timeAbbrev"); !hasAbbrev {
+				return newFormatError("Abbreviation for the local time is required for the conversion"), nil
+			}
+			loc := getStoredLocation(self)
+			t, err := civilMapToGoTimeInLocation(civil, loc)
+			if err != nil {
+				return newFormatError(err.Error()), nil
+			}
+			return goTimeToUtc(env, ctx.TypeCtx, t), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.utcToCivil",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self, _ := args[0].(*values.Object)
+			utc, _ := args[1].(*values.List)
+
+			loc := getStoredLocation(self)
+			t := utcToGoTime(utc).In(loc)
+			return buildCivilWithZone(ctx.TypeCtx, t, true, true), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.civilAddDuration",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self, _ := args[0].(*values.Object)
+			civil, _ := args[1].(*values.Map)
+			duration, _ := args[2].(*values.Map)
+
+			loc := getStoredLocation(self)
+			t, err := civilMapToGoTimeInLocation(civil, loc)
+			if err != nil {
+				return newFormatError(err.Error()), nil
+			}
+
+			duYear := int(mapInt(duration, "years"))
+			duMonth := int(mapInt(duration, "months"))
+			duWeek := int(mapInt(duration, "weeks"))
+			duDay := int(mapInt(duration, "days")) + duWeek*7
+			duHour := int(mapInt(duration, "hours"))
+			duMinute := int(mapInt(duration, "minutes"))
+			duSecond := mapDecimal(duration, "seconds")
+
+			t = t.AddDate(duYear, duMonth, duDay)
+			t = t.Add(time.Duration(duHour)*time.Hour +
+				time.Duration(duMinute)*time.Minute +
+				time.Duration(duSecond.Float64()*float64(time.Second)))
+
+			return buildCivilWithZone(ctx.TypeCtx, t.In(loc), true, true), nil
 		})
 }
 

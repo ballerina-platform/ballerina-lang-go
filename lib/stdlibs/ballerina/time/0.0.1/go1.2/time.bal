@@ -127,6 +127,92 @@ public enum HeaderZoneHandling {
     ZONE_OFFSET_WITH_TIME_ABBREV_COMMENT
 }
 
+// Zone is an abstract object type for handling time zones.
+// Note: jBallerina declares this as `readonly & object`; the Go-native interpreter uses a plain
+// object type because `readonly & object` type descriptors are not yet supported.
+public type Zone object {
+    # If always at a fixed offset from UTC, returns it; otherwise nil.
+    # + return - The fixed zone offset or nil
+    public isolated function fixedOffset() returns ZoneOffset?;
+
+    # Converts a given `time:Civil` value to a `time:Utc` timestamp based on the time zone value.
+    # + civil - The `time:Civil` value to be converted
+    # + return - The corresponding `time:Utc` value or an error
+    public isolated function utcFromCivil(Civil civil) returns Utc|Error;
+
+    # Converts a given `time:Utc` timestamp to a `time:Civil` value based on the time zone value.
+    # + utc - The `time:Utc` timestamp value to be converted
+    # + return - The corresponding `time:Civil` value
+    public isolated function utcToCivil(Utc utc) returns Civil;
+
+    # Adds the given time duration to the specified civil date-time based on the time zone.
+    # + civil - The civil time to which the duration should be added
+    # + duration - The date-time duration to be added
+    # + return - The civil time after adding the duration
+    public isolated function civilAddDuration(Civil civil, Duration duration) returns Civil|Error;
+};
+
+# Localized time zone implementation for IANA zone IDs and fixed zone offsets.
+# Note: jBallerina declares this as `readonly class`; the Go-native interpreter uses a plain class
+# because readonly classes are not yet supported.
+public class TimeZone {
+    *Zone;
+
+    # Initializes a TimeZone from a zone ID (e.g. "Asia/Colombo", "+05:30") or the system default.
+    #
+    # + zoneId - Zone ID as a string, or nil to use the system default timezone
+    # + return - A `time:Error` if the zone ID is invalid, otherwise nil
+    public isolated function init(string? zoneId = ()) returns Error? {
+        return self.initNative(zoneId);
+    }
+
+    private isolated function initNative(string? zoneId) returns Error? = external;
+
+    # If always at a fixed offset from UTC, returns it; otherwise nil.
+    #
+    # + return - The fixed zone offset or nil
+    public isolated function fixedOffset() returns ZoneOffset? = external;
+
+    # Converts a given `time:Civil` value to a `time:Utc` timestamp based on the time zone value.
+    #
+    # + civil - The `time:Civil` value to be converted
+    # + return - The corresponding `time:Utc` value or an error
+    public isolated function utcFromCivil(Civil civil) returns Utc|Error = external;
+
+    # Converts a given `time:Utc` timestamp to a `time:Civil` value based on the time zone value.
+    #
+    # + utc - The `time:Utc` timestamp value to be converted
+    # + return - The corresponding `time:Civil` value
+    public isolated function utcToCivil(Utc utc) returns Civil = external;
+
+    # Adds the given time duration to the specified civil date-time based on the time zone.
+    # The operation assumes that all days have exactly 86,400 seconds.
+    #
+    # + civil - The civil time to which the duration should be added
+    # + duration - The date-time duration to be added
+    # + return - The civil time after adding the duration
+    public isolated function civilAddDuration(Civil civil, Duration duration) returns Civil|Error = external;
+}
+
+# Loads the default time zone of the system.
+#
+# + return - Zone value or an error if the system zone ID is in invalid format
+public isolated function loadSystemZone() returns Zone|Error {
+    return check new TimeZone();
+}
+
+# Returns the time zone object for the given zone ID.
+#
+# + id - Time zone ID (e.g. "Asia/Colombo")
+# + return - Corresponding time zone object or nil if the ID is invalid
+public isolated function getZone(string id) returns Zone? {
+    TimeZone|Error timeZone = new TimeZone(id);
+    if timeZone is error {
+        return;
+    }
+    return timeZone;
+}
+
 # Returns the UTC representing the current time.
 #
 # + precision - Number of decimal places in the fractional seconds (nil = nanosecond precision)
