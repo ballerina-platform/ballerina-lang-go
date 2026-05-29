@@ -80,6 +80,9 @@ type stdlibEntry struct {
 var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
+	{"ballerina", "math.vector", "0.0.1"},
+	{"ballerina", "time", "0.0.1"},
+	{"ballerina", "url", "0.0.1"},
 }
 
 // loadBuiltinPublicSymbols compiles the embedded standard-library packages into a

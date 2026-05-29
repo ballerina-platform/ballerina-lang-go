@@ -1,0 +1,30 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad /tmp/bal_io_nonexistent_file_xyz.txt
+    %2 = fileReadString(%1) -> bb1;
+  }
+  bb1 {
+    result = %2;
+    %4 = result is error
+    %4 ? bb2 : bb4;
+  }
+  bb2 {
+    %5 = ConstantLoad got error
+    %6 = println(%5) -> bb3;
+  }
+  bb3 {
+    GOTO bb6;
+  }
+  bb4 {
+    %7 = ConstantLoad unexpected success
+    %8 = println(%7) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    return;
+  }
+}
