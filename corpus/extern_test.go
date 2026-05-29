@@ -81,7 +81,7 @@ func TestExternValid(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 
@@ -99,8 +99,10 @@ func TestExternValid(t *testing.T) {
 		return a + ", " + b, nil
 	})
 
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "$foo, $foo\n"
@@ -212,7 +214,7 @@ func TestDependentlyTyped(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
@@ -302,8 +304,10 @@ func TestDependentlyTyped(t *testing.T) {
 		panic(values.NewErrorWithMessage("unsupported inferredWithDefault typedesc constraint"))
 	})
 
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "1\nfoo\n1\n1\n0\nbar\n11\n22\n1\n6\n102\n42\n100\n7\n"
@@ -335,7 +339,7 @@ func TestDependentlyTypedAlias(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
@@ -355,8 +359,10 @@ func TestDependentlyTypedAlias(t *testing.T) {
 	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaAliasUnion", aliasImpl)
 	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaChainedAlias", aliasImpl)
 
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	const expected = "10\nalias\n10\nalias\n"
@@ -388,7 +394,7 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 	tyEnv := result.Project().Environment().TypeEnv()
@@ -417,8 +423,10 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 		return out, nil
 	})
 
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "11\n22\n6\n2\n1\n2\n"
@@ -507,7 +515,7 @@ func TestExternHandle(t *testing.T) {
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
 	stdoutBuf := &bytes.Buffer{}
 
@@ -526,8 +534,10 @@ func TestExternHandle(t *testing.T) {
 		return h.data, nil
 	})
 
-	if err := rt.Interpret(*birPkg); err != nil {
-		t.Fatalf("runtime error: %v", err)
+	for _, pkg := range birPkgs {
+		if err := rt.Interpret(*pkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
 	}
 
 	expected := "handle_value\n"
@@ -594,8 +604,10 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	publicSymbols := map[semantics.PackageIdentifier]model.ExportedSymbolSpace{
 		{OrgName: org, ModuleName: helperMod}: deserializedHelperExported,
 	}
-	if ioID, ioExported, ok := compileBuiltinInEnv(env2, "ballerina", "io", "0.0.1"); ok {
+	var ioBIR *bir.BIRPackage
+	if ioID, ioExported, ioBIRPkg, ok := compileBuiltinWithBIR(env2, "ballerina", "io", "0.0.1"); ok {
 		publicSymbols[ioID] = ioExported
+		ioBIR = ioBIRPkg
 	}
 	_, mainBIR := compileSingleFileModule(t, env2, mainBalPath,
 		model.Name(org),
@@ -604,7 +616,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 		org,
 	)
 
-	// Stage 5: interpret [deserialized helper BIR, freshly compiled main BIR]
+	// Stage 5: interpret [io BIR, deserialized helper BIR, freshly compiled main BIR]
 	// with helper's native registered. Validate stdout.
 	stdoutBuf := &bytes.Buffer{}
 	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), env2.GetTypeEnv())
@@ -622,7 +634,12 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 		}
 		panic(values.NewErrorWithMessage("unsupported inferred typedesc constraint"))
 	})
-	for _, pkg := range []*bir.BIRPackage{deserializedHelperBIR, mainBIR} {
+	pkgsToRun := []*bir.BIRPackage{}
+	if ioBIR != nil {
+		pkgsToRun = append(pkgsToRun, ioBIR)
+	}
+	pkgsToRun = append(pkgsToRun, deserializedHelperBIR, mainBIR)
+	for _, pkg := range pkgsToRun {
 		if err := rt.Interpret(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
@@ -668,6 +685,57 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
 	return semantics.PackageIdentifier{OrgName: org, ModuleName: name}, exported, true
+}
+
+// compileBuiltinWithBIR compiles the embedded stdlib .bal file for a module and also
+// generates its BIR. Returns the package identifier, exported symbols, BIR package,
+// and whether the compilation succeeded.
+func compileBuiltinWithBIR(env *context.CompilerEnvironment, org, name, version string) (semantics.PackageIdentifier, model.ExportedSymbolSpace, *bir.BIRPackage, bool) {
+	balPath := fmt.Sprintf("ballerina/%s/%s/go1.2/%s.bal", name, version, name)
+	contentBytes, err := gofs.ReadFile(stdlibs.FS, balPath)
+	if err != nil {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	cx := context.NewCompilerContext(env)
+	virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", name)
+	cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(string(contentBytes)))
+	st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, string(contentBytes))
+	if err != nil || cx.HasDiagnostics() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	cu := ast.GetCompilationUnit(cx, st)
+	if cu == nil || cx.HasDiagnostics() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	pkg := ast.ToPackage(cu)
+	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
+	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
+	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	analyzer := semantics.NewSemanticAnalyzer(cx)
+	analyzer.Analyze(pkg)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	cfg := semantics.CreateControlFlowGraph(cx, pkg)
+	semantics.AnalyzeCFG(cx, pkg, cfg)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
+	birPkg := bir.GenBir(cx, pkg)
+	return semantics.PackageIdentifier{OrgName: org, ModuleName: name}, exported, birPkg, true
 }
 
 // compileSingleFileModule parses a .bal file and runs the full compilation

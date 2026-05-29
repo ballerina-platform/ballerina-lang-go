@@ -41,8 +41,9 @@ type Lexer interface {
 
 // TODO: introduce diagnostic context with flags and a channel
 type lexer struct {
-	reader  text.CharReader
-	context LexerContext
+	reader        text.CharReader
+	context       LexerContext
+	suppressDebug bool
 }
 
 type LexerContext struct {
@@ -57,6 +58,10 @@ func NewLexer(reader text.CharReader) *lexer {
 		reader:  reader,
 		context: LexerContext{},
 	}
+}
+
+func (l *lexer) SetSuppressDebug(suppress bool) {
+	l.suppressDebug = suppress
 }
 
 func (l *lexer) StartMode(mode ParserMode) {
@@ -109,7 +114,9 @@ func (l *lexer) NextToken() tree.STToken {
 		token = tree.AddSyntaxDiagnostics(token, l.context.diagnostics)
 		l.context.diagnostics = nil
 	}
-	debugcommon.DebugWriteLazy(debugcommon.DUMP_TOKENS, func() string { return tree.ToSexpr(token) })
+	if !l.suppressDebug {
+		debugcommon.DebugWriteLazy(debugcommon.DUMP_TOKENS, func() string { return tree.ToSexpr(token) })
+	}
 	return token
 }
 

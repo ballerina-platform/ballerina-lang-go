@@ -84,26 +84,32 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 	if len(birPkgs) == 0 || compileErr != nil {
 		t.Fatalf("compilation failed for %s: %v", testPair.InputPath, compileErr)
 	}
-	// The consumer's BIR is the last package in topological order.
-	consumerPkg := birPkgs[len(birPkgs)-1]
 
-	// Step 2: Serialize BIR.
-	serialized, err := bircodec.Marshal(tyEnv, consumerPkg)
-	if err != nil {
-		t.Fatalf("BIR serialization failed for %s: %v", testPair.InputPath, err)
+	// Step 2: Serialize ALL BIR packages (in topological order).
+	serializedPkgs := make([][]byte, len(birPkgs))
+	for i, pkg := range birPkgs {
+		serialized, err := bircodec.Marshal(tyEnv, pkg)
+		if err != nil {
+			t.Fatalf("BIR serialization failed for package %d of %s: %v", i, testPair.InputPath, err)
+		}
+		serializedPkgs[i] = serialized
 	}
 
-	// Step 3: Deserialize with a fresh compiler context.
+	// Step 3: Deserialize ALL packages into the same fresh compiler context.
 	freshEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	freshCtx := context.NewCompilerContext(freshEnv)
-	deserialized, err := bircodec.Unmarshal(freshCtx, serialized)
-	if err != nil {
-		t.Fatalf("BIR deserialization failed for %s: %v", testPair.InputPath, err)
+	deserializedPkgs := make([]*bir.BIRPackage, len(serializedPkgs))
+	for i, serialized := range serializedPkgs {
+		deserialized, err := bircodec.Unmarshal(freshCtx, serialized)
+		if err != nil {
+			t.Fatalf("BIR deserialization failed for package %d of %s: %v", i, testPair.InputPath, err)
+		}
+		deserializedPkgs[i] = deserialized
 	}
 
-	// Step 4: Execute the deserialized BIR.
+	// Step 4: Execute all deserialized BIR packages in topological order.
 	var rtStdoutBuf, rtStderrBuf bytes.Buffer
-	runInterpretPhase([]*bir.BIRPackage{deserialized}, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
+	runInterpretPhase(deserializedPkgs, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
 
 	// Step 5: Compare against expected output.
 	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
