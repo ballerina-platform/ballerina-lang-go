@@ -325,6 +325,16 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 	case *bir.NewObject:
 		bw.writeStringCPEntry(buf, instr.ClassDefRef)
 		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewStream:
+		bw.writeType(buf, instr.StreamType)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeOperand(buf, instr.ImplOp)
+	case *bir.StreamNext:
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeOperand(buf, instr.StreamOp)
+	case *bir.StreamClose:
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeOperand(buf, instr.StreamOp)
 	case *bir.FPLoad:
 		bw.writeStringCPEntry(buf, instr.FunctionLookupKey)
 		bw.writeType(buf, instr.Type)

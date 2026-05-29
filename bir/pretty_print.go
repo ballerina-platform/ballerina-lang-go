@@ -194,6 +194,12 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintPanic(instruction)
 	case *NewObject:
 		return p.PrintNewObject(instruction)
+	case *NewStream:
+		return p.PrintNewStream(instruction)
+	case *StreamNext:
+		return p.PrintStreamNext(instruction)
+	case *StreamClose:
+		return p.PrintStreamClose(instruction)
 	case *FPLoad:
 		return p.PrintFPLoad(instruction)
 	case *PushScopeFrame:
@@ -306,6 +312,18 @@ func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 
 func (p *PrettyPrinter) PrintNewObject(n *NewObject) string {
 	return fmt.Sprintf("%s = newObject %s", p.PrintOperand(*n.LhsOp), n.ClassDefRef)
+}
+
+func (p *PrettyPrinter) PrintNewStream(n *NewStream) string {
+	return fmt.Sprintf("%s = newStream %s %s", p.PrintOperand(*n.LhsOp), p.PrintSemType(n.StreamType), p.PrintOperand(*n.ImplOp))
+}
+
+func (p *PrettyPrinter) PrintStreamNext(n *StreamNext) string {
+	return fmt.Sprintf("%s = streamNext %s", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.StreamOp))
+}
+
+func (p *PrettyPrinter) PrintStreamClose(n *StreamClose) string {
+	return fmt.Sprintf("%s = streamClose %s", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.StreamOp))
 }
 
 func (p *PrettyPrinter) PrintClassDef(classDef BIRClassDef) {

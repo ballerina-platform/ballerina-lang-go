@@ -673,6 +673,19 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			},
 			ClassDefRef: classDefRef.Value(),
 		}
+	case bir.INSTRUCTION_KIND_NEW_STREAM:
+		streamTy := br.readType()
+		lhsOp := br.readOperand(varMap)
+		implOp := br.readOperand(varMap)
+		return bir.NewStreamConstructor(streamTy, lhsOp, implOp, pos)
+	case bir.INSTRUCTION_KIND_STREAM_NEXT:
+		lhsOp := br.readOperand(varMap)
+		streamOp := br.readOperand(varMap)
+		return bir.NewStreamNext(lhsOp, streamOp, pos)
+	case bir.INSTRUCTION_KIND_STREAM_CLOSE:
+		lhsOp := br.readOperand(varMap)
+		streamOp := br.readOperand(varMap)
+		return bir.NewStreamClose(lhsOp, streamOp, pos)
 	case bir.INSTRUCTION_KIND_FP_LOAD:
 		functionLookupKey := br.readStringCPEntry()
 		ty := br.readType()
