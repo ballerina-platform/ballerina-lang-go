@@ -19,13 +19,10 @@ package test_util
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"ballerina-lang-go/platform/pal"
 )
 
 // TestKind represents the type of corpus test
@@ -239,35 +236,4 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	relPath, _ := filepath.Rel(inputBaseDir, inputPath)
 	relPath = strings.TrimSuffix(relPath, ".bal") + outputExt
 	return filepath.Join(outputBaseDir, relPath)
-}
-
-type stubHTTPClient struct{}
-
-func (c *stubHTTPClient) Execute(_, _ string, _ []byte, _ string, _ map[string][]string) (int, map[string][]string, []byte, error) {
-	return 200, map[string][]string{}, []byte("test body"), nil
-}
-
-// PR-FIXME:
-// LegacyTestPal returns a pal.Platform writing to the given writers. New code
-// should use NewTestPal() in test_harness.go. This function will be removed
-// once all callers (extern-test, etc.) have been migrated.
-func LegacyTestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
-	signals, _ := NewTestSignalSource(nil, TestSignalTimeout)
-	return pal.Platform{
-		IO: pal.IO{
-			Stdout: stdout.Write,
-			Stderr: stderr.Write,
-		},
-		FS: pal.FS{
-			ReadFile: func(path string) ([]byte, error) {
-				return os.ReadFile(path)
-			},
-		},
-		HTTP: pal.HTTP{
-			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
-				return &stubHTTPClient{}
-			},
-		},
-		Signals: signals,
-	}
 }

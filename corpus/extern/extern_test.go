@@ -17,7 +17,6 @@
 package extern_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,7 +36,6 @@ import (
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/langlib"
 	"ballerina-lang-go/test_util/testharness"
 	"ballerina-lang-go/tools/text"
@@ -506,8 +504,10 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	)
 	deserializedPkgs = append(deserializedPkgs, mainBIR)
 
-	stdoutBuf := &bytes.Buffer{}
-	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, os.Stderr), freshEnv.GetTypeEnv())
+	// Stage 5: interpret [deserialized dependency BIR, freshly compiled main BIR]
+	// with helper's native registered. Validate stdout.
+	pal := testharness.NewTestPal()
+	rt := runtime.NewRuntime(pal.Platform(), freshEnv.GetTypeEnv())
 	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
 	runtime.RegisterExternFunction(rt, org, helperMod, "inferred", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		td, ok := args[1].(*values.TypeDesc)
@@ -531,8 +531,8 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	<-rt.ExitStatus
 
 	const expected = "1\nfoo\n"
-	if stdoutBuf.String() != expected {
-		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	if got := pal.Stdout(); got != expected {
+		t.Errorf("expected %q, got %q", expected, got)
 	}
 }
 
