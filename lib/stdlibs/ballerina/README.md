@@ -1,0 +1,47 @@
+# Ballerina Standard Library — Go Native Support
+
+This directory contains the Go-native implementations of the `ballerina/*` standard library
+packages baked into the interpreter binary. Each package is compiled into embedded `.sym`/`.bir`
+artefacts and laid out as `<name>/0.0.1/go1.2/`. See each package's own README (linked below)
+for the full feature-by-feature support table and behavioural notes.
+
+## Packages
+
+Support % is computed as `round(Supported / Total * 100)`, where *Total* is the number of rows
+in each package's support table (Supported + Partially Supported + Not Yet Supported + Cannot Support).
+
+| Package | Supported | Partially Supported | Not Yet Supported | Support % |
+|---|---|---|---|---|
+| [http](http/0.0.1/go1.2/README.md) | 14 | 1 | 53 | 21% |
+| [io](io/0.0.1/go1.2/README.md) | 14 | 1 | 11 | 54% |
+| [math.vector](math.vector/0.0.1/go1.2/README.md) | 5 | 0 | 0 | 100% |
+| [time](time/0.0.1/go1.2/README.md) | 27 | 0 | 5 | 84% |
+| [url](url/0.0.1/go1.2/README.md) | 2 | 1 | 1 | 50% |
+| **Total** | **62** | **3** | **70** | **46%** |
+
+## Notable Behavioural Changes
+
+Consolidated from each package's README. Only permanent, architectural Go-level divergences are
+listed here; temporary language gaps are tracked as `Not Yet Supported` rows in the per-package
+tables instead.
+
+### http
+
+- **HTTP/1.0 is a compile error.** Specifying `httpVersion: "1.0"` in `ClientConfiguration` is rejected at compile time. Go's HTTP client cannot send HTTP/1.0 requests, so this is a permanent restriction rather than a missing runtime feature.
+- **Trailing headers are not modelled.** The `TRAILING` header position constant is accepted at compile time for API compatibility, but all header operations (`getHeader`, `getHeaders`, `hasHeader`, `getHeaderNames`) act on transport (leading) headers at runtime. HTTP trailers sent by the server are silently discarded.
+- **TLS protocol name has no effect.** The `protocol.name` field accepts `"SSL"`, `"TLS"`, and `"DTLS"` at compile time, but only TLS is supported at runtime. `"SSL"` and `"DTLS"` values are ignored because Go's standard TLS stack does not expose separate SSL or DTLS stacks.
+
+### io
+
+- **`fileWriteJson` key ordering.** jBallerina writes JSON object keys in insertion order; the Go-native version writes them in **alphabetical order** — Go's `encoding/json` sorts map keys.
+
+### time
+
+- **`Utc` type mutability.** jBallerina declares `Utc` as `readonly & [int, decimal]` (immutable tuple). The Go-native version uses a plain mutable tuple type because `readonly &` intersection types on tuples are not yet supported by the interpreter's AST transformation. Programs should treat `Utc` values as immutable by convention; mutation is not guarded at runtime.
+- **`ZoneOffset` type mutability.** Same as above — `ZoneOffset` is declared as a plain open record instead of `readonly & record {| ... |}`. Programs should not mutate `ZoneOffset` values.
+- **`FormatError` is not distinct.** jBallerina's `FormatError` is a `distinct Error` subtype, allowing `error is time:FormatError` checks to distinguish it from other errors. The Go-native version declares `FormatError` as a plain `error` alias because `distinct` type descriptors are not yet supported. `error is time:FormatError` will not narrow correctly in the Go version.
+- **Error message wording for `dateValidate`, `dayOfWeek`, `utcFromCivil`.** These functions return errors whose message text is produced by Go's standard `time` package rather than Java's `DateTimeException.getMessage()`. The message content differs (e.g., "invalid date: 2021-02-30" vs. "Invalid value for DayOfMonth..."). Programs must not depend on the exact error message text.
+- **`monotonicNow()` epoch.** The specification states the epoch is "unspecified". jBallerina uses the JVM process start (`System.nanoTime()`); the Go-native version uses the time at which the PAL was constructed. The two values are not comparable across processes and will differ between implementations. This is expected behavior.
+- **Named IANA timezones in `civilToString` / `civilToEmailString`.** When a `Civil` record carries a `timeAbbrev` containing an IANA zone name (e.g., `"Asia/Colombo"`), the Go-native version resolves the zone using the host operating system's timezone database via `time.LoadLocation`. If the host has an incomplete or missing IANA database, an error is returned. jBallerina ships its own bundled IANA data.
+
+The remaining packages (`math.vector`, `url`) have **no** notable behavioural changes compared to the original jBallerina implementation for their currently supported features.
