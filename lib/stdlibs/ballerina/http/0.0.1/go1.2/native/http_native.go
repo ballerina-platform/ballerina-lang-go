@@ -177,7 +177,8 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"initExtern":      {FunctionLookupKey: "ballerina/http:Client.initExtern"},
+			"init":            {FunctionLookupKey: "ballerina/http:Client.init"},
+			"initNative":      {FunctionLookupKey: "ballerina/http:Client.initNative"},
 			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
 			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
 			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
@@ -203,7 +204,10 @@ func initHttpModule(rt *runtime.Runtime) {
 			return result, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initExtern",
+	// initNative is the extern called by the Ballerina Client.init wrapper.
+	// The Ballerina wrapper handles default-expansion of the config parameter,
+	// so args are always [self, url, config].
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initNative",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			url := args[1].(string)
@@ -213,8 +217,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			httpVersion := "2.0"
 
 			var tlsCfg pal.TLSConfig
-			if len(args) > 2 {
-				if cfg, ok := args[2].(*values.Map); ok {
+			if cfg, ok := args[2].(*values.Map); ok {
 					if v, ok := cfg.Get("timeout"); ok {
 						if d, ok := v.(*decimal.Decimal); ok {
 							timeout = d
@@ -343,7 +346,6 @@ func initHttpModule(rt *runtime.Runtime) {
 						}
 					}
 				}
-			}
 			httpClient := rt.Platform().HTTP.NewClient(pal.ClientConfig{
 				Timeout:         decimalToDuration(timeout),
 				FollowRedirects: followRedirects,
