@@ -17,10 +17,8 @@
 package corpus
 
 import (
-	"bytes"
 	"context"
 	"embed"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -36,7 +34,7 @@ import (
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testharness"
 )
 
 const packageResolutionTestDataDir = "package-resolution/testdata"
@@ -61,14 +59,14 @@ func bundledEmbedRepo(t *testing.T) *projects.FileSystemRepository {
 
 func interpretBIRPackagesStdout(t *testing.T, typeEnv semtypes.Env, birPkgs []*bir.BIRPackage) string {
 	t.Helper()
-	var stdout bytes.Buffer
-	rt := runtime.NewRuntime(test_util.LegacyTestPal(&stdout, io.Discard), typeEnv)
+	pal := testharness.NewTestPal()
+	rt := runtime.NewRuntime(pal.Platform(), typeEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {
 			t.Fatalf("Init(%v): %v", birPkg.PackageID, err)
 		}
 	}
-	return strings.TrimSpace(stdout.String())
+	return strings.TrimSpace(pal.Stdout())
 }
 
 // TestBundledRepository_LoadsEmbeddedPackage verifies that both a pure-Ballerina

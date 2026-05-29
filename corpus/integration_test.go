@@ -438,7 +438,12 @@ func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf,
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
+	pal := testharness.NewTestPal()
+	defer func() {
+		stdoutBuf.WriteString(pal.Stdout())
+		stderrBuf.WriteString(pal.Stderr())
+	}()
+	rt := runtime.NewRuntime(pal.Platform(), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {
 			// For now just write the error string to stderr to match corpus expectations
@@ -591,7 +596,12 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, std
 		return
 	}
 
-	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
+	pal := testharness.NewTestPal()
+	defer func() {
+		stdoutBuf.WriteString(pal.Stdout())
+		stderrBuf.WriteString(pal.Stderr())
+	}()
+	rt := runtime.NewRuntime(pal.Platform(), tyEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())

@@ -20,6 +20,7 @@ public class Listener {
     public function attach(service object {} s, () attachPoint = ()) returns error? = external;
 
     public function detach(service object {} s) returns error? {
+        var _ = s;
     }
 
     public function 'start() returns error? {
