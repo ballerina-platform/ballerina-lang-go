@@ -22,31 +22,30 @@ import (
 	"ballerina-lang-go/values"
 )
 
-// methodHandleImpl is the concrete payload behind extern.MethodHandle. The
-// flavour of the resolved method (BIR, native, resource) is encoded entirely
-// in the captured closure; no flavour discriminator is stored on the struct.
-type methodHandleImpl struct {
+// InvokableHandle is provides a unified representation that can be used to execute any function/method
+// in runtime
+type InvokableHandle struct {
 	invoke func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error)
 }
 
-func newBIRHandle(fn *bir.BIRFunction) *methodHandleImpl {
-	return &methodHandleImpl{
+func NewBIRHandle(fn *bir.BIRFunction) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return executeFunction(ctx, *fn, args, nil), nil
+			return executeFunction(ctx, fn, args, nil), nil
 		},
 	}
 }
 
-func newNativeHandle(fn extern.NativeFunc) *methodHandleImpl {
-	return &methodHandleImpl{
+func NewNativeHandle(fn extern.NativeFunc) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return fn(ctx, args)
 		},
 	}
 }
 
-func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *methodHandleImpl {
-	return &methodHandleImpl{
+func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			full := buildResourceCallArgs(ctx, receiver, match, path, args)
 			return lookupAndExecute(ctx, nil, full, match.FunctionLookupKey)

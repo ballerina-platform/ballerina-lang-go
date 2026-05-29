@@ -252,6 +252,7 @@ func (c *stubHTTPClient) Execute(_, _ string, _ []byte, _ string, _ map[string][
 // should use NewTestPal() in test_harness.go. This function will be removed
 // once all callers (extern-test, etc.) have been migrated.
 func LegacyTestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
+	signals, _ := NewTestSignalSource(nil, TestSignalTimeout)
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: stdout.Write,
@@ -267,5 +268,6 @@ func LegacyTestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 				return &stubHTTPClient{}
 			},
 		},
+		Signals: signals,
 	}
 }

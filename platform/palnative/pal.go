@@ -28,7 +28,8 @@ import (
 
 // NewPlatform returns the native-CLI pal.Platform, wiring os.Stdout/Stderr for
 // IO and NewHTTPClient for HTTP.
-func NewPlatform() pal.Platform {
+func NewPlatform() (pal.Platform, chan pal.Signal) {
+	signals, c := newSignalSource()
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: func(p []byte) (n int, err error) { return os.Stdout.Write(p) },
@@ -42,5 +43,6 @@ func NewPlatform() pal.Platform {
 		HTTP: pal.HTTP{
 			NewClient: NewHTTPClient,
 		},
-	}
+		Signals: signals,
+	}, c
 }

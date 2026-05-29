@@ -523,10 +523,12 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 		panic(values.NewErrorWithMessage("unsupported inferred typedesc constraint"))
 	})
 	for _, pkg := range deserializedPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
+	rt.Listen()
+	<-rt.ExitStatus
 
 	const expected = "1\nfoo\n"
 	if stdoutBuf.String() != expected {
