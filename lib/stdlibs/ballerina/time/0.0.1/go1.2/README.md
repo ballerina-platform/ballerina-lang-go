@@ -82,7 +82,7 @@ Support Levels:
 | Day of week from a Date | Supported | |
 | Convert UTC to Civil | Supported | |
 | Convert Civil to UTC | Supported | Handles `timeAbbrev = "Z"` case |
-| Parse RFC 3339 string to Civil | Supported | Correctly omits `utcOffset` for Z-terminated strings; sets `timeAbbrev = "Z"` |
+| Parse RFC 3339 string to Civil | Supported | Correctly omits `utcOffset` for Z-terminated strings; sets `timeAbbrev = "Z"`; supports RFC 9557 IANA zone annotation (`[Zone/Name]` suffix) |
 | Format Civil to RFC 3339 string | Supported | Fixed-offset and UTC zones supported; named IANA zones via `PREFER_TIME_ABBREV` require the IANA database on the host |
 | Format UTC to email string | Supported | Non-zero-padded day matches Java's `DateTimeFormatter.RFC_1123_DATE_TIME` |
 | Parse email string to Civil | Supported | Handles optional `(comment)` for time abbreviation |

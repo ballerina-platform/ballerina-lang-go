@@ -40,6 +40,9 @@ var secondsHavePattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}
 // utcOnlyPattern matches RFC 3339 strings ending in bare Z (no fixed offset in Civil record).
 var utcOnlyPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z$)`)
 
+// ianaZoneSuffixPattern matches the RFC 9557 IANA zone annotation "[Zone/Name]" at end of string.
+var ianaZoneSuffixPattern = regexp.MustCompile(`\[([^\]]+)\]$`)
+
 // emailCommentPattern extracts the optional comment like "(PST)" from RFC 5322 date strings.
 var emailCommentPattern = regexp.MustCompile(`\(([^)]*)\)`)
 
@@ -541,13 +544,23 @@ func initTimeModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCivilFromString",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			str := getStringArg(args, 0)
-			t, err := time.Parse(time.RFC3339Nano, str)
+			parseStr := str
+			ianaZone := ""
+			if mm := ianaZoneSuffixPattern.FindStringSubmatchIndex(parseStr); mm != nil {
+				ianaZone = parseStr[mm[2]:mm[3]]
+				parseStr = parseStr[:mm[0]]
+			}
+			t, err := time.Parse(time.RFC3339Nano, parseStr)
 			if err != nil {
 				return newFormatError(fmt.Sprintf("invalid date-time string: %s", str)), nil
 			}
-			hasSeconds := secondsHavePattern.MatchString(str)
-			isUTCOnly := utcOnlyPattern.MatchString(str)
-			return buildCivilWithZone(ctx.TypeCtx, t, hasSeconds, !isUTCOnly), nil
+			hasSeconds := secondsHavePattern.MatchString(parseStr)
+			isUTCOnly := utcOnlyPattern.MatchString(parseStr)
+			result := buildCivilWithZone(ctx.TypeCtx, t, hasSeconds, !isUTCOnly)
+			if ianaZone != "" {
+				result.Put(ctx.TypeCtx, "timeAbbrev", ianaZone)
+			}
+			return result, nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCivilToString",
