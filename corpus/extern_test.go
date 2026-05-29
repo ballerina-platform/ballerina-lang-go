@@ -656,7 +656,7 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
 	pkg := ast.ToPackage(cu)
-	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.DEFAULT_VERSION)
+	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
 	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
 	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
