@@ -546,8 +546,6 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	for i := range pkg.Services {
 		initStmts = append(initStmts, buildServiceInitStmts(pkgCtx, pkg, &pkg.Services[i])...)
 	}
-	initStmts = append(initStmts, buildModuleListenerStartStmts(pkgCtx, nodes)...)
-
 	body := pkg.InitFunction.Body.(*ast.BLangBlockFunctionBody)
 	if initFnCreated {
 		body.Stmts = initStmts
@@ -557,6 +555,138 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	}
 
 	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
+
+	if hasListeners {
+		createLifeCycleHooks(pkgCtx, pkg, moduleListenersRef, initPos)
+	}
+}
+
+// createLifeCycleHooks generates `$start`, `$gracefulEnd` and `$immediateEnd`
+// for the module and appends them to pkg.Functions. Each function iterates
+// the `$moduleListeners` array and invokes the listener method that
+// ListenerMethodFor returns for the function name, propagating errors via
+// `check`.
+func createLifeCycleHooks(pkgCtx *packageContext, pkg *ast.BLangPackage, moduleListenersRef *ast.BLangSimpleVarRef, initPos diagnostics.Location) {
+	compilerCtx := pkgCtx.compilerCtx
+	errorOrNil := semtypes.Union(semtypes.NIL, semtypes.ERROR)
+	pkgID := pkg.PackageID
+	tyCtx := pkgCtx.typeCtx()
+	elementTy := semtypes.ListMemberTypeInnerVal(tyCtx, moduleListenersRef.GetDeterminedType(), semtypes.INT)
+
+	buildMethodCallStmt := func(scope model.Scope, listenerRef ast.BLangExpression, methodName string) ast.StatementNode {
+		fnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(methodName), elementTy)
+		if semtypes.IsZero(fnTy) {
+			pkgCtx.internalError("listener element type does not expose method " + methodName)
+			return nil
+		}
+		ld := semtypes.NewListDefinition()
+		paramList := ld.DefineListTypeWrapped(pkgCtx.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		retTy := semtypes.FunctionReturnType(tyCtx, fnTy, paramList)
+
+		fnSymName := "$" + methodName + "Method"
+		fnSym := &desugaredSymbol{name: fnSymName, ty: fnTy, kind: model.SymbolKindFunction}
+		scope.AddSymbol(fnSymName, fnSym)
+		fnSymRef, _ := scope.GetSymbol(fnSymName)
+
+		inv := &ast.BLangInvocation{}
+		inv.Name = &ast.BLangIdentifier{Value: methodName}
+		inv.Expr = listenerRef
+		inv.SetSymbol(fnSymRef)
+		inv.SetDeterminedType(retTy)
+		inv.SetPosition(initPos)
+		return createExpressionStmt(wrapInCheck(inv), initPos)
+	}
+
+	buildForeach := func(fnScope model.Scope, methodName string) *ast.BLangForeach {
+		foreachScope := compilerCtx.NewBlockScope(fnScope, *pkgID)
+		loopVarName := "$listener"
+		loopSym := &desugaredSymbol{name: loopVarName, ty: elementTy, kind: model.SymbolKindVariable}
+		foreachScope.AddSymbol(loopVarName, loopSym)
+		loopSymRef, _ := foreachScope.GetSymbol(loopVarName)
+
+		loopVarIdent := &ast.BLangIdentifier{Value: loopVarName}
+		loopVarIdent.SetDeterminedType(semtypes.NEVER)
+		loopVarIdent.SetPosition(initPos)
+		loopVar := &ast.BLangSimpleVariable{Name: loopVarIdent}
+		loopVar.SetDeterminedType(elementTy)
+		loopVar.SetSymbol(loopSymRef)
+		loopVar.SetPosition(initPos)
+		loopVarDef := &ast.BLangSimpleVariableDef{Var: loopVar}
+		loopVarDef.SetDeterminedType(semtypes.NEVER)
+		loopVarDef.SetPosition(initPos)
+
+		loopVarRef := &ast.BLangSimpleVarRef{VariableName: loopVarIdent}
+		loopVarRef.SetSymbol(loopSymRef)
+		loopVarRef.SetDeterminedType(elementTy)
+		loopVarRef.SetPosition(initPos)
+
+		collectionRef := *moduleListenersRef
+		bodyStmt := buildMethodCallStmt(foreachScope, loopVarRef, methodName)
+
+		foreach := &ast.BLangForeach{
+			VariableDef: loopVarDef,
+			Collection:  &collectionRef,
+			Body:        ast.BLangBlockStmt{Stmts: []ast.StatementNode{bodyStmt}},
+		}
+		foreach.Body.SetDeterminedType(semtypes.NEVER)
+		foreach.Body.SetPosition(initPos)
+		foreach.SetScope(foreachScope)
+		foreach.SetDeterminedType(semtypes.NEVER)
+		foreach.SetPosition(initPos)
+		return foreach
+	}
+
+	buildLifecycleFn := func(fnName string) *ast.BLangFunction {
+		fn := &ast.BLangFunction{}
+		fn.Name = ast.BLangIdentifier{Value: fnName}
+		fn.Name.SetDeterminedType(semtypes.NEVER)
+		fn.SetDeterminedType(semtypes.NEVER)
+		fn.SetPosition(initPos)
+
+		signature := model.FunctionSignature{ReturnType: errorOrNil}
+		fnSymbol := model.NewFunctionSymbol(fnName, signature, false)
+		symbolSpace := compilerCtx.NewSymbolSpace(*pkgID)
+		symbolSpace.AddSymbol(fnName, fnSymbol)
+		symRef, _ := symbolSpace.GetSymbol(fnName)
+		fn.SetSymbol(symRef)
+		fnScope := compilerCtx.NewFunctionScope(nil, *pkgID)
+		fn.SetScope(fnScope)
+
+		foreachStmt := buildForeach(fnScope, ListenerMethodFor(fnName))
+
+		body := &ast.BLangBlockFunctionBody{Stmts: []ast.StatementNode{foreachStmt}}
+		body.SetDeterminedType(semtypes.NEVER)
+		body.SetPosition(initPos)
+		fn.Body = body
+		return fn
+	}
+
+	for _, fnName := range []string{StartFunctionName, GracefulStopFunctionName, ImmediateStopFunctionName} {
+		pkg.Functions = append(pkg.Functions, *desugarFunction(pkgCtx, buildLifecycleFn(fnName)))
+	}
+}
+
+// Names of the per-module lifecycle dispatch functions emitted by desugar.
+// Each one iterates the module's listener array and invokes the matching
+// listener method (see ListenerMethodFor).
+const (
+	StartFunctionName         = "$start"
+	GracefulStopFunctionName  = "$gracefulEnd"
+	ImmediateStopFunctionName = "$immediateEnd"
+)
+
+// ListenerMethodFor returns the listener method name that the given lifecycle
+// dispatch function calls. Returns "" if name is not a lifecycle function.
+func ListenerMethodFor(name string) string {
+	switch name {
+	case StartFunctionName:
+		return "start"
+	case GracefulStopFunctionName:
+		return "gracefulStop"
+	case ImmediateStopFunctionName:
+		return "immediateStop"
+	}
+	return ""
 }
 
 func hasModuleListenerVar(compilerCtx *context.CompilerContext, nodes []moduleInitNode) bool {
@@ -566,24 +696,6 @@ func hasModuleListenerVar(compilerCtx *context.CompilerContext, nodes []moduleIn
 		}
 	}
 	return false
-}
-
-func buildModuleListenerStartStmts(pkgCtx *packageContext, nodes []moduleInitNode) []ast.StatementNode {
-	compilerCtx := pkgCtx.compilerCtx
-	var stmts []ast.StatementNode
-	for _, node := range nodes {
-		vs, ok := compilerCtx.GetSymbol(node.sym).(*model.ValueSymbol)
-		if !ok || !vs.IsListener() {
-			continue
-		}
-		listenerVarRef := buildModuleInitVarRef(compilerCtx, node)
-		startInv := buildListenerStartInvocation(pkgCtx, listenerVarRef)
-		if startInv == nil {
-			continue
-		}
-		stmts = append(stmts, createExpressionStmt(wrapInCheck(startInv), listenerVarRef.GetPosition()))
-	}
-	return stmts
 }
 
 func buildModuleInitVarRef(compilerCtx *context.CompilerContext, node moduleInitNode) *ast.BLangSimpleVarRef {

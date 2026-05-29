@@ -444,15 +444,42 @@ func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf,
 		stderrBuf.WriteString(pal.Stderr())
 	}()
 	rt := runtime.NewRuntime(pal.Platform(), tyEnv)
+	hasLifecycle := false
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {
 			// For now just write the error string to stderr to match corpus expectations
 			fmt.Fprintln(stderrBuf, err.Error())
 			return
 		}
+		if birPkg.StartFunction != nil {
+			hasLifecycle = true
+		}
 	}
 	rt.Listen()
+	for _, birPkg := range birPkgs {
+		invokeTestMainOnPkg(rt, birPkg, stderrBuf)
+	}
+	if hasLifecycle {
+		pal.SendGracefulStop()
+	}
 	<-rt.ExitStatus
+}
+
+const testMainFunctionName = "testMain"
+
+func invokeTestMainOnPkg(rt *runtime.Runtime, pkg *bir.BIRPackage, stderrBuf *bytes.Buffer) {
+	if pkg == nil || pkg.PackageID == nil || pkg.PackageID.OrgName == nil || pkg.PackageID.PkgName == nil {
+		return
+	}
+	org := pkg.PackageID.OrgName.Value()
+	module := pkg.PackageID.PkgName.Value()
+	fn, ok := runtime.LookupFunction(rt, org, module, testMainFunctionName)
+	if !ok {
+		return
+	}
+	if _, err := runtime.InvokeFunction(rt, fn, nil); err != nil {
+		fmt.Fprintln(stderrBuf, err.Error())
+	}
 }
 
 func findProjectDirs(dir string) []string {
@@ -602,13 +629,23 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, std
 		stderrBuf.WriteString(pal.Stderr())
 	}()
 	rt := runtime.NewRuntime(pal.Platform(), tyEnv)
+	hasLifecycle := false
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())
 			return
 		}
+		if birPkg.StartFunction != nil {
+			hasLifecycle = true
+		}
 	}
 	rt.Listen()
+	for _, birPkg := range birPkgs {
+		invokeTestMainOnPkg(rt, birPkg, stderrBuf)
+	}
+	if hasLifecycle {
+		pal.SendGracefulStop()
+	}
 	<-rt.ExitStatus
 }
 

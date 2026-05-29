@@ -68,7 +68,6 @@ service on l {
         io:println("listener-> ", message);
     }
 
-    // @output listener start
     function trigger(string message) {
         io:println("trigger-> ", message);
     }
@@ -77,3 +76,7 @@ service on l {
 public function main() {
     l.trigger("foo"); // @output trigger-> foo
 }
+
+// Lifecycle hooks fire after main:
+// @output listener start
+// @output graceful stop

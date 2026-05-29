@@ -35,6 +35,7 @@ import (
 	"sync"
 	"testing"
 
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
@@ -168,6 +169,9 @@ type TestPal interface {
 	// SetReporter attaches a failure reporter used by the in-memory
 	// signal source watchdog (see test_util.NewTestSignalSource).
 	SetReporter(r test_util.FailReporter)
+	// SendGracefulStop pushes a graceful stop signal onto the PAL's signal
+	// channel so the runtime can wind down deterministically from tests.
+	SendGracefulStop()
 }
 
 // stubHTTP returns a fixed canned response. Tests that need a different
@@ -179,11 +183,14 @@ func (c *stubHTTP) Execute(_, _ string, _ []byte, _ string, _ map[string][]strin
 }
 
 type testPal struct {
-	mu       sync.Mutex
-	stdout   bytes.Buffer
-	stderr   bytes.Buffer
-	diags    []ResolvedDiag
-	reporter test_util.FailReporter
+	mu         sync.Mutex
+	stdout     bytes.Buffer
+	stderr     bytes.Buffer
+	diags      []ResolvedDiag
+	reporter   test_util.FailReporter
+	signalSrc  pal.SignalSource
+	signalCh   chan pal.Signal
+	signalInit bool
 }
 
 // NewTestPal returns a fresh in-memory TestPal. The optional reporter is
@@ -193,7 +200,7 @@ func NewTestPal() TestPal {
 }
 
 func (p *testPal) Platform() pal.Platform {
-	signals, _ := test_util.NewTestSignalSource(p.reporter, test_util.TestSignalTimeout)
+	p.ensureSignalSource()
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: func(b []byte) (int, error) {
@@ -217,8 +224,24 @@ func (p *testPal) Platform() pal.Platform {
 				return &stubHTTP{}
 			},
 		},
-		Signals: signals,
+		Signals: p.signalSrc,
 	}
+}
+
+func (p *testPal) ensureSignalSource() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.signalInit {
+		return
+	}
+	p.signalSrc, p.signalCh = test_util.NewTestSignalSource(p.reporter, test_util.TestSignalTimeout)
+	p.signalInit = true
+}
+
+func (p *testPal) SendGracefulStop() {
+	p.ensureSignalSource()
+	defer func() { _ = recover() }() // channel may already be closed
+	p.signalCh <- pal.GracefulStop
 }
 
 func (p *testPal) Stdout() string {
@@ -338,15 +361,63 @@ func Run(t testing.TB, tc test_util.TestCase, pal TestPal, externs []ExternRegis
 		}
 	}
 	rt.Listen()
+	invokeTestMain(t, rt, birPkgs, pal)
+	hasListeners := hasListeners(birPkgs)
+	if hasListeners {
+		pal.SendGracefulStop()
+	}
 	code := <-rt.ExitStatus
 	switch tc.Suffix() {
 	case test_util.SuffixValid, test_util.SuffixFutureValid:
-		if code != 0 {
-			t.Errorf("%s: expected exit code 0, got %d", tc.Name, code)
+		expected := uint8(0)
+		if hasListeners {
+			expected = gracefulStopExitCode
+		}
+		if code != expected {
+			t.Errorf("%s: expected exit code %d, got %d", tc.Name, expected, code)
 		}
 	case test_util.SuffixPanic, test_util.SuffixFuturePanic:
 		if code == 0 {
 			t.Errorf("%s: expected non-zero exit code, got 0", tc.Name)
+		}
+	}
+}
+
+// gracefulStopExitCode mirrors runtime/lifecycle.go's graceful stop code
+// (128 + SIGINT). Kept here to avoid exporting the constant just for tests.
+const gracefulStopExitCode uint8 = 130
+
+func hasListeners(pkgs []*bir.BIRPackage) bool {
+	// if the package have listeners we expect lifecycle hooks
+	for _, p := range pkgs {
+		if p != nil && p.StartFunction != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// testMainFunctionName is the optional user-defined function the test harness
+// invokes after Listen() to drive listeners from inside the listening state.
+const testMainFunctionName = "testMain"
+
+// invokeTestMain looks up `testMain` on each BIR package and invokes it on
+// the live runtime. Used by listener tests to exercise the runtime while
+// it's parked in Listening state, before the harness pushes a graceful stop.
+func invokeTestMain(t testing.TB, rt *runtime.Runtime, pkgs []*bir.BIRPackage, pal TestPal) {
+	t.Helper()
+	for _, p := range pkgs {
+		if p == nil || p.PackageID == nil || p.PackageID.OrgName == nil || p.PackageID.PkgName == nil {
+			continue
+		}
+		org := p.PackageID.OrgName.Value()
+		module := p.PackageID.PkgName.Value()
+		fn, ok := runtime.LookupFunction(rt, org, module, testMainFunctionName)
+		if !ok {
+			continue
+		}
+		if _, err := runtime.InvokeFunction(rt, fn, nil); err != nil {
+			pal.WriteStderr(err.Error() + "\n")
 		}
 	}
 }
