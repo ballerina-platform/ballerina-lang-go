@@ -4,7 +4,7 @@ import ballerina.io v 0.0.0;
 main() -> nil|error{
   bb0 {
     %1 = ConstantLoad hello
-    %2 = ConstantLoad ISO-8859-1
+    %2 = ConstantLoad Shift_JIS
     %3 = encode(%1,%2) -> bb1;
   }
   bb1 {
@@ -15,7 +15,7 @@ main() -> nil|error{
   }
   bb2 {
     %8 = ConstantLoad hello
-    %9 = ConstantLoad ISO-8859-1
+    %9 = ConstantLoad Shift_JIS
     %10 = decode(%8,%9) -> bb3;
   }
   bb3 {

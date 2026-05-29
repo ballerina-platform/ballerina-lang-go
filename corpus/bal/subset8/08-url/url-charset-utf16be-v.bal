@@ -18,10 +18,18 @@ import ballerina/io;
 import ballerina/url;
 
 public function main() returns error? {
-    // Unrecognised charset returns an error.
-    string|error encResult = url:encode("hello", "Shift_JIS");
-    io:println(encResult is error); // @output true
+    // UTF-16BE encodes each character as two bytes (big-endian), so ASCII
+    // characters gain a leading %00 byte.
+    io:println(check url:encode("AB", "UTF-16BE")); // @output %00A%00B
+    io:println(check url:encode("hi", "UTF-16BE")); // @output %00h%00i
 
-    string|error decResult = url:decode("hello", "Shift_JIS");
-    io:println(decResult is error); // @output true
+    // Decode reverses the two-byte sequences back to the original string.
+    io:println(check url:decode("%00A%00B", "UTF-16BE")); // @output AB
+    io:println(check url:decode("%00h%00i", "UTF-16BE")); // @output hi
+
+    // Roundtrip.
+    string original = "Go";
+    string encoded = check url:encode(original, "UTF-16BE");
+    string decoded = check url:decode(encoded, "UTF-16BE");
+    io:println(decoded == original); // @output true
 }

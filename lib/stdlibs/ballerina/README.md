@@ -16,8 +16,8 @@ in each package's support table (Supported + Partially Supported + Not Yet Suppo
 | [io](io/0.0.1/go1.2/README.md) | 14 | 1 | 11 | 54% |
 | [math.vector](math.vector/0.0.1/go1.2/README.md) | 5 | 0 | 0 | 100% |
 | [time](time/0.0.1/go1.2/README.md) | 31 | 1 | 0 | 97% |
-| [url](url/0.0.1/go1.2/README.md) | 2 | 1 | 1 | 50% |
-| **Total** | **66** | **4** | **65** | **49%** |
+| [url](url/0.0.1/go1.2/README.md) | 3 | 0 | 1 | 75% |
+| **Total** | **67** | **3** | **65** | **50%** |
 
 ## Notable Behavioural Changes
 

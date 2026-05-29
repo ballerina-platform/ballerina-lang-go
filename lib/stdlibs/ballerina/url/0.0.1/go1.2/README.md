@@ -12,7 +12,7 @@ The Ballerina `url` module facilitates APIs to encode and decode a URL or part o
 
 - Encode a URL or part of a URL.
 - Decode a URL or part of a URL.
-- Support for different character encodings (currently UTF-8).
+- Support for different character encodings (UTF-8, ISO-8859-1, US-ASCII, UTF-16, UTF-16BE, UTF-16LE).
 
 ## Examples
 
@@ -45,7 +45,7 @@ Support Levels:
 |---|---|---|
 | Encoding a URL | Supported | |
 | Decoding a URL | Supported | |
-| Support for different character encodings | Partially Supported | Currently supports UTF-8 encoding only. Support for other encodings is not yet implemented. |
+| Support for different character encodings | Supported | |
 | Specific error types | Not Yet Supported | Error handling is implemented but errors are returned as a generic error type. |
 
 ### Notable Behavioural Changes

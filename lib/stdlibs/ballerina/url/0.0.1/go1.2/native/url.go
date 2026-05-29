@@ -18,8 +18,12 @@ package native
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/unicode"
 
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/runtime/extern"
@@ -31,12 +35,93 @@ const (
 	moduleName = "url"
 )
 
-// encodeExtern replicates Java URLEncoder.encode() + post-processing:
-//   - space -> %20 (Java uses +, post-processing converts to %20)
-//   - * -> %2A (Java keeps *, post-processing converts to %2A; Go encodes directly)
-//   - ~ -> ~ (Java encodes as %7E, post-processing reverts; Go never encodes ~)
+// resolveEncoding maps a Java/IANA charset name to an x/text Encoding.
+// Returns nil for unrecognised charsets.
+func resolveEncoding(charset string) encoding.Encoding {
+	switch strings.ToUpper(charset) {
+	case "UTF-8", "UTF8":
+		return encoding.Nop
+	case "ISO-8859-1", "ISO8859-1", "ISO_8859_1", "LATIN-1", "LATIN1":
+		return charmap.ISO8859_1
+	case "US-ASCII", "ASCII":
+		return charmap.ISO8859_1 // ASCII is a subset; ISO-8859-1 encoder errors on >U+00FF
+	case "UTF-16":
+		return unicode.UTF16(unicode.BigEndian, unicode.UseBOM)
+	case "UTF-16BE":
+		return unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
+	case "UTF-16LE":
+		return unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+	default:
+		return nil
+	}
+}
+
+// isUnreserved reports whether b is an RFC 3986 unreserved character that
+// Java's URLEncoder also leaves unencoded: A-Z, a-z, 0-9, -, _, ., ~.
+func isUnreserved(b byte) bool {
+	return (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') ||
+		b == '-' || b == '_' || b == '.' || b == '~'
+}
+
+// encodeBytes percent-encodes raw bytes, leaving unreserved bytes as-is.
+// Space is encoded as %20 (not +) to match Ballerina/jBallerina behaviour.
+func encodeBytes(raw []byte) string {
+	var buf strings.Builder
+	for _, b := range raw {
+		if isUnreserved(b) {
+			buf.WriteByte(b)
+		} else {
+			fmt.Fprintf(&buf, "%%%02X", b)
+		}
+	}
+	return buf.String()
+}
+
+// percentDecodeToBytes decodes a percent-encoded string to raw bytes.
+// Treats '+' as space, matching Java URLDecoder for all charsets.
+func percentDecodeToBytes(s string) ([]byte, error) {
+	buf := make([]byte, 0, len(s))
+	for i := 0; i < len(s); {
+		switch {
+		case s[i] == '+':
+			buf = append(buf, ' ')
+			i++
+		case s[i] == '%' && i+2 < len(s):
+			hi, ok1 := fromHex(s[i+1])
+			lo, ok2 := fromHex(s[i+2])
+			if !ok1 || !ok2 {
+				return nil, fmt.Errorf("invalid percent-encoding at position %d", i)
+			}
+			buf = append(buf, byte(hi<<4|lo))
+			i += 3
+		default:
+			buf = append(buf, s[i])
+			i++
+		}
+	}
+	return buf, nil
+}
+
+func fromHex(c byte) (byte, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return c - '0', true
+	case c >= 'a' && c <= 'f':
+		return c - 'a' + 10, true
+	case c >= 'A' && c <= 'F':
+		return c - 'A' + 10, true
+	default:
+		return 0, false
+	}
+}
+
+// encodeExtern replicates Java URLEncoder.encode() + Ballerina post-processing:
+//   - space -> %20 (Java uses +, Ballerina converts to %20)
+//   - * -> %2A (encoded, unlike RFC 3986 sub-delimiters)
+//   - ~ -> ~ (unreserved, not encoded)
 //
-// Only UTF-8 charset is supported; Go strings are always UTF-8.
+// For non-UTF-8 charsets the string is first converted to the target charset
+// bytes, then those bytes are percent-encoded.
 func encodeExtern() extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		value, ok := args[0].(string)
@@ -47,18 +132,28 @@ func encodeExtern() extern.NativeFunc {
 		if !ok {
 			return values.NewErrorWithMessage("Error occurred while encoding. invalid charset argument"), nil
 		}
-		if !strings.EqualFold(charset, "UTF-8") {
+		enc := resolveEncoding(charset)
+		if enc == nil {
 			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while encoding. %s", charset)), nil
 		}
-		encoded := url.QueryEscape(value)
-		// QueryEscape encodes space as +; convert to %20 to match Java behaviour.
-		encoded = strings.ReplaceAll(encoded, "+", "%20")
-		return encoded, nil
+
+		var raw []byte
+		if enc == encoding.Nop {
+			raw = []byte(value)
+		} else {
+			converted, err := enc.NewEncoder().Bytes([]byte(value))
+			if err != nil {
+				return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while encoding. %s", err.Error())), nil
+			}
+			raw = converted
+		}
+		return encodeBytes(raw), nil
 	}
 }
 
 // decodeExtern replicates Java URLDecoder.decode().
-// Only UTF-8 charset is supported; Go strings are always UTF-8.
+// For non-UTF-8 charsets the percent-decoded bytes are interpreted in the
+// target charset and converted to UTF-8.
 func decodeExtern() extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		value, ok := args[0].(string)
@@ -69,14 +164,28 @@ func decodeExtern() extern.NativeFunc {
 		if !ok {
 			return values.NewErrorWithMessage("Error occurred while decoding. invalid charset argument"), nil
 		}
-		if !strings.EqualFold(charset, "UTF-8") {
+		enc := resolveEncoding(charset)
+		if enc == nil {
 			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while decoding. %s", charset)), nil
 		}
-		decoded, err := url.QueryUnescape(value)
+
+		raw, err := percentDecodeToBytes(value)
 		if err != nil {
 			return values.NewErrorWithMessage("Error occurred while decoding. " + err.Error()), nil
 		}
-		return decoded, nil
+
+		if enc == encoding.Nop {
+			if !utf8.Valid(raw) {
+				return values.NewErrorWithMessage("Error occurred while decoding. invalid UTF-8 sequence"), nil
+			}
+			return string(raw), nil
+		}
+
+		utf8Bytes, err := enc.NewDecoder().Bytes(raw)
+		if err != nil {
+			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while decoding. %s", err.Error())), nil
+		}
+		return string(utf8Bytes), nil
 	}
 }
 

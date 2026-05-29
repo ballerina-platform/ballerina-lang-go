@@ -7,7 +7,7 @@
           (error-type))) (expr
         (invocation url encode (
           (literal hello)
-          (literal ISO-8859-1))))))
+          (literal Shift_JIS))))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -20,7 +20,7 @@
           (error-type))) (expr
         (invocation url decode (
           (literal hello)
-          (literal ISO-8859-1))))))
+          (literal Shift_JIS))))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
