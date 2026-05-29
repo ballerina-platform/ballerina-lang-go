@@ -29,6 +29,7 @@ type (
 	Platform struct {
 		IO   IO
 		FS   FS
+		Time Time
 		HTTP HTTP
 	}
 	IO struct {
@@ -37,6 +38,12 @@ type (
 	}
 	FS struct {
 		ReadFile func(path string) ([]byte, error)
+		WriteFile     func(path string, data []byte) error
+		AppendFile    func(path string, data []byte) error
+	}
+	Time struct {
+		Now          func() time.Time
+		MonotonicNow func() time.Duration
 	}
 	HTTP struct {
 		NewClient func(cfg ClientConfig) HTTPClient

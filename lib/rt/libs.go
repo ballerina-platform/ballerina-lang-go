@@ -19,6 +19,7 @@ package rt
 import (
 	_ "ballerina-lang-go/lib/array/runtime"
 	_ "ballerina-lang-go/lib/error/runtime"
+	_ "ballerina-lang-go/lib/float/runtime"
 	_ "ballerina-lang-go/lib/int/runtime"
 	_ "ballerina-lang-go/lib/langinternal/runtime"
 	_ "ballerina-lang-go/lib/map/runtime"
@@ -27,4 +28,6 @@ import (
 	// standard libraries
 	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"
 	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.2/native"
+	_ "ballerina-lang-go/lib/stdlibs/ballerina/time/0.0.1/go1.2/native"
+	_ "ballerina-lang-go/lib/stdlibs/ballerina/url/0.0.1/go1.2/native"
 )

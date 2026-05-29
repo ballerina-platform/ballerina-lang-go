@@ -28,17 +28,12 @@ import (
 const (
 	orgName    = "ballerina"
 	moduleName = "io"
+
+	stdoutStream = int64(1)
+	stderrStream = int64(2)
 )
 
-func Println(rt *runtime.Runtime, vals ...values.BalValue) {
-	write(rt, true, vals)
-}
-
-func Print(rt *runtime.Runtime, vals ...values.BalValue) {
-	write(rt, false, vals)
-}
-
-func write(rt *runtime.Runtime, newline bool, vals []values.BalValue) {
+func write(rt *runtime.Runtime, stream int64, newline bool, vals []values.BalValue) {
 	parts := make([]string, len(vals))
 	visited := make(map[uintptr]bool)
 	for i, v := range vals {
@@ -51,26 +46,31 @@ func write(rt *runtime.Runtime, newline bool, vals []values.BalValue) {
 	} else {
 		out = []byte(joined)
 	}
-	_, _ = rt.Platform().IO.Stdout(out)
-}
-
-func printlnExtern(rt *runtime.Runtime) extern.NativeFunc {
-	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		Println(rt, args...)
-		return nil, nil
+	pio := rt.Platform().IO
+	if stream == stderrStream {
+		_, _ = pio.Stderr(out)
+	} else {
+		_, _ = pio.Stdout(out)
 	}
 }
 
-func printExtern(rt *runtime.Runtime) extern.NativeFunc {
+func externPrintExtern(rt *runtime.Runtime) extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		Print(rt, args...)
+		stream, _ := args[0].(int64)
+		newLine, _ := args[1].(bool)
+		var vals []values.BalValue
+		if list, ok := args[2].(*values.List); ok {
+			for i := 0; i < list.Len(); i++ {
+				vals = append(vals, list.Get(i))
+			}
+		}
+		write(rt, stream, newLine, vals)
 		return nil, nil
 	}
 }
 
 func initIOModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "println", printlnExtern(rt))
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "print", printExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externPrint", externPrintExtern(rt))
 }
 
 func init() {
