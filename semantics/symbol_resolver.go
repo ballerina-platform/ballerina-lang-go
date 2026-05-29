@@ -30,6 +30,7 @@ import (
 
 	array "ballerina-lang-go/lib/array/compile"
 	bError "ballerina-lang-go/lib/error/compile"
+	bFloat "ballerina-lang-go/lib/float/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
@@ -598,6 +599,7 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
 	result[bError.PackageName] = bError.GetErrorSymbols(ctx)
+	result[bFloat.PackageName] = bFloat.GetFloatSymbols(ctx)
 	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	result[bString.PackageName] = bString.GetStringSymbols(ctx)
