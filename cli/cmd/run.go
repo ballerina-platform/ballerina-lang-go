@@ -278,12 +278,19 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	rt := runtime.NewRuntime(palnative.NewPlatform(), tyEnv)
+	pal, sigChan := palnative.NewPlatform()
+	rt := runtime.NewRuntime(pal, tyEnv)
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			printRuntimeError(err)
 			return err
 		}
+	}
+	rt.Listen()
+	exitCode := <-rt.ExitStatus
+	close(sigChan)
+	if exitCode != 0 {
+		return error(fmt.Errorf("exit: %d", exitCode))
 	}
 	return nil
 }

@@ -45,7 +45,7 @@ func executeCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue
 		return dispatchMethodCall(ctx, callInfo, args)
 	}
 	if callInfo.CachedBIRFunc != nil {
-		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
+		return executeFunction(ctx, callInfo.CachedBIRFunc, args, nil)
 	}
 	if callInfo.CachedNativeFunc != nil {
 		result, err := callInfo.CachedNativeFunc(ctx, args)
@@ -72,7 +72,7 @@ func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.B
 	// of objects with different concrete types). Cache only when it matches the receiver.
 	if callInfo.CachedMethodLookupKey == lookupKey {
 		if callInfo.CachedBIRFunc != nil {
-			return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
+			return executeFunction(ctx, callInfo.CachedBIRFunc, args, nil)
 		}
 		if callInfo.CachedNativeFunc != nil {
 			result, err := callInfo.CachedNativeFunc(ctx, args)
@@ -101,7 +101,7 @@ func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.Bal
 		if !isResourceFnCall {
 			callInfo.CachedBIRFunc = fn
 		}
-		return executeFunction(ctx, *fn, args, nil), nil
+		return executeFunction(ctx, fn, args, nil), nil
 	}
 	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
@@ -122,7 +122,7 @@ func execResourceCall(ctx *extern.Context, instr *bir.ResourceFunctionCall, fram
 		panic(values.NewErrorWithMessage("no matching resource method"))
 	}
 	argVals := extractArgs(ctx, instr.Args, frame)
-	result, err := InvokeMethod(ctx, impl, argVals)
+	result, err := Invoke(ctx, impl, argVals)
 	if err != nil {
 		panic(err)
 	}
@@ -214,7 +214,7 @@ func execFpCall(ctx *extern.Context, callInfo *bir.Call, frame *Frame) *bir.BIRB
 	fn := reg.GetBIRFunction(lookupKey)
 	var result values.BalValue
 	if fn != nil {
-		result = executeFunction(ctx, *fn, args, parentFrame)
+		result = executeFunction(ctx, fn, args, parentFrame)
 	} else {
 		externFn := reg.GetNativeFunction(lookupKey)
 		if externFn != nil {

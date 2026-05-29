@@ -33,7 +33,7 @@ import (
 // channel.
 func StartMethod(parent *extern.Context, h any, args []values.BalValue) (<-chan values.BalValue, error) {
 	ch := make(chan values.BalValue, 1)
-	impl := h.(*methodHandleImpl)
+	impl := h.(*InvokableHandle)
 	seed := snapshotSpawnFrames(parent.CallStack.(*callStack))
 	go runStrand(parent.Env, seed, impl, args, ch)
 	return ch, nil
@@ -41,24 +41,27 @@ func StartMethod(parent *extern.Context, h any, args []values.BalValue) (<-chan 
 
 // snapshotSpawnFrames returns a value-copy of every frame currently on cs so
 // the started strand can carry parent context into its own call stack
-// without aliasing the parent's mutable Frame.location.
-func snapshotSpawnFrames(cs *callStack) []*Frame {
-	src := cs.Frames()
-	out := make([]*Frame, len(src))
-	for i, f := range src {
-		out[i] = &Frame{functionKey: f.functionKey, location: f.location}
+// without aliasing the parent's mutable call-stack entries.
+func snapshotSpawnFrames(cs *callStack) []callStackEntry {
+	src := cs.Entries()
+	out := make([]callStackEntry, len(src))
+	for i, e := range src {
+		frame := &Frame{}
+		if e.frame != nil {
+			frame.SetFunctionKey(e.frame.FunctionKey())
+		}
+		out[i] = callStackEntry{frame: frame, location: e.location}
 	}
 	return out
 }
 
-func runStrand(env *extern.Env, seed []*Frame, h *methodHandleImpl,
+func runStrand(env *extern.Env, seed []callStackEntry, h *InvokableHandle,
 	args []values.BalValue, ch chan<- values.BalValue,
 ) {
-	ctx := extern.CreateContext(env)
-	elems := make([]*Frame, len(seed), len(seed)+32)
+	ctx := CreateContext(env)
+	elems := make([]callStackEntry, len(seed), len(seed)+32)
 	copy(elems, seed)
-	cs := &callStack{elements: elems}
-	ctx.CallStack = cs
+	ctx.CallStack = &callStack{elements: elems}
 
 	defer close(ch)
 	v, err := h.invoke(ctx, args)

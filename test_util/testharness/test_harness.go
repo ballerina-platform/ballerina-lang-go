@@ -165,6 +165,9 @@ type TestPal interface {
 	WriteStderr(s string)
 	Diagnostics() []ResolvedDiag
 	SetDiagnostics([]ResolvedDiag)
+	// SetReporter attaches a failure reporter used by the in-memory
+	// signal source watchdog (see test_util.NewTestSignalSource).
+	SetReporter(r test_util.FailReporter)
 }
 
 // stubHTTP returns a fixed canned response. Tests that need a different
@@ -176,18 +179,21 @@ func (c *stubHTTP) Execute(_, _ string, _ []byte, _ string, _ map[string][]strin
 }
 
 type testPal struct {
-	mu     sync.Mutex
-	stdout bytes.Buffer
-	stderr bytes.Buffer
-	diags  []ResolvedDiag
+	mu       sync.Mutex
+	stdout   bytes.Buffer
+	stderr   bytes.Buffer
+	diags    []ResolvedDiag
+	reporter test_util.FailReporter
 }
 
-// NewTestPal returns a fresh in-memory TestPal.
+// NewTestPal returns a fresh in-memory TestPal. The optional reporter is
+// notified if the signal-watchdog forces a graceful shutdown.
 func NewTestPal() TestPal {
 	return &testPal{}
 }
 
 func (p *testPal) Platform() pal.Platform {
+	signals, _ := test_util.NewTestSignalSource(p.reporter, test_util.TestSignalTimeout)
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: func(b []byte) (int, error) {
@@ -211,6 +217,7 @@ func (p *testPal) Platform() pal.Platform {
 				return &stubHTTP{}
 			},
 		},
+		Signals: signals,
 	}
 }
 
@@ -250,6 +257,12 @@ func (p *testPal) SetDiagnostics(d []ResolvedDiag) {
 	p.diags = d
 }
 
+func (p *testPal) SetReporter(r test_util.FailReporter) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.reporter = r
+}
+
 // ---------------------------------------------------------------------------
 // Run: compile + interpret a TestCase against a TestPal.
 // ---------------------------------------------------------------------------
@@ -271,6 +284,7 @@ type ExternRegistration struct {
 // for @error marker checking).
 func Run(t testing.TB, tc test_util.TestCase, pal TestPal, externs []ExternRegistration) {
 	t.Helper()
+	pal.SetReporter(t)
 	defer func() {
 		if r := recover(); r != nil {
 			msg := strings.TrimPrefix(fmt.Sprintf("%v", r), panicPrefix)
@@ -318,9 +332,21 @@ func Run(t testing.TB, tc test_util.TestCase, pal TestPal, externs []ExternRegis
 		runtime.RegisterExternFunction(rt, e.Org, e.Module, e.FuncName, e.Impl)
 	}
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			pal.WriteStderr(err.Error() + "\n")
 			return
+		}
+	}
+	rt.Listen()
+	code := <-rt.ExitStatus
+	switch tc.Suffix() {
+	case test_util.SuffixValid, test_util.SuffixFutureValid:
+		if code != 0 {
+			t.Errorf("%s: expected exit code 0, got %d", tc.Name, code)
+		}
+	case test_util.SuffixPanic, test_util.SuffixFuturePanic:
+		if code == 0 {
+			t.Errorf("%s: expected non-zero exit code, got 0", tc.Name)
 		}
 	}
 }

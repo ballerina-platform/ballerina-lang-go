@@ -440,12 +440,14 @@ func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf,
 
 	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			// For now just write the error string to stderr to match corpus expectations
 			fmt.Fprintln(stderrBuf, err.Error())
 			return
 		}
 	}
+	rt.Listen()
+	<-rt.ExitStatus
 }
 
 func findProjectDirs(dir string) []string {
@@ -591,11 +593,13 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, std
 
 	rt := runtime.NewRuntime(test_util.LegacyTestPal(stdoutBuf, stderrBuf), tyEnv)
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())
 			return
 		}
 	}
+	rt.Listen()
+	<-rt.ExitStatus
 }
 
 func TestProjectSerializationRoundtrip(t *testing.T) {

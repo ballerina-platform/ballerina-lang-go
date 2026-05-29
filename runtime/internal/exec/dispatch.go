@@ -37,6 +37,18 @@ func LookupRemoteMethod(ctx *extern.Context, obj *values.Object, methodName stri
 	return lookupByMethodName(ctx, obj, model.RemoteMethodName(methodName))
 }
 
+func LookupFunction(env *extern.Env, org, module, name string) (any, bool) {
+	reg := env.Registry.(*modules.Registry)
+	key := org + "/" + module + ":" + name
+	if fn := reg.GetBIRFunction(key); fn != nil {
+		return NewBIRHandle(fn), true
+	}
+	if ef := reg.GetNativeFunction(key); ef != nil {
+		return NewNativeHandle(ef.Impl), true
+	}
+	return nil, false
+}
+
 // LookupResourceMethod resolves a resource method named resourceMethodName
 // on obj. The second return is false if no candidate matches or if more
 // than one candidate matches (ambiguous dispatch).
@@ -54,10 +66,10 @@ func LookupResourceMethod(ctx *extern.Context, obj *values.Object, resourceMetho
 	return newResourceHandle(obj, matches[0], path), true
 }
 
-// InvokeMethod calls the closure captured by the handle returned from one of
+// Invoke calls the closure captured by the handle returned from one of
 // the Lookup* functions.
-func InvokeMethod(ctx *extern.Context, h any, args []values.BalValue) (values.BalValue, error) {
-	return h.(*methodHandleImpl).invoke(ctx, args)
+func Invoke(ctx *extern.Context, h any, args []values.BalValue) (values.BalValue, error) {
+	return h.(*InvokableHandle).invoke(ctx, args)
 }
 
 func lookupByMethodName(ctx *extern.Context, obj *values.Object, methodName string) (any, bool) {
@@ -71,10 +83,10 @@ func lookupByMethodName(ctx *extern.Context, obj *values.Object, methodName stri
 func lookupByKey(ctx *extern.Context, lookupKey string) (any, bool) {
 	reg := ctx.Env.Registry.(*modules.Registry)
 	if fn := reg.GetBIRFunction(lookupKey); fn != nil {
-		return newBIRHandle(fn), true
+		return NewBIRHandle(fn), true
 	}
 	if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
-		return newNativeHandle(externFn.Impl), true
+		return NewNativeHandle(externFn.Impl), true
 	}
 	return nil, false
 }
