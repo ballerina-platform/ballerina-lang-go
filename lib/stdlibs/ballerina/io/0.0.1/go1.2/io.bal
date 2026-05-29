@@ -174,6 +174,28 @@ public isolated function fileWriteJson(string path, json content) returns Error?
     return externFileWriteJson(path, content);
 }
 
+# Reads file content as an `xml`.
+# ```ballerina
+# xml|io:Error content = io:fileReadXml("./resources/myfile.xml");
+# ```
+# + path - The XML file path
+# + return - The file content as an `xml` or an `io:Error`
+public isolated function fileReadXml(string path) returns xml|Error {
+    return externFileReadXml(path);
+}
+
+# Writes an `xml` to a file.
+# ```ballerina
+# io:Error? result = io:fileWriteXml("./resources/myfile.xml", xml `<book><title>Clean Code</title></book>`);
+# ```
+# + path - The XML file path
+# + content - XML content to write
+# + option - Whether to overwrite or append the given content (default: `OVERWRITE`)
+# + return - `()` when the write was successful or an `io:Error`
+public isolated function fileWriteXml(string path, xml content, FileWriteOption option = OVERWRITE) returns Error? {
+    return externFileWriteXml(path, content, option);
+}
+
 isolated function externFileReadString(string path) returns string|Error = external;
 isolated function externFileReadLines(string path) returns string[]|Error = external;
 isolated function externFileReadBytes(string path) returns byte[]|Error = external;
@@ -182,3 +204,5 @@ isolated function externFileWriteString(string path, string content, FileWriteOp
 isolated function externFileWriteLines(string path, string[] content, FileWriteOption option) returns Error? = external;
 isolated function externFileWriteBytes(string path, byte[] content, FileWriteOption option) returns Error? = external;
 isolated function externFileWriteJson(string path, json content) returns Error? = external;
+isolated function externFileReadXml(string path) returns xml|Error = external;
+isolated function externFileWriteXml(string path, xml content, FileWriteOption option) returns Error? = external;

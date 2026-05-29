@@ -31,10 +31,12 @@ import (
 )
 
 type fileIOTypes struct {
-	strArrTy   semtypes.SemType
-	byteArrTy  semtypes.SemType
-	jsonListTy semtypes.SemType
-	jsonMapTy  semtypes.SemType
+	strArrTy        semtypes.SemType
+	byteArrTy       semtypes.SemType
+	jsonListTy       semtypes.SemType
+	jsonMapTy        semtypes.SemType
+	stringMapTy      semtypes.SemType
+	stringMapAtomicTy *semtypes.MappingAtomicType
 }
 
 func fileIOError(msg string) values.BalValue {
@@ -144,6 +146,9 @@ func initFileIOModule(rt *runtime.Runtime) {
 			types.jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
 			jld := semtypes.NewListDefinition()
 			types.jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
+			smd := semtypes.NewMappingDefinition()
+			types.stringMapTy = smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
+			types.stringMapAtomicTy = semtypes.ToMappingAtomicType(typCtx, types.stringMapTy)
 		})
 	}
 
@@ -276,6 +281,39 @@ func initFileIOModule(rt *runtime.Runtime) {
 				return fileIOError(fmt.Sprintf("error while serializing JSON for file '%s': %s", path, err.Error())), nil
 			}
 			if err := rt.Platform().FS.WriteFile(path, data); err != nil {
+				return fileIOError(fmt.Sprintf("error while writing to file '%s': %s", path, err.Error())), nil
+			}
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadXml",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			path, _ := args[0].(string)
+			data, err := rt.Platform().FS.ReadFile(path)
+			if err != nil {
+				return fileIOError(fmt.Sprintf("error while reading file '%s': %s", path, err.Error())), nil
+			}
+			xmlVal, parseErr := parseXMLFromBytes(data, types.stringMapTy, types.stringMapAtomicTy)
+			if parseErr != nil {
+				return fileIOError(fmt.Sprintf("error while parsing XML from file '%s': %s", path, parseErr.Error())), nil
+			}
+			return xmlVal, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileWriteXml",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			path, _ := args[0].(string)
+			content, _ := args[1].(values.XMLValue)
+			option, _ := args[2].(string)
+			data := []byte(content.XMLString())
+			var err error
+			if option == "APPEND" {
+				err = rt.Platform().FS.AppendFile(path, data)
+			} else {
+				err = rt.Platform().FS.WriteFile(path, data)
+			}
+			if err != nil {
 				return fileIOError(fmt.Sprintf("error while writing to file '%s': %s", path, err.Error())), nil
 			}
 			return nil, nil

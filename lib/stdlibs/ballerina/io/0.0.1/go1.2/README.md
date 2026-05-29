@@ -8,8 +8,8 @@ This module provides I/O operations for Ballerina programs. The full jBallerina 
 
 - Print `any` or `error` values to the standard output stream using `print` and `println`.
 - Print to a specified output stream (stdout or stderr) using `fprint` and `fprintln`.
-- Read file content as a string, line array, byte array, or JSON using `fileReadString`, `fileReadLines`, `fileReadBytes`, and `fileReadJson`.
-- Write string, line array, byte array, or JSON content to a file using `fileWriteString`, `fileWriteLines`, `fileWriteBytes`, and `fileWriteJson`.
+- Read file content as a string, line array, byte array, JSON, or XML using `fileReadString`, `fileReadLines`, `fileReadBytes`, `fileReadJson`, and `fileReadXml`.
+- Write string, line array, byte array, JSON, or XML content to a file using `fileWriteString`, `fileWriteLines`, `fileWriteBytes`, `fileWriteJson`, and `fileWriteXml`.
 - Control write behaviour with the `FileWriteOption` enum (`OVERWRITE` or `APPEND`).
 
 ## Examples
@@ -46,6 +46,11 @@ public function main() returns error? {
     check io:fileWriteJson("/tmp/data.json", {"name": "Alice", "age": 30});
     json result = check io:fileReadJson("/tmp/data.json");
     io:println(result);
+
+    // Write and read XML
+    check io:fileWriteXml("/tmp/data.xml", xml `<book><title>Clean Code</title></book>`);
+    xml xmlResult = check io:fileReadXml("/tmp/data.xml");
+    io:println(xmlResult);
 }
 ```
 
@@ -79,7 +84,7 @@ Support Levels:
 | File write — JSON | Supported | `fileWriteJson`. Always overwrites; JSON object keys sorted alphabetically. See Notable Behavioural Changes. |
 | File write — stream of lines | Not Yet Supported | `fileWriteLinesFromStream`. `stream` type not yet supported. |
 | File write — stream of blocks | Not Yet Supported | `fileWriteBlocksFromStream`. `stream` type not yet supported. |
-| File I/O — XML | Not Yet Supported | `fileReadXml`, `fileWriteXml`. XML basic type not yet supported. |
+| File I/O — XML | Supported | `fileReadXml`, `fileWriteXml`. `OVERWRITE` and `APPEND` modes supported. |
 | File I/O — CSV | Not Yet Supported | `fileReadCsv`, `fileWriteCsv`, stream variants. `stream` type not yet supported; `typedesc` parameter handling complex. |
 | File write option enum | Supported | `FileWriteOption`: `OVERWRITE` and `APPEND` constants. |
 | Module-level error type | Partially Supported | `io:Error` declared as a plain `error` alias; `distinct` error subtypes (`FileNotFoundError`, `GenericError`, `AccessDeniedError`, `EofError`, `ConfigurationError`, `TypeMismatchError`) not yet supported. |
