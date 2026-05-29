@@ -54,7 +54,7 @@ class FailingIterable {
     }
   }
 
-  iterator() -> object { int idx; function init() returns nil; function next() returns nil|error|{| value: int, never... |} }{
+  iterator() -> object { private int idx; public function init() returns nil; public function next() returns nil|error|{| value: int, never... |} }{
     bb0 {
       %2 = newObject $anon/.:FailingIterator
       %3 = init(%2) -> bb1;

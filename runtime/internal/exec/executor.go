@@ -181,6 +181,12 @@ func execInstruction(ctx *extern.Context, inst bir.BIRNonTerminator, frame *Fram
 		execNewError(ctx, v, frame)
 	case *bir.NewObject:
 		execNewObject(ctx, v, frame)
+	case *bir.NewStream:
+		execNewStream(ctx, v, frame)
+	case *bir.StreamNext:
+		execStreamNext(ctx, v, frame)
+	case *bir.StreamClose:
+		execStreamClose(ctx, v, frame)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:

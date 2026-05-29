@@ -1282,6 +1282,9 @@ type callable interface {
 
 func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expressionEffect {
 	curBB := bb
+	if ast.IsStreamOperation(callable) {
+		return streamMethodCall(ctx, curBB, callable)
+	}
 	var args []BIROperand
 	isMethodCall := false
 
@@ -1589,6 +1592,9 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 }
 
 func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExpression) expressionEffect {
+	if semtypes.IsSubtypeSimple(expr.GetDeterminedType(), semtypes.STREAM) {
+		return newStreamExpression(ctx, curBB, expr)
+	}
 	classSymbol := expr.ClassSymbol
 	className := ctx.birCx.CompilerContext.SymbolName(classSymbol)
 	classLookupKey := buildLookupKey(classSymbol.Package, className)
@@ -1633,6 +1639,31 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 		result: result,
 		block:  thenBB,
 	}
+}
+
+func streamMethodCall(ctx *stmtContext, curBB *BIRBasicBlock, callable callable) expressionEffect {
+	recvEffect := handleActionOrExpression(ctx, curBB, callable.Receiver())
+	curBB = recvEffect.block
+	result := ctx.addTempVar(callable.GetDeterminedType())
+	pos := ctx.loc(callable.GetPosition())
+	switch callable.GetName().GetValue() {
+	case "next":
+		curBB.Instructions = append(curBB.Instructions, NewStreamNext(result, recvEffect.result, pos))
+	case "close":
+		curBB.Instructions = append(curBB.Instructions, NewStreamClose(result, recvEffect.result, pos))
+	default:
+		ctx.birCx.CompilerContext.InternalError("unexpected stream method: "+callable.GetName().GetValue(), callable.GetPosition())
+	}
+	return expressionEffect{result: result, block: curBB}
+}
+
+func newStreamExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExpression) expressionEffect {
+	argEffect := handleActionOrExpression(ctx, curBB, expr.ArgsExprs[0])
+	curBB = argEffect.block
+	result := ctx.addTempVar(expr.GetDeterminedType())
+	instr := NewStreamConstructor(expr.GetDeterminedType(), result, argEffect.result, ctx.loc(expr.GetPosition()))
+	curBB.Instructions = append(curBB.Instructions, instr)
+	return expressionEffect{result: result, block: curBB}
 }
 
 func appendIfNotNil[T any](slice []T, item *T) []T {

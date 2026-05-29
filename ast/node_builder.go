@@ -2806,7 +2806,32 @@ func (n *NodeBuilder) TransformKeySpecifier(keySpecifierNode *tree.KeySpecifierN
 }
 
 func (n *NodeBuilder) TransformStreamTypeDescriptor(streamTypeDescriptorNode *tree.StreamTypeDescriptorNode) BLangNode {
-	panic("TransformStreamTypeDescriptor unimplemented")
+	position := getPosition(n.de(), streamTypeDescriptorNode)
+	paramsNode := streamTypeDescriptorNode.StreamTypeParamsNode()
+	if paramsNode == nil {
+		refType := &BLangBuiltInRefTypeNode{
+			TypeKind: TypeKind_STREAM,
+		}
+		refType.SetPosition(position)
+		return refType
+	}
+	params, ok := paramsNode.(*tree.StreamTypeParamsNode)
+	if !ok {
+		n.cx.InternalError("unexpected stream type params node", position)
+		return nil
+	}
+	valueDesc := params.LeftTypeDescNode()
+	completionDesc := params.RightTypeDescNode()
+	if valueDesc == nil || completionDesc == nil {
+		n.cx.InternalError("stream<...> requires both value and completion type parameters", position)
+		return nil
+	}
+	streamType := NewBLangStreamType(
+		TypeData{TypeDescriptor: n.createTypeNode(valueDesc)},
+		TypeData{TypeDescriptor: n.createTypeNode(completionDesc)},
+	)
+	streamType.SetPosition(position)
+	return streamType
 }
 
 func (n *NodeBuilder) TransformStreamTypeParams(streamTypeParamsNode *tree.StreamTypeParamsNode) BLangNode {
@@ -3198,7 +3223,7 @@ func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDesc
 func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewBLangExpression *tree.ExplicitNewExpressionNode) BLangNode {
 	typeInit := &BLangNewExpression{}
 	typeInit.pos = getPosition(n.de(), explicitNewBLangExpression)
-	typeInit.UserDefinedType = n.createTypeNode(explicitNewBLangExpression.TypeDescriptor()).(*BLangUserDefinedType)
+	typeInit.TypeDescriptor = n.createTypeNode(explicitNewBLangExpression.TypeDescriptor()).(BType)
 	if argList := explicitNewBLangExpression.ParenthesizedArgList(); argList != nil {
 		args := argList.Arguments()
 		for arg := range args.Iterator() {

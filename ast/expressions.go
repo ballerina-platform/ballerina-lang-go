@@ -349,10 +349,10 @@ type (
 
 	BLangNewExpression struct {
 		bLangExpressionBase
-		AtomicType      *semtypes.MappingAtomicType
-		ClassSymbol     model.SymbolRef
-		UserDefinedType *BLangUserDefinedType
-		ArgsExprs       []BLangExpression
+		AtomicType     *semtypes.MappingAtomicType
+		ClassSymbol    model.SymbolRef
+		TypeDescriptor BType
+		ArgsExprs      []BLangExpression
 	}
 
 	BLangXMLSequenceLiteral struct {
@@ -963,6 +963,17 @@ func (b *BLangNamedArgsExpression) SetExpression(expr BLangExpression) {
 
 func (b *BLangTrapExpr) GetExpression() BLangExpression {
 	return b.Expr
+}
+
+// IsStreamOperation use to distinguish stream operations from method calls.
+func IsStreamOperation(inv interface{ Receiver() BLangExpression }) bool {
+	recv := inv.Receiver()
+	return recv != nil && semtypes.IsSubtypeSimple(recv.GetDeterminedType(), semtypes.STREAM)
+}
+
+// IsStreamNewExpression returns true when the new expression constructs a stream value.
+func IsStreamNewExpression(expr *BLangNewExpression) bool {
+	return semtypes.IsSubtypeSimple(expr.GetDeterminedType(), semtypes.STREAM)
 }
 
 func createBLangUnaryExpr(location diagnostics.Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

@@ -1,0 +1,90 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Emit {
+  n int
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 0
+      %3 = ConstantLoad n
+      self[%3] = %2;
+      return;
+    }
+  }
+
+  next() -> nil|{| value: int, never... |}{
+    bb0 {
+      %4 = ConstantLoad n
+      %3 = self[%4];
+      %5 = %3;
+      %6 = ConstantLoad 2
+      %7 = %6;
+      %2 = >= %5 %7;
+      %2 ? bb1 : bb2;
+    }
+    bb1 {
+      %8 = ConstantLoad <nil>
+      %0 = %8;
+      return;
+    }
+    bb2 {
+      %10 = ConstantLoad n
+      %9 = self[%10];
+      current = %9;
+      %13 = current;
+      %14 = ConstantLoad 1
+      %15 = %14;
+      %12 = + %13 %15;
+      %16 = ConstantLoad n
+      self[%16] = %12;
+      %17 = ConstantLoad value
+      %18 = newMap {| value: int, never... |}{%17=current}
+      %0 = %18;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:Emit
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    %5 = newStream stream %3
+    s = %5;
+    %7 = streamClose s
+    c = %7;
+    %9 = c;
+    %10 = println(%9) -> bb5;
+  }
+  bb5 {
+    %11 = streamNext s
+    r = %11;
+    %13 = r is {| value: int, never... |}
+    %13 ? bb6 : bb8;
+  }
+  bb6 {
+    %15 = ConstantLoad value
+    %14 = r[%15];
+    %16 = %14;
+    %17 = println(%16) -> bb7;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    return;
+  }
+}
