@@ -36,7 +36,9 @@ type (
 		Stderr func(p []byte) (n int, err error)
 	}
 	FS struct {
-		ReadFile func(path string) ([]byte, error)
+		ReadFile  func(path string) ([]byte, error)
+		WriteFile func(path string, data []byte) error
+		MkdirAll  func(path string) error
 	}
 	HTTP struct {
 		NewClient func(cfg ClientConfig) HTTPClient

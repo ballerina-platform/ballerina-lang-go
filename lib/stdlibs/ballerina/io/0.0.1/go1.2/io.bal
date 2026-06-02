@@ -17,3 +17,7 @@
 public isolated function println(any|error... vals) = external;
 
 public isolated function print(any|error... vals) = external;
+
+public isolated function fileReadString(string path) returns string|error = external;
+
+public isolated function fileWriteString(string path, string content) returns error? = external;

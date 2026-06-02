@@ -18,6 +18,7 @@ package native
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"ballerina-lang-go/runtime"
@@ -68,9 +69,39 @@ func printExtern(rt *runtime.Runtime) extern.NativeFunc {
 	}
 }
 
+func fileReadStringExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path := args[0].(string)
+		data, err := rt.Platform().FS.ReadFile(path)
+		if err != nil {
+			return values.NewErrorWithMessage(fmt.Sprintf("failed to read file: %v", err)), nil
+		}
+		return string(data), nil
+	}
+}
+
+func fileWriteStringExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path := args[0].(string)
+		dir := filepath.Dir(path)
+		err := rt.Platform().FS.MkdirAll(dir)
+		if err != nil {
+			return values.NewErrorWithMessage(fmt.Sprintf("failed to create directories: %v", err)), nil
+		}
+		content := args[1].(string)
+		err = rt.Platform().FS.WriteFile(path, []byte(content))
+		if err != nil {
+			return values.NewErrorWithMessage(fmt.Sprintf("failed to write file: %v", err)), nil
+		}
+		return nil, nil
+	}
+}
+
 func initIOModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "println", printlnExtern(rt))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "print", printExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "fileReadString", fileReadStringExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "fileWriteString", fileWriteStringExtern(rt))
 }
 
 func init() {
