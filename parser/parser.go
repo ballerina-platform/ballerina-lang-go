@@ -14677,6 +14677,8 @@ func (b *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 }
 
 // GetSyntaxTreeFromContent parses Ballerina source from an in-memory string.
+// It is the counterpart to GetSyntaxTree for sources that have no real
+// filesystem path (e.g. stdlib .bal files embedded via embed.FS).
 // virtualPath is used only for diagnostic messages; no file I/O is performed.
 func GetSyntaxTreeFromContent(ctx *context.CompilerContext, virtualPath, content string) (*tree.SyntaxTree, error) {
 	reader := text.CharReaderFromText(content)

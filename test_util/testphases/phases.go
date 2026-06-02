@@ -76,7 +76,7 @@ type stdlibEntry struct {
 }
 
 // builtinStdlibs is the ordered list of standard-library packages baked into the
-// binary. They are compiled with no imports of their own, so order is irrelevant.
+// binary. Order matters if any entry imports another.
 var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},

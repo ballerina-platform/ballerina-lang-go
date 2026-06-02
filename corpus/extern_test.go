@@ -590,7 +590,8 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	// symbols. If dependent-fn metadata failed to survive serialization, type
 	// resolution of `int a = helper:inferred(0)` would widen to VAL (or error)
 	// and main compilation would fail.
-	// main.bal also imports ballerina/io, so compile io in env2 first.
+	// main.bal imports ballerina/io (but not http), so only io needs to be
+	// compiled into env2 before resolving main's imports.
 	publicSymbols := map[semantics.PackageIdentifier]model.ExportedSymbolSpace{
 		{OrgName: org, ModuleName: helperMod}: deserializedHelperExported,
 	}

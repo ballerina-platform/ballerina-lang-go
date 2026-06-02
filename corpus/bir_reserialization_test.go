@@ -32,22 +32,15 @@ import (
 // TestBIRSerializationRoundtrip compiles .bal files to BIR, serializes the BIR, deserializes it
 // with a fresh compiler context, executes the deserialized BIR, and validates the output matches
 // the expected integration test output.
-// birSerializationRoundtripSkipList is the BIR-roundtrip *additional* skip
+// birSerializationRoundtripSkipPrefixes is the BIR-roundtrip *additional* skip
 // list, on top of the shared test_util.UnsupportedTests baseline (which is
-// applied via isTestSkipped below). Currently empty -- every known failure
-// is already covered by the shared baseline.
-// birSerializationRoundtripSkipList skips tests whose BIR cannot be
+// applied via isTestSkipped below). It skips tests whose BIR cannot be
 // round-tripped in isolation because they depend on stdlib modules whose
 // Ballerina-level functions (e.g. http:Client.init) live in the http BIR
 // rather than being registered as native Go functions. Running only the
 // deserialized consumer BIR in a fresh env would panic on those calls.
-var birSerializationRoundtripSkipList = []string{
-	"subset8/08-network/http-client-v.bal",
-	"subset8/08-network/http-client-post-v.bal",
-	"subset8/08-network/http-client-methods-v.bal",
-	"subset8/08-network/http-client-tls-v.bal",
-	"subset8/08-network/http-client-response-headers-v.bal",
-	"subset8/08-network/http-client-response-payload-v.bal",
+var birSerializationRoundtripSkipPrefixes = []string{
+	"08-network/http-client",
 }
 
 func TestBIRSerializationRoundtrip(t *testing.T) {
@@ -67,7 +60,7 @@ func TestBIRSerializationRoundtrip(t *testing.T) {
 }
 
 func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
-	if isTestSkipped(testPair) || test_util.MatchesSkip(testPair.InputPath, birSerializationRoundtripSkipList) {
+	if isTestSkipped(testPair) || test_util.MatchesSkipSubstr(testPair.InputPath, birSerializationRoundtripSkipPrefixes) {
 		t.Skipf("Skipping BIR serialization roundtrip test for %s", testPair.InputPath)
 		return
 	}

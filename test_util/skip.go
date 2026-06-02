@@ -193,3 +193,16 @@ func MatchesSkip(path string, entries []string) bool {
 	}
 	return false
 }
+
+// MatchesSkipSubstr reports whether path contains any of the given substrings.
+// Use this for directory-level or prefix-based skip rules where all affected
+// tests share a common path segment (e.g. "08-network/http-client").
+func MatchesSkipSubstr(path string, substrings []string) bool {
+	p := filepath.ToSlash(path)
+	for _, s := range substrings {
+		if strings.Contains(p, s) {
+			return true
+		}
+	}
+	return false
+}
