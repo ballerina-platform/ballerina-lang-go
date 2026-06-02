@@ -23,7 +23,11 @@
 // implementation of PAL to the runtime.
 package pal
 
-import "time"
+import (
+	"context"
+	"io"
+	"time"
+)
 
 type (
 	Platform struct {
@@ -71,16 +75,45 @@ type (
 		MaxCount         int  // 0 uses Ballerina default of 5; only used when Enabled=true
 		AllowAuthHeaders bool // if true, forward Authorization/Proxy-Authorization on redirect
 	}
+	// PoolConfig carries connection pool settings derived from Ballerina's http:PoolConfiguration.
+	// Zero values trigger platform-chosen defaults that mirror jBallerina's pool config.
+	PoolConfig struct {
+		// MaxIdleConnsPerHost is the per-host idle connection pool size.
+		// 0 → default (100); matches jBallerina maxIdleConnections=100.
+		MaxIdleConnsPerHost int
+		// MaxIdleConns is the global idle pool size across all hosts.
+		// 0 → default (512).
+		MaxIdleConns int
+		// MaxConnsPerHost is the maximum total (active+idle) connections per host.
+		// 0 = unlimited; matches jBallerina maxActiveConnections=-1.
+		MaxConnsPerHost int
+		// IdleConnTimeout is how long idle connections are kept in the pool before eviction.
+		// 0 → default (300s); matches jBallerina minEvictableIdleTime=300.
+		IdleConnTimeout time.Duration
+		// DialTimeout is the maximum time to establish a new TCP connection.
+		// 0 → default (15s); matches jBallerina socketConfig.connectTimeOut=15.
+		DialTimeout time.Duration
+		// ResponseHeaderTimeout limits the time waiting for the first response byte.
+		// 0 = no limit (disabled by default; opt-in via poolConfig).
+		ResponseHeaderTimeout time.Duration
+		// WriteBufferSize and ReadBufferSize size the per-connection user-space I/O buffers.
+		// 0 → default (32 KB each).
+		WriteBufferSize int
+		ReadBufferSize  int
+		// DisableCompression prevents the transport from injecting Accept-Encoding: gzip.
+		DisableCompression bool
+	}
 	// ClientConfig bundles all static options for a new HTTP client instance.
 	ClientConfig struct {
 		Timeout         time.Duration
 		FollowRedirects FollowRedirects
 		HTTPVersion     string // "1.1" or "2.0"; defaults to "2.0"
 		TLS             TLSConfig
+		Pool            PoolConfig
 	}
 	// HTTPClient is an opaque handle to an HTTP client created by the platform.
 	// It is created once per Ballerina http:Client init and reused across requests.
 	HTTPClient interface {
-		Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (statusCode int, respHeaders map[string][]string, respBody []byte, err error)
+		Execute(ctx context.Context, method, url string, body io.Reader, contentLength int64, contentType string, reqHeaders map[string][]string) (statusCode int, respHeaders map[string][]string, respBody io.ReadCloser, err error)
 	}
 )

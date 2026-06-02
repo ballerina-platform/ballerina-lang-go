@@ -2,14 +2,17 @@
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License. You may obtain a copy of the
-// License at http://www.apache.org/licenses/LICENSE-2.0
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-// either express or implied. See the License for the specific
-// language governing permissions and limitations under the License.
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
 // Supported subset of ballerina/http for the Go runtime.
 // See lib/http/client-support.md for the full feature support matrix.
@@ -117,28 +120,53 @@ public type FollowRedirects record {|
     boolean allowAuthHeaders = false;
 |};
 
-// HTTP protocol version. "1.1" or "2.0" (default).
+// Provides a set of configurations for controlling the connection pooling behaviour.
+// Defaults mirror jBallerina's PoolConfiguration:
+//   maxActiveConnections=-1 (unlimited), maxIdleConnections=100, waitTime=30s.
+//
+// Fields:
+//   maxActiveConnections         - Maximum number of active connections the client pool can create
+//                                  per endpoint. -1 means unlimited.
+//   maxIdleConnections           - Maximum number of idle connections the client pool can hold
+//                                  per endpoint.
+//   waitTime                     - Maximum time (in seconds) a request will wait to acquire an
+//                                  idle connection before erroring.
+//   maxActiveStreamsPerConnection - Maximum active streams per HTTP/2 connection (HTTP/2 only).
+public type PoolConfiguration record {|
+    int maxActiveConnections = -1;
+    int maxIdleConnections = 100;
+    decimal waitTime = 30;
+    int maxActiveStreamsPerConnection = 100;
+|};
+
+// HTTP protocol version enum.
 // HTTP/1.0 is not supported — Go's HTTP client cannot send HTTP/1.0 requests.
-public type HttpVersion "1.1"|"2.0";
+public enum HttpVersion {
+    HTTP_1_1 = "1.1",
+    HTTP_2_0 = "2.0"
+}
 
 // Provides a set of configurations for controlling the behaviours when communicating with
 // a remote HTTP endpoint.
 //
-// Supported: timeout, httpVersion, followRedirects, secureSocket.
+// Supported: timeout, httpVersion, followRedirects, secureSocket, poolConfig.
 // Not supported: circuitBreaker, retryConfig, cookieConfig, cache, compression,
 //               auth, http1Settings, http2Settings, responseLimits, socketConfig,
 //               validation, laxDataBinding.
 //
 // Fields:
-//   timeout        - Max wait time in seconds before request times out (default: 30).
+//   timeout         - Max wait time in seconds before request times out (default: 30).
 //   followRedirects - Redirect handling configuration; () disables redirect following.
-//   httpVersion    - HTTP protocol version: "1.1" or "2.0" (default: "2.0").
-//   secureSocket   - TLS settings; () uses default TLS verification.
+//   httpVersion     - HTTP protocol version: HTTP_1_1 or HTTP_2_0 (default).
+//   secureSocket    - TLS settings; () uses default TLS verification.
+//   poolConfig      - Connection pool settings; () uses platform defaults
+//                     (maxIdleConnections=100, maxActiveConnections=-1, waitTime=30s).
 public type ClientConfiguration record {|
     decimal timeout = 30;
     FollowRedirects? followRedirects = ();
-    HttpVersion httpVersion = "2.0";
+    HttpVersion httpVersion = HTTP_2_0;
     ClientSecureSocket? secureSocket = ();
+    PoolConfiguration? poolConfig = ();
 |};
 
 // ── Header position ───────────────────────────────────────────────────────────
@@ -157,14 +185,48 @@ public const HeaderPosition TRAILING = "TRAILING";
 
 // ── Response ──────────────────────────────────────────────────────────────────
 
-# Represents an HTTP response received from a remote endpoint.
+# Represents an HTTP response.
 #
-# `Response` objects are created by the HTTP client after a successful request —
-# they are never constructed directly by user code. All write methods (`addHeader`,
-# `setHeader`, `setPayload`, etc.) are not supported in this implementation.
+# `Response` objects are created by the HTTP client after a successful request.
+# They can also be constructed explicitly using `new http:Response()` and populated
+# with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`,
+# and `setStatusCode` before being returned.
 public class Response {
-    # The HTTP status code of the response (e.g., 200, 404, 500).
+    # The HTTP status code (e.g., 200, 404, 500). Initialised to 200 by `init`.
     public int statusCode = 0;
+
+    # Initialises the response with status code 200 and empty headers and body.
+    public isolated function init() {
+        self.initNative();
+    }
+
+    private isolated function initNative() = external;
+
+    # Sets the response body to a plain string and Content-Type to `text/plain`.
+    #
+    # + payload - The string payload
+    public isolated function setTextPayload(string payload) = external;
+
+    # Sets the response body to a JSON value and Content-Type to `application/json`.
+    #
+    # + payload - The JSON payload
+    public isolated function setJsonPayload(json payload) = external;
+
+    # Sets the response body to a byte array and Content-Type to `application/octet-stream`.
+    #
+    # + payload - The binary payload
+    public isolated function setBinaryPayload(byte[] payload) = external;
+
+    # Sets or replaces a response header.
+    #
+    # + headerName  - The header name (case-insensitive)
+    # + headerValue - The header value
+    public isolated function setHeader(string headerName, string headerValue) = external;
+
+    # Sets the HTTP status code on this response object.
+    #
+    # + statusCode - The HTTP status code to set
+    public isolated function setStatusCode(int statusCode) = external;
 
     # Returns the response body as a plain string.
     #
@@ -213,15 +275,115 @@ public class Response {
     public isolated function getHeaderNames(HeaderPosition position = LEADING) returns string[] = external;
 }
 
+// ── Request ───────────────────────────────────────────────────────────────────
+
+# Represents an HTTP request. Used both for constructing outbound requests (client-side `forward`)
+# and for inspecting inbound requests in resource functions.
+#
+# To construct an outbound request, create a `new http:Request()`, set the `method` field,
+# and call `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, or `setHeader` to populate it.
+public class Request {
+    # The raw URI path of the request (including query string if present).
+    public string rawPath = "";
+    # The HTTP method of the request (e.g., "GET", "POST").
+    public string method = "";
+    # The HTTP protocol version of the request (e.g., "HTTP/1.1").
+    public string httpVersion = "";
+
+    # Initialises the request with an empty body and headers.
+    public isolated function init() {
+        self.initNative();
+    }
+
+    private isolated function initNative() = external;
+
+    # Sets the request body as plain text with `Content-Type: text/plain`.
+    #
+    # + payload - The text body to set
+    public isolated function setTextPayload(string payload) = external;
+
+    # Sets the request body as JSON with `Content-Type: application/json`.
+    #
+    # + payload - The JSON value to set
+    public isolated function setJsonPayload(json payload) = external;
+
+    # Sets the request body as bytes with `Content-Type: application/octet-stream`.
+    #
+    # + payload - The byte array to set
+    public isolated function setBinaryPayload(byte[] payload) = external;
+
+    # Sets a header on the request. Replaces any existing value for the header.
+    #
+    # + headerName  - The header name
+    # + headerValue - The header value
+    public isolated function setHeader(string headerName, string headerValue) = external;
+
+    # Returns the request body as a plain string.
+    #
+    # + return - The request body as a `string`, or an `error` if extraction fails
+    public isolated function getTextPayload() returns string|error = external;
+
+    # Parses the request body as JSON.
+    #
+    # + return - The parsed `json` value, or an `error` if the body is not valid JSON
+    public isolated function getJsonPayload() returns json|error = external;
+
+    # Returns the request body as a byte array.
+    #
+    # + return - The request body as `byte[]`, or an `error` if extraction fails
+    public isolated function getBinaryPayload() returns byte[]|error = external;
+
+    # Returns the first value for the specified request header.
+    #
+    # + headerName - The header name (case-insensitive)
+    # + return - The first header value, or an `error` if the header is not found
+    public isolated function getHeader(string headerName) returns string|error = external;
+
+    # Returns all values for the specified request header.
+    #
+    # + headerName - The header name (case-insensitive)
+    # + return - A `string[]` of all values for the header, or an `error` if not found
+    public isolated function getHeaders(string headerName) returns string[]|error = external;
+
+    # Checks whether the specified header is present in the request.
+    #
+    # + headerName - The header name (case-insensitive)
+    # + return - `true` if the header exists, `false` otherwise
+    public isolated function hasHeader(string headerName) returns boolean = external;
+
+    # Returns all query parameters as a map of string arrays.
+    #
+    # + return - A `map<string[]>` of query parameter names to value lists
+    public isolated function getQueryParams() returns map<string[]> = external;
+
+    # Returns the first value of a query parameter by name.
+    #
+    # + paramName - The query parameter name
+    # + return - The first value as a `string`, or `()` if the parameter is not present
+    public isolated function getQueryParamValue(string paramName) returns string? = external;
+}
+
+// Represents HTTP methods.
+public enum Method {
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    PATCH,
+    HEAD,
+    OPTIONS
+}
+
 // ── Client ────────────────────────────────────────────────────────────────────
 
 # The HTTP client provides functionality to connect to remote HTTP services and perform
 # requests using the standard HTTP methods GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS,
-# and EXECUTE.
+# EXECUTE, and FORWARD.
 #
-# **Supported methods:** `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `execute`.
+# **Supported methods:** `get`, `post`, `put`, `patch`, `delete`, `head`, `options`,
+# `execute`, `forward`.
 #
-# **Not supported:** `forward`, `submit`/`getResponse`, HTTP/2 server push methods
+# **Not supported:** `submit`/`getResponse`, HTTP/2 server push methods
 # (`hasPromise`, `getNextPromise`, etc.), and resource function syntax (`client->/path.get(...)`).
 #
 # **Message body:** The `message` parameter accepts `json`, which in Ballerina includes
@@ -241,8 +403,8 @@ public class Response {
 public isolated client class Client {
 
     # Gets invoked to initialize the `client`. During initialization, the configurations
-    # provided through the `config` record control timeout, TLS, HTTP version, and redirect
-    # behaviour.
+    # provided through the `config` record control timeout, TLS, HTTP version, redirect
+    # behaviour, and connection pooling.
     #
     # + url - The base URL of the target service
     # + config - The configurations to be used when initializing the `client`.
@@ -328,4 +490,13 @@ public isolated client class Client {
     # + return - The `http:Response` or an `error` if the request fails
     remote isolated function execute(string httpVerb, string path, json message,
             map<string|string[]>? headers = (), string? mediaType = ()) returns Response|error = external;
+
+    # Forwards the inbound `Request` to the specified path, preserving the original HTTP method,
+    # headers, and body. Useful for proxy and gateway patterns where the incoming request must be
+    # relayed to an upstream service without modification.
+    #
+    # + path    - The request path (appended to the base URL)
+    # + request - The inbound `http:Request` whose method, headers, and body are forwarded
+    # + return  - The `http:Response` from the upstream service, or an `error` if the request fails
+    remote isolated function forward(string path, Request request) returns Response|error = external;
 }

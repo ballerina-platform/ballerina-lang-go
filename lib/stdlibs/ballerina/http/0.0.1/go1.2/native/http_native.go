@@ -17,8 +17,13 @@
 package native
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,12 +50,42 @@ const (
 	moduleName = "http"
 )
 
+// hopByHopHeaders is the set of headers that must not be forwarded by a proxy per
+// RFC 7230 §6.1 and RFC 2616 §13.5.1. Keys are lowercase canonical form.
+var hopByHopHeaders = map[string]struct{}{
+	"connection":          {},
+	"keep-alive":          {},
+	"proxy-authenticate":  {},
+	"proxy-authorization": {},
+	"proxy-connection":    {},
+	"te":                  {},
+	"trailer":             {},
+	"transfer-encoding":   {},
+	"upgrade":             {},
+}
+
+// removeHopByHopHeaders deletes hop-by-hop entries from h in place.
+// It also honours the Connection header's own token list per RFC 7230 §6.1.
+func removeHopByHopHeaders(h map[string][]string) {
+	if connVals, ok := h["connection"]; ok {
+		for _, f := range connVals {
+			for _, tok := range strings.Split(f, ",") {
+				delete(h, strings.ToLower(strings.TrimSpace(tok)))
+			}
+		}
+	}
+	for k := range h {
+		if _, skip := hopByHopHeaders[strings.ToLower(k)]; skip {
+			delete(h, k)
+		}
+	}
+}
+
 func init() {
 	runtime.RegisterModuleInitializer(initHttpModule)
 }
 
 // httpTypes holds the lazily-built semtypes used by the http runtime.
-// All entries are computed once on first use (so concurrent reads shouldn't be a problem);
 type httpTypes struct {
 	byteArrTy  semtypes.SemType
 	strArrTy   semtypes.SemType
@@ -58,31 +93,154 @@ type httpTypes struct {
 	jsonMapTy  semtypes.SemType
 }
 
-// newMappingValue builds a fresh open `map<anydata|error>` value.
+// 8 KB matches Netty's HttpObjectDecoder.maxChunkSize used by jBallerina's transport.
+// Bodies that fit in one chunk are buffered eagerly to skip the holder cost.
+const eagerBufferThreshold = 8192
+
+// requestBodyHolder holds an outbound (or inbound) request body.
+// lazy — stream (io.ReadCloser) has not been read yet;
+// materialized — the body has been read into buf.
+type requestBodyHolder struct {
+	once          sync.Once
+	stream        io.ReadCloser
+	buf           []byte
+	contentLength int64 // -1 if unknown; >=0 is the known byte count
+}
+
+func (h *requestBodyHolder) materialize() []byte {
+	h.once.Do(func() {
+		if h.stream != nil {
+			data, _ := io.ReadAll(h.stream)
+			_ = h.stream.Close()
+			h.stream = nil
+			h.buf = data
+		}
+		if h.buf == nil {
+			h.buf = []byte{}
+		}
+	})
+	return h.buf
+}
+
+// takeStream atomically takes ownership of the stream for zero-copy passthrough.
+// Returns the stream (and clears it) when the body has not yet been read.
+// Returns nil if already materialized; callers should fall back to materialize().
+func (h *requestBodyHolder) takeStream() io.ReadCloser {
+	var taken io.ReadCloser
+	h.once.Do(func() {
+		if h.stream != nil {
+			taken = h.stream
+			h.stream = nil
+			h.buf = []byte{}
+		}
+	})
+	return taken
+}
+
+// responseBodyHolder holds an HTTP response body.
+// streaming — stream (io.ReadCloser) is available;
+// materialized — the body has been read into buf.
+type responseBodyHolder struct {
+	once   sync.Once
+	stream io.ReadCloser
+	buf    []byte
+}
+
+func newResponseBodyHolder(stream io.ReadCloser) *responseBodyHolder {
+	if stream == nil {
+		return &responseBodyHolder{buf: []byte{}}
+	}
+	return &responseBodyHolder{stream: stream}
+}
+
+func (h *responseBodyHolder) materialize() []byte {
+	h.once.Do(func() {
+		if h.stream != nil {
+			data, _ := io.ReadAll(h.stream)
+			_ = h.stream.Close()
+			h.stream = nil
+			h.buf = data
+		}
+		if h.buf == nil {
+			h.buf = []byte{}
+		}
+	})
+	return h.buf
+}
+
+// eagerBufferResponse pre-buffers the response when Content-Length fits within
+// eagerBufferThreshold; otherwise stores the stream lazily.
+func eagerBufferResponse(respHeaders map[string][]string, bodyStream io.ReadCloser) *responseBodyHolder {
+	if bodyStream == nil {
+		return &responseBodyHolder{buf: []byte{}}
+	}
+	var cl int64 = -1
+	for k, vals := range respHeaders {
+		if strings.EqualFold(k, "content-length") && len(vals) > 0 {
+			if n, err := strconv.ParseInt(strings.TrimSpace(vals[0]), 10, 64); err == nil {
+				cl = n
+			}
+			break
+		}
+	}
+	if cl >= 0 && cl <= eagerBufferThreshold {
+		data, _ := io.ReadAll(bodyStream)
+		_ = bodyStream.Close()
+		return &responseBodyHolder{buf: data}
+	}
+	return &responseBodyHolder{stream: bodyStream}
+}
+
+// newMappingValue builds a fresh open map<anydata|error> value.
 func newMappingValue(tc semtypes.Context) *values.Map {
 	return values.NewMap(semtypes.MAPPING, semtypes.ToMappingAtomicType(tc, semtypes.MAPPING), false, nil)
 }
 
-// newListValue builds a fresh open `(anydata|error)[]` value seeded with the
-// supplied items.
+// newListValue builds a fresh open list seeded with items.
 func newListValue(tc semtypes.Context, items []values.BalValue) *values.List {
 	return values.NewList(semtypes.LIST, semtypes.ToListAtomicType(tc, semtypes.LIST), false, nil, 0, items)
 }
 
-// newTypedListValue builds a fresh list with the supplied inherent type seeded
-// with the supplied items. The atomic representation must exist; callers pass
-// concrete list types built via list defs.
+// newTypedListValue builds a typed list seeded with items.
 func newTypedListValue(tc semtypes.Context, ty semtypes.SemType, items []values.BalValue) *values.List {
 	return values.NewList(ty, semtypes.ToListAtomicType(tc, ty), false, nil, 0, items)
 }
 
+// setRequestHeader sets a single-value header on an http:Request object's $headers map.
+func setRequestHeader(self *values.Object, name, val string, tc semtypes.Context) {
+	hdrsVal, ok := self.Get("$headers")
+	var hdrs *values.Map
+	if ok {
+		hdrs, _ = hdrsVal.(*values.Map)
+	}
+	if hdrs == nil {
+		hdrs = newMappingValue(tc)
+		self.Put("$headers", hdrs)
+	}
+	hdrs.Put(tc, name, newListValue(tc, []values.BalValue{val}))
+}
+
+// goCtxOrBackground returns the Go context from an extern.Context if available,
+// otherwise returns context.Background().
+func goCtxOrBackground(_ *extern.Context) context.Context {
+	return context.Background()
+}
+
 func initHttpModule(rt *runtime.Runtime) {
 	// Register module-level constants so BIR global-variable loads of http:LEADING
-	// and http:TRAILING resolve correctly. Keys use buildGlobalVarLookupKey format:
-	// org/pkg:varName = "ballerina/http:LEADING".
+	// and http:TRAILING resolve correctly.
 	runtime.RegisterModuleGlobals(rt, httpPackageID, map[string]values.BalValue{
 		"ballerina/http:LEADING":  "LEADING",
 		"ballerina/http:TRAILING": "TRAILING",
+		"ballerina/http:HTTP_1_1": "1.1",
+		"ballerina/http:HTTP_2_0": "2.0",
+		"ballerina/http:GET":      "GET",
+		"ballerina/http:POST":     "POST",
+		"ballerina/http:PUT":      "PUT",
+		"ballerina/http:DELETE":   "DELETE",
+		"ballerina/http:PATCH":    "PATCH",
+		"ballerina/http:HEAD":     "HEAD",
+		"ballerina/http:OPTIONS":  "OPTIONS",
 	})
 
 	var (
@@ -105,40 +263,46 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 	}
 
-	msgToBody := func(tc semtypes.Context, msg values.BalValue) ([]byte, string) {
+	// msgToBody converts a Ballerina json value to (io.Reader, contentLength, contentType).
+	msgToBody := func(tc semtypes.Context, msg values.BalValue) (io.Reader, int64, string) {
 		ensureTypes()
 		switch v := msg.(type) {
 		case string:
-			return []byte(v), "text/plain"
+			b := []byte(v)
+			return bytes.NewReader(b), int64(len(b)), "text/plain"
 		case *values.List:
 			if v.Type != nil && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
-					return b, "application/octet-stream"
+					return bytes.NewReader(b), int64(len(b)), "application/octet-stream"
 				}
 			}
 			b, err := toJSONBytes(v)
 			if err != nil {
-				return nil, "json_error"
+				return nil, 0, "json_error"
 			}
-			return b, "application/json"
+			return bytes.NewReader(b), int64(len(b)), "application/json"
 		default:
 			b, err := toJSONBytes(v)
 			if err != nil {
-				return nil, "json_error"
+				return nil, 0, "json_error"
 			}
-			return b, "application/json"
+			return bytes.NewReader(b), int64(len(b)), "application/json"
 		}
 	}
+
 	execBody := func(ctx *extern.Context, verb string, args []values.BalValue) (values.BalValue, error) {
 		self := args[0].(*values.Object)
 		path := args[1].(string)
-		var body []byte
+		var bodyReader io.Reader
+		var contentLength int64
 		contentType := ""
 		if len(args) > 2 && args[2] != nil {
-			body, contentType = msgToBody(ctx.TypeCtx, args[2])
-			if body == nil && contentType == "json_error" {
+			var ct string
+			bodyReader, contentLength, ct = msgToBody(ctx.TypeCtx, args[2])
+			if bodyReader == nil && ct == "json_error" {
 				return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 			}
+			contentType = ct
 		}
 		var reqHeaders map[string][]string
 		if len(args) > 3 {
@@ -157,16 +321,15 @@ func initHttpModule(rt *runtime.Runtime) {
 		}
 		urlVal, _ := self.Get("url")
 		clientHandle, _ := self.Get("$httpClient")
-		statusCode, respHeaders, respBody, err := clientHandle.(pal.HTTPClient).Execute(verb, urlVal.(string)+path, body, contentType, reqHeaders)
+		statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+			goCtxOrBackground(ctx), verb, urlVal.(string)+path, bodyReader, contentLength, contentType, reqHeaders)
 		if err != nil {
 			return values.NewErrorWithMessage(err.Error()), nil
 		}
-		return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBody), nil
+		return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
 	}
 
-	// Remote method name uses the "$remote$" prefix (model.RemoteMethodName).
-	// The BIR gen emits `callInfo.Name = "$remote$get"` for c->get(...), which
-	// resolveObjectMethod then looks up in the object's methodKeys map.
+	// Client class def.
 	clientClassDef := &bir.BIRClassDef{
 		Name:      model.Name("Client"),
 		LookupKey: "ballerina/http:Client",
@@ -177,16 +340,17 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"init":            {FunctionLookupKey: "ballerina/http:Client.init"},
-			"initNative":      {FunctionLookupKey: "ballerina/http:Client.initNative"},
-			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
-			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
-			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
-			"$remote$options": {FunctionLookupKey: "ballerina/http:Client.$remote$options"},
-			"$remote$put":     {FunctionLookupKey: "ballerina/http:Client.$remote$put"},
-			"$remote$patch":   {FunctionLookupKey: "ballerina/http:Client.$remote$patch"},
-			"$remote$delete":  {FunctionLookupKey: "ballerina/http:Client.$remote$delete"},
-			"$remote$execute": {FunctionLookupKey: "ballerina/http:Client.$remote$execute"},
+			"init":             {FunctionLookupKey: "ballerina/http:Client.init"},
+			"initNative":       {FunctionLookupKey: "ballerina/http:Client.initNative"},
+			"$remote$get":      {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
+			"$remote$post":     {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
+			"$remote$head":     {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
+			"$remote$options":  {FunctionLookupKey: "ballerina/http:Client.$remote$options"},
+			"$remote$put":      {FunctionLookupKey: "ballerina/http:Client.$remote$put"},
+			"$remote$patch":    {FunctionLookupKey: "ballerina/http:Client.$remote$patch"},
+			"$remote$delete":   {FunctionLookupKey: "ballerina/http:Client.$remote$delete"},
+			"$remote$execute":  {FunctionLookupKey: "ballerina/http:Client.$remote$execute"},
+			"$remote$forward":  {FunctionLookupKey: "ballerina/http:Client.$remote$forward"},
 		},
 	}
 	runtime.RegisterExternClassDef(rt, clientClassDef)
@@ -205,136 +369,135 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 
 	// initNative is the extern called by the Ballerina Client.init wrapper.
-	// The Ballerina wrapper handles default-expansion of the config parameter,
-	// so args are always [self, url, config].
+	// args are always [self, url, config].
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initNative",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			url := args[1].(string)
 
 			timeout := decimal.FromInt64(30)
-			var followRedirects pal.FollowRedirects // Enabled=false by default (Ballerina spec)
+			var followRedirects pal.FollowRedirects
 			httpVersion := "2.0"
-
 			var tlsCfg pal.TLSConfig
+			var poolCfg pal.PoolConfig
+
 			if cfg, ok := args[2].(*values.Map); ok {
-					if v, ok := cfg.Get("timeout"); ok {
-						if d, ok := v.(*decimal.Decimal); ok {
-							timeout = d
-						}
+				if v, ok := cfg.Get("timeout"); ok {
+					if d, ok := v.(*decimal.Decimal); ok {
+						timeout = d
 					}
-					if v, ok := cfg.Get("followRedirects"); ok {
-						if frMap, ok := v.(*values.Map); ok {
-							if ev, ok := frMap.Get("enabled"); ok {
-								if b, ok := ev.(bool); ok {
-									followRedirects.Enabled = b
-								}
-							}
-							followRedirects.MaxCount = 5
-							if mv, ok := frMap.Get("maxCount"); ok {
-								if n, ok := mv.(int64); ok {
-									followRedirects.MaxCount = int(n)
-								}
-							}
-							if av, ok := frMap.Get("allowAuthHeaders"); ok {
-								if b, ok := av.(bool); ok {
-									followRedirects.AllowAuthHeaders = b
-								}
+				}
+				if v, ok := cfg.Get("followRedirects"); ok {
+					if frMap, ok := v.(*values.Map); ok {
+						if ev, ok := frMap.Get("enabled"); ok {
+							if b, ok := ev.(bool); ok {
+								followRedirects.Enabled = b
 							}
 						}
-					}
-					if v, ok := cfg.Get("httpVersion"); ok {
-						if s, ok := v.(string); ok {
-							httpVersion = s
+						followRedirects.MaxCount = 5
+						if mv, ok := frMap.Get("maxCount"); ok {
+							if n, ok := mv.(int64); ok {
+								followRedirects.MaxCount = int(n)
+							}
+						}
+						if av, ok := frMap.Get("allowAuthHeaders"); ok {
+							if b, ok := av.(bool); ok {
+								followRedirects.AllowAuthHeaders = b
+							}
 						}
 					}
-					if ss, ok := cfg.Get("secureSocket"); ok {
-						if ssMap, ok := ss.(*values.Map); ok {
-							if v, ok := ssMap.Get("enable"); ok {
-								if b, ok := v.(bool); ok && !b {
-									tlsCfg.InsecureSkipVerify = true
-								}
+				}
+				if v, ok := cfg.Get("httpVersion"); ok {
+					if s, ok := v.(string); ok {
+						httpVersion = s
+					}
+				}
+				if ss, ok := cfg.Get("secureSocket"); ok {
+					if ssMap, ok := ss.(*values.Map); ok {
+						if v, ok := ssMap.Get("enable"); ok {
+							if b, ok := v.(bool); ok && !b {
+								tlsCfg.InsecureSkipVerify = true
 							}
-							if v, ok := ssMap.Get("verifyHostName"); ok {
-								if b, ok := v.(bool); ok && !b {
-									tlsCfg.InsecureSkipVerify = true
-								}
+						}
+						if v, ok := ssMap.Get("verifyHostName"); ok {
+							if b, ok := v.(bool); ok && !b {
+								tlsCfg.InsecureSkipVerify = true
 							}
-							if v, ok := ssMap.Get("cert"); ok {
-								if certPath, ok := v.(string); ok && certPath != "" {
-									data, err := rt.Platform().FS.ReadFile(certPath)
-									if err != nil {
-										return values.NewErrorWithMessage("secureSocket.cert: " + err.Error()), nil
-									}
-									tlsCfg.CACertPEM = data
+						}
+						if v, ok := ssMap.Get("cert"); ok {
+							if certPath, ok := v.(string); ok && certPath != "" {
+								data, err := rt.Platform().FS.ReadFile(certPath)
+								if err != nil {
+									return values.NewErrorWithMessage("secureSocket.cert: " + err.Error()), nil
 								}
+								tlsCfg.CACertPEM = data
 							}
-							if v, ok := ssMap.Get("key"); ok {
-								if keyMap, ok := v.(*values.Map); ok {
-									if cv, ok := keyMap.Get("certFile"); ok {
-										if p, ok := cv.(string); ok && p != "" {
-											data, err := rt.Platform().FS.ReadFile(p)
-											if err != nil {
-												return values.NewErrorWithMessage("secureSocket.key.certFile: " + err.Error()), nil
-											}
-											tlsCfg.ClientCertPEM = data
+						}
+						if v, ok := ssMap.Get("key"); ok {
+							if keyMap, ok := v.(*values.Map); ok {
+								if cv, ok := keyMap.Get("certFile"); ok {
+									if p, ok := cv.(string); ok && p != "" {
+										data, err := rt.Platform().FS.ReadFile(p)
+										if err != nil {
+											return values.NewErrorWithMessage("secureSocket.key.certFile: " + err.Error()), nil
 										}
+										tlsCfg.ClientCertPEM = data
 									}
-									if kv, ok := keyMap.Get("keyFile"); ok {
-										if p, ok := kv.(string); ok && p != "" {
-											data, err := rt.Platform().FS.ReadFile(p)
-											if err != nil {
-												return values.NewErrorWithMessage("secureSocket.key.keyFile: " + err.Error()), nil
-											}
-											tlsCfg.ClientKeyPEM = data
+								}
+								if kv, ok := keyMap.Get("keyFile"); ok {
+									if p, ok := kv.(string); ok && p != "" {
+										data, err := rt.Platform().FS.ReadFile(p)
+										if err != nil {
+											return values.NewErrorWithMessage("secureSocket.key.keyFile: " + err.Error()), nil
 										}
+										tlsCfg.ClientKeyPEM = data
 									}
-									// keyPassword: accepted at compile time, ignored at runtime
+								}
+								// keyPassword: accepted at compile time, ignored at runtime
+							}
+						}
+						if v, ok := ssMap.Get("serverName"); ok {
+							if s, ok := v.(string); ok && s != "" {
+								tlsCfg.ServerName = s
+							}
+						}
+						if v, ok := ssMap.Get("shareSession"); ok {
+							if b, ok := v.(bool); ok && !b {
+								tlsCfg.DisableSessionTickets = true
+							}
+						}
+						if v, ok := ssMap.Get("handshakeTimeout"); ok {
+							if d, ok := v.(*decimal.Decimal); ok {
+								tlsCfg.HandshakeTimeout = decimalToDuration(d)
+							}
+						}
+						if v, ok := ssMap.Get("ciphers"); ok {
+							if list, ok := v.(*values.List); ok {
+								for i := 0; i < list.Len(); i++ {
+									if name, ok := list.Get(i).(string); ok {
+										tlsCfg.CipherSuiteNames = append(tlsCfg.CipherSuiteNames, name)
+									}
 								}
 							}
-							if v, ok := ssMap.Get("serverName"); ok {
-								if s, ok := v.(string); ok && s != "" {
-									tlsCfg.ServerName = s
-								}
-							}
-							if v, ok := ssMap.Get("shareSession"); ok {
-								if b, ok := v.(bool); ok && !b {
-									tlsCfg.DisableSessionTickets = true
-								}
-							}
-							if v, ok := ssMap.Get("handshakeTimeout"); ok {
-								if d, ok := v.(*decimal.Decimal); ok {
-									tlsCfg.HandshakeTimeout = decimalToDuration(d)
-								}
-							}
-							if v, ok := ssMap.Get("ciphers"); ok {
-								if list, ok := v.(*values.List); ok {
-									for i := 0; i < list.Len(); i++ {
-										if name, ok := list.Get(i).(string); ok {
-											tlsCfg.CipherSuiteNames = append(tlsCfg.CipherSuiteNames, name)
+						}
+						if v, ok := ssMap.Get("protocol"); ok {
+							if protoMap, ok := v.(*values.Map); ok {
+								if vv, ok := protoMap.Get("versions"); ok {
+									if list, ok := vv.(*values.List); ok {
+										tlsVersionMap := map[string]uint16{
+											"TLSv1.0": 0x0301,
+											"TLSv1.1": 0x0302,
+											"TLSv1.2": 0x0303,
+											"TLSv1.3": 0x0304,
 										}
-									}
-								}
-							}
-							if v, ok := ssMap.Get("protocol"); ok {
-								if protoMap, ok := v.(*values.Map); ok {
-									if vv, ok := protoMap.Get("versions"); ok {
-										if list, ok := vv.(*values.List); ok {
-											tlsVersionMap := map[string]uint16{
-												"TLSv1.0": 0x0301,
-												"TLSv1.1": 0x0302,
-												"TLSv1.2": 0x0303,
-												"TLSv1.3": 0x0304,
-											}
-											for i := 0; i < list.Len(); i++ {
-												if s, ok := list.Get(i).(string); ok {
-													if ver, found := tlsVersionMap[s]; found {
-														if tlsCfg.MinVersion == 0 || ver < tlsCfg.MinVersion {
-															tlsCfg.MinVersion = ver
-														}
-														if ver > tlsCfg.MaxVersion {
-															tlsCfg.MaxVersion = ver
-														}
+										for i := 0; i < list.Len(); i++ {
+											if s, ok := list.Get(i).(string); ok {
+												if ver, found := tlsVersionMap[s]; found {
+													if tlsCfg.MinVersion == 0 || ver < tlsCfg.MinVersion {
+														tlsCfg.MinVersion = ver
+													}
+													if ver > tlsCfg.MaxVersion {
+														tlsCfg.MaxVersion = ver
 													}
 												}
 											}
@@ -342,15 +505,41 @@ func initHttpModule(rt *runtime.Runtime) {
 									}
 								}
 							}
-							// certValidation/sessionTimeout: accepted at compile time, not supported at runtime
 						}
+						// certValidation/sessionTimeout: accepted at compile time, not supported at runtime
 					}
 				}
+				if v, ok := cfg.Get("poolConfig"); ok {
+					if pcMap, ok := v.(*values.Map); ok {
+						if mv, ok := pcMap.Get("maxIdleConnections"); ok {
+							if n, ok := mv.(int64); ok {
+								poolCfg.MaxIdleConnsPerHost = int(n)
+							}
+						}
+						if mv, ok := pcMap.Get("maxActiveConnections"); ok {
+							if n, ok := mv.(int64); ok {
+								if n < 0 {
+									poolCfg.MaxConnsPerHost = 0 // -1 means unlimited in Ballerina → 0 in Go
+								} else {
+									poolCfg.MaxConnsPerHost = int(n)
+								}
+							}
+						}
+						if mv, ok := pcMap.Get("waitTime"); ok {
+							if d, ok := mv.(*decimal.Decimal); ok {
+								poolCfg.ResponseHeaderTimeout = decimalToDuration(d)
+							}
+						}
+						// maxActiveStreamsPerConnection: HTTP/2 only; not directly mappable in Go transport
+					}
+				}
+			}
 			httpClient := rt.Platform().HTTP.NewClient(pal.ClientConfig{
 				Timeout:         decimalToDuration(timeout),
 				FollowRedirects: followRedirects,
 				HTTPVersion:     httpVersion,
 				TLS:             tlsCfg,
+				Pool:            poolCfg,
 			})
 			self.Put("url", url)
 			self.Put("timeout", timeout)
@@ -364,19 +553,18 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			path := args[1].(string)
-
 			var reqHeaders map[string][]string
 			if len(args) > 2 {
 				reqHeaders = extractHeaders(args[2])
 			}
-
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, body, err := clientHandle.(pal.HTTPClient).Execute("GET", urlVal.(string)+path, nil, "", reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+				goCtxOrBackground(ctx), "GET", urlVal.(string)+path, nil, 0, "", reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$post",
@@ -384,7 +572,6 @@ func initHttpModule(rt *runtime.Runtime) {
 			return execBody(ctx, "POST", args)
 		})
 
-	// head: body-less, like get
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$head",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
@@ -395,14 +582,14 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, body, err := clientHandle.(pal.HTTPClient).Execute("HEAD", urlVal.(string)+path, nil, "", reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+				goCtxOrBackground(ctx), "HEAD", urlVal.(string)+path, nil, 0, "", reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
 		})
 
-	// options: body-less, like get
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$options",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
@@ -413,26 +600,24 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, body, err := clientHandle.(pal.HTTPClient).Execute("OPTIONS", urlVal.(string)+path, nil, "", reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+				goCtxOrBackground(ctx), "OPTIONS", urlVal.(string)+path, nil, 0, "", reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
 		})
 
-	// put: body required, like post
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$put",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "PUT", args)
 		})
 
-	// patch: body required, like post
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$patch",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "PATCH", args)
 		})
 
-	// delete: message is optional (defaults to nil = empty body)
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$delete",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "DELETE", args)
@@ -445,15 +630,17 @@ func initHttpModule(rt *runtime.Runtime) {
 			verb := args[1].(string)
 			path := args[2].(string)
 
-			var body []byte
+			var bodyReader io.Reader
+			var contentLength int64
 			contentType := ""
 			if len(args) > 3 && args[3] != nil {
-				body, contentType = msgToBody(ctx.TypeCtx, args[3])
-				if body == nil && contentType == "json_error" {
+				var ct string
+				bodyReader, contentLength, ct = msgToBody(ctx.TypeCtx, args[3])
+				if bodyReader == nil && ct == "json_error" {
 					return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 				}
+				contentType = ct
 			}
-
 			var reqHeaders map[string][]string
 			if len(args) > 4 {
 				reqHeaders = extractHeaders(args[4])
@@ -469,21 +656,188 @@ func initHttpModule(rt *runtime.Runtime) {
 					contentType = mt
 				}
 			}
-
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, respBody, err := clientHandle.(pal.HTTPClient).Execute(verb, urlVal.(string)+path, body, contentType, reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+				goCtxOrBackground(ctx), verb, urlVal.(string)+path, bodyReader, contentLength, contentType, reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
-			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBody), nil
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
 		})
 
+	// forward: args = [self, path, request]
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$forward",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			path := args[1].(string)
+			reqObj := args[2].(*values.Object)
+
+			methodVal, _ := reqObj.Get("method")
+			method, _ := methodVal.(string)
+			if method == "" {
+				method = "GET"
+			}
+
+			// Extract headers from the request object.
+			hdrsVal, _ := reqObj.Get("$headers")
+			var reqHeaders map[string][]string
+			if hdrs, ok := hdrsVal.(*values.Map); ok {
+				reqHeaders = make(map[string][]string, hdrs.Len())
+				for _, k := range hdrs.Keys() {
+					v, _ := hdrs.Get(k)
+					if list, ok := v.(*values.List); ok {
+						strs := make([]string, list.Len())
+						for i := range list.Len() {
+							if s, ok := list.Get(i).(string); ok {
+								strs[i] = s
+							}
+						}
+						reqHeaders[k] = strs
+					}
+				}
+			}
+			// Strip hop-by-hop headers per RFC 7230 §6.1 before forwarding.
+			removeHopByHopHeaders(reqHeaders)
+
+			// Obtain the request body as an io.Reader for streaming passthrough.
+			bodyVal, _ := reqObj.Get("$body")
+			var bodyReader io.Reader
+			var forwardContentLength int64
+			if holder, ok := bodyVal.(*requestBodyHolder); ok {
+				if stream := holder.takeStream(); stream != nil {
+					bodyReader = stream
+					forwardContentLength = holder.contentLength
+				} else if buf := holder.materialize(); len(buf) > 0 {
+					bodyReader = bytes.NewReader(buf)
+					forwardContentLength = int64(len(buf))
+				}
+			}
+
+			contentType := ""
+			if cts, ok := reqHeaders["content-type"]; ok && len(cts) > 0 {
+				contentType = cts[0]
+			}
+
+			urlVal, _ := self.Get("url")
+			clientHandle, _ := self.Get("$httpClient")
+			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
+				goCtxOrBackground(ctx), method, urlVal.(string)+path, bodyReader, forwardContentLength, contentType, reqHeaders)
+			if err != nil {
+				return values.NewErrorWithMessage(err.Error()), nil
+			}
+			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, respBodyStream), nil
+		})
+
+	// Default lambdas for Response header position params (return "LEADING").
+	leading := values.BalValue("LEADING")
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.hasHeader$default$1",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeader$default$1",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeaders$default$1",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeaderNames$default$0",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+
+	// Response class def — registers `new http:Response()` constructor support.
+	responseClassDef := &bir.BIRClassDef{
+		Name:      model.Name("Response"),
+		LookupKey: "ballerina/http:Response",
+		Fields: []bir.ObjectField{
+			{Name: "statusCode", Ty: semtypes.INT},
+		},
+		VTable: map[string]*bir.BIRFunction{
+			"initNative":       {FunctionLookupKey: "ballerina/http:Response.initNative"},
+			"setTextPayload":   {FunctionLookupKey: "ballerina/http:Response.setTextPayload"},
+			"setJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.setJsonPayload"},
+			"setBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.setBinaryPayload"},
+			"setHeader":        {FunctionLookupKey: "ballerina/http:Response.setHeader"},
+			"setStatusCode":    {FunctionLookupKey: "ballerina/http:Response.setStatusCode"},
+			"getTextPayload":   {FunctionLookupKey: "ballerina/http:Response.getTextPayload"},
+			"getJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.getJsonPayload"},
+			"getBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.getBinaryPayload"},
+			"hasHeader":        {FunctionLookupKey: "ballerina/http:Response.hasHeader"},
+			"getHeader":        {FunctionLookupKey: "ballerina/http:Response.getHeader"},
+			"getHeaders":       {FunctionLookupKey: "ballerina/http:Response.getHeaders"},
+			"getHeaderNames":   {FunctionLookupKey: "ballerina/http:Response.getHeaderNames"},
+		},
+	}
+	runtime.RegisterExternClassDef(rt, responseClassDef)
+
+	// Response write methods.
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.initNative",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			self.Put("statusCode", int64(200))
+			self.Put("$headers", newMappingValue(ctx.TypeCtx))
+			self.Put("body", &responseBodyHolder{buf: []byte{}})
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setTextPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			self.Put("body", &responseBodyHolder{buf: []byte(args[1].(string))})
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setJsonPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			b, err := toJSONBytes(args[1])
+			if err != nil {
+				return values.NewErrorWithMessage("setJsonPayload: " + err.Error()), nil
+			}
+			self.Put("body", &responseBodyHolder{buf: b})
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setBinaryPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			list, ok := args[1].(*values.List)
+			if !ok {
+				return values.NewErrorWithMessage("setBinaryPayload: expected byte[]"), nil
+			}
+			b, ok := listToBytes(list)
+			if !ok {
+				return values.NewErrorWithMessage("setBinaryPayload: invalid byte value"), nil
+			}
+			self.Put("body", &responseBodyHolder{buf: b})
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			val := args[2].(string)
+			headers := responseHeaders(self)
+			headers.Put(ctx.TypeCtx, name, newListValue(ctx.TypeCtx, []values.BalValue{val}))
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setStatusCode",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			self.Put("statusCode", args[1].(int64))
+			return nil, nil
+		})
+
+	// Response read methods.
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getTextPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			body, _ := self.Get("body")
-			return body, nil
+			bodyVal, _ := self.Get("body")
+			if holder, ok := bodyVal.(*responseBodyHolder); ok {
+				return string(holder.materialize()), nil
+			}
+			// fallback: plain string (should not occur in normal flow)
+			if s, ok := bodyVal.(string); ok {
+				return s, nil
+			}
+			return "", nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getJsonPayload",
@@ -491,8 +845,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
-			body := bodyVal.(string)
-			dec := json.NewDecoder(strings.NewReader(body))
+			var body []byte
+			if holder, ok := bodyVal.(*responseBodyHolder); ok {
+				body = holder.materialize()
+			} else if s, ok := bodyVal.(string); ok {
+				body = []byte(s)
+			}
+			dec := json.NewDecoder(bytes.NewReader(body))
 			dec.UseNumber()
 			var v interface{}
 			if err := dec.Decode(&v); err != nil {
@@ -506,8 +865,12 @@ func initHttpModule(rt *runtime.Runtime) {
 			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
-			body := bodyVal.(string)
-			raw := []byte(body)
+			var raw []byte
+			if holder, ok := bodyVal.(*responseBodyHolder); ok {
+				raw = holder.materialize()
+			} else if s, ok := bodyVal.(string); ok {
+				raw = []byte(s)
+			}
 			items := make([]values.BalValue, len(raw))
 			for i, b := range raw {
 				items[i] = int64(b)
@@ -560,6 +923,214 @@ func initHttpModule(rt *runtime.Runtime) {
 				items[i] = k
 			}
 			return newTypedListValue(ctx.TypeCtx, types.strArrTy, items), nil
+		})
+
+	// Request class def.
+	requestClassDef := &bir.BIRClassDef{
+		Name:      model.Name("Request"),
+		LookupKey: "ballerina/http:Request",
+		Fields: []bir.ObjectField{
+			{Name: "rawPath", Ty: semtypes.STRING},
+			{Name: "method", Ty: semtypes.STRING},
+			{Name: "httpVersion", Ty: semtypes.STRING},
+		},
+		VTable: map[string]*bir.BIRFunction{
+			"initNative":         {FunctionLookupKey: "ballerina/http:Request.initNative"},
+			"setTextPayload":     {FunctionLookupKey: "ballerina/http:Request.setTextPayload"},
+			"setJsonPayload":     {FunctionLookupKey: "ballerina/http:Request.setJsonPayload"},
+			"setBinaryPayload":   {FunctionLookupKey: "ballerina/http:Request.setBinaryPayload"},
+			"setHeader":          {FunctionLookupKey: "ballerina/http:Request.setHeader"},
+			"getTextPayload":     {FunctionLookupKey: "ballerina/http:Request.getTextPayload"},
+			"getJsonPayload":     {FunctionLookupKey: "ballerina/http:Request.getJsonPayload"},
+			"getBinaryPayload":   {FunctionLookupKey: "ballerina/http:Request.getBinaryPayload"},
+			"getHeader":          {FunctionLookupKey: "ballerina/http:Request.getHeader"},
+			"getHeaders":         {FunctionLookupKey: "ballerina/http:Request.getHeaders"},
+			"hasHeader":          {FunctionLookupKey: "ballerina/http:Request.hasHeader"},
+			"getQueryParams":     {FunctionLookupKey: "ballerina/http:Request.getQueryParams"},
+			"getQueryParamValue": {FunctionLookupKey: "ballerina/http:Request.getQueryParamValue"},
+		},
+	}
+	runtime.RegisterExternClassDef(rt, requestClassDef)
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.initNative",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			self.Put("$body", &requestBodyHolder{buf: []byte{}})
+			self.Put("$headers", newMappingValue(ctx.TypeCtx))
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setTextPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			payload, _ := args[1].(string)
+			self.Put("$body", &requestBodyHolder{buf: []byte(payload)})
+			setRequestHeader(self, "content-type", "text/plain", ctx.TypeCtx)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setJsonPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			b, _ := json.Marshal(balToGoJSON(args[1]))
+			self.Put("$body", &requestBodyHolder{buf: b})
+			setRequestHeader(self, "content-type", "application/json", ctx.TypeCtx)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setBinaryPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			list, ok := args[1].(*values.List)
+			if !ok {
+				return nil, nil
+			}
+			raw := make([]byte, list.Len())
+			for i := range list.Len() {
+				if b, ok := list.Get(i).(int64); ok {
+					raw[i] = byte(b)
+				}
+			}
+			self.Put("$body", &requestBodyHolder{buf: raw})
+			setRequestHeader(self, "content-type", "application/octet-stream", ctx.TypeCtx)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			val, _ := args[2].(string)
+			setRequestHeader(self, name, val, ctx.TypeCtx)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getTextPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			bodyVal, _ := self.Get("$body")
+			holder, _ := bodyVal.(*requestBodyHolder)
+			if holder == nil {
+				return "", nil
+			}
+			return string(holder.materialize()), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getJsonPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			self := args[0].(*values.Object)
+			bodyVal, _ := self.Get("$body")
+			holder, _ := bodyVal.(*requestBodyHolder)
+			var body []byte
+			if holder != nil {
+				body = holder.materialize()
+			}
+			dec := json.NewDecoder(bytes.NewReader(body))
+			dec.UseNumber()
+			var v interface{}
+			if err := dec.Decode(&v); err != nil {
+				return values.NewErrorWithMessage("getJsonPayload: " + err.Error()), nil
+			}
+			return goToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getBinaryPayload",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			self := args[0].(*values.Object)
+			bodyVal, _ := self.Get("$body")
+			holder, _ := bodyVal.(*requestBodyHolder)
+			var raw []byte
+			if holder != nil {
+				raw = holder.materialize()
+			}
+			items := make([]values.BalValue, len(raw))
+			for i, b := range raw {
+				items[i] = int64(b)
+			}
+			return newTypedListValue(ctx.TypeCtx, types.byteArrTy, items), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			hdrsVal, _ := self.Get("$headers")
+			hdrs, ok := hdrsVal.(*values.Map)
+			if !ok {
+				return values.NewErrorWithMessage("header not found: " + name), nil
+			}
+			v, ok := hdrs.Get(name)
+			if !ok {
+				return values.NewErrorWithMessage("header not found: " + name), nil
+			}
+			list := v.(*values.List)
+			if list.Len() == 0 {
+				return values.NewErrorWithMessage("header has no values: " + name), nil
+			}
+			return list.Get(0), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getHeaders",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			hdrsVal, _ := self.Get("$headers")
+			hdrs, ok := hdrsVal.(*values.Map)
+			if !ok {
+				return values.NewErrorWithMessage("header not found: " + name), nil
+			}
+			v, ok := hdrs.Get(name)
+			if !ok {
+				return values.NewErrorWithMessage("header not found: " + name), nil
+			}
+			return v.(*values.List), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.hasHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			hdrsVal, _ := self.Get("$headers")
+			hdrs, ok := hdrsVal.(*values.Map)
+			if !ok {
+				return false, nil
+			}
+			_, ok = hdrs.Get(name)
+			return ok, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getQueryParams",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			self := args[0].(*values.Object)
+			queryStrVal, _ := self.Get("$queryStr")
+			queryStr, _ := queryStrVal.(string)
+			parsed, _ := url.ParseQuery(queryStr)
+			m := newMappingValue(ctx.TypeCtx)
+			for k, vals := range parsed {
+				items := make([]values.BalValue, len(vals))
+				for i, v := range vals {
+					items[i] = v
+				}
+				m.Put(ctx.TypeCtx, k, newTypedListValue(ctx.TypeCtx, types.strArrTy, items))
+			}
+			return m, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getQueryParamValue",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			paramName := args[1].(string)
+			queryStrVal, _ := self.Get("$queryStr")
+			queryStr, _ := queryStrVal.(string)
+			parsed, _ := url.ParseQuery(queryStr)
+			vals := parsed[paramName]
+			if len(vals) == 0 {
+				return nil, nil
+			}
+			return vals[0], nil
 		})
 }
 
@@ -657,7 +1228,7 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 
 // buildResponse constructs a Ballerina Response object from HTTP response data.
 // All header values are stored as *values.List under the internal "$headers" key.
-func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][]string, body []byte) *values.Object {
+func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][]string, bodyStream io.ReadCloser) *values.Object {
 	headersMap := newMappingValue(tc)
 	for k, vals := range respHeaders {
 		items := make([]values.BalValue, len(vals))
@@ -666,12 +1237,13 @@ func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][
 		}
 		headersMap.Put(tc, strings.ToLower(k), newListValue(tc, items))
 	}
+	holder := eagerBufferResponse(respHeaders, bodyStream)
 	return values.NewObject(
 		semtypes.OBJECT,
 		map[string]values.BalValue{
 			"statusCode": int64(statusCode),
 			"$headers":   headersMap,
-			"body":       string(body),
+			"body":       holder,
 		},
 		map[string]string{
 			"getTextPayload":   "ballerina/http:Response.getTextPayload",
@@ -692,8 +1264,6 @@ func responseHeaders(self *values.Object) *values.Map {
 }
 
 // listToBytes converts a Ballerina byte[] (List of int64 in 0–255) to []byte.
-// Returns (nil, false) if any element is not an integer in the byte range,
-// indicating the list should be treated as a JSON array instead.
 func listToBytes(list *values.List) ([]byte, bool) {
 	b := make([]byte, list.Len())
 	for i := range list.Len() {
@@ -707,7 +1277,6 @@ func listToBytes(list *values.List) ([]byte, bool) {
 }
 
 // balToGoJSON converts a Ballerina value to a Go value suitable for json.Marshal.
-// Handles all Ballerina json-compatible types: nil, bool, int, float, decimal, string, map, list.
 func balToGoJSON(v values.BalValue) any {
 	switch t := v.(type) {
 	case nil:
@@ -719,9 +1288,6 @@ func balToGoJSON(v values.BalValue) any {
 	case float64:
 		return t
 	case *decimal.Decimal:
-		// Emit the decimal128 string verbatim as a JSON number so the full
-		// precision of the value is preserved — going through Float64() truncates
-		// past ~17 significant digits.
 		return json.RawMessage(t.String())
 	case string:
 		return t
@@ -749,10 +1315,6 @@ func toJSONBytes(v values.BalValue) ([]byte, error) {
 }
 
 // goToBalValue converts a Go value (from json.Decoder with UseNumber) to a Ballerina BalValue.
-// JSON null → nil, bool → bool, json.Number → int64 or float64, string → string,
-// []interface{} → *values.List with json[] type, map[string]interface{} → *values.Map with map<json> type.
-// jsonListTy and jsonMapTy must be the structural json[] and map<json> semtypes so that
-// `value is json` type checks return true for the produced values.
 func goToBalValue(tc semtypes.Context, v interface{}, jsonListTy, jsonMapTy semtypes.SemType) values.BalValue {
 	switch v := v.(type) {
 	case nil:
