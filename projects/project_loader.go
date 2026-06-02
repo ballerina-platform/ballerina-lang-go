@@ -149,10 +149,18 @@ func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, worksp
 		Build()
 }
 
+// prependBundledRepositories ensures the binary-baked repositories (lang and
+// standard libraries) are searched first even when the caller supplies an
+// explicit repository list, so implicitly-available packages (e.g.
+// ballerina/io) always resolve.
+func prependBundledRepositories(repos []Repository) []Repository {
+	return append(bundledRepositories(), repos...)
+}
+
 // getDefaultRepositories returns the default repositories based on config.
 func (l *ProjectLoader) getDefaultRepositories(cfg ProjectLoadConfig) []Repository {
 	if len(cfg.Repositories) > 0 {
-		return cfg.Repositories
+		return prependBundledRepositories(cfg.Repositories)
 	}
 
 	homeFs := l.ballerinaEnvFs
@@ -184,6 +192,9 @@ func (l *ProjectLoader) getDefaultRepositories(cfg ProjectLoadConfig) []Reposito
 //     <file-path-parent>/.ballerina for single-file projects.
 func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig, buildOpts BuildOptions) *Environment {
 	repos := cfg.Repositories
+	if len(repos) > 0 {
+		repos = prependBundledRepositories(repos)
+	}
 
 	if len(repos) == 0 {
 		homeFs := l.ballerinaEnvFs

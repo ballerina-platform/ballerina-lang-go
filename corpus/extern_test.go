@@ -762,6 +762,10 @@ func compileSingleFileModule(
 	if err != nil {
 		t.Fatalf("loading lang libraries failed: %v", err)
 	}
+	publicSymbols, err = langlib.SeedPublicSymbols(cx, publicSymbols)
+	if err != nil {
+		t.Fatalf("loading lang libraries failed: %v", err)
+	}
 	importedSymbols := semantics.ResolveImports(cx, pkg, implicitImports, publicSymbols, defaultOrg)
 	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveSymbols")

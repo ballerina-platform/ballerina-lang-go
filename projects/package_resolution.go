@@ -220,24 +220,27 @@ func (r *PackageResolution) resolveTransitiveDependencies(
 	}
 }
 
-// implicitLangLibs lists the lang libraries that are migrated to bala bundles
-// and are always compiled (they are used implicitly, without an import
-// statement) so their symbols are available via the implicit-imports map.
-var implicitLangLibs = []struct{ org, name, version string }{
+// bundledLangLibs lists the lang libraries that are migrated to bala bundles
+// and are used implicitly (without an import statement), so they must be
+// compiled ahead of the root package's modules and seeded into the
+// implicit-imports map. Explicitly imported bundles (e.g. ballerina/io) are
+// not listed here; they resolve through normal dependency resolution from the
+// bundled langlibs repository.
+var bundledLangLibs = []struct{ org, name, version string }{
 	{"ballerina", "lang.int", "0.0.1"},
 	{"ballerina", "lang.error", "0.0.1"},
 }
 
-// implicitLangLibModules resolves the migrated lang libraries and returns their
+// bundledLangLibModules resolves the migrated lang libraries and returns their
 // module contexts (compiled ahead of the root package's modules). They are not
 // added to the package dependency graph. A lib is skipped when the root package
 // is that lib itself.
-func (r *PackageResolution) implicitLangLibModules() []*moduleContext {
+func (r *PackageResolution) bundledLangLibModules() []*moduleContext {
 	rootDesc := r.rootPackageContext.getDescriptor()
 	resolver := r.environment.PackageResolver()
 	options := r.environment.ResolutionOptions()
 	var modules []*moduleContext
-	for _, lib := range implicitLangLibs {
+	for _, lib := range bundledLangLibs {
 		if rootDesc.Org().Value() == lib.org && rootDesc.Name().Value() == lib.name {
 			continue
 		}
@@ -346,7 +349,8 @@ func (r *PackageResolution) resolveDependencies() {
 
 	// TODO: avoid always adding implicit lang libs here. Instead we need to think of away from front end to signal
 	// to driver which implicit imports were added.
-	sortedModuleList = append(r.implicitLangLibModules(), sortedModuleList...)
+	bundledModules := r.bundledLangLibModules()
+	sortedModuleList = append(prependImplicitLangLibs(bundledModules, sortedModuleList), sortedModuleList...)
 
 	r.topologicallySortedModuleList = sortedModuleList
 	r.diagnosticResult = NewDiagnosticResult(nil)

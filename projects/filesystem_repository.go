@@ -241,12 +241,17 @@ var _ bindableRepository = (*FileSystemRepository)(nil)
 // is the central bala directory. The RemoteRepository currently has no remote
 // source wired in, so it behaves as a cache-only read until that arrives.
 func defaultRepositories(ballerinaEnvFs fs.FS) []Repository {
-	bundledLangLibs := NewFileSystemRepository(langlibs.FS, ".")
-	bundled := NewFileSystemRepository(stdlibs.FS, ".")
 	centralCache := NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath)
+	return append(bundledRepositories(), NewRemoteRepository(centralCache))
+}
+
+// bundledRepositories returns the repositories baked into the binary: the lang
+// libraries and the standard libraries. They are always searched first so
+// these packages (e.g. ballerina/io) resolve even when callers supply their
+// own repository list.
+func bundledRepositories() []Repository {
 	return []Repository{
-		bundledLangLibs,
-		bundled,
-		NewRemoteRepository(centralCache),
+		NewFileSystemRepository(langlibs.FS, "."),
+		NewFileSystemRepository(stdlibs.FS, "."),
 	}
 }

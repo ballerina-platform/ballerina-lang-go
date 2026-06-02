@@ -23,10 +23,12 @@ package langlib
 import (
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib/langlibs"
+	"ballerina-lang-go/lib/stdlibs"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
@@ -34,10 +36,14 @@ import (
 )
 
 type langLib struct {
-	org        string
-	nameComps  []string
-	implicitID string // key in the implicit-imports map
-	balPath    string // path within langlibs.FS
+	org       string
+	nameComps []string
+	// implicitID, when set, is the key under which the lib is exposed in the
+	// implicit-imports map (used without an import statement). When empty the
+	// lib requires an explicit import and is exposed via publicSymbols instead.
+	implicitID string
+	srcFS      fs.FS  // embedded bundle filesystem the source is read from
+	balPath    string // path within srcFS
 	version    string
 }
 
@@ -46,6 +52,7 @@ var migratedLangLibs = []langLib{
 		org:        "ballerina",
 		nameComps:  []string{"lang", "int"},
 		implicitID: "lang.int",
+		srcFS:      langlibs.FS,
 		balPath:    "ballerina/lang.int/0.0.1/any/lang.int.bal",
 		version:    "0.0.1",
 	},
@@ -53,8 +60,16 @@ var migratedLangLibs = []langLib{
 		org:        "ballerina",
 		nameComps:  []string{"lang", "error"},
 		implicitID: "lang.error",
+		srcFS:      langlibs.FS,
 		balPath:    "ballerina/lang.error/0.0.1/any/lang.error.bal",
 		version:    "0.0.1",
+	},
+	{
+		org:       "ballerina",
+		nameComps: []string{"io"},
+		srcFS:     stdlibs.FS,
+		balPath:   "ballerina/io/0.0.1/any/io.bal",
+		version:   "0.0.1",
 	},
 }
 
@@ -66,6 +81,9 @@ var migratedLangLibs = []langLib{
 func ImplicitImports(cx *context.CompilerContext) (map[string]model.ExportedSymbolSpace, error) {
 	result := semantics.GetImplicitImports(cx)
 	for _, lib := range migratedLangLibs {
+		if lib.implicitID == "" {
+			continue
+		}
 		space, err := compileLangLib(cx, lib)
 		if err != nil {
 			return nil, err
@@ -75,10 +93,35 @@ func ImplicitImports(cx *context.CompilerContext) (map[string]model.ExportedSymb
 	return result, nil
 }
 
+// SeedPublicSymbols compiles the migrated lang libraries that require an
+// explicit import (e.g. ballerina/io) into cx and registers them in
+// publicSymbols keyed by package identifier, so a hand-rolled driver resolves
+// them like any other dependency when the user code imports them. A nil
+// publicSymbols map is initialized and returned.
+func SeedPublicSymbols(cx *context.CompilerContext, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) (map[semantics.PackageIdentifier]model.ExportedSymbolSpace, error) {
+	if publicSymbols == nil {
+		publicSymbols = make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
+	}
+	for _, lib := range migratedLangLibs {
+		if lib.implicitID != "" {
+			continue
+		}
+		space, err := compileLangLib(cx, lib)
+		if err != nil {
+			return nil, err
+		}
+		publicSymbols[semantics.PackageIdentifier{
+			OrgName:    lib.org,
+			ModuleName: strings.Join(lib.nameComps, "."),
+		}] = space
+	}
+	return publicSymbols, nil
+}
+
 // compileLangLib compiles a single bundled lang library's source into cx and
 // returns its exported symbol space.
 func compileLangLib(cx *context.CompilerContext, lib langLib) (model.ExportedSymbolSpace, error) {
-	content, err := fs.ReadFile(langlibs.FS, lib.balPath)
+	content, err := fs.ReadFile(lib.srcFS, lib.balPath)
 	if err != nil {
 		return model.ExportedSymbolSpace{}, fmt.Errorf("langlib: read %s: %w", lib.balPath, err)
 	}

@@ -77,9 +77,8 @@ type stdlibEntry struct {
 }
 
 // builtinStdlibs is the ordered list of standard-library packages baked into the
-// binary. Order matters if any entry imports another.
+// binary that are still seeded manually for hand-rolled compile drivers.
 var builtinStdlibs = []stdlibEntry{
-	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
 }
 
@@ -168,8 +167,8 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 		return result, nil
 	}
 
-	// Pre-compile the embedded standard-library packages so that imports like
-	// ballerina/io and ballerina/http resolve correctly during symbol resolution.
+	// Pre-compile embedded standard-library packages still needed by hand-rolled
+	// corpus drivers.
 	stdlibSymbols := loadBuiltinPublicSymbols(env)
 
 	// Phase 3: Symbol Resolution
@@ -177,7 +176,11 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 	if err != nil {
 		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
 	}
-	importedSymbols := semantics.ResolveImports(cx, result.Package, implicitImports, stdlibSymbols, "")
+	publicSymbols, err := langlib.SeedPublicSymbols(cx, stdlibSymbols)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	importedSymbols := semantics.ResolveImports(cx, result.Package, implicitImports, publicSymbols, "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil
