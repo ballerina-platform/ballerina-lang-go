@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 
+	"ballerina-lang-go/lib/langlibs"
 	"ballerina-lang-go/lib/stdlibs"
 )
 
@@ -240,9 +241,11 @@ var _ bindableRepository = (*FileSystemRepository)(nil)
 // is the central bala directory. The RemoteRepository currently has no remote
 // source wired in, so it behaves as a cache-only read until that arrives.
 func defaultRepositories(ballerinaEnvFs fs.FS) []Repository {
+	bundledLangLibs := NewFileSystemRepository(langlibs.FS, ".")
 	bundled := NewFileSystemRepository(stdlibs.FS, ".")
 	centralCache := NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath)
 	return []Repository{
+		bundledLangLibs,
 		bundled,
 		NewRemoteRepository(centralCache),
 	}

@@ -31,6 +31,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/test_util/langlib"
 	"ballerina-lang-go/tools/text"
 )
 
@@ -143,9 +144,10 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 
 	// Register source file with DiagnosticEnv
 	content, err := os.ReadFile(inputPath)
-	if err == nil {
-		cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", inputPath, err)
 	}
+	cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
 
 	// Phase 1: Parse
 	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, string(content))
@@ -171,7 +173,11 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 	stdlibSymbols := loadBuiltinPublicSymbols(env)
 
 	// Phase 3: Symbol Resolution
-	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), stdlibSymbols, "")
+	implicitImports, err := langlib.ImplicitImports(cx)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	importedSymbols := semantics.ResolveImports(cx, result.Package, implicitImports, stdlibSymbols, "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil
