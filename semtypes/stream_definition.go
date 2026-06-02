@@ -18,17 +18,17 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-// Represent stream type desc.
+// StreamDefinition represents a stream<T, C> type descriptor.
 //
 // @since 2201.12.0
-type streamDefinition struct {
+type StreamDefinition struct {
 	listDefinition ListDefinition
 }
 
-var _ Definition = &streamDefinition{}
+var _ Definition = &StreamDefinition{}
 
-func newStreamDefinition() streamDefinition {
-	this := streamDefinition{}
+func NewStreamDefinition() StreamDefinition {
+	this := StreamDefinition{}
 	this.listDefinition = NewListDefinition()
 	return this
 }
@@ -38,11 +38,11 @@ func streamContaining(tupleType SemType) SemType {
 	return createBasicSemType(BTStream, bdd)
 }
 
-func (s *streamDefinition) GetSemType(env Env) SemType {
+func (s *StreamDefinition) GetSemType(env Env) SemType {
 	return streamContaining(s.listDefinition.GetSemType(env))
 }
 
-func (s *streamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
+func (s *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
 	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
 		return STREAM
 	}

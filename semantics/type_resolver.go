@@ -2437,29 +2437,40 @@ func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSe
 }
 
 func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	cx := t.typeContext()
 	var determinedTy semtypes.SemType
-	if e.UserDefinedType != nil {
-		resolvedTy, ok := resolveBType(t, e.UserDefinedType, 0)
+	if e.TypeDescriptor != nil {
+		resolvedTy, ok := resolveBType(t, e.TypeDescriptor, 0)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
 		determinedTy = resolvedTy
 	} else {
-		// Implicit new: refine from expected type
 		if expectedType == nil {
 			t.semanticError("cannot infer type for implicit new expression", e.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		cx := t.typeContext()
-		intersection := semtypes.Intersect(expectedType, semtypes.OBJECT)
+		intersection := semtypes.Intersect(expectedType, semtypes.Union(semtypes.OBJECT, semtypes.STREAM))
 		if semtypes.IsEmpty(cx, intersection) {
-			t.semanticError("expected type is not an object type", e.GetPosition())
+			t.semanticError("expected type is not an object or stream type", e.GetPosition())
 			return nil, expressionEffect{}, false
 		}
 		determinedTy = intersection
 	}
 	setExpectedType(e, determinedTy)
 
+	switch {
+	case semtypes.IsSubtypeSimple(determinedTy, semtypes.OBJECT):
+		return resolveObjectNewExpr(t, chain, e, determinedTy)
+	case semtypes.IsSubtypeSimple(determinedTy, semtypes.STREAM):
+		return resolveStreamNewExpr(t, chain, e, determinedTy)
+	default:
+		t.semanticError("new expression target must be either an object or stream type", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+}
+
+func resolveObjectNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, determinedTy semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	cx := t.typeContext()
 	initKey := semtypes.StringConst("init")
 	initFnTy := semtypes.ObjectMemberType(cx, initKey, determinedTy)
@@ -2525,6 +2536,26 @@ func padNewExprArgTypesForDefaults(t typeResolver, objectTy semtypes.SemType, ar
 		return argTys, false
 	}
 	return padArgTypesForDefaults(t, initRef, argTys, loc), true
+}
+
+func resolveStreamNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, streamTy semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if len(e.ArgsExprs) != 1 {
+		t.semanticError("new stream expression requires exactly one argument", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	cx := t.typeContext()
+	valueTy := semtypes.StreamValueType(cx, streamTy)
+	completionTy := semtypes.StreamCompletionType(cx, streamTy)
+	if valueTy == nil || completionTy == nil {
+		t.internalError("failed to extract stream type parameters", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	implTy := semtypes.CreateStreamImplementorType(cx, valueTy, completionTy)
+	if _, _, ok := resolveActionOrExpression(t, chain, e.ArgsExprs[0], implTy); !ok {
+		return nil, expressionEffect{}, false
+	}
+	e.SetDeterminedType(streamTy)
+	return streamTy, defaultExpressionEffect(chain), true
 }
 
 func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, argTys []semtypes.SemType, objectTy semtypes.SemType) (semtypes.SemType, bool) {
@@ -4596,6 +4627,9 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	if semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.OBJECT) {
 		return resolveObjectMethodCall(t, chain, expr, methodSymbol, expectedType)
 	}
+	if semtypes.IsSubtypeSimple(recieverTy, semtypes.STREAM) {
+		return resolveStreamOperation(t, chain, expr, methodSymbol, expectedType)
+	}
 	var symbolRef model.SymbolRef
 	var pkgAlias ast.BLangIdentifier
 	switch {
@@ -4646,6 +4680,34 @@ func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvo
 		expr.SetSymbol(symbolRef)
 	}
 	return retTy, effect, ok
+}
+
+func resolveStreamOperation(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	cx := t.typeContext()
+	recieverTy := expr.Expr.GetDeterminedType()
+	valueTy := semtypes.StreamValueType(cx, recieverTy)
+	completionTy := semtypes.StreamCompletionType(cx, recieverTy)
+	if valueTy == nil || completionTy == nil {
+		t.internalError("failed to extract stream type parameters", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	var resultTy semtypes.SemType
+	switch methodSymbol.name {
+	case "next":
+		nextRecordDefn := semtypes.NewMappingDefinition()
+		nextRecord := nextRecordDefn.DefineMappingTypeWrapped(t.typeEnv(),
+			[]semtypes.Field{semtypes.FieldFrom("value", valueTy, false, false)},
+			semtypes.NEVER)
+		resultTy = semtypes.Union(nextRecord, completionTy)
+	case "close":
+		resultTy = semtypes.Union(completionTy, semtypes.NIL)
+	default:
+		t.semanticError("stream type has no operation '"+methodSymbol.name+"'", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	expr.RawSymbol = nil
+	setExpectedType(expr, resultTy)
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes.SemType, methodName string,
@@ -5458,13 +5520,37 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return semtypes.ANY, true
 		case ast.TypeKind_XML:
 			return semtypes.XML, true
-		case ast.TypeKind_STREAM, ast.TypeKind_TABLE, ast.TypeKind_FUTURE:
+		case ast.TypeKind_STREAM:
+			return semtypes.STREAM, true
+		case ast.TypeKind_TABLE, ast.TypeKind_FUTURE:
 			t.unimplemented("unsupported builtin type kind: "+string(ty.TypeKind), ty.GetPosition())
 			return nil, false
 		default:
 			t.internalError("Unexpected builtin type kind", ty.GetPosition())
 		}
 		return nil, false
+	case *ast.BLangStreamType:
+		if defn := ty.Definition; defn != nil {
+			return defn.GetSemType(t.typeEnv()), true
+		}
+		valueTy, ok := resolveTypeDataPair(t, &ty.ValueType, depth+1)
+		if !ok {
+			return nil, false
+		}
+		completionTy, ok := resolveTypeDataPair(t, &ty.CompletionType, depth+1)
+		if !ok {
+			return nil, false
+		}
+		if !semtypes.IsSubtype(t.typeContext(), completionTy, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+			t.semanticError(
+				"stream completion type must be a subtype of error?",
+				ty.CompletionType.TypeDescriptor.GetPosition(),
+			)
+			return nil, false
+		}
+		d := semtypes.NewStreamDefinition()
+		ty.Definition = &d
+		return d.Define(t.typeEnv(), valueTy, completionTy), true
 	case *ast.BLangTupleTypeNode:
 		defn := ty.Definition
 		if defn == nil {

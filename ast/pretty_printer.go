@@ -114,6 +114,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printErrorTypeNode(t)
 	case *BLangConstrainedType:
 		p.printConstrainedType(t)
+	case *BLangStreamType:
+		p.printStreamType(t)
 	case *BLangTypeDefinition:
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
@@ -1462,6 +1464,20 @@ func (p *PrettyPrinter) printMarkdownReferenceDocumentation(node *BLangMarkdownR
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
+	p.startNode()
+	p.printString("stream-type")
+	p.indentLevel++
+	if node.ValueType.TypeDescriptor != nil {
+		p.PrintInner(node.ValueType.TypeDescriptor.(BLangNode))
+	}
+	if node.CompletionType.TypeDescriptor != nil {
+		p.PrintInner(node.CompletionType.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
 	p.startNode()
 	p.printString("constrained-type")
@@ -1725,9 +1741,9 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
 	p.startNode()
 	p.printString("new")
-	if node.UserDefinedType != nil {
+	if node.TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.UserDefinedType)
+		p.PrintInner(node.TypeDescriptor)
 		p.indentLevel--
 	}
 	p.printString("(")
