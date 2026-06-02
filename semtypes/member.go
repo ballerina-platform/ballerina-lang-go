@@ -104,8 +104,8 @@ func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 	return mappingMemberTypeInner(ctx, memberMap, StringConst("kind"))
 }
 
-// objectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
-func objectMemberVisibility(ctx Context, name, ty SemType) SemType {
+// ObjectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
+func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
 	if objectTy == nil {
 		return nil

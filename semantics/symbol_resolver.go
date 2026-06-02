@@ -54,6 +54,7 @@ type symbolResolver interface {
 	GetPkgID() model.PackageID
 	GetScope() model.Scope
 	GetCtx() *context.CompilerContext
+	TypeContext() semtypes.Context
 	GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition
 }
 
@@ -70,6 +71,7 @@ type (
 
 	moduleSymbolResolver struct {
 		ctx            *context.CompilerContext
+		tyCtx          semtypes.Context
 		scope          *model.ModuleScope
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]ast.TypeDefinition
@@ -101,6 +103,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 	}
 	return &moduleSymbolResolver{
 		ctx:       ctx,
+		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
 		scope:     scope,
 		pkgID:     pkgID,
 		typeDefns: make(map[model.SymbolRef]ast.TypeDefinition),
@@ -155,6 +158,10 @@ func (ms *moduleSymbolResolver) GetCtx() *context.CompilerContext {
 	return ms.ctx
 }
 
+func (ms *moduleSymbolResolver) TypeContext() semtypes.Context {
+	return ms.tyCtx
+}
+
 func (ms *moduleSymbolResolver) nextDefaultSymbolName() string {
 	name := fmt.Sprintf("$default$%d", ms.defaultCounter)
 	ms.defaultCounter++
@@ -193,6 +200,10 @@ func (bs *blockSymbolResolver) GetCtx() *context.CompilerContext {
 	return bs.parent.GetCtx()
 }
 
+func (bs *blockSymbolResolver) TypeContext() semtypes.Context {
+	return bs.parent.TypeContext()
+}
+
 func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition {
 	return bs.parent.GetTypeDefns()
 }
@@ -221,7 +232,7 @@ func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedTyp
 			return false
 		}
 		ty := ms.ctx.GetSymbol(symRef).Type()
-		return ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.TYPEDESC)
+		return ty != nil && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
 	}
 	symRef, _, ok := ms.GetSymbol(typeName)
 	if !ok {
@@ -427,10 +438,13 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 	fnSymRef := function.Symbol()
 	fnSym := cx.GetSymbol(fnSymRef).(model.FunctionSymbol)
 	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
-	inclInfo := model.NewIncludedRecordParamInfo(len(function.RequiredParams))
+	var inclInfo *model.IncludedRecordParamInfo
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
 		if param.IsIncludedRecordParam() {
+			if inclInfo == nil {
+				inclInfo = model.NewIncludedRecordParamInfo(len(function.RequiredParams))
+			}
 			inclInfo.Set(i)
 			continue
 		}
@@ -483,74 +497,88 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// Check if this is ballerina import
+		// ballerina/lang.* bind to compiler-intrinsic symbols. io and http are
+		// also handled as intrinsics below until their bala bundles are introduced
+		// in dedicated PRs; at that point they will resolve through publicSymbols
+		// like all other ballerina/* packages.
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
 			if isIoImport(&imp) {
-				// Use alias if available, otherwise use package name
-				key := "io"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = io.GetIoSymbols(ctx)
-			} else if isLangImport(&imp, "array") {
-				key := "array"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = array.GetArraySymbols(ctx)
-			} else if isLangImport(&imp, "map") {
-				key := "map"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bMap.GetMapSymbols(ctx)
-			} else if isLangImport(&imp, "error") {
-				key := "error"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bError.GetErrorSymbols(ctx)
-			} else if isLangImport(&imp, "string") {
-				key := "string"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bString.GetStringSymbols(ctx)
-			} else if isLangImport(&imp, "value") {
-				key := "value"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bValue.GetValueSymbols(ctx)
-			} else if isHttpImport(&imp) {
-				key := "http"
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				}
-				result[key] = bHttp.GetHttpSymbols(ctx)
-			} else {
-				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+				bindIntrinsicImport(&imp, "io", io.GetIoSymbols(ctx), result)
+				continue
 			}
-		} else {
-			id := resolveImportPackageIdentifier(&imp, defaultOrg)
-			if symbols, ok := publicSymbols[id]; ok {
-				var key string
-				if imp.Alias != nil {
-					key = imp.Alias.Value
-				} else {
-					comps := imp.GetPackageName()
-					key = comps[len(comps)-1].GetValue()
-				}
-				result[key] = symbols
-			} else {
-				ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
+			if isLangImport(&imp, "array") {
+				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "map") {
+				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "error") {
+				bindIntrinsicImport(&imp, "error", bError.GetErrorSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "string") {
+				bindIntrinsicImport(&imp, "string", bString.GetStringSymbols(ctx), result)
+				continue
+			}
+			if isLangImport(&imp, "value") {
+				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
+				continue
+			}
+			if isHttpImport(&imp) {
+				bindIntrinsicImport(&imp, "http", bHttp.GetHttpSymbols(ctx), result)
+				continue
 			}
 		}
+		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
 
 	maps.Copy(result, implicitImports)
 
 	return result
+}
+
+// bindIntrinsicImport binds a compiler-intrinsic symbol space under either the
+// import's alias or the given default name.
+func bindIntrinsicImport(
+	imp *ast.BLangImportPackage,
+	defaultName string,
+	symbols model.ExportedSymbolSpace,
+	result map[string]model.ExportedSymbolSpace,
+) {
+	key := defaultName
+	if imp.Alias != nil {
+		key = imp.Alias.Value
+	}
+	result[key] = symbols
+}
+
+// resolveExternalImport looks up the import's exported symbols in publicSymbols
+// (populated as each dependency's module is compiled) and binds them to the
+// import alias or the last name component. Reports an "Unknown import" error
+// when the package was not resolved upstream.
+func resolveExternalImport(
+	ctx *context.CompilerContext,
+	imp *ast.BLangImportPackage,
+	defaultOrg string,
+	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace,
+	result map[string]model.ExportedSymbolSpace,
+) {
+	id := resolveImportPackageIdentifier(imp, defaultOrg)
+	symbols, ok := publicSymbols[id]
+	if !ok {
+		ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
+		return
+	}
+	var key string
+	if imp.Alias != nil {
+		key = imp.Alias.Value
+	} else {
+		comps := imp.GetPackageName()
+		key = comps[len(comps)-1].GetValue()
+	}
+	result[key] = symbols
 }
 
 type PackageIdentifier struct {
@@ -983,7 +1011,8 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			case *model.ClassSymbol:
 				carrier = s
 			case *model.ObjectTypeSymbol:
-				if s.Type() == nil || !semtypes.IsSubtypeSimple(s.Type(), semtypes.OBJECT) {
+				incTy := ctx.SymbolType(symRef)
+				if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.OBJECT) {
 					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 					continue
 				}
@@ -1028,8 +1057,12 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 			}
 		} else {
 			sym := ctx.GetSymbol(symRef)
-			recSym, ok := sym.(*model.RecordSymbol)
-			if !ok || recSym.Type() == nil || !semtypes.IsSubtypeSimple(recSym.Type(), semtypes.MAPPING) {
+			if _, ok := sym.(*model.RecordSymbol); !ok {
+				ctx.SemanticError("included type is not a record type", udt.GetPosition())
+				continue
+			}
+			incTy := ctx.SymbolType(symRef)
+			if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.MAPPING) {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
 			}

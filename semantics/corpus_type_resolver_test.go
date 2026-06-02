@@ -96,6 +96,9 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 		}
 	}
 
+	if inv, ok := node.(*ast.BLangInvocation); ok && ast.IsStreamOperation(inv) {
+		return v
+	}
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
 		// Skip constant symbols (kind: 1) since they're resolved during semantic analysis

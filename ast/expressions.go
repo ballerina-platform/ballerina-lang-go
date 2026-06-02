@@ -301,8 +301,9 @@ type (
 
 	BLangListConstructorExpr struct {
 		bLangExpressionBase
-		Exprs      []BLangExpression
-		AtomicType semtypes.ListAtomicType
+		Exprs         []BLangExpression
+		AtomicType    semtypes.ListAtomicType
+		SpreadMembers []bool
 	}
 
 	BLangErrorConstructorExpr struct {
@@ -348,10 +349,10 @@ type (
 
 	BLangNewExpression struct {
 		bLangExpressionBase
-		AtomicType      *semtypes.MappingAtomicType
-		ClassSymbol     model.SymbolRef
-		UserDefinedType *BLangUserDefinedType
-		ArgsExprs       []BLangExpression
+		AtomicType     *semtypes.MappingAtomicType
+		ClassSymbol    model.SymbolRef
+		TypeDescriptor BType
+		ArgsExprs      []BLangExpression
 	}
 
 	BLangXMLSequenceLiteral struct {
@@ -879,6 +880,26 @@ func (b *BLangListConstructorExpr) GetExpressions() []BLangExpression {
 	return result
 }
 
+func (b *BLangListConstructorExpr) SetSpreadMember(index int) {
+	if len(b.SpreadMembers) != len(b.Exprs) {
+		b.SpreadMembers = make([]bool, len(b.Exprs))
+	}
+	b.SpreadMembers[index] = true
+}
+
+func (b *BLangListConstructorExpr) IsSpreadMember(index int) bool {
+	return index >= 0 && index < len(b.SpreadMembers) && b.SpreadMembers[index]
+}
+
+func (b *BLangListConstructorExpr) HasSpreadMembers() bool {
+	for _, isSpread := range b.SpreadMembers {
+		if isSpread {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *BLangErrorConstructorExpr) GetPositionalArgs() []BLangExpression {
 	result := make([]BLangExpression, len(b.PositionalArgs))
 	copy(result, b.PositionalArgs)
@@ -942,6 +963,17 @@ func (b *BLangNamedArgsExpression) SetExpression(expr BLangExpression) {
 
 func (b *BLangTrapExpr) GetExpression() BLangExpression {
 	return b.Expr
+}
+
+// IsStreamOperation use to distinguish stream operations from method calls.
+func IsStreamOperation(inv interface{ Receiver() BLangExpression }) bool {
+	recv := inv.Receiver()
+	return recv != nil && semtypes.IsSubtypeSimple(recv.GetDeterminedType(), semtypes.STREAM)
+}
+
+// IsStreamNewExpression returns true when the new expression constructs a stream value.
+func IsStreamNewExpression(expr *BLangNewExpression) bool {
+	return semtypes.IsSubtypeSimple(expr.GetDeterminedType(), semtypes.STREAM)
 }
 
 func createBLangUnaryExpr(location diagnostics.Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

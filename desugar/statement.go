@@ -354,10 +354,11 @@ func visitForEach(cx *functionContext, stmt *ast.BLangForeach) desugaredNode[ast
 		rangeExpr := stmt.Collection.(*ast.BLangBinaryExpr)
 		return desugarForEachOnRange(cx, rangeExpr, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
-	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.LIST) {
+	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	if semtypes.IsSubtype(tyCtx, stmt.Collection.GetDeterminedType(), semtypes.LIST) {
 		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
-	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.MAPPING) {
+	if semtypes.IsSubtype(tyCtx, stmt.Collection.GetDeterminedType(), semtypes.MAPPING) {
 		return desugarForEachOnMap(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
 	return desugarForEachOnIterable(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
@@ -517,6 +518,7 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
+	setPositionIfMissing(inv, basePos)
 	return inv
 }
 

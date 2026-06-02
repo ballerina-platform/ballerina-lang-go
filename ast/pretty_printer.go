@@ -114,6 +114,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printErrorTypeNode(t)
 	case *BLangConstrainedType:
 		p.printConstrainedType(t)
+	case *BLangStreamType:
+		p.printStreamType(t)
 	case *BLangTypeDefinition:
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
@@ -158,6 +160,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printOnClause(t)
 	case *BLangWhereClause:
 		p.printWhereClause(t)
+	case *BLangGroupByClause:
+		p.printGroupByClause(t)
+	case *BLangGroupingKey:
+		p.printGroupingKey(t)
 	case *BLangLimitClause:
 		p.printLimitClause(t)
 	case *BLangOrderByClause:
@@ -168,6 +174,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSelectClause(t)
 	case *BLangOnConflictClause:
 		p.printOnConflictClause(t)
+	case *BLangCollectClause:
+		p.printCollectClause(t)
 	case *BLangCheckedExpr:
 		p.printCheckedExpr(t)
 	case *BLangCheckPanickedExpr:
@@ -834,6 +842,28 @@ func (p *PrettyPrinter) printWhereClause(node *BLangWhereClause) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printGroupByClause(node *BLangGroupByClause) {
+	p.startNode()
+	p.printString("group-by-clause")
+	p.indentLevel++
+	for _, groupingKey := range node.GetGroupingKeyList() {
+		p.PrintInner(groupingKey.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printGroupingKey(node *BLangGroupingKey) {
+	p.startNode()
+	p.printString("grouping-key")
+	p.indentLevel++
+	if groupingKey := node.GetGroupingKey(); groupingKey != nil {
+		p.PrintInner(groupingKey.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printLimitClause(node *BLangLimitClause) {
 	p.startNode()
 	p.printString("limit-clause")
@@ -889,6 +919,17 @@ func (p *PrettyPrinter) printOnConflictClause(node *BLangOnConflictClause) {
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printCollectClause(node *BLangCollectClause) {
+	p.startNode()
+	p.printString("collect-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()
@@ -1423,6 +1464,20 @@ func (p *PrettyPrinter) printMarkdownReferenceDocumentation(node *BLangMarkdownR
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
+	p.startNode()
+	p.printString("stream-type")
+	p.indentLevel++
+	if node.ValueType.TypeDescriptor != nil {
+		p.PrintInner(node.ValueType.TypeDescriptor.(BLangNode))
+	}
+	if node.CompletionType.TypeDescriptor != nil {
+		p.PrintInner(node.CompletionType.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
 	p.startNode()
 	p.printString("constrained-type")
@@ -1686,9 +1741,9 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
 	p.startNode()
 	p.printString("new")
-	if node.UserDefinedType != nil {
+	if node.TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.UserDefinedType)
+		p.PrintInner(node.TypeDescriptor)
 		p.indentLevel--
 	}
 	p.printString("(")

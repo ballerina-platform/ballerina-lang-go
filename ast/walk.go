@@ -611,6 +611,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangConstrainedType:
 		WalkTypeData(v, &node.Type)
 		WalkTypeData(v, &node.Constraint)
+	case *BLangStreamType:
+		WalkTypeData(v, &node.ValueType)
+		WalkTypeData(v, &node.CompletionType)
 	case *BLangTupleTypeNode:
 		for i := range node.Members {
 			Walk(v, node.Members[i].TypeDesc.(BLangNode))
@@ -772,6 +775,16 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expression.(BLangNode))
 		}
 
+	case *BLangGroupByClause:
+		for _, groupingKey := range node.GetGroupingKeyList() {
+			Walk(v, groupingKey.(BLangNode))
+		}
+
+	case *BLangGroupingKey:
+		if groupingKey := node.GetGroupingKey(); groupingKey != nil {
+			Walk(v, groupingKey.(BLangNode))
+		}
+
 	case *BLangOnClause:
 		if node.OnExpr != nil {
 			Walk(v, node.OnExpr.(BLangNode))
@@ -879,8 +892,8 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, node.Expr.(BLangNode))
 
 	case *BLangNewExpression:
-		if node.UserDefinedType != nil {
-			Walk(v, node.UserDefinedType)
+		if node.TypeDescriptor != nil {
+			Walk(v, node.TypeDescriptor)
 		}
 		for _, arg := range node.ArgsExprs {
 			Walk(v, arg.(BLangNode))

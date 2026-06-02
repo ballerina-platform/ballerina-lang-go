@@ -454,9 +454,11 @@ func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.De
 
 func (sw *symbolWriter) writeIncludedRecordParams(buf *bytes.Buffer, info *model.IncludedRecordParamInfo, paramCount int) error {
 	var included []int
-	for i := 0; i < paramCount; i++ {
-		if info.IsIncluded(i) {
-			included = append(included, i)
+	if info != nil {
+		for i := 0; i < paramCount; i++ {
+			if info.IsIncluded(i) {
+				included = append(included, i)
+			}
 		}
 	}
 	if err := write(buf, int64(len(included))); err != nil {

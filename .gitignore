@@ -35,6 +35,8 @@ go.work.sum
 corpus/**/*.json
 parser/testdata/**/*.json
 /corpus/parser/*
+# Hand-authored bala fixture data (not generated)
+!corpus/package-resolution/testdata/**/*.json
 
 # IDE specific files
 .idea/

@@ -341,14 +341,19 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 		t.Logf("Diagnostic: %s", diag.Message())
 	}
 
-	// Step 5: Verify external packages were resolved and cached during compilation
-	assert.Equal(3, env.PackageCache().Size(), "expected 3 packages in cache after compilation")
+	// Step 5: Verify external packages were resolved and cached during compilation.
+	// middlepkg declares aaaleafpkg and leafpkg as direct deps; with the main
+	// project that's 4 packages total in the cache.
+	assert.Equal(4, env.PackageCache().Size(), "expected 4 packages in cache after compilation")
 
 	cachedMiddle := env.PackageCache().Get("mockorg", "middlepkg", "1.0.0")
 	require.NotNil(cachedMiddle, "middlepkg should be cached after compilation")
 
 	cachedLeaf := env.PackageCache().Get("mockorg", "leafpkg", "1.0.0")
 	require.NotNil(cachedLeaf, "leafpkg should be cached after compilation")
+
+	cachedAaaLeaf := env.PackageCache().Get("mockorg", "aaaleafpkg", "1.0.0")
+	require.NotNil(cachedAaaLeaf, "aaaleafpkg should be cached after compilation")
 
 	// Step 6: Verify dependency graph shows both direct and transitive dependencies
 	resolution := pkg.Resolution()
@@ -374,9 +379,9 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	packageDependencyGraph := resolution.DependencyGraph()
 	require.NotNil(packageDependencyGraph)
 
-	// The graph should show: project -> middlepkg -> leafpkg
+	// The graph should show: project -> middlepkg -> {aaaleafpkg, leafpkg}
 	nodes := packageDependencyGraph.ToTopologicallySortedList()
-	assert.Len(nodes, 3, "expected 3 nodes in package dependency graph (project, middlepkg, leafpkg)")
+	assert.Len(nodes, 4, "expected 4 nodes in package dependency graph (project, middlepkg, aaaleafpkg, leafpkg)")
 }
 
 // TestPackageResolution_MultiModuleDependencies tests package resolution with multi-module
