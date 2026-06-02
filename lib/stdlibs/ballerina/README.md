@@ -15,13 +15,13 @@ in each package's support table (Supported + Partially Supported + Not Yet Suppo
 | [crypto](crypto/0.0.1/go1.2/README.md) | 26 | 1 | 5 | 81% |
 | [http](http/0.0.1/go1.2/README.md) | 24 | 2 | 46 | 33% |
 | [io](io/0.0.1/go1.2/README.md) | 14 | 1 | 11 | 54% |
-| [log](log/0.0.1/go1.2/README.md) | 8 | 1 | 15 | 33% |
+| [log](log/0.0.1/go1.2/README.md) | 7 | 2 | 15 | 29% |
 | [math.vector](math.vector/0.0.1/go1.2/README.md) | 5 | 0 | 0 | 100% |
 | [os](os/0.0.1/go1.2/README.md) | 11 | 1 | 0 | 92% |
 | [random](random/0.0.1/go1.2/README.md) | 3 | 1 | 1 | 60% |
 | [time](time/0.0.1/go1.2/README.md) | 31 | 1 | 0 | 97% |
 | [url](url/0.0.1/go1.2/README.md) | 3 | 0 | 1 | 75% |
-| **Total** | **125** | **8** | **79** | **59%** |
+| **Total** | **124** | **9** | **79** | **58%** |
 
 ## Notable Behavioural Changes
 

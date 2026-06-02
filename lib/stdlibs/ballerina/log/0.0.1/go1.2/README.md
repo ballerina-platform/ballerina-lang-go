@@ -52,7 +52,7 @@ Support Levels:
 | JSON output format | Not Yet Supported | `JSON_FORMAT` enum constant declared; switching format requires `configurable` variable support. |
 | Configurable log level | Not Yet Supported | Level is hardcoded to `INFO`; `configurable Level level` requires configurable variable support. |
 | Configurable log format | Not Yet Supported | Format is hardcoded to LOGFMT; `configurable LogFormat format` requires configurable variable support. |
-| Key-value pair annotations | Supported | KV values are restricted to `anydata`; `Valuer` function values and `PrintableRawTemplate` values are not supported. |
+| Key-value pair annotations | Partially Supported | KV values are restricted to `anydata`; `Valuer` function values and `PrintableRawTemplate` values are not supported. |
 | Per-module level overrides | Not Yet Supported | Requires `configurable table<Module>` support; tables not yet supported. |
 | Multiple output destinations | Not Yet Supported | `configurable OutputDestination[] destinations` not supported; output is always written to stderr. |
 | File output destination | Not Yet Supported | Requires `lock` statements and file I/O integration not yet implemented. |
