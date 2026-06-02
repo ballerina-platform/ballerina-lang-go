@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,6 +68,68 @@ func TestTlsMatchCN(t *testing.T) {
 // ---------------------------------------------------------------------------
 // resolveCipherSuites
 // ---------------------------------------------------------------------------
+
+// TestNewHTTPClient_HTTP2_TLS verifies that HTTPVersion "2.0" negotiates HTTP/2
+// over a TLS connection (via ALPN), not HTTP/1.1.
+func TestNewHTTPClient_HTTP2_TLS(t *testing.T) {
+	var gotProto string
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotProto = r.Proto
+		w.WriteHeader(200)
+	}))
+	server.EnableHTTP2 = true
+	server.StartTLS()
+	defer server.Close()
+
+	client := NewHTTPClient(pal.ClientConfig{
+		HTTPVersion: "2.0",
+		TLS:         pal.TLSConfig{InsecureSkipVerify: true},
+	})
+	status, _, body, err := client.Execute(context.Background(), "GET", server.URL+"/", nil, 0, "", nil)
+	if body != nil {
+		_ = body.Close()
+	}
+	if err != nil {
+		t.Fatalf("expected successful connection with HTTPVersion 2.0, got: %v", err)
+	}
+	if status != 200 {
+		t.Errorf("expected status 200, got %d", status)
+	}
+	if !strings.HasPrefix(gotProto, "HTTP/2") {
+		t.Errorf("expected HTTP/2 connection with HTTPVersion 2.0, got proto: %s", gotProto)
+	}
+}
+
+// TestNewHTTPClient_HTTP1_TLS verifies that HTTPVersion "1.1" forces HTTP/1.1
+// even when connecting to an HTTP/2-capable TLS server.
+func TestNewHTTPClient_HTTP1_TLS(t *testing.T) {
+	var gotProto string
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotProto = r.Proto
+		w.WriteHeader(200)
+	}))
+	server.EnableHTTP2 = true
+	server.StartTLS()
+	defer server.Close()
+
+	client := NewHTTPClient(pal.ClientConfig{
+		HTTPVersion: "1.1",
+		TLS:         pal.TLSConfig{InsecureSkipVerify: true},
+	})
+	status, _, body, err := client.Execute(context.Background(), "GET", server.URL+"/", nil, 0, "", nil)
+	if body != nil {
+		_ = body.Close()
+	}
+	if err != nil {
+		t.Fatalf("expected successful connection with HTTPVersion 1.1, got: %v", err)
+	}
+	if status != 200 {
+		t.Errorf("expected status 200, got %d", status)
+	}
+	if !strings.HasPrefix(gotProto, "HTTP/1") {
+		t.Errorf("expected HTTP/1.x connection with HTTPVersion 1.1, got proto: %s", gotProto)
+	}
+}
 
 func TestResolveCipherSuites_Empty(t *testing.T) {
 	result := resolveCipherSuites([]string{})

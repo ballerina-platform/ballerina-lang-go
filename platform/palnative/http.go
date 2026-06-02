@@ -141,14 +141,17 @@ func NewHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
 		ReadBufferSize:        poolDefaultInt(cfg.Pool.ReadBufferSize, 32*1024),
 		DisableCompression:    cfg.Pool.DisableCompression,
 	}
-	// Always enable HTTP/1 so default-config clients can talk to plain HTTP/1.1
-	// servers (and so ALPN can fall back to http/1.1 for HTTPS servers that
-	// don't speak h2). Add HTTP/2 + h2c on top when explicitly opted in.
 	protocols := new(http.Protocols)
-	protocols.SetHTTP1(true)
 	if cfg.HTTPVersion == "2.0" {
+		// HTTP/2 mode: enable h2 (TLS/ALPN) and h2c (cleartext prior-knowledge, RFC 7540 §3.4).
+		// SetHTTP1 is intentionally omitted so Go uses h2c prior-knowledge for http:// connections
+		// rather than falling back to HTTP/1.1. SetHTTP1 only governs unencrypted traffic,
+		// so https:// connections retain their normal ALPN h2→http/1.1 fallback.
 		protocols.SetHTTP2(true)
 		protocols.SetUnencryptedHTTP2(true)
+	} else {
+		// HTTP/1.x mode: cleartext HTTP/1 only; no h2 ALPN for https:// either.
+		protocols.SetHTTP1(true)
 	}
 	transport.Protocols = protocols
 	c := &http.Client{Timeout: cfg.Timeout, Transport: transport}
