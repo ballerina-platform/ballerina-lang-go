@@ -36,7 +36,9 @@ div(int,int) -> int|error{
     %6 ? bb2 : bb3;
   }
   bb2 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb3 {
@@ -55,13 +57,17 @@ nonZero(int) -> int|error{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %6 = ConstantLoad zero
-    %7 = newError error(%6)
-    %0 = %7;
+    PushScopeFrame 2
+    %0 = ConstantLoad zero
+    %1 = newError error(%0)
+    (1, %0) = %1;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %0 = n;
+    PushScopeFrame 0
+    (1, %0) = (1, n);
+    PopScopeFrame
     return;
   }
 }

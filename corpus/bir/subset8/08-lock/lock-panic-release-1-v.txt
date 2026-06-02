@@ -6,16 +6,19 @@ bump() -> nil{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
-    %2 = ConstantLoad 1
-    %3 = %2;
-    %1 = + counter %3;
-    counter = %1;
-    %4 = ConstantLoad boom
-    %5 = newError error(%4)
+    PushScopeFrame 5
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %0 = + counter %2;
+    counter = %0;
+    %3 = ConstantLoad boom
+    %4 = newError error(%3)
+    (1, %1) = %4;
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb2;
   }
   bb2 {
-    panic %5;
+    panic %1;
   }
   bb3 {
     return;
@@ -42,13 +45,15 @@ main() -> nil{
     lock-start "$anon/.:counter" GOTO bb5;
   }
   bb5 {
-    %8 = ConstantLoad 1
-    %9 = %8;
-    %7 = + counter %9;
-    counter = %7;
-    %10 = println(counter) -> bb6;
+    PushScopeFrame 4
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %0 = + counter %2;
+    counter = %0;
+    %3 = println(counter) -> bb6;
   }
   bb6 {
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb7;
   }
   bb7 {

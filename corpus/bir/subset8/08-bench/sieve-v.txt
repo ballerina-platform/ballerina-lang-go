@@ -39,7 +39,7 @@ findPrimes() -> [nil|boolean|int|float|decimal|string|typedesc|handle|function|r
     %10 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 16
+    PushScopeFrame 4
     %1 = (1, primes)[(1, gap)];
     %2 = ConstantLoad <nil>
     %3 = %2;
@@ -51,41 +51,45 @@ findPrimes() -> [nil|boolean|int|float|decimal|string|typedesc|handle|function|r
     return;
   }
   bb5 {
-    %5 = (1, gap);
-    %6 = (1, gap);
-    %4 = * %5 %6;
-    i = %4;
+    PushScopeFrame 8
+    %1 = (2, gap);
+    %2 = (2, gap);
+    %0 = * %1 %2;
+    i = %0;
     GOTO bb6;
   }
   bb6 {
-    %9 = i;
-    %10 = length((1, primes)) -> bb7;
+    %5 = i;
+    %6 = length((2, primes)) -> bb7;
   }
   bb7 {
-    %11 = %10;
-    %8 = < %9 %11;
-    %8 ? bb8 : bb9;
+    %7 = %6;
+    %4 = < %5 %7;
+    %4 ? bb8 : bb9;
   }
   bb8 {
     PushScopeFrame 4
     %0 = ConstantLoad false
-    (2, primes)[(1, i)] = %0;
+    (3, primes)[(1, i)] = %0;
     %2 = (1, i);
-    %3 = (2, gap);
+    %3 = (3, gap);
     %1 = + %2 %3;
     (1, i) = %1;
     PopScopeFrame
     GOTO bb6;
   }
   bb9 {
+    PopScopeFrame
     GOTO bb10;
   }
   bb10 {
-    %13 = (1, gap);
-    %14 = ConstantLoad 1
-    %15 = %14;
-    %12 = + %13 %15;
-    (1, gap) = %12;
+    PushScopeFrame 4
+    %1 = (2, gap);
+    %2 = ConstantLoad 1
+    %3 = %2;
+    %0 = + %1 %3;
+    (2, gap) = %0;
+    PopScopeFrame
     PopScopeFrame
     GOTO bb1;
   }
@@ -106,7 +110,7 @@ printMersenne([nil|boolean|int|float|decimal|string|typedesc|handle|function|reg
     %4 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 18
+    PushScopeFrame 8
     %3 = (1, i);
     %4 = ConstantLoad 1
     %5 = %4;
@@ -121,22 +125,26 @@ printMersenne([nil|boolean|int|float|decimal|string|typedesc|handle|function|reg
     return;
   }
   bb5 {
-    %9 = (1, i);
-    %10 = ConstantLoad 1
-    %11 = %10;
-    %8 = - %9 %11;
-    %12 = %8;
-    %13 = println(%12) -> bb6;
+    PushScopeFrame 6
+    %1 = (2, i);
+    %2 = ConstantLoad 1
+    %3 = %2;
+    %0 = - %1 %3;
+    %4 = %0;
+    %5 = println(%4) -> bb6;
   }
   bb6 {
+    PopScopeFrame
     GOTO bb7;
   }
   bb7 {
-    %15 = (1, i);
-    %16 = ConstantLoad 2
-    %17 = %16;
-    %14 = * %15 %17;
-    (1, i) = %14;
+    PushScopeFrame 4
+    %1 = (2, i);
+    %2 = ConstantLoad 2
+    %3 = %2;
+    %0 = * %1 %3;
+    (2, i) = %0;
+    PopScopeFrame
     PopScopeFrame
     GOTO bb1;
   }

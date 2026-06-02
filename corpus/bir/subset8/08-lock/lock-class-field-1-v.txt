@@ -8,9 +8,11 @@ class Counter {
       lock-start "$anon/.:Counter.count" GOTO bb1;
     }
     bb1 {
-      %3 = ConstantLoad count
-      %2 = self[%3];
-      %0 = %2;
+      PushScopeFrame 2
+      %1 = ConstantLoad count
+      %0 = (1, self)[%1];
+      (1, %0) = %0;
+      PopScopeFrame
       lock-end "$anon/.:Counter.count" GOTO bb2;
     }
     bb2 {
@@ -26,14 +28,16 @@ class Counter {
       lock-start "$anon/.:Counter.count" GOTO bb1;
     }
     bb1 {
-      %4 = ConstantLoad count
-      %3 = self[%4];
-      %5 = %3;
-      %6 = ConstantLoad 1
-      %7 = %6;
-      %2 = + %5 %7;
-      %8 = ConstantLoad count
-      self[%8] = %2;
+      PushScopeFrame 7
+      %2 = ConstantLoad count
+      %1 = (1, self)[%2];
+      %3 = %1;
+      %4 = ConstantLoad 1
+      %5 = %4;
+      %0 = + %3 %5;
+      %6 = ConstantLoad count
+      (1, self)[%6] = %0;
+      PopScopeFrame
       lock-end "$anon/.:Counter.count" GOTO bb2;
     }
     bb2 {

@@ -6,11 +6,13 @@ readAndBump() -> int{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
-    %2 = ConstantLoad 1
-    %3 = %2;
-    %1 = + counter %3;
-    counter = %1;
-    %0 = counter;
+    PushScopeFrame 3
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %0 = + counter %2;
+    counter = %0;
+    (1, %0) = counter;
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb2;
   }
   bb2 {

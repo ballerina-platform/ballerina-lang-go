@@ -14,11 +14,13 @@ callFoo() -> int{
     lock-start "" GOTO bb1;
   }
   bb1 {
-    %1 = foo() -> bb2;
+    PushScopeFrame 2
+    %0 = foo() -> bb2;
   }
   bb2 {
-    %2 = ConstantLoad 1
-    %0 = %2;
+    %1 = ConstantLoad 1
+    (1, %0) = %1;
+    PopScopeFrame
     lock-end "" GOTO bb3;
   }
   bb3 {

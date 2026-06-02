@@ -6,9 +6,11 @@ bumpBy(int) -> nil{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
-    %3 = amount;
-    %2 = + counter %3;
-    counter = %2;
+    PushScopeFrame 2
+    %1 = (1, amount);
+    %0 = + counter %1;
+    counter = %0;
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb2;
   }
   bb2 {
@@ -30,9 +32,11 @@ main() -> nil{
     lock-start "$anon/.:counter" GOTO bb3;
   }
   bb3 {
-    %7 = println(counter) -> bb4;
+    PushScopeFrame 1
+    %0 = println(counter) -> bb4;
   }
   bb4 {
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb5;
   }
   bb5 {

@@ -14,7 +14,9 @@ main() -> nil{
     %5 ? bb3 : bb4;
   }
   bb3 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb4 {
@@ -23,7 +25,9 @@ main() -> nil{
     %7 ? bb5 : bb6;
   }
   bb5 {
-    %0 = $desugar$1;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$1);
+    PopScopeFrame
     return;
   }
   bb6 {

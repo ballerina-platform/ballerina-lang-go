@@ -30,6 +30,7 @@ loop() -> int{
   bb2 {
     PushScopeFrame 0
     (1, %0) = (1, i);
+    PopScopeFrame
     return;
   }
   bb3 {

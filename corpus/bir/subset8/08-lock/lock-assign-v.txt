@@ -6,15 +6,17 @@ bumpBy(int) -> nil{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
-    %2 = newMap {| int... |}{}
-    f = %2;
-    %4 = ConstantLoad foo
-    f[%4] = amount;
-    %5 = ConstantLoad bar
-    f[%5] = counter;
-    %7 = amount;
-    %6 = + counter %7;
-    counter = %6;
+    PushScopeFrame 6
+    %0 = newMap {| int... |}{}
+    f = %0;
+    %2 = ConstantLoad foo
+    f[%2] = (1, amount);
+    %3 = ConstantLoad bar
+    f[%3] = counter;
+    %5 = (1, amount);
+    %4 = + counter %5;
+    counter = %4;
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb2;
   }
   bb2 {
@@ -36,9 +38,11 @@ main() -> nil{
     lock-start "$anon/.:counter" GOTO bb3;
   }
   bb3 {
-    %7 = println(counter) -> bb4;
+    PushScopeFrame 1
+    %0 = println(counter) -> bb4;
   }
   bb4 {
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb5;
   }
   bb5 {

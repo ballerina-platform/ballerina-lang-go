@@ -16,6 +16,7 @@ main() -> nil{
     PushScopeFrame 1
     %0 = ConstantLoad <nil>
     (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb4 {

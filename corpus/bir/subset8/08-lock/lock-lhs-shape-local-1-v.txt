@@ -6,16 +6,18 @@ snapshot() -> int{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
+    PushScopeFrame 8
+    %0 = ConstantLoad 0
     %1 = ConstantLoad 0
-    %2 = ConstantLoad 0
-    %3 = ConstantLoad 2
-    %4 = newArray [int...][%3]{%1, %2}
-    local = %4;
-    %6 = ConstantLoad 0
-    local[%6] = counter;
-    %8 = ConstantLoad 0
-    %7 = local[%8];
-    %0 = %7;
+    %2 = ConstantLoad 2
+    %3 = newArray [int...][%2]{%0, %1}
+    local = %3;
+    %5 = ConstantLoad 0
+    local[%5] = counter;
+    %7 = ConstantLoad 0
+    %6 = local[%7];
+    (1, %0) = %6;
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb2;
   }
   bb2 {

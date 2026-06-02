@@ -18,13 +18,15 @@ main() -> nil{
     lock-start "$anon/.:counter" GOTO bb1;
   }
   bb1 {
-    %2 = ConstantLoad 1
-    %3 = %2;
-    %1 = + counter %3;
-    counter = %1;
-    %4 = bump() -> bb2;
+    PushScopeFrame 4
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %0 = + counter %2;
+    counter = %0;
+    %3 = bump() -> bb2;
   }
   bb2 {
+    PopScopeFrame
     lock-end "$anon/.:counter" GOTO bb3;
   }
   bb3 {
