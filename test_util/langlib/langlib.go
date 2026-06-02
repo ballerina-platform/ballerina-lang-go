@@ -49,6 +49,13 @@ var migratedLangLibs = []langLib{
 		balPath:    "ballerina/lang.int/0.0.1/any/lang.int.bal",
 		version:    "0.0.1",
 	},
+	{
+		org:        "ballerina",
+		nameComps:  []string{"lang", "error"},
+		implicitID: "lang.error",
+		balPath:    "ballerina/lang.error/0.0.1/any/lang.error.bal",
+		version:    "0.0.1",
+	},
 }
 
 // ImplicitImports returns the implicit-imports map for a hand-rolled compile
