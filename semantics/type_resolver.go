@@ -2724,15 +2724,7 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 }
 
 func resolveTypedescExpr(t typeResolver, chain *binding, e *ast.BLangTypedescExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	typeDesc, ok := e.GetTypeDescriptor().(ast.BType)
-	if !ok {
-		t.internalError("typedesc expression has no type descriptor", e.GetPosition())
-		return nil, expressionEffect{}, false
-	}
-	constraint, ok := resolveBType(t, typeDesc, 0)
-	if !ok {
-		return nil, expressionEffect{}, false
-	}
+	constraint, _ := resolveBType(t, e.GetTypeDescriptor().(ast.BType), 0)
 	e.Constraint = constraint
 	ty := semtypes.TypedescContaining(t.typeEnv(), constraint)
 	if expectedType != nil && !semtypes.IsSubtype(t.typeContext(), ty, expectedType) {
@@ -3984,6 +3976,9 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 		return semtypes.SemType{}, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
+	if t.getSymbol(sym).Kind() == model.SymbolKindType {
+		ty = semtypes.TypedescContaining(t.typeEnv(), ty)
+	}
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(expr)
 	return ty, defaultExpressionEffect(chain), true

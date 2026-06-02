@@ -1726,14 +1726,10 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 	}
 
 	if sym.Kind() == model.SymbolKindType {
-		typeTy := ctx.birCx.CompilerContext.SymbolType(symRef)
-		resultTy := expr.GetDeterminedType()
-		if resultTy == nil || !semtypes.IsSubtype(ctx.birCx.typeCtx, resultTy, semtypes.TYPEDESC) {
-			resultTy = semtypes.TypedescContaining(ctx.birCx.CompilerContext.GetTypeEnv(), typeTy)
-		}
-		resultOperand := ctx.addTempVar(resultTy)
+		typeTy := ctx.function().birCx.CompilerContext.SymbolType(symRef)
+		resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 		td := &values.TypeDesc{Type: typeTy}
-		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.loc(expr.GetPosition())))
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 		return expressionEffect{
 			result: resultOperand,
 			block:  curBB,
