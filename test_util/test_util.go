@@ -208,6 +208,12 @@ func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 			ReadFile: func(path string) ([]byte, error) {
 				return os.ReadFile(path)
 			},
+			WriteFile: func(path string, data []byte) error {
+				return os.WriteFile(path, data, 0o644)
+			},
+			MkdirAll: func(path string) error {
+				return os.MkdirAll(path, 0o755)
+			},
 		},
 		HTTP: pal.HTTP{
 			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
