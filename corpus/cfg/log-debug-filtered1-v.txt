@@ -1,0 +1,10 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation log printDebug (
+        (literal filtered debug message))))
+    (expression-stmt
+      (invocation io println (
+        (literal ok))))
+  )
+)

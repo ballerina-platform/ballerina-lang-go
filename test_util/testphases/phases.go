@@ -80,9 +80,13 @@ type stdlibEntry struct {
 var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
+	{"ballerina", "log", "0.0.1"},
 	{"ballerina", "math.vector", "0.0.1"},
+	{"ballerina", "os", "0.0.1"},
+	{"ballerina", "random", "0.0.1"},
 	{"ballerina", "time", "0.0.1"},
 	{"ballerina", "url", "0.0.1"},
+	{"ballerina", "crypto", "0.0.1"},
 }
 
 // loadBuiltinPublicSymbols compiles the embedded standard-library packages into a
@@ -121,9 +125,9 @@ func loadBuiltinPublicSymbols(mainCx *context.CompilerContext) map[semantics.Pac
 			model.DEFAULT_VERSION,
 		)
 
-		// The stdlib packages have no imports of their own.
+		// Pass accumulated stdlib symbols so packages that import other stdlibs (e.g. os→io, crypto→time) resolve correctly.
 		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
-			make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), entry.org)
+			result, entry.org)
 		exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
 		if cx.HasErrors() {
 			continue
