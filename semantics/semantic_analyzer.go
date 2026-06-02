@@ -818,6 +818,10 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 				validateConstantExpr(ctx, kv.ValueExpr, onNonConst)
 			}
 		}
+	case *ast.BLangTemplateExpr:
+		for _, ins := range e.Insertions {
+			validateConstantExpr(ctx, ins, onNonConst)
+		}
 	default:
 		onNonConst(expr)
 	}

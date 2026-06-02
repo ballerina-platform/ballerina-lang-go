@@ -2428,15 +2428,38 @@ func resolveTemplateExpr(t typeResolver, chain *binding, e *ast.BLangTemplateExp
 	if len(e.Insertions) == 0 {
 		ty = semtypes.StringConst(e.Strings[0])
 	} else {
-		for _, ins := range e.Insertions {
-			if _, _, ok := resolveActionOrExpression(t, chain, ins, templateInsertionAllowedTypes); !ok {
-				return nil, expressionEffect{}, false
-			}
+		var ok bool
+		ty, ok = resolveStringTemplateType(t, chain, e)
+		if !ok {
+			return nil, expressionEffect{}, false
 		}
-		ty = semtypes.STRING
 	}
 	setExpectedType(e, ty)
 	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveStringTemplateType(t typeResolver, chain *binding, e *ast.BLangTemplateExpr) (semtypes.SemType, bool) {
+	allSingleton := true
+	var sb strings.Builder
+	sb.WriteString(e.Strings[0])
+	for i, ins := range e.Insertions {
+		insTy, _, ok := resolveActionOrExpression(t, chain, ins, templateInsertionAllowedTypes)
+		if !ok {
+			return nil, false
+		}
+		if allSingleton && semtypes.IsSubtypeSimple(insTy, semtypes.STRING) {
+			if shape := semtypes.SingleShape(insTy); !shape.IsEmpty() {
+				sb.WriteString(shape.Get().Value.(string))
+				sb.WriteString(e.Strings[i+1])
+				continue
+			}
+		}
+		allSingleton = false
+	}
+	if allSingleton {
+		return semtypes.StringConst(sb.String()), true
+	}
+	return semtypes.STRING, true
 }
 
 func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSequenceLiteral, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
