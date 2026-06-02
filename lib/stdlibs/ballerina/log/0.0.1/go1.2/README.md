@@ -8,8 +8,9 @@ This module provides structured logging for Ballerina programs. The full jBaller
 
 - Print structured log messages at four severity levels using `printDebug`, `printInfo`, `printWarn`, and `printError`.
 - Attach an optional `error` value to any log call via the `'error` named parameter.
+- Attach arbitrary key-value pair annotations to any log call using rest-record syntax (e.g. `id = 845315, path = "/api"`).
 - Level filtering at the default `INFO` level: `DEBUG` messages are silently suppressed; `INFO`, `WARN`, and `ERROR` messages are emitted.
-- Log output is written to stderr in LOGFMT format: `time=<RFC3339> level=<LEVEL> module="" message="<msg>" [error=<err>]`.
+- Log output is written to stderr in LOGFMT format: `time=<RFC3339> level=<LEVEL> module="" message="<msg>" [error=<err>] [key=value ...]`.
 
 ## Examples
 
@@ -17,14 +18,14 @@ This module provides structured logging for Ballerina programs. The full jBaller
 import ballerina/log;
 
 public function main() {
-    log:printInfo("server started");
-    log:printWarn("connection slow");
+    log:printInfo("server started", port = 8080, host = "localhost");
+    log:printWarn("connection slow", latency = 1500);
 
     error e = error("disk full");
-    log:printError("write failed", 'error = e);
+    log:printError("write failed", 'error = e, path = "/var/log");
 
     // DEBUG is silently dropped at the default INFO level
-    log:printDebug("this will not appear");
+    log:printDebug("this will not appear", id = 42);
 }
 ```
 
@@ -51,7 +52,7 @@ Support Levels:
 | JSON output format | Not Yet Supported | `JSON_FORMAT` enum constant declared; switching format requires `configurable` variable support. |
 | Configurable log level | Not Yet Supported | Level is hardcoded to `INFO`; `configurable Level level` requires configurable variable support. |
 | Configurable log format | Not Yet Supported | Format is hardcoded to LOGFMT; `configurable LogFormat format` requires configurable variable support. |
-| Key-value pair annotations | Not Yet Supported | Not yet implemented in the Ballerina source; `printInfo` and others do not yet accept `*KeyValues` rest-record parameters. |
+| Key-value pair annotations | Supported | KV values are restricted to `anydata`; `Valuer` function values and `PrintableRawTemplate` values are not supported. |
 | Per-module level overrides | Not Yet Supported | Requires `configurable table<Module>` support; tables not yet supported. |
 | Multiple output destinations | Not Yet Supported | `configurable OutputDestination[] destinations` not supported; output is always written to stderr. |
 | File output destination | Not Yet Supported | Requires `lock` statements and file I/O integration not yet implemented. |

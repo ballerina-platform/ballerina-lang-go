@@ -34,36 +34,48 @@ public enum LogFormat {
     LOGFMT = "logfmt"
 }
 
+// Key-value pairs to be included in the log record.
+// The keys `msg` and `'error` are reserved and cannot be used.
+public type KeyValues record {|
+    never msg?;
+    never 'error?;
+    anydata...;
+|};
+
 # Prints debug logs.
 #
 # + msg - The message to be logged
 # + 'error - The error to be logged
-public isolated function printDebug(string msg, error? 'error = ()) {
-    externPrintLog("DEBUG", msg, 'error);
+# + keyValues - Additional key-value pairs to be logged
+public isolated function printDebug(string msg, error? 'error = (), *KeyValues keyValues) {
+    externPrintLog("DEBUG", msg, 'error, keyValues);
 }
 
 # Prints error logs.
 #
 # + msg - The message to be logged
 # + 'error - The error to be logged
-public isolated function printError(string msg, error? 'error = ()) {
-    externPrintLog("ERROR", msg, 'error);
+# + keyValues - Additional key-value pairs to be logged
+public isolated function printError(string msg, error? 'error = (), *KeyValues keyValues) {
+    externPrintLog("ERROR", msg, 'error, keyValues);
 }
 
 # Prints info logs.
 #
 # + msg - The message to be logged
 # + 'error - The error to be logged
-public isolated function printInfo(string msg, error? 'error = ()) {
-    externPrintLog("INFO", msg, 'error);
+# + keyValues - Additional key-value pairs to be logged
+public isolated function printInfo(string msg, error? 'error = (), *KeyValues keyValues) {
+    externPrintLog("INFO", msg, 'error, keyValues);
 }
 
 # Prints warn logs.
 #
 # + msg - The message to be logged
 # + 'error - The error to be logged
-public isolated function printWarn(string msg, error? 'error = ()) {
-    externPrintLog("WARN", msg, 'error);
+# + keyValues - Additional key-value pairs to be logged
+public isolated function printWarn(string msg, error? 'error = (), *KeyValues keyValues) {
+    externPrintLog("WARN", msg, 'error, keyValues);
 }
 
-isolated function externPrintLog(string level, string msg, error? 'error) = external;
+isolated function externPrintLog(string level, string msg, error? 'error, KeyValues keyValues) = external;

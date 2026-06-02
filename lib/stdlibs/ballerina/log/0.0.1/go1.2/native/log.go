@@ -60,7 +60,8 @@ var logfmtEscaper = strings.NewReplacer(
 	`"`, `\"`,
 )
 
-func formatLogfmt(level, timeStr, msg string, errVal *values.Error) string {
+func formatLogfmt(level, timeStr, msg string, errVal *values.Error, kvMap *values.Map) string {
+	visited := make(map[uintptr]bool)
 	var b strings.Builder
 	b.WriteString("time=")
 	b.WriteString(timeStr)
@@ -73,7 +74,24 @@ func formatLogfmt(level, timeStr, msg string, errVal *values.Error) string {
 
 	if errVal != nil {
 		b.WriteString(" error=")
-		b.WriteString(errVal.String(nil))
+		b.WriteString(errVal.String(visited))
+	}
+
+	if kvMap != nil {
+		for _, k := range kvMap.Keys() {
+			if val, ok := kvMap.Get(k); ok {
+				b.WriteByte(' ')
+				b.WriteString(k)
+				b.WriteByte('=')
+				if strVal, isStr := val.(string); isStr {
+					b.WriteByte('"')
+					b.WriteString(logfmtEscaper.Replace(strVal))
+					b.WriteByte('"')
+				} else {
+					b.WriteString(values.String(val, visited))
+				}
+			}
+		}
 	}
 
 	return b.String()
@@ -94,10 +112,15 @@ func initLogModule(rt *runtime.Runtime) {
 				errVal, _ = args[2].(*values.Error)
 			}
 
+			var kvMap *values.Map
+			if args[3] != nil {
+				kvMap, _ = args[3].(*values.Map)
+			}
+
 			now := rt.Platform().Time.Now()
 			timeStr := now.Format("2006-01-02T15:04:05.000Z07:00")
 
-			output := formatLogfmt(level, timeStr, msg, errVal)
+			output := formatLogfmt(level, timeStr, msg, errVal, kvMap)
 			_, _ = rt.Platform().IO.Stderr([]byte(output + "\n"))
 
 			return nil, nil
