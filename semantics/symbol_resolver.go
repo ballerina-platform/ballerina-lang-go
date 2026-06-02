@@ -473,6 +473,7 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
+	injectOpaqueSymbols(*pkg.PackageID, moduleResolver)
 	// Type definitions are registered first so that function-symbol allocation can walk alias
 	// chains when classifying typedesc parameters (needed for dependently-typed detection).
 	for i := range pkg.TypeDefinitions {
@@ -586,6 +587,20 @@ func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol
 		return model.NewNetworkClassSymbol(name, isPublic)
 	}
 	return model.NewClassSymbol(name, isPublic)
+}
+
+// injectOpaqueSymbols adds the Go-defined symbols of a builtin lang library to
+// the package's symbol table before its AST symbols are resolved. It is a no-op
+// for non-builtin packages, where model.OpaqueSymbols returns nil.
+func injectOpaqueSymbols(pkgID model.PackageID, r *moduleSymbolResolver) {
+	pkg := model.PackageIdentifier{
+		Organization: pkgID.OrgName.Value(),
+		Package:      pkgID.PkgName.Value(),
+		Version:      pkgID.Version.Value(),
+	}
+	for _, sym := range model.OpaqueSymbols(pkg) {
+		r.AddSymbol(sym.Name(), sym)
+	}
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {

@@ -40,6 +40,7 @@ const (
 	symTagObjectType
 	symTagNetworkClass
 	symTagResourceMethod
+	symTagOpaque
 )
 
 const (
@@ -141,6 +142,12 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 }
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
+	if op, ok := sym.(model.OpaqueSymbol); ok {
+		if err := write(buf, symTagOpaque); err != nil {
+			return err
+		}
+		return write(buf, int32(op.OpaqueID()))
+	}
 	switch s := sym.(type) {
 	case *model.NetworkClassSymbol:
 		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
