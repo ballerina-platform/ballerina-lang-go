@@ -109,7 +109,7 @@ func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 func (sr *symbolReader) readSymbolSpace() *model.SymbolSpace {
 	var count int64
 	read(sr.r, &count)
-	if count == 0 {
+	if count == symbolSpaceNilSentinel {
 		return nil
 	}
 

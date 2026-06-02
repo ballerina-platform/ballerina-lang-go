@@ -121,9 +121,13 @@ func (sw *symbolWriter) writePackageIdentifier(buf *bytes.Buffer, pkg model.Pack
 	return sw.writeStringCP(buf, pkg.Version)
 }
 
+// symbolSpaceNilSentinel marks a nil space, distinguishing it from a non-nil
+// but empty space (which still carries a package identifier).
+const symbolSpaceNilSentinel = int64(-1)
+
 func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolSpace) error {
 	if space == nil {
-		return write(buf, int64(0))
+		return write(buf, symbolSpaceNilSentinel)
 	}
 
 	if err := write(buf, int64(space.Len())); err != nil {

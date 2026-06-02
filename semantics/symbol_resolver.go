@@ -31,7 +31,6 @@ import (
 	array "ballerina-lang-go/lib/array/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
-	bValue "ballerina-lang-go/lib/value/compile"
 	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
@@ -723,10 +722,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
 				continue
 			}
-			if isLangImport(&imp, "value") {
-				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
-				continue
-			}
 		}
 		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
@@ -804,7 +799,6 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
-	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
 	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }

@@ -14,24 +14,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package compile
-
-import (
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-)
-
-const PackageName = "lang.value"
-
-var ValuePackageID = model.NewPackageID(
-	model.DefaultPackageIDInterner,
-	model.Name("ballerina"),
-	[]model.Name{model.Name("lang"), model.Name("value")},
-	model.Name("0.0.1"),
-)
-
-// GetValueSymbols returns the exported symbol space for ballerina/lang.value.
-func GetValueSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
-	space := ctx.NewSymbolSpace(*ValuePackageID)
-	return model.NewExportedSymbolSpace(space, nil)
-}
+// This module currently exposes no symbols; it exists so that the lang.value
+// langlib resolves as a real bundle.
