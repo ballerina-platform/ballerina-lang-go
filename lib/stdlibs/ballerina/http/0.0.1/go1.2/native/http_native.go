@@ -18,6 +18,8 @@ package native
 
 import (
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -226,21 +228,35 @@ func goCtxOrBackground(_ *extern.Context) context.Context {
 	return context.Background()
 }
 
+// compressionModeOf reads the "$compression" field from a Client object.
+// Returns "AUTO" when the field is absent (safe default).
+func compressionModeOf(self *values.Object) string {
+	if v, ok := self.Get("$compression"); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return "AUTO"
+}
+
 func initHttpModule(rt *runtime.Runtime) {
 	// Register module-level constants so BIR global-variable loads of http:LEADING
 	// and http:TRAILING resolve correctly.
 	runtime.RegisterModuleGlobals(rt, httpPackageID, map[string]values.BalValue{
-		"ballerina/http:LEADING":  "LEADING",
-		"ballerina/http:TRAILING": "TRAILING",
-		"ballerina/http:HTTP_1_1": "1.1",
-		"ballerina/http:HTTP_2_0": "2.0",
-		"ballerina/http:GET":      "GET",
-		"ballerina/http:POST":     "POST",
-		"ballerina/http:PUT":      "PUT",
-		"ballerina/http:DELETE":   "DELETE",
-		"ballerina/http:PATCH":    "PATCH",
-		"ballerina/http:HEAD":     "HEAD",
-		"ballerina/http:OPTIONS":  "OPTIONS",
+		"ballerina/http:LEADING":             "LEADING",
+		"ballerina/http:TRAILING":            "TRAILING",
+		"ballerina/http:HTTP_1_1":            "1.1",
+		"ballerina/http:HTTP_2_0":            "2.0",
+		"ballerina/http:GET":                 "GET",
+		"ballerina/http:POST":                "POST",
+		"ballerina/http:PUT":                 "PUT",
+		"ballerina/http:DELETE":              "DELETE",
+		"ballerina/http:PATCH":               "PATCH",
+		"ballerina/http:HEAD":                "HEAD",
+		"ballerina/http:OPTIONS":             "OPTIONS",
+		"ballerina/http:COMPRESSION_AUTO":    "AUTO",
+		"ballerina/http:COMPRESSION_ALWAYS":  "ALWAYS",
+		"ballerina/http:COMPRESSION_NEVER":   "NEVER",
 	})
 
 	var (
@@ -319,6 +335,7 @@ func initHttpModule(rt *runtime.Runtime) {
 				contentType = mt
 			}
 		}
+		reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 		urlVal, _ := self.Get("url")
 		clientHandle, _ := self.Get("$httpClient")
 		statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
@@ -533,6 +550,17 @@ func initHttpModule(rt *runtime.Runtime) {
 						// maxActiveStreamsPerConnection: HTTP/2 only; not directly mappable in Go transport
 					}
 				}
+				// Always disable Go's automatic Accept-Encoding injection so we control
+				// it precisely per the compression mode (jBallerina AbstractHTTPAction logic).
+				poolCfg.DisableCompression = true
+			}
+			compressionMode := "AUTO"
+			if cfg, ok := args[2].(*values.Map); ok {
+				if v, ok := cfg.Get("compression"); ok {
+					if s, ok := v.(string); ok && s != "" {
+						compressionMode = s
+					}
+				}
 			}
 			httpClient := rt.Platform().HTTP.NewClient(pal.ClientConfig{
 				Timeout:         decimalToDuration(timeout),
@@ -545,6 +573,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			self.Put("timeout", timeout)
 			self.Put("followRedirects", nil)
 			self.Put("httpVersion", httpVersion)
+			self.Put("$compression", compressionMode)
 			self.Put("$httpClient", httpClient)
 			return nil, nil
 		})
@@ -557,6 +586,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if len(args) > 2 {
 				reqHeaders = extractHeaders(args[2])
 			}
+			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
 			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
@@ -580,6 +610,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if len(args) > 2 {
 				reqHeaders = extractHeaders(args[2])
 			}
+			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
 			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
@@ -598,6 +629,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if len(args) > 2 {
 				reqHeaders = extractHeaders(args[2])
 			}
+			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
 			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
@@ -656,6 +688,7 @@ func initHttpModule(rt *runtime.Runtime) {
 					contentType = mt
 				}
 			}
+			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
 			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
@@ -699,6 +732,8 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			// Strip hop-by-hop headers per RFC 7230 §6.1 before forwarding.
 			removeHopByHopHeaders(reqHeaders)
+			// Apply compression mode to Accept-Encoding after hop-by-hop removal.
+			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 
 			// Obtain the request body as an io.Reader for streaming passthrough.
 			bodyVal, _ := reqObj.Get("$body")
@@ -1198,6 +1233,82 @@ func decimalToDuration(d *decimal.Decimal) time.Duration {
 	return time.Duration(d.Float64() * float64(time.Second))
 }
 
+// applyCompressionHeaders mutates headers according to the Ballerina compression mode, mirroring
+// jBallerina's AbstractHTTPAction compression logic:
+//
+//   - ALWAYS: add "Accept-Encoding: deflate, gzip" if not already present.
+//   - NEVER:  remove any existing "Accept-Encoding" header.
+//   - AUTO (default): leave headers untouched — the server decides.
+func applyCompressionHeaders(mode string, headers map[string][]string) map[string][]string {
+	switch mode {
+	case "ALWAYS":
+		for k := range headers {
+			if strings.EqualFold(k, "accept-encoding") {
+				return headers // caller already set Accept-Encoding; don't override
+			}
+		}
+		if headers == nil {
+			headers = make(map[string][]string)
+		}
+		headers["accept-encoding"] = []string{"deflate, gzip"}
+	case "NEVER":
+		for k := range headers {
+			if strings.EqualFold(k, "accept-encoding") {
+				delete(headers, k)
+				break
+			}
+		}
+	}
+	return headers
+}
+
+// decompressResponseBody wraps body with a gzip or deflate reader when the server
+// returns a Content-Encoding header. The Content-Encoding entry is deleted from
+// headers so callers see the decoded body without an encoding marker, matching the
+// transparent decompression behaviour of jBallerina's Netty pipeline.
+func decompressResponseBody(headers map[string][]string, body io.ReadCloser) io.ReadCloser {
+	for k, vals := range headers {
+		if !strings.EqualFold(k, "content-encoding") || len(vals) == 0 {
+			continue
+		}
+		enc := strings.ToLower(strings.TrimSpace(vals[0]))
+		switch enc {
+		case "gzip":
+			if gr, err := gzip.NewReader(body); err == nil {
+				delete(headers, k)
+				return &gzipReadCloser{reader: gr, underlying: body}
+			}
+		case "deflate":
+			delete(headers, k)
+			return &deflateReadCloser{reader: flate.NewReader(body), underlying: body}
+		}
+		break
+	}
+	return body
+}
+
+type gzipReadCloser struct {
+	reader     *gzip.Reader
+	underlying io.ReadCloser
+}
+
+func (g *gzipReadCloser) Read(p []byte) (int, error) { return g.reader.Read(p) }
+func (g *gzipReadCloser) Close() error {
+	_ = g.reader.Close()
+	return g.underlying.Close()
+}
+
+type deflateReadCloser struct {
+	reader     io.ReadCloser
+	underlying io.ReadCloser
+}
+
+func (d *deflateReadCloser) Read(p []byte) (int, error) { return d.reader.Read(p) }
+func (d *deflateReadCloser) Close() error {
+	_ = d.reader.Close()
+	return d.underlying.Close()
+}
+
 // extractHeaders converts a Ballerina map<string|string[]>? value to Go request headers.
 func extractHeaders(arg values.BalValue) map[string][]string {
 	if arg == nil {
@@ -1228,7 +1339,10 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 
 // buildResponse constructs a Ballerina Response object from HTTP response data.
 // All header values are stored as *values.List under the internal "$headers" key.
+// Content-Encoding (gzip/deflate) is transparently decoded, mirroring jBallerina's
+// Netty pipeline behaviour; the Content-Encoding header is removed from the response.
 func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][]string, bodyStream io.ReadCloser) *values.Object {
+	bodyStream = decompressResponseBody(respHeaders, bodyStream)
 	headersMap := newMappingValue(tc)
 	for k, vals := range respHeaders {
 		items := make([]values.BalValue, len(vals))

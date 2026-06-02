@@ -23,7 +23,9 @@ State back to the user, in one sentence, exactly what will change (e.g., "Promot
 
 ## 2. Read jBallerina reference for just this surface
 
-Ask the user for the path to the corresponding jBallerina **library implementation root**, e.g. `~/github/ballerina-platform/module-ballerina-<name>/`.
+**This step is mandatory and blocking.** Do not proceed to Step 3 until the jBallerina source has been read and the behaviour is confirmed from code — not from doc comments, not from training knowledge.
+
+Ask the user for the path to the corresponding jBallerina **library implementation root**, e.g. `~/github/ballerina-platform/module-ballerina-<name>/`. If the user has not provided it, stop and ask before doing anything else.
 
 Read only the `.bal` and Java code relevant to the targeted function(s) — do not enumerate the whole library. Note:
 
@@ -31,6 +33,18 @@ Read only the `.bal` and Java code relevant to the targeted function(s) — do n
 - Error types raised, and the wording of any error messages produced by the *outer* Ballerina error (not the underlying Java cause).
 - Edge cases handled in Java (empty input, malformed input, large inputs, encoding).
 - Whether the function is `isolated`, `public`, has a default value, etc.
+
+### What to read for config fields, enums, and modes
+
+When the feature involves a configuration record, enum, or multi-mode flag (e.g. a `compression`, `httpVersion`, or `retryConfig` field), doc comments and type signatures are **insufficient** — they describe intent, not mechanics. For these cases you **must** also read the Java action or handler that consumes the config value at runtime and trace the actual code path for each enum variant or flag value. Common locations:
+
+- Action classes (e.g. `AbstractHTTPAction.java`, `HttpClientAction.java`)
+- Configuration handler/builder classes (e.g. `HttpUtil.java`, `ConnectionManager.java`)
+- Test files that assert the wire-level behaviour (e.g. header values actually sent)
+
+### Do not infer from training knowledge
+
+Do not assume you know what a jBallerina feature does from prior training. Implementations frequently differ from what documentation or naming implies. If reading the source leaves behaviour ambiguous (e.g. conflicting comments, dead code, platform-specific branches), **stop and ask the user** rather than making an assumption. A wrong assumption that ships silently is worse than a clarifying question.
 
 ## 3. Quick parity check
 

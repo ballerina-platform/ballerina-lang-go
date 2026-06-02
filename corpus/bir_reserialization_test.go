@@ -48,6 +48,7 @@ var birSerializationRoundtripSkipList = []string{
 	"subset8/08-network/http-client-tls-v.bal",
 	"subset8/08-network/http-client-response-headers-v.bal",
 	"subset8/08-network/http-client-response-payload-v.bal",
+	"subset8/08-network/http-client-compression-v.bal",
 }
 
 func TestBIRSerializationRoundtrip(t *testing.T) {

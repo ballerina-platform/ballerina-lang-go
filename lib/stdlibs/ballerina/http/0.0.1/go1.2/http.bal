@@ -146,11 +146,24 @@ public enum HttpVersion {
     HTTP_2_0 = "2.0"
 }
 
+// Compression negotiation options for the HTTP client.
+// Controls the Accept-Encoding header on outbound requests and transparent
+// decompression of Content-Encoding: gzip/deflate response bodies.
+public enum Compression {
+    // No Accept-Encoding header is added; the server decides whether to compress.
+    COMPRESSION_AUTO = "AUTO",
+    // Adds Accept-Encoding: deflate, gzip to outbound requests if not already set.
+    // Compressed responses are transparently decompressed.
+    COMPRESSION_ALWAYS = "ALWAYS",
+    // Removes any Accept-Encoding header, asking the server not to compress the response.
+    COMPRESSION_NEVER = "NEVER"
+}
+
 // Provides a set of configurations for controlling the behaviours when communicating with
 // a remote HTTP endpoint.
 //
-// Supported: timeout, httpVersion, followRedirects, secureSocket, poolConfig.
-// Not supported: circuitBreaker, retryConfig, cookieConfig, cache, compression,
+// Supported: timeout, httpVersion, followRedirects, secureSocket, poolConfig, compression.
+// Not supported: circuitBreaker, retryConfig, cookieConfig, cache,
 //               auth, http1Settings, http2Settings, responseLimits, socketConfig,
 //               validation, laxDataBinding.
 //
@@ -161,12 +174,15 @@ public enum HttpVersion {
 //   secureSocket    - TLS settings; () uses default TLS verification.
 //   poolConfig      - Connection pool settings; () uses platform defaults
 //                     (maxIdleConnections=100, maxActiveConnections=-1, waitTime=30s).
+//   compression     - Compression negotiation mode (default: COMPRESSION_AUTO).
+//                     COMPRESSION_NEVER disables Accept-Encoding and response decompression.
 public type ClientConfiguration record {|
     decimal timeout = 30;
     FollowRedirects? followRedirects = ();
     HttpVersion httpVersion = HTTP_2_0;
     ClientSecureSocket? secureSocket = ();
     PoolConfiguration? poolConfig = ();
+    Compression compression = COMPRESSION_AUTO;
 |};
 
 // ── Header position ───────────────────────────────────────────────────────────

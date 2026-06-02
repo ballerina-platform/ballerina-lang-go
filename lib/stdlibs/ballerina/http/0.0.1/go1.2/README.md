@@ -14,7 +14,7 @@ The Go Native Interpreter currently supports the **HTTP client subset only**: th
 
 - Send HTTP requests using GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, and custom verbs.
 - Forward inbound requests to upstream services preserving method, headers, and body (`forward`).
-- Configure request timeout, HTTP version (1.0/1.1/2.0), redirect behaviour, and connection pool settings.
+- Configure request timeout, HTTP version (1.0/1.1/2.0), redirect behaviour, connection pool settings, and compression negotiation.
 - Secure connections with TLS and mutual TLS using PEM certificate and key files.
 - Set custom request headers and override the inferred Content-Type.
 - Read the response status code, text, JSON, or binary payload.
@@ -98,7 +98,7 @@ Support Levels:
 | Load balancer client | Not Yet Supported | `LoadBalanceClient` is not implemented. |
 | Cookie management | Not Yet Supported | `cookieConfig`, `CookieStore`, and `getCookieStore()` are not implemented. |
 | HTTP response caching | Not Yet Supported | The `cache` (`CacheConfig`) configuration is not implemented. |
-| Compression negotiation | Not Yet Supported | The `compression` configuration (`accept-encoding` header negotiation) is not implemented. |
+| Compression negotiation | Supported | `COMPRESSION_AUTO` adds no `Accept-Encoding` header (server decides). `COMPRESSION_ALWAYS` adds `Accept-Encoding: deflate, gzip` if not already set. `COMPRESSION_NEVER` removes any `Accept-Encoding` header. Compressed responses (`Content-Encoding: gzip` or `deflate`) are transparently decompressed in all modes. |
 | HTTP/1.x protocol settings | Not Yet Supported | `http1Settings` (keep-alive, chunking, proxy) is not implemented. |
 | HTTP/2 protocol settings | Not Yet Supported | `http2Settings` (prior knowledge, initial window size) is not implemented. |
 | Response size limits | Not Yet Supported | `responseLimits` (`ResponseLimitConfigs`) is not implemented. |
