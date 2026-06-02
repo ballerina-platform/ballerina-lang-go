@@ -17,11 +17,11 @@ in each package's support table (Supported + Partially Supported + Not Yet Suppo
 | [io](io/0.0.1/go1.2/README.md) | 14 | 1 | 11 | 54% |
 | [log](log/0.0.1/go1.2/README.md) | 7 | 1 | 16 | 29% |
 | [math.vector](math.vector/0.0.1/go1.2/README.md) | 5 | 0 | 0 | 100% |
-| [os](os/0.0.1/go1.2/README.md) | 10 | 1 | 1 | 83% |
+| [os](os/0.0.1/go1.2/README.md) | 11 | 1 | 0 | 92% |
 | [random](random/0.0.1/go1.2/README.md) | 3 | 1 | 1 | 60% |
 | [time](time/0.0.1/go1.2/README.md) | 31 | 1 | 0 | 97% |
 | [url](url/0.0.1/go1.2/README.md) | 3 | 0 | 1 | 75% |
-| **Total** | **123** | **8** | **81** | **58%** |
+| **Total** | **124** | **8** | **80** | **58%** |
 
 ## Notable Behavioural Changes
 

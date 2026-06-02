@@ -64,7 +64,7 @@ Support Levels:
 | Read subprocess output | Supported | `Process.output(fileOutputStream)`. Reads stdout (default) or stderr after the process exits. |
 | Terminate a subprocess | Supported | `Process.exit()`. Sends SIGKILL to the subprocess immediately. |
 | Module-level error types | Partially Supported | `os:Error` and `os:ProcessExecError` declared as plain `error` aliases; `distinct` error subtypes not yet supported. |
-| Exclusion guard on environment property keys | Not Yet Supported | The `never`-typed field that prevents accidental shadowing of the `command` parameter is omitted; `never` field handling is not yet implemented. |
+| Exclusion guard on environment property keys | Supported | `never command?;` field in `EnvProperties` prevents `command` from being used as an environment variable key. |
 
 ### Notable Behavioural Changes
 

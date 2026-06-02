@@ -53,7 +53,7 @@ public type Command record {|
 // Represents additional environment variable overrides for a subprocess.
 // Any key-value pair (except `command`) is treated as an environment variable.
 public type EnvProperties record {|
-    // never command?;
+    never command?;
     anydata...;
 |};
 
