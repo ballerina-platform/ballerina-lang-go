@@ -229,6 +229,7 @@ func (r *PackageResolution) resolveTransitiveDependencies(
 var bundledLangLibs = []struct{ org, name, version string }{
 	{"ballerina", "lang.int", "0.0.1"},
 	{"ballerina", "lang.error", "0.0.1"},
+	{"ballerina", "lang.string", "0.0.1"},
 }
 
 // bundledLangLibModules resolves the migrated lang libraries and returns their

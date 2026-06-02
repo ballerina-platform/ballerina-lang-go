@@ -344,8 +344,8 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	// Step 5: Verify external packages were resolved and cached during compilation.
 	// middlepkg declares aaaleafpkg and leafpkg as direct deps; with the main
 	// project that's 4 packages, plus the always-compiled implicit lang libs
-	// (lang.int, lang.error), giving 6 packages total in the cache.
-	assert.Equal(6, env.PackageCache().Size(), "expected 6 packages in cache after compilation")
+	// (lang.int, lang.error, lang.string), giving 7 packages total in the cache.
+	assert.Equal(7, env.PackageCache().Size(), "expected 7 packages in cache after compilation")
 
 	cachedMiddle := env.PackageCache().Get("mockorg", "middlepkg", "1.0.0")
 	require.NotNil(cachedMiddle, "middlepkg should be cached after compilation")

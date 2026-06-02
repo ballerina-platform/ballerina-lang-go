@@ -62,6 +62,8 @@ func OpaqueSymbols(pkg PackageIdentifier) []Symbol {
 	switch pkg.Package {
 	case "lang.int":
 		return langIntOpaqueSymbols()
+	case "lang.string":
+		return langStringOpaqueSymbols()
 	default:
 		return nil
 	}
@@ -84,4 +86,8 @@ func langIntOpaqueSymbols() []Symbol {
 		syms[i] = newOpaqueTypeSymbol(def.name, def.ty, i)
 	}
 	return syms
+}
+
+func langStringOpaqueSymbols() []Symbol {
+	return []Symbol{newOpaqueTypeSymbol("Char", semtypes.CHAR, 0)}
 }

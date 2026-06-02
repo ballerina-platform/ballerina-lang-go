@@ -34,7 +34,6 @@ import (
 
 	array "ballerina-lang-go/lib/array/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
-	bString "ballerina-lang-go/lib/string/compile"
 	bValue "ballerina-lang-go/lib/value/compile"
 )
 
@@ -4742,7 +4741,9 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.ERROR):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.error", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.STRING):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bString.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.string", methodSymbol.name, expr)
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.XML):
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.xml", methodSymbol.name, expr)
 	default:
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bValue.PackageName, methodSymbol.name, expr)
 	}
