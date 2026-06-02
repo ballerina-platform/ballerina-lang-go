@@ -31,7 +31,6 @@ import (
 	array "ballerina-lang-go/lib/array/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	bMap "ballerina-lang-go/lib/map/compile"
-	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
 type scopeKind int
@@ -799,7 +798,6 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
-	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }
 

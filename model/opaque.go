@@ -64,6 +64,8 @@ func OpaqueSymbols(pkg PackageIdentifier) []Symbol {
 		return langIntOpaqueSymbols()
 	case "lang.string":
 		return langStringOpaqueSymbols()
+	case "lang.xml":
+		return langXMLOpaqueSymbols()
 	default:
 		return nil
 	}
@@ -90,4 +92,21 @@ func langIntOpaqueSymbols() []Symbol {
 
 func langStringOpaqueSymbols() []Symbol {
 	return []Symbol{newOpaqueTypeSymbol("Char", semtypes.CHAR, 0)}
+}
+
+func langXMLOpaqueSymbols() []Symbol {
+	defs := []struct {
+		name string
+		ty   semtypes.SemType
+	}{
+		{"Element", semtypes.XML_ELEMENT},
+		{"Comment", semtypes.XML_COMMENT},
+		{"Text", semtypes.XML_TEXT},
+		{"ProcessingInstruction", semtypes.XML_PI},
+	}
+	syms := make([]Symbol, len(defs))
+	for i, def := range defs {
+		syms[i] = newOpaqueTypeSymbol(def.name, def.ty, i)
+	}
+	return syms
 }

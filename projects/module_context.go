@@ -485,7 +485,7 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 // their langlib key, so they are usable without an import statement. No-op
 // until the lib has been compiled (e.g. while compiling the lib itself).
 func seedMigratedLangLibs(implicitImports map[string]model.ExportedSymbolSpace, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) {
-	for _, name := range []string{"lang.int", "lang.error", "lang.string", "lang.value"} {
+	for _, name := range []string{"lang.int", "lang.error", "lang.string", "lang.value", "lang.xml"} {
 		if space, ok := publicSymbols[semantics.PackageIdentifier{OrgName: "ballerina", ModuleName: name}]; ok {
 			implicitImports[name] = space
 		}

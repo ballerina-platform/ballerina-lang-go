@@ -81,6 +81,14 @@ var migratedLangLibs = []langLib{
 		version:    "0.0.1",
 	},
 	{
+		org:        "ballerina",
+		nameComps:  []string{"lang", "xml"},
+		implicitID: "lang.xml",
+		srcFS:      langlibs.FS,
+		balPath:    "ballerina/lang.xml/0.0.1/any/lang.xml.bal",
+		version:    "0.0.1",
+	},
+	{
 		org:       "ballerina",
 		nameComps: []string{"io"},
 		srcFS:     stdlibs.FS,
