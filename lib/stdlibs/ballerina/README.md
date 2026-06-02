@@ -12,12 +12,12 @@ in each package's support table (Supported + Partially Supported + Not Yet Suppo
 
 | Package | Supported | Partially Supported | Not Yet Supported | Support % |
 |---|---|---|---|---|
-| [http](http/0.0.1/go1.2/README.md) | 14 | 1 | 53 | 21% |
+| [http](http/0.0.1/go1.2/README.md) | 22 | 1 | 49 | 31% |
 | [io](io/0.0.1/go1.2/README.md) | 14 | 1 | 11 | 54% |
 | [math.vector](math.vector/0.0.1/go1.2/README.md) | 5 | 0 | 0 | 100% |
 | [time](time/0.0.1/go1.2/README.md) | 31 | 1 | 0 | 97% |
 | [url](url/0.0.1/go1.2/README.md) | 3 | 0 | 1 | 75% |
-| **Total** | **67** | **3** | **65** | **50%** |
+| **Total** | **75** | **3** | **61** | **55%** |
 
 ## Notable Behavioural Changes
 
@@ -27,9 +27,10 @@ tables instead.
 
 ### http
 
-- **HTTP/1.0 is a compile error.** Specifying `httpVersion: "1.0"` in `ClientConfiguration` is rejected at compile time. Go's HTTP client cannot send HTTP/1.0 requests, so this is a permanent restriction rather than a missing runtime feature.
+- **HTTP/1.0 is a compile error.** Specifying `httpVersion: "1.0"` (or any value outside the `HttpVersion` enum) in `ClientConfiguration` is rejected at compile time. Go's HTTP client cannot send HTTP/1.0 requests, so this is a permanent restriction rather than a missing runtime feature.
 - **Trailing headers are not modelled.** The `TRAILING` header position constant is accepted at compile time for API compatibility, but all header operations (`getHeader`, `getHeaders`, `hasHeader`, `getHeaderNames`) act on transport (leading) headers at runtime. HTTP trailers sent by the server are silently discarded.
 - **TLS protocol name has no effect.** The `protocol.name` field accepts `"SSL"`, `"TLS"`, and `"DTLS"` at compile time, but only TLS is supported at runtime. `"SSL"` and `"DTLS"` values are ignored because Go's standard TLS stack does not expose separate SSL or DTLS stacks.
+- **`poolConfig.waitTime` maps to `ResponseHeaderTimeout`.** jBallerina's `waitTime` limits how long a request waits to acquire a connection from the pool. In the Go runtime this is approximated by `ResponseHeaderTimeout` (maximum time to wait for the first response byte). True connection-wait limiting is not available in Go's `net/http` transport.
 
 ### io
 
