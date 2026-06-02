@@ -109,6 +109,43 @@ public type ClientSecureSocket record {|
 
 // ── Client configuration ──────────────────────────────────────────────────────
 
+// Provides configurations for response size validation.
+//
+// Notes:
+//   maxStatusLineLength - Accepted for API compatibility; not enforced at runtime (no Go transport
+//                         equivalent). jBallerina enforces this via Netty's HttpClientCodec.
+//   maxHeaderSize       - Maps to Go's http.Transport.MaxResponseHeaderBytes. If the response
+//                         headers exceed this limit the request returns an error.
+//   maxEntityBodySize   - Enforced per-response via a counting reader. -1 = no limit.
+//                         Unlike jBallerina (Netty), streaming enforcement is not applied when
+//                         the server omits Content-Length and sends less than maxHeaderSize bytes
+//                         before the limit reader fires; the error surfaces on payload extraction.
+//
+// Fields:
+//   maxStatusLineLength - Maximum bytes for the HTTP status line (default: 4096).
+//   maxHeaderSize       - Maximum bytes for all response headers combined (default: 8192).
+//   maxEntityBodySize   - Maximum bytes for the response body; -1 = no limit (default: -1).
+public type ResponseLimitConfigs record {|
+    int maxStatusLineLength = 4096;
+    int maxHeaderSize = 8192;
+    int maxEntityBodySize = -1;
+|};
+
+// Provides configurations for connecting to a proxy server.
+// The proxy is enabled by setting a non-empty `host`.
+//
+// Fields:
+//   host     - Proxy server hostname (default: ""; empty = no proxy).
+//   port     - Proxy server port (default: 0).
+//   userName - Proxy auth username (default: ""; empty = no auth).
+//   password - Proxy auth password (default: "").
+public type ProxyConfig record {|
+    string host = "";
+    int port = 0;
+    string userName = "";
+    string password = "";
+|};
+
 // Provides configurations for controlling the behaviour in response to HTTP redirect responses
 // (status codes 301, 302, 303, 307, 308).
 // Fields: enabled - enable/disable redirect following (default: false);
@@ -162,9 +199,10 @@ public enum Compression {
 // Provides a set of configurations for controlling the behaviours when communicating with
 // a remote HTTP endpoint.
 //
-// Supported: timeout, httpVersion, followRedirects, secureSocket, poolConfig, compression.
+// Supported: timeout, httpVersion, followRedirects, secureSocket, poolConfig, compression,
+//            responseLimits, proxy.
 // Not supported: circuitBreaker, retryConfig, cookieConfig, cache,
-//               auth, http1Settings, http2Settings, responseLimits, socketConfig,
+//               auth, http1Settings, http2Settings, socketConfig,
 //               validation, laxDataBinding.
 //
 // Fields:
@@ -176,6 +214,9 @@ public enum Compression {
 //                     (maxIdleConnections=100, maxActiveConnections=-1, waitTime=30s).
 //   compression     - Compression negotiation mode (default: COMPRESSION_AUTO).
 //                     COMPRESSION_NEVER disables Accept-Encoding and response decompression.
+//   responseLimits  - Response size limits (default: maxStatusLineLength=4096,
+//                     maxHeaderSize=8192, maxEntityBodySize=-1).
+//   proxy           - HTTP proxy configuration; () disables proxy.
 public type ClientConfiguration record {|
     decimal timeout = 30;
     FollowRedirects? followRedirects = ();
@@ -183,6 +224,8 @@ public type ClientConfiguration record {|
     ClientSecureSocket? secureSocket = ();
     PoolConfiguration? poolConfig = ();
     Compression compression = COMPRESSION_AUTO;
+    ResponseLimitConfigs responseLimits = {};
+    ProxyConfig? proxy = ();
 |};
 
 // ── Header position ───────────────────────────────────────────────────────────

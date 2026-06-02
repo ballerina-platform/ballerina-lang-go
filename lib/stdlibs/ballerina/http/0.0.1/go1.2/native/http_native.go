@@ -143,9 +143,10 @@ func (h *requestBodyHolder) takeStream() io.ReadCloser {
 // streaming — stream (io.ReadCloser) is available;
 // materialized — the body has been read into buf.
 type responseBodyHolder struct {
-	once   sync.Once
-	stream io.ReadCloser
-	buf    []byte
+	once    sync.Once
+	stream  io.ReadCloser
+	buf     []byte
+	readErr error // set if the stream returned an error during materialization
 }
 
 func newResponseBodyHolder(stream io.ReadCloser) *responseBodyHolder {
@@ -155,19 +156,20 @@ func newResponseBodyHolder(stream io.ReadCloser) *responseBodyHolder {
 	return &responseBodyHolder{stream: stream}
 }
 
-func (h *responseBodyHolder) materialize() []byte {
+func (h *responseBodyHolder) materialize() ([]byte, error) {
 	h.once.Do(func() {
 		if h.stream != nil {
-			data, _ := io.ReadAll(h.stream)
+			var err error
+			h.buf, err = io.ReadAll(h.stream)
 			_ = h.stream.Close()
 			h.stream = nil
-			h.buf = data
+			h.readErr = err
 		}
 		if h.buf == nil {
 			h.buf = []byte{}
 		}
 	})
-	return h.buf
+	return h.buf, h.readErr
 }
 
 // eagerBufferResponse pre-buffers the response when Content-Length fits within
@@ -186,9 +188,9 @@ func eagerBufferResponse(respHeaders map[string][]string, bodyStream io.ReadClos
 		}
 	}
 	if cl >= 0 && cl <= eagerBufferThreshold {
-		data, _ := io.ReadAll(bodyStream)
+		data, readErr := io.ReadAll(bodyStream)
 		_ = bodyStream.Close()
-		return &responseBodyHolder{buf: data}
+		return &responseBodyHolder{buf: data, readErr: readErr}
 	}
 	return &responseBodyHolder{stream: bodyStream}
 }
@@ -397,6 +399,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			httpVersion := "2.0"
 			var tlsCfg pal.TLSConfig
 			var poolCfg pal.PoolConfig
+			// Defaults match jBallerina's ResponseLimitConfigs and CommonClientConfiguration.
+			responseLimits := pal.ResponseLimitConfig{
+				MaxStatusLineLength: 4096,
+				MaxHeaderSize:       8192,
+				MaxEntityBodySize:   -1,
+			}
+			var proxyCfg pal.ProxyConfig
 
 			if cfg, ok := args[2].(*values.Map); ok {
 				if v, ok := cfg.Get("timeout"); ok {
@@ -561,6 +570,58 @@ func initHttpModule(rt *runtime.Runtime) {
 						compressionMode = s
 					}
 				}
+				if v, ok := cfg.Get("responseLimits"); ok {
+					if rlMap, ok := v.(*values.Map); ok {
+						if mv, ok := rlMap.Get("maxStatusLineLength"); ok {
+							if n, ok := mv.(int64); ok {
+								if n < 0 {
+									return values.NewErrorWithMessage("invalid value for responseLimits.maxStatusLineLength: must be >= 0"), nil
+								}
+								responseLimits.MaxStatusLineLength = int(n)
+							}
+						}
+						if mv, ok := rlMap.Get("maxHeaderSize"); ok {
+							if n, ok := mv.(int64); ok {
+								if n < 0 {
+									return values.NewErrorWithMessage("invalid value for responseLimits.maxHeaderSize: must be >= 0"), nil
+								}
+								responseLimits.MaxHeaderSize = n
+							}
+						}
+						if mv, ok := rlMap.Get("maxEntityBodySize"); ok {
+							if n, ok := mv.(int64); ok {
+								if n < -1 {
+									return values.NewErrorWithMessage("invalid value for responseLimits.maxEntityBodySize: must be >= -1"), nil
+								}
+								responseLimits.MaxEntityBodySize = n
+							}
+						}
+					}
+				}
+				if v, ok := cfg.Get("proxy"); ok {
+					if proxyMap, ok := v.(*values.Map); ok {
+						if hv, ok := proxyMap.Get("host"); ok {
+							if s, ok := hv.(string); ok {
+								proxyCfg.Host = s
+							}
+						}
+						if pv, ok := proxyMap.Get("port"); ok {
+							if n, ok := pv.(int64); ok {
+								proxyCfg.Port = int(n)
+							}
+						}
+						if uv, ok := proxyMap.Get("userName"); ok {
+							if s, ok := uv.(string); ok {
+								proxyCfg.UserName = s
+							}
+						}
+						if pwv, ok := proxyMap.Get("password"); ok {
+							if s, ok := pwv.(string); ok {
+								proxyCfg.Password = s
+							}
+						}
+					}
+				}
 			}
 			httpClient := rt.Platform().HTTP.NewClient(pal.ClientConfig{
 				Timeout:         decimalToDuration(timeout),
@@ -568,6 +629,8 @@ func initHttpModule(rt *runtime.Runtime) {
 				HTTPVersion:     httpVersion,
 				TLS:             tlsCfg,
 				Pool:            poolCfg,
+				ResponseLimits:  responseLimits,
+				Proxy:           proxyCfg,
 			})
 			self.Put("url", url)
 			self.Put("timeout", timeout)
@@ -866,7 +929,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			if holder, ok := bodyVal.(*responseBodyHolder); ok {
-				return string(holder.materialize()), nil
+				buf, err := holder.materialize()
+				if err != nil {
+					return values.NewErrorWithMessage(err.Error()), nil
+				}
+				return string(buf), nil
 			}
 			// fallback: plain string (should not occur in normal flow)
 			if s, ok := bodyVal.(string); ok {
@@ -882,7 +949,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			bodyVal, _ := self.Get("body")
 			var body []byte
 			if holder, ok := bodyVal.(*responseBodyHolder); ok {
-				body = holder.materialize()
+				var err error
+				body, err = holder.materialize()
+				if err != nil {
+					return values.NewErrorWithMessage(err.Error()), nil
+				}
 			} else if s, ok := bodyVal.(string); ok {
 				body = []byte(s)
 			}
@@ -902,7 +973,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			bodyVal, _ := self.Get("body")
 			var raw []byte
 			if holder, ok := bodyVal.(*responseBodyHolder); ok {
-				raw = holder.materialize()
+				var err error
+				raw, err = holder.materialize()
+				if err != nil {
+					return values.NewErrorWithMessage(err.Error()), nil
+				}
 			} else if s, ok := bodyVal.(string); ok {
 				raw = []byte(s)
 			}

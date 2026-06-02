@@ -103,6 +103,27 @@ type (
 		// DisableCompression prevents the transport from injecting Accept-Encoding: gzip.
 		DisableCompression bool
 	}
+	// ResponseLimitConfig carries response size limits derived from Ballerina's http:ResponseLimitConfigs.
+	// Zero values mean "use defaults" (set explicitly in Client.initNative to match jBallerina defaults).
+	ResponseLimitConfig struct {
+		// MaxStatusLineLength is the maximum byte length of the HTTP response status line.
+		// Accepted for config compatibility; not enforced at runtime (no Go transport equivalent).
+		// jBallerina default: 4096.
+		MaxStatusLineLength int
+		// MaxHeaderSize maps to http.Transport.MaxResponseHeaderBytes.
+		// jBallerina default: 8192. 0 = Go transport default (10 MB).
+		MaxHeaderSize int64
+		// MaxEntityBodySize is the maximum byte length of the response body.
+		// -1 = no limit (jBallerina default). ≥0 enforced per-response via a counting reader.
+		MaxEntityBodySize int64
+	}
+	// ProxyConfig carries HTTP proxy settings derived from Ballerina's http:ProxyConfig.
+	ProxyConfig struct {
+		Host     string // proxy hostname; empty = no proxy
+		Port     int    // proxy port
+		UserName string // proxy auth username; empty = no auth
+		Password string // proxy auth password
+	}
 	// ClientConfig bundles all static options for a new HTTP client instance.
 	ClientConfig struct {
 		Timeout         time.Duration
@@ -110,6 +131,8 @@ type (
 		HTTPVersion     string // "1.1" or "2.0"; defaults to "2.0"
 		TLS             TLSConfig
 		Pool            PoolConfig
+		ResponseLimits  ResponseLimitConfig
+		Proxy           ProxyConfig
 	}
 	// HTTPClient is an opaque handle to an HTTP client created by the platform.
 	// It is created once per Ballerina http:Client init and reused across requests.

@@ -631,6 +631,7 @@ func TestHttpClientMTLS(t *testing.T) {
 		ClientCAs:    clientCertPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
+	server.EnableHTTP2 = true
 	server.StartTLS()
 	defer server.Close()
 
