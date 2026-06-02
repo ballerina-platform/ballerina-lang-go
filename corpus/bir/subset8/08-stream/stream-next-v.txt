@@ -56,15 +56,19 @@ main() -> nil{
     %9 ? bb5 : bb7;
   }
   bb5 {
-    %11 = ConstantLoad value
-    %10 = r[%11];
-    %12 = %10;
-    %13 = println(%12) -> bb6;
+    PushScopeFrame 4
+    %1 = ConstantLoad value
+    %0 = (1, r)[%1];
+    %2 = %0;
+    %3 = println(%2) -> bb6;
   }
   bb6 {
+    PopScopeFrame
     GOTO bb7;
   }
   bb7 {
+    PushScopeFrame 0
+    PopScopeFrame
     return;
   }
 }

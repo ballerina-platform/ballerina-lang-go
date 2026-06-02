@@ -29,21 +29,25 @@ f(int|string) -> nil{
     %2 ? bb3 : bb5;
   }
   bb3 {
-    unused1 = x;
-    %6 = ConstantLoad s
-    %7 = println(%6) -> bb4;
+    PushScopeFrame 4
+    unused1 = (1, x);
+    %1 = ConstantLoad s
+    %2 = println(%1) -> bb4;
   }
   bb4 {
-    %8 = ConstantLoad <nil>
-    %0 = %8;
+    %3 = ConstantLoad <nil>
+    (1, %0) = %3;
+    PopScopeFrame
     return;
   }
   bb5 {
-    unused2 = x;
-    %10 = ConstantLoad i
-    %11 = println(%10) -> bb6;
+    PushScopeFrame 3
+    unused2 = (1, x);
+    %1 = ConstantLoad i
+    %2 = println(%1) -> bb6;
   }
   bb6 {
+    PopScopeFrame
     return;
   }
 }

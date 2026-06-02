@@ -30,12 +30,14 @@ func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 	env.Registry.(*modules.Registry).RegisterModule(pkg.PackageID, modules.NewBIRModule(ctx, &pkg))
 	defer func() {
 		if r := recover(); r != nil {
+			ctx.ReleaseAllHeldLocks()
 			err = getFormattedError(cs, r)
 		}
 	}()
 	if pkg.InitFunction != nil {
 		defer func() {
 			if r := recover(); r != nil {
+				ctx.ReleaseAllHeldLocks()
 				err = getFormattedError(cs, r)
 			}
 		}()
@@ -49,6 +51,7 @@ func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 	if pkg.MainFunction != nil {
 		defer func() {
 			if r := recover(); r != nil {
+				ctx.ReleaseAllHeldLocks()
 				err = getFormattedError(cs, r)
 			}
 		}()

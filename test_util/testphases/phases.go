@@ -117,7 +117,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 
 	// Phase 6: Semantic Analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(result.Package)
+	semanticAnalyzer.Analyze(result.Package, importedSymbols)
 	if phase == PhaseSemanticAnalysis || cx.HasDiagnostics() {
 		return result, nil
 	}
