@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
 
 public function main() {
     xml elem = xml `<bar:f foo="ff"><bar:x></bar:x></bar:f>`; // @error

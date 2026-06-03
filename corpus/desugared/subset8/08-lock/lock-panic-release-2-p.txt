@@ -1,5 +1,4 @@
 (package
-  (import-package ballerina io (as io))
   (variable counter (type
     (value-type int)))
   (function init () ()
