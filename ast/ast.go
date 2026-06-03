@@ -1107,6 +1107,12 @@ func (b *bLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
 	}
 }
 
+// RequiredParameters returns the concrete required-parameter nodes backing this
+// invokable so callers can take the address of an individual parameter.
+func (b *bLangInvokableNodeBase) RequiredParameters() []BLangSimpleVariable {
+	return b.RequiredParams
+}
+
 func (b *bLangInvokableNodeBase) GetRequiredParams() []SimpleVariableNode {
 	result := make([]SimpleVariableNode, len(b.RequiredParams))
 	for i := range b.RequiredParams {

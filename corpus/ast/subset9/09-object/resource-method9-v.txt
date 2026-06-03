@@ -2,7 +2,9 @@
 (package-id $anon . 0.0.0)
   (import-package ballerina io (as io))
   (class-definition foo
-    (resource-function get name:test param:name
+    (resource-function get name:test
+      (param name
+        (value-type string))
       (value-type null)
       (block-function-body
         (expression-stmt
@@ -10,7 +12,9 @@
             (binary-expr +
               (literal get test/)
               (simple-var-ref name)))))))
-    (resource-function get name:other param:id
+    (resource-function get name:other
+      (param id
+        (value-type int))
       (value-type null)
       (block-function-body
         (expression-stmt
@@ -19,7 +23,9 @@
         (expression-stmt
           (invocation io println (
             (simple-var-ref id))))))
-    (resource-function post name:test param:name
+    (resource-function post name:test
+      (param name
+        (value-type string))
       (value-type null)
       (block-function-body
         (expression-stmt

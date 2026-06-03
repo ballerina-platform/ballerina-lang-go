@@ -549,6 +549,18 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printResourcePathParamSegment(kind string, seg *BLangResourcePathSegment) {
+	p.startNode()
+	p.printString(kind)
+	p.printString(seg.Name)
+	if seg.ParamType != nil {
+		p.indentLevel++
+		p.PrintInner(seg.ParamType.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
 	p.startNode()
 	p.printString("resource-function")
@@ -560,9 +572,9 @@ func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
 		case ResourcePathSegmentName:
 			p.printString("name:" + seg.Name)
 		case ResourcePathSegmentParam:
-			p.printString("param:" + seg.Name)
+			p.printResourcePathParamSegment("param", seg)
 		case ResourcePathSegmentParamRest:
-			p.printString("rest:" + seg.Name)
+			p.printResourcePathParamSegment("rest", seg)
 		}
 	}
 	for i := range node.RequiredParams {

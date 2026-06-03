@@ -2,7 +2,11 @@
 (package-id $anon . 0.0.0)
   (import-package ballerina io (as io))
   (class-definition foo
-    (resource-function get name:test param:foo param:bar
+    (resource-function get name:test
+      (param foo
+        (value-type string))
+      (param bar
+        (value-type int))
       (variable vals (type
         (array-type
           (value-type int) dimensions: 1 ([]))))

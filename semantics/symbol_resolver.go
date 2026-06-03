@@ -1299,13 +1299,18 @@ func mangledResourceMethodName(methodName string, idx int) string {
 }
 
 func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangResourceMethod) {
+	// Limit collision detection to the current function scope, matching
+	// resolveFunctionInner. functionResolver.GetSymbol would otherwise delegate
+	// into the enclosing class scope (also a blockSymbolResolver) and wrongly
+	// reject path params that shadow a class field.
+	scope := functionResolver.scope.MainSpace()
 	for i := range rm.ResourcePath {
 		seg := &rm.ResourcePath[i]
 		if seg.Kind == ast.ResourcePathSegmentName || seg.Name == "" {
 			continue
 		}
 		name := seg.Name
-		if _, sk, exists := functionResolver.GetSymbol(name); exists && sk == blockScopeKind {
+		if _, exists := scope.GetSymbol(name); exists {
 			semanticError(functionResolver, "redeclared symbol '"+name+"'", seg.GetPosition())
 			continue
 		}

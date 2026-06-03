@@ -4,9 +4,7 @@
     (function init () ()
       (block-function-body))
     (resource-function get name:test
-      (param foo
-        (value-type string))
-      (param bar
+      (param id
         (value-type int))
       (variable vals (type
         (array-type
@@ -15,10 +13,7 @@
       (block-function-body
         (expression-stmt
           (invocation io println (
-            (simple-var-ref foo))))
-        (expression-stmt
-          (invocation io println (
-            (simple-var-ref bar))))
+            (simple-var-ref id))))
         (expression-stmt
           (invocation io println (
             (simple-var-ref vals)))))))
@@ -32,6 +27,5 @@
       (expression-stmt
         (client-resource-access get expr:
           (simple-var-ref f) name:test computed:
-          (literal foo) computed:
           (literal 4)
           (list-constructor-expr))))))

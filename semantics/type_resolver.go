@@ -4893,7 +4893,7 @@ func resolveResourcePathType(t typeResolver, method *ast.BLangResourceMethod) (s
 					t.internalError("resource path parameter symbol not found in scope", seg.GetPosition())
 					return nil, nil, false
 				}
-				t.getSymbol(ref).SetType(symbolTy)
+				t.setSymbolType(ref, symbolTy)
 				paramRefs = append(paramRefs, ref)
 			}
 			if seg.Kind == ast.ResourcePathSegmentParamRest {

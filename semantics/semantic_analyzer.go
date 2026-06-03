@@ -470,11 +470,31 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 }
 
 func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
+	return initializeInvokableAnalyzer(parent, function, classDef, buildFunctionLocals(parent, function))
+}
+
+// invokableSignatureNode is implemented by AST nodes that share the invokable
+// base (functions and resource methods). It exposes the parameter/body surface
+// the shared function analysis and validation helpers operate on.
+type invokableSignatureNode interface {
+	ast.BLangNode
+	Symbol() model.SymbolRef
+	IsIsolated() bool
+	IsNative() bool
+	RequiredParameters() []ast.BLangSimpleVariable
+	GetRestParam() ast.SimpleVariableNode
+	GetBody() ast.FunctionBodyNode
+}
+
+// initializeInvokableAnalyzer builds the functionAnalyzer shared by plain
+// functions/methods and resource methods, running the per-parameter and
+// signature validations on the given invokable using the provided locals scope.
+func initializeInvokableAnalyzer(parent analyzer, function invokableSignatureNode, classDef *ast.BLangClassDefinition, locals *localScope) *functionAnalyzer {
 	fa := &functionAnalyzer{
 		analyzerBase:   analyzerBase{parent: parent},
 		function:       function,
 		enclosingClass: classDef,
-		locals:         buildFunctionLocals(parent, function),
+		locals:         locals,
 	}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	if depSym, ok := fnSymbol.(model.DependentlyTypedFunctionSymbol); ok {
@@ -495,9 +515,9 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 // buildFunctionLocals creates the per-function locals scope, seeded with
 // the function's parameters (and `self` for methods). Body-local variables
 // are added later as normal semantic analysis encounters their definitions.
-func buildFunctionLocals(parent analyzer, fn *ast.BLangFunction) *localScope {
+func buildFunctionLocals(parent analyzer, fn invokableSignatureNode) *localScope {
 	scope := newLocalScope(nil, true)
-	finishBuildFunctionLocals(parent, scope, fn.RequiredParams, fn.RestParam)
+	finishBuildFunctionLocals(parent, scope, fn.RequiredParameters(), fn.GetRestParam())
 	return scope
 }
 
@@ -524,10 +544,11 @@ func finishBuildFunctionLocals(parent analyzer, scope *localScope, requiredParam
 // boundary, so any isolated module variable reference is reported by
 // `checkIsolatedModuleVarOutsideLock` exactly as it would be for any
 // other unprotected read.
-func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction) {
+func validateIsolatedDefaultParams[A analyzer](a A, function invokableSignatureNode) {
 	fa := enclosingFunctionAnalyzer(a)
-	for i := range function.RequiredParams {
-		param := &function.RequiredParams[i]
+	requiredParams := function.RequiredParameters()
+	for i := range requiredParams {
+		param := &requiredParams[i]
 		if !param.IsDefaultableParam() {
 			continue
 		}
@@ -549,9 +570,10 @@ func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction)
 
 // rejectInferredTypedescOnNonDependent emits an error for any `<>` default on a function
 // whose return type does not depend on that parameter.
-func rejectInferredTypedescOnNonDependent(a analyzer, fn *ast.BLangFunction) {
-	for i := range fn.RequiredParams {
-		param := &fn.RequiredParams[i]
+func rejectInferredTypedescOnNonDependent(a analyzer, fn invokableSignatureNode) {
+	requiredParams := fn.RequiredParameters()
+	for i := range requiredParams {
+		param := &requiredParams[i]
 		if !param.IsDefaultableParam() {
 			continue
 		}
@@ -567,16 +589,17 @@ func rejectInferredTypedescOnNonDependent(a analyzer, fn *ast.BLangFunction) {
 //  2. A parameter with inferred-typedesc default '<>' must be the parameter the return type
 //     depends on. Otherwise: "inferred typedesc default '<>' requires the return type to depend on this parameter".
 //  3. A union of dependent and defined return parts must be disjoint.
-func validateDependentFunction(a analyzer, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) {
-	if _, ok := fn.Body.(*ast.BLangExternFunctionBody); !ok {
+func validateDependentFunction(a analyzer, fn invokableSignatureNode, sym model.DependentlyTypedFunctionSymbol) {
+	if _, ok := fn.GetBody().(*ast.BLangExternFunctionBody); !ok {
 		a.semanticErr("dependently-typed function must be external", fn.GetPosition())
 	}
 	retType := sym.ReturnType()
 	if _, disjoint := checkDependentReturnParts(a, a.tyCtx(), retType, sym.ParamTypes(), fn.GetPosition()); !disjoint {
 		a.semanticErr("dependently-typed function return type dependent and defined parts must be disjoint", fn.GetPosition())
 	}
-	for i := range fn.RequiredParams {
-		param := &fn.RequiredParams[i]
+	requiredParams := fn.RequiredParameters()
+	for i := range requiredParams {
+		param := &requiredParams[i]
 		if !param.IsDefaultableParam() {
 			continue
 		}
@@ -628,9 +651,10 @@ func checkDependentReturnParts(a analyzer, ctx semtypes.Context, op model.TypeOp
 	}
 }
 
-func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
-	for i := range function.RequiredParams {
-		param := &function.RequiredParams[i]
+func validateDefaultParamTypes(a analyzer, function invokableSignatureNode) {
+	requiredParams := function.RequiredParameters()
+	for i := range requiredParams {
+		param := &requiredParams[i]
 		if !param.IsDefaultableParam() {
 			continue
 		}
@@ -654,15 +678,7 @@ func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction, clas
 }
 
 func initializeResourceMethodAnalyzer(parent analyzer, rm *ast.BLangResourceMethod, classDef *ast.BLangClassDefinition) *functionAnalyzer {
-	fa := &functionAnalyzer{
-		analyzerBase:   analyzerBase{parent: parent},
-		function:       rm,
-		enclosingClass: classDef,
-		locals:         buildResourceMethodLocals(parent, rm),
-	}
-	fnSymbol := parent.ctx().GetSymbol(rm.Symbol()).(model.FunctionSymbol)
-	fa.retTy = fnSymbol.Signature().ReturnType
-	return fa
+	return initializeInvokableAnalyzer(parent, rm, classDef, buildResourceMethodLocals(parent, rm))
 }
 
 func buildResourceMethodLocals(parent analyzer, method *ast.BLangResourceMethod) *localScope {
@@ -692,14 +708,15 @@ func buildResourceMethodLocals(parent analyzer, method *ast.BLangResourceMethod)
 // functionAnalyzer. We avoid walking the BLangFunction node itself because
 // functionAnalyzer.Visit on that node would re-initialize a fresh analyzer
 // (losing context like enclosingClass).
-func walkMethodBody(fa *functionAnalyzer, method *ast.BLangFunction) {
-	for i := range method.RequiredParams {
-		ast.Walk(fa, &method.RequiredParams[i])
+func walkMethodBody(fa *functionAnalyzer, method invokableSignatureNode) {
+	requiredParams := method.RequiredParameters()
+	for i := range requiredParams {
+		ast.Walk(fa, &requiredParams[i])
 	}
-	if method.RestParam != nil {
-		ast.Walk(fa, method.RestParam.(ast.BLangNode))
+	if restParam := method.GetRestParam(); restParam != nil {
+		ast.Walk(fa, restParam.(ast.BLangNode))
 	}
-	if method.Body == nil {
+	if method.GetBody() == nil {
 		return
 	}
 	ast.Walk(fa, method.GetBody().(ast.BLangNode))
@@ -1862,9 +1879,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		for _, rm := range n.ResourceMethods {
 			fa := initializeResourceMethodAnalyzer(a, rm, n)
 			validateResourceMethodReturnType(a, fa.retTy, rm)
-			if rm.Body != nil {
-				ast.Walk(fa, rm.GetBody().(ast.BLangNode))
-			}
+			walkMethodBody(fa, rm)
 		}
 		validateClassDefn(a, n)
 		return nil
@@ -2023,11 +2038,11 @@ func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
 }
 
 func validateResourceMethodReturnType[A analyzer](a A, retTy semtypes.SemType, rm *ast.BLangResourceMethod) {
-	if semtypes.IsSubtypeSimple(retTy, semtypes.FUNCTION) {
+	if !semtypes.IsEmpty(a.tyCtx(), semtypes.Intersect(retTy, semtypes.FUNCTION)) {
 		a.semanticErr("resource method return type must not include a function type", rm.GetPosition())
 		return
 	}
-	if semtypes.IsClientObject(a.tyCtx(), retTy) {
+	if !semtypes.IsEmpty(a.tyCtx(), semtypes.Intersect(retTy, semtypes.CreateClientObject(a.tyCtx()))) {
 		a.semanticErr("resource method return type must not include a client object type", rm.GetPosition())
 	}
 }

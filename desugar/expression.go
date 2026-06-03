@@ -471,6 +471,11 @@ func walkClientResourceAccessAction(cx *functionContext, expr *ast.BLangClientRe
 		initStmts = append(initStmts, result.initStmts...)
 		expr.ArgExprs[i] = result.replacementNode.(ast.BLangExpression)
 	}
+	// Synthesize omitted defaultable arguments, mirroring walkInvocation's
+	// direct-call handling for the resolved resource method.
+	if fnSym, ok := cx.getSymbol(expr.MethodSymbol()).(model.FunctionSymbol); ok {
+		initStmts = append(initStmts, walkDirectCallArgs(cx, expr, fnSym)...)
+	}
 	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: expr,

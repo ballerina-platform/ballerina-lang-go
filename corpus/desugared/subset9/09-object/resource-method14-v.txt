@@ -3,7 +3,9 @@
   (class-definition foo
     (function init () ()
       (block-function-body))
-    (resource-function get name:items rest:rest
+    (resource-function get name:items
+      (rest rest
+        (value-type string))
       (value-type null)
       (block-function-body
         (expression-stmt

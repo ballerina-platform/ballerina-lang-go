@@ -4373,7 +4373,7 @@ func (n *NodeBuilder) TransformResourcePathParameter(resourcePathParameterNode *
 	seg.pos = getPosition(n.de(), resourcePathParameterNode)
 	nameTok := resourcePathParameterNode.ParamName()
 	if nameTok != nil && !nameTok.IsMissing() {
-		seg.Name = nameTok.Text()
+		seg.Name = createIdentifierFromToken(getPosition(n.de(), nameTok), nameTok).Value
 	}
 	if td := resourcePathParameterNode.TypeDescriptor(); td != nil {
 		seg.ParamType = n.createTypeNode(td).(BType)
