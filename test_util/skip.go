@@ -168,9 +168,6 @@ var UnsupportedTests = []string{
 	"subset8/08-list/10-e.bal",
 	"subset8/08-mapping/9-e.bal",
 
-	// https://github.com/ballerina-platform/ballerina-lang-go/issues/441
-	"subset8/08-bug/unusedimport-e.bal",
-
 	// rest param not supported in dependently typed functions
 	"subset8/08-function/dependent-fn-5-e.bal",
 }

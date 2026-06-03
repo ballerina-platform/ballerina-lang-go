@@ -1,6 +1,5 @@
 (compilation-unit  regular-source
 (package-id $anon . 0.0.0)
-  (import-package ballerina io (as io))
   (variable counter (type
     (value-type int)) (expr
     (literal 0)))

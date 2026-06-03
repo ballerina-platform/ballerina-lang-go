@@ -14,19 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
-type R record {
-    int foo?;
-    int bar;
-};
-
-type R1 record {
-    int foo;
-    string baz;
-};
+// @productions local-var-decl-stmt
+import ballerina/io as _;
 
 public function main() {
-    R|R1 r = {foo: 10, bar: 10};
-    R1 r2 = {foo: 20, baz: ""};
-    r2.foo += r.foo; // @error
+    int i = 3;
+    i += 1;
 }

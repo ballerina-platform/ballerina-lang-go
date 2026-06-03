@@ -18,8 +18,6 @@
 // out of `main`. There is no static `LockEnd` on this path; the
 // top-level `Interpret` recover calls `Context.ReleaseAllHeldLocks`
 // to drain the held-lock stack.
-import ballerina/io;
-
 isolated int counter = 0;
 
 isolated function bump() {
