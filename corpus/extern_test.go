@@ -648,7 +648,7 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 	cx := context.NewCompilerContext(env)
 	virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", name)
 	cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(string(contentBytes)))
-	st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, string(contentBytes))
+	st, err := parser.GetSyntaxTree(cx, virtualPath, string(contentBytes))
 	if err != nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
@@ -695,7 +695,7 @@ func compileSingleFileModule(
 		t.Fatalf("reading %s: %v", balPath, err)
 	}
 	cx.DiagnosticEnv().RegisterFile(absPath, text.NewStringTextDocument(string(content)))
-	st, err := parser.GetSyntaxTree(cx, absPath)
+	st, err := parser.GetSyntaxTree(cx, absPath, string(content))
 	if err != nil {
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}

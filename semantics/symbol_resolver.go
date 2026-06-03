@@ -1160,6 +1160,23 @@ func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn ast.Typ
 	}
 }
 
+type namedClassMethod struct {
+	name   string
+	method *ast.BLangFunction
+}
+
+// classMethodsInResolutionOrder returns class methods in sorted name order so
+// that default-param symbol counter assignments are deterministic regardless of
+// Go's map iteration order.
+func classMethodsInResolutionOrder(classDef *ast.BLangClassDefinition) []namedClassMethod {
+	names := slices.Sorted(maps.Keys(classDef.Methods))
+	result := make([]namedClassMethod, len(names))
+	for i, name := range names {
+		result[i] = namedClassMethod{name: name, method: classDef.Methods[name]}
+	}
+	return result
+}
+
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
@@ -1180,22 +1197,22 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 
 	isPublicClass := classDef.IsPublic()
 	className := classDef.Name.Value
-	for methodName := range classDef.Methods {
-		method := classDef.Methods[methodName]
-		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(methodName)+"'", method.Name.GetPosition())
+	methods := classMethodsInResolutionOrder(classDef)
+	for _, m := range methods {
+		if _, sk, exists := classResolver.GetSymbol(m.name); exists && sk == blockScopeKind {
+			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(m.name)+"'", m.method.Name.GetPosition())
 			continue
 		}
-		isPublic := method.IsPublic()
-		symbol := ms.allocateFunctionSymbol(method, methodName, isPublic)
+		isPublic := m.method.IsPublic()
+		symbol := ms.allocateFunctionSymbol(m.method, m.name, isPublic)
 		if isPublicClass && isPublic {
-			moduleName := className + "." + methodName
+			moduleName := className + "." + m.name
 			ms.scope.AddSymbol(moduleName, symbol)
 			moduleRef, _ := ms.scope.GetSymbol(moduleName)
-			classResolver.AddSymbol(methodName, symbol)
-			method.SetSymbol(moduleRef)
+			classResolver.AddSymbol(m.name, symbol)
+			m.method.SetSymbol(moduleRef)
 		} else {
-			addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
+			addSymbolAndSetOnNode(classResolver, m.name, symbol, m.method)
 		}
 	}
 
@@ -1227,20 +1244,14 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
 	}
 
-	// Iterate in sorted order so that default-param symbol counter assignments
-	// are deterministic regardless of Go's map iteration order.
-	for _, methodName := range slices.Sorted(maps.Keys(classDef.Methods)) {
-		method := classDef.Methods[methodName]
-		methodResolver := newFunctionResolver(classResolver, method)
-		method.SetScope(methodResolver.scope)
-		resolveFunction(methodResolver, method)
-		allocateDefaultParamSymbols(ms, ms.scope, method)
-	}
-
 	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
 	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
-	for name, method := range classDef.Methods {
-		methodTable[name] = method.Symbol()
+	for _, m := range methods {
+		methodResolver := newFunctionResolver(classResolver, m.method)
+		m.method.SetScope(methodResolver.scope)
+		resolveFunction(methodResolver, m.method)
+		allocateDefaultParamSymbols(ms, ms.scope, m.method)
+		methodTable[m.name] = m.method.Symbol()
 	}
 	if classDef.InitFunction != nil {
 		methodTable["init"] = classDef.InitFunction.Symbol()
