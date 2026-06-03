@@ -33,6 +33,7 @@ import (
 // has the expected entries and that loading it produces a Bala
 // project with the correct descriptor and module set.
 func TestPack_ReadBala(t *testing.T) {
+	t.Parallel()
 	source, err := filepath.Abs(filepath.Join("testdata", "myproject"))
 	if err != nil {
 		t.Fatalf("abs source: %v", err)
@@ -111,6 +112,7 @@ func TestPack_ReadBala(t *testing.T) {
 // .bal files at the archive root, sub-modules under modules/<sub>/ (never
 // under modules/<pkgName>/ and never with dotted full names as directories).
 func TestPack_MultiModuleLayout(t *testing.T) {
+	t.Parallel()
 	source, err := filepath.Abs(filepath.Join("testdata", "multi-module-project"))
 	if err != nil {
 		t.Fatalf("abs source: %v", err)
@@ -239,6 +241,7 @@ func TestPack_MultiModuleLayout(t *testing.T) {
 // byte-compares the archive's Dependencies.toml entry against a pregenerated
 // expected fixture.
 func TestPack_DependenciesToml(t *testing.T) {
+	t.Parallel()
 	testRepoPath, err := filepath.Abs(filepath.Join("testdata", "repo", "bala"))
 	if err != nil {
 		t.Fatalf("abs repo path: %v", err)
@@ -287,6 +290,36 @@ func TestPack_DependenciesToml(t *testing.T) {
 
 	if strings.TrimSpace(got) != strings.TrimSpace(want) {
 		t.Errorf("Dependencies.toml mismatch:\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestPack_EmitBala_NoBallerinaToml verifies that EmitBala returns an error
+// when called on a package that has no Ballerina.toml (e.g. a bala loaded
+// from the local cache). Such packages expose only a Bala.toml, so packing
+// them is rejected rather than producing a corrupt archive.
+func TestPack_EmitBala_NoBallerinaToml(t *testing.T) {
+	t.Parallel()
+
+	balaPath, err := filepath.Abs(filepath.Join("testdata", "repo", "bala", "mockorg", "mockpkg", "1.0.0", "any"))
+	if err != nil {
+		t.Fatalf("abs: %v", err)
+	}
+	result, err := loadProject(balaPath)
+	if err != nil {
+		t.Fatalf("load bala project: %v", err)
+	}
+
+	pkg := result.Project().CurrentPackage()
+	if pkg == nil {
+		t.Fatal("bala project has no CurrentPackage")
+	}
+
+	_, err = projects.NewBallerinaBackend(pkg.Compilation()).EmitBala(t.TempDir())
+	if err == nil {
+		t.Fatal("EmitBala on a bala project should return an error")
+	}
+	if !strings.Contains(err.Error(), "no Ballerina.toml") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
