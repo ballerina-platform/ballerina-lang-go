@@ -73,12 +73,16 @@ eq(float,float) -> any{
     %11 ? bb1 : bb2;
   }
   bb1 {
-    %14 = ConstantLoad <nil>
-    %0 = %14;
+    PushScopeFrame 1
+    %0 = ConstantLoad <nil>
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %0 = eq;
+    PushScopeFrame 0
+    (1, %0) = (1, eq);
+    PopScopeFrame
     return;
   }
 }

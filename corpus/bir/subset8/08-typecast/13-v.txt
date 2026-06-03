@@ -32,13 +32,17 @@ f(boolean) -> boolean|int|float{
     isInt ? bb1 : bb2;
   }
   bb1 {
-    %2 = ConstantLoad 2
-    %0 = %2;
+    PushScopeFrame 1
+    %0 = ConstantLoad 2
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %3 = ConstantLoad 3.5
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad 3.5
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb3 {

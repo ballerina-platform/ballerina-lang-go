@@ -304,6 +304,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		return analyzer.analyzeIf(curBB, s)
 	case *ast.BLangBlockStmt:
 		return analyzer.analyzeBlockStmt(curBB, s)
+	case *ast.BLangLock:
+		return analyzer.analyzeBlockStmt(curBB, &s.Body)
 	case *ast.BLangWhile:
 		return analyzer.analyzeWhile(curBB, s)
 	case *ast.BLangForeach:

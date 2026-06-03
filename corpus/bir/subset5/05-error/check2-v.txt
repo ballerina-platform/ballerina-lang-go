@@ -8,7 +8,9 @@ main() -> nil{
     %3 ? bb1 : bb2;
   }
   bb1 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb2 {

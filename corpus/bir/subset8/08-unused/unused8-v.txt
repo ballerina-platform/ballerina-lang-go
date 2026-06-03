@@ -8,13 +8,17 @@ main() -> nil{
     %3 ? bb1 : bb3;
   }
   bb1 {
-    s = x;
-    %5 = println(s) -> bb2;
+    PushScopeFrame 2
+    s = (1, x);
+    %1 = println(s) -> bb2;
   }
   bb2 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb3 {
+    PushScopeFrame 0
+    PopScopeFrame
     return;
   }
 }

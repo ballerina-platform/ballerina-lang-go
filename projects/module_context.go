@@ -312,7 +312,7 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 
 	compilerCtx.StartStage(context.StageSemanticAnalysis)
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(moduleCtx.compilerCtx)
-	semanticAnalyzer.Analyze(pkgNode)
+	semanticAnalyzer.Analyze(pkgNode, moduleCtx.importedSymbols)
 	compilerCtx.EndStage()
 	if compilerCtx.HasDiagnostics() {
 		return

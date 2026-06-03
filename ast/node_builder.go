@@ -1345,6 +1345,10 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 		}
 		// Dispatch to TransformSyntaxNode which handles all node types
 		var memberNode tree.Node = member
+		if memberNode.HasDiagnostics() {
+			n.reportSyntaxDiagnostics(memberNode)
+			continue
+		}
 		transformedNode := n.TransformSyntaxNode(memberNode)
 		node := transformedNode.(TopLevelNode)
 		compilationUnit.AddTopLevelNode(node)
@@ -1906,7 +1910,15 @@ func (n *NodeBuilder) TransformLocalTypeDefinitionStatement(localTypeDefinitionS
 }
 
 func (n *NodeBuilder) TransformLockStatement(lockStatementNode *tree.LockStatementNode) BLangNode {
-	panic("TransformLockStatement unimplemented")
+	if lockStatementNode.OnFailClause() != nil {
+		n.cx.Unimplemented("on-fail clause on lock is not yet supported", getPosition(n.de(), lockStatementNode.OnFailClause()))
+	}
+	bLLock := &BLangLock{}
+	bLLock.pos = getPosition(n.de(), lockStatementNode)
+	bLBlockStmt := n.TransformBlockStatement(lockStatementNode.BlockStatement()).(*BLangBlockStmt)
+	bLBlockStmt.pos = getPosition(n.de(), lockStatementNode.BlockStatement())
+	bLLock.Body = *bLBlockStmt
+	return bLLock
 }
 
 func (n *NodeBuilder) TransformForkStatement(forkStatementNode *tree.ForkStatementNode) BLangNode {
