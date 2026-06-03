@@ -23,5 +23,5 @@ class Counter {
 }
 
 public function main() {
-    stream<int, ()> s = new (); // @error new stream expression requires exactly one argument
+    stream<int, ()> _ = new (); // @error new stream expression requires exactly one argument
 }

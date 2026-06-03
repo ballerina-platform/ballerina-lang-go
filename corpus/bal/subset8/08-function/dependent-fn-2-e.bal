@@ -16,9 +16,10 @@
 
 
 public function main() {
-    int a = inferred(0);
+    int _ = inferred(0);
 }
 
 function inferred(int val, typedesc retTy = <>) returns retTy|int { // @error
+    int _ = val;
     return 1;
 }

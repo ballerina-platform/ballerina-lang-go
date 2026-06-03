@@ -17,7 +17,7 @@
 public function main() {
     [string, int][] pairs = [["odd", 1], ["even", 2]];
 
-    map<int[]> grouped = map from var p in pairs
+    map<int[]> _ = map from var p in pairs
         let string key = p[0]
         let int n = p[1]
         group by key

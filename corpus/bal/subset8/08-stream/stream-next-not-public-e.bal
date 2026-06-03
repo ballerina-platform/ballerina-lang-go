@@ -21,5 +21,5 @@ class Emit {
 }
 
 public function main() {
-    stream<int, ()> s = new (new Emit()); // @error
+    stream<int, ()> _ = new (new Emit()); // @error
 }

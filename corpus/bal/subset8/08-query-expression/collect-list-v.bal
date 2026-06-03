@@ -31,10 +31,10 @@ public function main() {
         group by x
         collect y;
 
-    decimal[] contextualSelect = from var x in xs
+    decimal[] contextualSelect = from var _ in xs
         select 1;
 
-    decimal contextualCollect = from var x in xs
+    decimal contextualCollect = from var _ in xs
         collect 1;
 
     io:println(doubled); // @output [2,4,6]

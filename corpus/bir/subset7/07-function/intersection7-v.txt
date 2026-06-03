@@ -44,8 +44,9 @@ main() -> nil{
 }
 foo(int|string) -> 2{
   bb0 {
-    %2 = ConstantLoad 2
-    %0 = %2;
+    _ = a;
+    %3 = ConstantLoad 2
+    %0 = %3;
     return;
   }
 }

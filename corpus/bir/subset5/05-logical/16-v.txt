@@ -19,7 +19,7 @@ main() -> nil{
   }
   bb3 {
     PushScopeFrame 1
-    unused1 = (1, x);
+    _ = (1, x);
     PopScopeFrame
     GOTO bb4;
   }
@@ -39,13 +39,13 @@ main() -> nil{
   }
   bb7 {
     PushScopeFrame 1
-    unused2 = (2, x);
+    _ = (2, x);
     PopScopeFrame
     GOTO bb9;
   }
   bb8 {
     PushScopeFrame 1
-    unused3 = (2, x);
+    _ = (2, x);
     PopScopeFrame
     GOTO bb9;
   }

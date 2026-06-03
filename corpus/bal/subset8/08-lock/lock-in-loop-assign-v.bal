@@ -19,7 +19,7 @@ import ballerina/io;
 isolated int counter = 0;
 
 function bumpBy(int amount) {
-    foreach int i in 0 ..< amount {
+    foreach int _ in 0 ..< amount {
         lock {
             counter += 1;
         }

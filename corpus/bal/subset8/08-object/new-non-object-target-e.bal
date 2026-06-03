@@ -17,5 +17,5 @@
 type Foo int;
 
 public function main() {
-    Foo f = new Foo(5); // @error new expression target must be either an object or stream type
+    Foo _ = new Foo(5); // @error new expression target must be either an object or stream type
 }

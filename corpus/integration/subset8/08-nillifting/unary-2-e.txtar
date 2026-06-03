@@ -3,17 +3,17 @@
 error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
   --> unary-2-e.bal:20:13
    |
-20 |     int a = +base; // @error 
+20 |     int _ = +base; // @error 
    |             ^^^^^
 
 error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
   --> unary-2-e.bal:21:13
    |
-21 |     int c = -base; // @error
+21 |     int _ = -base; // @error
    |             ^^^^^
 
 error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
   --> unary-2-e.bal:22:13
    |
-22 |     int d = ~base; // @error
+22 |     int _ = ~base; // @error
    |             ^^^^^

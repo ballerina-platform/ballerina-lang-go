@@ -12,8 +12,9 @@ stringFoo(string) -> nil{
 }
 intFoo(int) -> nil{
   bb0 {
-    %2 = ConstantLoad This is integer
-    %3 = println(%2) -> bb1;
+    _ = i;
+    %3 = ConstantLoad This is integer
+    %4 = println(%3) -> bb1;
   }
   bb1 {
     return;

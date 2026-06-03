@@ -21,6 +21,6 @@ public function main() {
     // Both imported directly; middlepkg also depends on leafpkg.
     // The dependency graph must record the middlepkg->leafpkg edge so that
     // topological sort places leafpkg before middlepkg.
-    int leaf = leafpkg:getValue();
-    int doubled = middlepkg:getDoubledValue();
+    int _ = leafpkg:getValue();
+    int _ = middlepkg:getDoubledValue();
 }

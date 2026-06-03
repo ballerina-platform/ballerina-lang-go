@@ -16,9 +16,12 @@
 
 client class foo {
     resource function get test/[string name](int count) {
+        int _ = count;
     }
 
     resource function post items(string body, int retries) {
+        string _ = body;
+        int _ = retries;
     }
 }
 

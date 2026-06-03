@@ -17,8 +17,9 @@ main() -> nil{
 }
 explode(nil) -> nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
-    %2 = ConstantLoad 42
-    %0 = %2;
+    _ = n;
+    %3 = ConstantLoad 42
+    %0 = %3;
     return;
   }
 }

@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: incompatible type: expected nil, got false
   --> local2-e.bal:21:15
    |
-21 |     MyNil n = false; // @error
+21 |     MyNil _ = false; // @error
    |               ^^^^^

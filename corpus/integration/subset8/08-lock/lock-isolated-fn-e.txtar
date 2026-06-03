@@ -1,13 +1,13 @@
 -- stdout --
 -- stderr --
 error[SEMANTIC_ERROR]: access of mutable variable
-  --> lock-isolated-fn-e.bal:22:13
+  --> lock-isolated-fn-e.bal:21:13
    |
-22 |         a = a + 1; // @error
+21 |         a = a + 1; // @error
    |             ^
 
 error[SEMANTIC_ERROR]: access of mutable variable
-  --> lock-isolated-fn-e.bal:22:9
+  --> lock-isolated-fn-e.bal:21:9
    |
-22 |         a = a + 1; // @error
+21 |         a = a + 1; // @error
    |         ^

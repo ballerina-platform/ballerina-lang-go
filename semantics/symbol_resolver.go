@@ -45,7 +45,26 @@ const (
 	blockScopeKind
 )
 
+type varStatus uint8
+
+const (
+	varDeclared varStatus = iota
+	varUsed
+)
+
+type varStatusTracker interface {
+	markInit(sym model.SymbolRef, pos diagnostics.Location)
+	markUsed(sym model.SymbolRef)
+	getUnused() []varDeclInfo
+}
+
+type varDeclInfo struct {
+	varSym model.SymbolRef
+	pos    diagnostics.Location
+}
+
 type symbolResolver interface {
+	varStatusTracker
 	GetSymbol(name string) (model.SymbolRef, scopeKind, bool)
 	ast.Visitor
 	GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool)
@@ -68,6 +87,13 @@ type (
 		reported bool
 	}
 
+	varTracker struct {
+		varIndex  map[model.SymbolRef]int
+		declPos   []diagnostics.Location
+		varStatus []varStatus
+		symbol    []model.SymbolRef
+	}
+
 	moduleSymbolResolver struct {
 		ctx            *context.CompilerContext
 		tyCtx          semtypes.Context
@@ -77,19 +103,104 @@ type (
 		prevPos        map[string]prevPos
 		usedPrefixes   map[string]bool
 		defaultCounter int
+		varTracker     varTracker
 	}
 
 	blockSymbolResolver struct {
-		parent symbolResolver
-		scope  model.BlockLevelScope
-		node   ast.BLangNode
+		parent     symbolResolver
+		scope      model.BlockLevelScope
+		node       ast.BLangNode
+		varTracker *varTracker
 	}
 )
 
 var (
-	_ symbolResolver = &moduleSymbolResolver{}
-	_ symbolResolver = &blockSymbolResolver{}
+	_ symbolResolver   = &moduleSymbolResolver{}
+	_ symbolResolver   = &blockSymbolResolver{}
+	_ varStatusTracker = &varTracker{}
 )
+
+func markInit(resolver symbolResolver, name string, symbol model.SymbolRef, pos diagnostics.Location) {
+	if isIgnoredDeclName(name) {
+		return
+	}
+	resolver.markInit(symbol, pos)
+}
+
+func (r *moduleSymbolResolver) markInit(sym model.SymbolRef, pos diagnostics.Location) {
+	r.varTracker.markInit(sym, pos)
+}
+
+func (r *moduleSymbolResolver) markUsed(sym model.SymbolRef) {
+	if r.varTracker.isTracked(sym) {
+		r.varTracker.markUsed(sym)
+	}
+}
+
+func (r *moduleSymbolResolver) getUnused() []varDeclInfo {
+	return r.varTracker.getUnused()
+}
+
+func (r *blockSymbolResolver) markInit(sym model.SymbolRef, pos diagnostics.Location) {
+	if r.varTracker == nil {
+		r.parent.markInit(sym, pos)
+		return
+	}
+	r.varTracker.markInit(sym, pos)
+}
+
+func (r *blockSymbolResolver) markUsed(sym model.SymbolRef) {
+	tracker := r.varTracker
+	if tracker == nil {
+		r.parent.markUsed(sym)
+		return
+	}
+	if tracker.isTracked(sym) {
+		tracker.markUsed(sym)
+		return
+	}
+	r.parent.markUsed(sym)
+}
+
+func (r *blockSymbolResolver) getUnused() []varDeclInfo {
+	return r.varTracker.getUnused()
+}
+
+func (t *varTracker) isTracked(sym model.SymbolRef) bool {
+	if t.varIndex == nil {
+		return false
+	}
+	_, ok := t.varIndex[sym]
+	return ok
+}
+
+func (t *varTracker) markInit(sym model.SymbolRef, pos diagnostics.Location) {
+	index := len(t.symbol)
+	if t.varIndex == nil {
+		t.varIndex = make(map[model.SymbolRef]int)
+	}
+	t.varIndex[sym] = index
+	t.symbol = append(t.symbol, sym)
+	t.declPos = append(t.declPos, pos)
+	t.varStatus = append(t.varStatus, varDeclared)
+}
+
+func (t *varTracker) markUsed(sym model.SymbolRef) {
+	index := t.varIndex[sym]
+	t.varStatus[index] = varUsed
+}
+
+func (t *varTracker) getUnused() []varDeclInfo {
+	var res []varDeclInfo
+	for i := range len(t.symbol) {
+		status := t.varStatus[i]
+		if status == varUsed {
+			continue
+		}
+		res = append(res, varDeclInfo{t.symbol[i], t.declPos[i]})
+	}
+	return res
+}
 
 func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID, importedSymbols map[string]model.ExportedSymbolSpace) *moduleSymbolResolver {
 	if importedSymbols == nil {
@@ -117,9 +228,10 @@ func newFunctionResolver(parent symbolResolver, node ast.BLangNode) *blockSymbol
 	parentScope := parent.GetScope()
 	scope := parent.GetCtx().NewFunctionScope(parentScope, pkgID)
 	return &blockSymbolResolver{
-		parent: parent,
-		scope:  scope,
-		node:   node,
+		parent:     parent,
+		scope:      scope,
+		node:       node,
+		varTracker: new(varTracker{}),
 	}
 }
 
@@ -210,6 +322,19 @@ func (bs *blockSymbolResolver) TypeContext() semtypes.Context {
 
 func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition {
 	return bs.parent.GetTypeDefns()
+}
+
+// isIgnoredDeclName reports whether a name should be excluded from unused-variable tracking.
+// The IGNORE name (`_`) is the user-facing opt-out; names beginning with `$` are compiler
+// generated (default-param synthetic functions, desugar temporaries, etc.) and never user-visible.
+func isIgnoredDeclName(name string) bool {
+	if name == string(model.IGNORE) {
+		return true
+	}
+	if len(name) > 0 && name[0] == '$' {
+		return true
+	}
+	return false
 }
 
 func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model.Symbol, pos diagnostics.Location) bool {
@@ -383,7 +508,11 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		isPublic := constDef.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition()) {
-			return moduleResolver.scope.Exports()
+			continue
+		}
+		if !isPublic {
+			symRef, _, _ := moduleResolver.GetSymbol(name)
+			markInit(moduleResolver, name, symRef, constDef.GetPosition())
 		}
 	}
 	for _, globalVar := range pkg.GlobalVars {
@@ -399,7 +528,13 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		if globalVar.Flags().Has(model.FlagIsolated) {
 			symbol.SetIsolated()
 		}
-		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
+		if !addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition()) {
+			continue
+		}
+		if !isPublic {
+			symRef, _, _ := moduleResolver.GetSymbol(name)
+			markInit(moduleResolver, name, symRef, globalVar.GetPosition())
+		}
 	}
 	if pkg.InitFunction != nil {
 		signature := model.FunctionSignature{}
@@ -420,7 +555,15 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	ast.Walk(moduleResolver, pkg)
 	reportUnusedImports(moduleResolver, pkg)
 	pkg.Scope = moduleResolver.scope
+	reportUnusedVariables(cx, moduleResolver.getUnused())
 	return moduleResolver.scope.Exports()
+}
+
+func reportUnusedVariables(ctx *context.CompilerContext, unused []varDeclInfo) {
+	for _, v := range unused {
+		name := ctx.SymbolName(v.varSym)
+		ctx.SemanticError("unused variable '"+name+"'", v.pos)
+	}
 }
 
 func reportUnusedImports(resolver *moduleSymbolResolver, pkg *ast.BLangPackage) {
@@ -446,10 +589,11 @@ func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
-	resolveFunctionInner(functionResolver, function.RequiredParams, function.RestParam, function)
+	resolveFunctionInner(functionResolver, function.RequiredParams, function.RestParam, function, function.Body)
 }
 
-func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams []ast.BLangSimpleVariable, restParam ast.SimpleVariableNode, walkNode ast.BLangNode) {
+func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams []ast.BLangSimpleVariable, restParam ast.SimpleVariableNode, walkNode ast.BLangNode, body ast.FunctionBodyNode) {
+	trackParams := !isExternalFunctionBody(body)
 	scope := functionResolver.scope.MainSpace()
 	for i := range requiredParams {
 		param := &requiredParams[i]
@@ -460,6 +604,9 @@ func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams 
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
+		if trackParams {
+			markInit(functionResolver, name, param.Symbol(), param.GetPosition())
+		}
 	}
 	if restParam != nil {
 		rest := restParam.(*ast.BLangSimpleVariable)
@@ -469,9 +616,18 @@ func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams 
 		} else {
 			symbol := model.NewValueSymbol(name, false, false, true)
 			addSymbolAndSetOnNode(functionResolver, name, &symbol, rest)
+			if trackParams {
+				markInit(functionResolver, name, rest.Symbol(), rest.GetPosition())
+			}
 		}
 	}
 	ast.Walk(functionResolver, walkNode)
+	reportUnusedVariables(functionResolver.GetCtx(), functionResolver.getUnused())
+}
+
+func isExternalFunctionBody(body ast.FunctionBodyNode) bool {
+	_, ok := body.(*ast.BLangExternFunctionBody)
+	return ok
 }
 
 func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model.Scope, function *ast.BLangFunction) {
@@ -520,6 +676,7 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
+		markInit(functionResolver, name, param.Symbol(), param.GetPosition())
 	}
 
 	if function.RestParam != nil {
@@ -530,9 +687,11 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
+		markInit(functionResolver, name, restParam.Symbol(), restParam.GetPosition())
 	}
 
 	ast.Walk(functionResolver, function)
+	reportUnusedVariables(functionResolver.GetCtx(), functionResolver.getUnused())
 }
 
 func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace,
@@ -796,19 +955,19 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 	if n.GetPackageAlias() != nil {
 		prefix = n.GetPackageAlias().GetValue()
 	}
+	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n)
+	markUnprefixedRefUsed(resolver, name, prefix)
+}
+
+func markUnprefixedRefUsed[T symbolResolver](resolver T, name, prefix string) {
 	if prefix != "" {
-		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
-		if !ok {
-			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
-		}
-		n.SetSymbol(symRef)
-	} else {
-		symRef, _, ok := resolver.GetSymbol(name)
-		if !ok {
-			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
-		}
-		n.SetSymbol(symRef)
+		return
 	}
+	symRef, _, ok := resolver.GetSymbol(name)
+	if !ok {
+		return
+	}
+	resolver.markUsed(symRef)
 }
 
 type symbolRefNode interface {
@@ -838,6 +997,7 @@ func referSimpleVariableReference[T symbolResolver](resolver T, n ast.SimpleVari
 		prefix = n.GetPackageAlias().GetValue()
 	}
 	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n.(ast.BNodeWithSymbol))
+	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
 type functionRefNode interface {
@@ -848,7 +1008,10 @@ type functionRefNode interface {
 }
 
 func resolveFunctionRef[T symbolResolver](resolver T, invocation *ast.BLangInvocation) {
-	resolveSymbolRef(resolver, invocation.GetName().GetValue(), invocation.GetPackageAlias().GetValue(), invocation.GetPosition(), invocation)
+	name := invocation.GetName().GetValue()
+	prefix := invocation.GetPackageAlias().GetValue()
+	resolveSymbolRef(resolver, name, prefix, invocation.GetPosition(), invocation)
+	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
 type variableNode interface {
@@ -858,7 +1021,8 @@ type variableNode interface {
 }
 
 func referVariable[T symbolResolver](resolver T, variable variableNode) {
-	resolveSymbolRef(resolver, variable.GetName().GetValue(), "", variable.GetPosition(), variable)
+	name := variable.GetName().GetValue()
+	resolveSymbolRef(resolver, name, "", variable.GetPosition(), variable)
 }
 
 // isShadowed checks if a name is already defined in an enclosing block scope.
@@ -897,6 +1061,7 @@ func defineVariable(resolver *blockSymbolResolver, variable ast.VariableNode, is
 			symbol.SetFinal()
 		}
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
+		markInit(resolver, name, variable.Symbol(), variable.GetPosition())
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
 		return
@@ -948,6 +1113,7 @@ func setTypeDescriptorSymbol[T symbolResolver](resolver T, td ast.TypeDescriptor
 				if !ok {
 					semanticError(resolver, "Unknown type: "+tyName, td.GetPosition())
 				}
+				markUnprefixedRefUsed(resolver, tyName, pkg)
 			}
 			bNodeWithSymbol.SetSymbol(symRef)
 		default:
@@ -1208,8 +1374,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
 			continue
 		}
-		isPublic := field.IsPublic()
-		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		symbol := model.NewValueSymbol(name, field.IsPublic(), false, false)
 		classResolver.AddSymbol(name, &symbol)
 	}
 
@@ -1317,7 +1482,7 @@ func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangR
 		symbol := model.NewValueSymbol(name, false, false, true)
 		functionResolver.AddSymbol(name, &symbol)
 	}
-	resolveFunctionInner(functionResolver, rm.RequiredParams, rm.RestParam, rm)
+	resolveFunctionInner(functionResolver, rm.RequiredParams, rm.RestParam, rm, rm.Body)
 }
 
 func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
