@@ -14,17 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
+import ballerina/lang.array;
 
-import (
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.array"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.error"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.int"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.map"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.string"
+public function main() {
+    int[] ints = [];
+    array:push(ints, 1);
 
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.2/native"
-)
+    string[] strings = [];
+    array:push(strings, "a");
+
+    io:println(ints); // @output [1]
+    io:println(strings); // @output ["a"]
+}

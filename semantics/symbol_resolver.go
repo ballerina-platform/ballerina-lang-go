@@ -21,6 +21,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -28,9 +29,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
-	array "ballerina-lang-go/lib/array/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
 )
 
 type scopeKind int
@@ -593,9 +592,47 @@ func injectOpaqueSymbols(pkgID model.PackageID, r *moduleSymbolResolver) {
 		Package:      pkgID.PkgName.Value(),
 		Version:      pkgID.Version.Value(),
 	}
+	space := r.scope.MainSpace()
 	for _, sym := range model.OpaqueSymbols(pkg) {
+		fillinOpaqueSymbol(sym, space)
 		r.AddSymbol(sym.Name(), sym)
 	}
+}
+
+// fillinOpaqueSymbol fills in any information that needs to be stored in the opaque symbol
+// that is used within semantic package.
+func fillinOpaqueSymbol(sym model.Symbol, space *model.SymbolSpace) {
+	fn, ok := sym.(*model.OpaqueFunctionSymbol)
+	if !ok {
+		return
+	}
+	fn.SymbolSpace = space
+	fn.Lookup, fn.Store = newMonomorphizationCache()
+}
+
+// TODO: when we have cases where we have more than one type param types we need to properly
+// implement this
+func newMonomorphizationCache() (func(...semtypes.SemType) (model.SymbolRef, bool), func(model.SymbolRef, ...semtypes.SemType)) {
+	var mu sync.Mutex
+	cache := make(map[semtypes.SemType]model.SymbolRef)
+	keyOf := func(keys []semtypes.SemType) semtypes.SemType {
+		if len(keys) != 1 {
+			panic("monomorphization cache supports a single key type")
+		}
+		return keys[0]
+	}
+	lookup := func(keys ...semtypes.SemType) (model.SymbolRef, bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		ref, ok := cache[keyOf(keys)]
+		return ref, ok
+	}
+	store := func(ref model.SymbolRef, keys ...semtypes.SemType) {
+		mu.Lock()
+		defer mu.Unlock()
+		cache[keyOf(keys)] = ref
+	}
+	return lookup, store
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
@@ -710,18 +747,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// ballerina/lang.* packages that have not yet migrated to bala bundles bind
-		// to compiler-intrinsic symbols.
-		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if isLangImport(&imp, "array") {
-				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "map") {
-				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
-				continue
-			}
-		}
 		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
 
@@ -795,9 +820,7 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
-	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	return result
 }
 

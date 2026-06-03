@@ -14,17 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+# Returns the number of members of a map.
+#
+# + m - the map
+# + return - number of members in `m`
+public isolated function length(map<any|error> m) returns int = external;
 
-import (
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.array"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.error"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.int"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.map"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.string"
-
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.2/native"
-)
+# Returns a list of all the keys of a map.
+#
+# + m - the map
+# + return - a new list of all keys
+public isolated function keys(map<any|error> m) returns string[] = external;

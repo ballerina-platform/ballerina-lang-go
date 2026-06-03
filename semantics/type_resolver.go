@@ -31,9 +31,6 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-
-	array "ballerina-lang-go/lib/array/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
 )
 
 type typeResolver interface {
@@ -637,7 +634,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 
 func isPolymorphicFnSymbol(sym model.FunctionSymbol) bool {
 	switch sym.(type) {
-	case model.DependentlyTypedFunctionSymbol, model.ContainerGenericFunctionSymbol:
+	case model.DependentlyTypedFunctionSymbol:
 		return true
 	default:
 		return false
@@ -4732,11 +4729,11 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	var pkgAlias ast.BLangIdentifier
 	switch {
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.LIST):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, array.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.array", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.INT):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.int", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.MAPPING):
-		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bMap.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.map", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.ERROR):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.error", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.STRING):
@@ -5074,24 +5071,21 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		monoSym.SetType(typeFromFunctionSignature(t, monoSym.Signature()))
 		inv.SetResolvedSymbol(monoRef)
 		return argTys, monoRef, chain, true
-	case model.ContainerGenericFunctionSymbol:
-		args := inv.CallArgs()
-		if len(args) == 0 {
-			t.semanticError("missing container argument", inv.GetPosition())
+	case *model.OpaqueFunctionSymbol:
+		mono, ok := opaqueFunctionMonomorphizerFor(
+			fnSymbol.Package.Organization,
+			fnSymbol.Package.Package,
+			sym.OpaqueID(),
+		)
+		if !ok {
+			t.internalError("no monomorphizer for opaque function", inv.GetPosition())
 			return nil, fnSymbol, chain, false
 		}
-		container := args[0]
-		containerTy, _, ok := resolveActionOrExpression(t, chain, container, nil)
+		symbolRef, ok := mono(t, sym, fnSymbol, chain, inv.CallArgs(), inv.GetPosition())
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
-
-		symbolRef := sym.Monomorphize(containerTy)
-		fnSym, ok := t.getSymbol(symbolRef).(model.FunctionSymbol)
-		if !ok {
-			t.internalError("monomorphized container generic symbol is not a function symbol", inv.GetPosition())
-			return nil, fnSymbol, chain, false
-		}
+		fnSym := t.getSymbol(symbolRef).(model.FunctionSymbol)
 		sig := fnSym.Signature()
 		argTys, chain, ok := argArray(t, fnSym, sig.ParamTypes, sig.RestParamType, chain, inv, expectedType)
 		if !ok {
@@ -5174,10 +5168,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	paramNames := sym.ParamNames()
 	nRequired := len(paramNames)
 
-	var inclInfo *model.IncludedRecordParamInfo
-	if supportsIncludedRecords(sym) {
-		inclInfo = sym.IncludedRecordParams()
-	}
+	inclInfo := sym.IncludedRecordParams()
 
 	slots := make([]argSlot, nRequired)
 	namedArgsByIndex := make(map[int]*ast.BLangNamedArgsExpression)
@@ -5431,11 +5422,6 @@ func resolveIncludedRecordSlot(t typeResolver, chain *binding, s *mappingSlot, l
 	}
 	mc.SetDeterminedType(s.recordTy)
 	return mc, effect, true
-}
-
-func supportsIncludedRecords(sym model.FunctionSymbol) bool {
-	_, isGeneric := sym.(model.ContainerGenericFunctionSymbol)
-	return !isGeneric
 }
 
 // I don't like this. But we are doing this to avoid having to do this in both desugar and semantic analysis. Ideally this should be in the desugar
@@ -6406,4 +6392,158 @@ func setPositions(pos diagnostics.Location, nodes ...ast.BLangNode) {
 	for _, node := range nodes {
 		node.SetPosition(pos)
 	}
+}
+
+// opaqueFnMonomorphizer monomorphizes a generic lang-lib function at a call
+// site. It resolves only the first (container) argument, builds the concrete
+// monomorphized symbol, adds it to the opaque symbol's own space, and returns
+// its ref. Results are cached on the opaque symbol.
+type opaqueFnMonomorphizer func(t typeResolver, sym *model.OpaqueFunctionSymbol, polymorphicRef model.SymbolRef, chain *binding, args []ast.BLangExpression, pos diagnostics.Location) (model.SymbolRef, bool)
+
+// Per-package opaque-function monomorphizer tables, indexed by opaque id.
+// Assigned in init (not via var initializers) to avoid an initialization cycle:
+// the monomorphizers' bodies reach back into the resolver call graph, which
+// references these tables.
+var (
+	arrayOpaqueMonomorphizers []opaqueFnMonomorphizer
+	mapOpaqueMonomorphizers   []opaqueFnMonomorphizer
+)
+
+func init() {
+	arrayOpaqueMonomorphizers = []opaqueFnMonomorphizer{
+		model.OpaqueFnArrayPush: monomorphizeArrayPush,
+	}
+	mapOpaqueMonomorphizers = []opaqueFnMonomorphizer{
+		model.OpaqueFnMapRemove: monomorphizeMapRemove,
+	}
+}
+
+// opaqueFunctionMonomorphizerFor selects the monomorphizer for a generic
+// lang-lib function, indexed by its opaque id within the owning package.
+func opaqueFunctionMonomorphizerFor(org, pkg string, id int) (opaqueFnMonomorphizer, bool) {
+	if org != "ballerina" {
+		return nil, false
+	}
+	var monomorphizers []opaqueFnMonomorphizer
+	switch pkg {
+	case "lang.array":
+		monomorphizers = arrayOpaqueMonomorphizers
+	case "lang.map":
+		monomorphizers = mapOpaqueMonomorphizers
+	default:
+		return nil, false
+	}
+	if id < 0 || id >= len(monomorphizers) {
+		return nil, false
+	}
+	return monomorphizers[id], true
+}
+
+// monomorphicOpaqueFn satisfies model.MonomorphicFunctionSymbol: a concrete
+// function symbol that carries a backref to its polymorphic opaque origin so
+// BIR dispatches to the lang-lib extern.
+type monomorphicOpaqueFn struct {
+	model.FunctionSymbol
+	name string
+	poly model.SymbolRef
+}
+
+func (m *monomorphicOpaqueFn) Name() string { return m.name }
+
+func (m *monomorphicOpaqueFn) PolymorphicSymbol() model.SymbolRef { return m.poly }
+
+var _ model.MonomorphicFunctionSymbol = &monomorphicOpaqueFn{}
+
+// containerArgExpr returns the expression bound to the container (first)
+// parameter of an opaque lang-lib function. The container is always the first
+// positional argument (Ballerina forbids a named argument before a positional
+// one); when the call uses only named arguments it is matched by paramName.
+// This keeps out-of-order named calls (e.g. map:remove(k = "x", m = myMap))
+// from being monomorphized against the wrong argument.
+func containerArgExpr(args []ast.BLangExpression, paramName string) (ast.BLangExpression, bool) {
+	for _, arg := range args {
+		named, ok := arg.(*ast.BLangNamedArgsExpression)
+		if !ok {
+			return arg, true
+		}
+		if named.Name.Value == paramName {
+			return named.Expr, true
+		}
+	}
+	return nil, false
+}
+
+// storeMonomorphizedOpaqueFn builds the monomorphic symbol for sig, adds it to
+// the opaque symbol's space, sets its type, and caches it under containerTy.
+func storeMonomorphizedOpaqueFn(t typeResolver, sym *model.OpaqueFunctionSymbol, polymorphicRef model.SymbolRef, sig model.FunctionSignature, containerTy semtypes.SemType) model.SymbolRef {
+	mono := &monomorphicOpaqueFn{FunctionSymbol: model.NewFunctionSymbol(sym.Name(), sig, true), poly: polymorphicRef}
+	mono.SetType(typeFromFunctionSignature(t, sig))
+	space := sym.SymbolSpace
+	idx := space.AppendSymbol(mono)
+	mono.name = fmt.Sprintf("%s$mono$%d", sym.Name(), idx)
+	ref := space.RefAt(idx)
+	if sym.Store != nil {
+		sym.Store(ref, containerTy)
+	}
+	return ref
+}
+
+func monomorphizeArrayPush(t typeResolver, sym *model.OpaqueFunctionSymbol, polymorphicRef model.SymbolRef, chain *binding, args []ast.BLangExpression, pos diagnostics.Location) (model.SymbolRef, bool) {
+	containerExpr, ok := containerArgExpr(args, "arr")
+	if !ok {
+		t.semanticError("missing container argument", pos)
+		return model.SymbolRef{}, false
+	}
+	containerTy, _, ok := resolveActionOrExpression(t, chain, containerExpr, nil)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	if sym.Lookup != nil {
+		if ref, ok := sym.Lookup(containerTy); ok {
+			return ref, true
+		}
+	}
+	cx := t.typeContext()
+	if !semtypes.IsSubtype(cx, containerTy, semtypes.LIST) {
+		t.semanticError("expect first argument to be a subtype of (any|error)[]", pos)
+		return model.SymbolRef{}, false
+	}
+	valType := semtypes.ListProj(cx, containerTy, semtypes.INT)
+	sig := model.FunctionSignature{
+		ParamTypes:    []semtypes.SemType{containerTy},
+		RestParamType: valType,
+		ReturnType:    semtypes.NIL,
+		Flags:         model.FuncSymbolFlagIsolated,
+	}
+	return storeMonomorphizedOpaqueFn(t, sym, polymorphicRef, sig, containerTy), true
+}
+
+func monomorphizeMapRemove(t typeResolver, sym *model.OpaqueFunctionSymbol, polymorphicRef model.SymbolRef, chain *binding, args []ast.BLangExpression, pos diagnostics.Location) (model.SymbolRef, bool) {
+	containerExpr, ok := containerArgExpr(args, "m")
+	if !ok {
+		t.semanticError("missing container argument", pos)
+		return model.SymbolRef{}, false
+	}
+	containerTy, _, ok := resolveActionOrExpression(t, chain, containerExpr, nil)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	if sym.Lookup != nil {
+		if ref, ok := sym.Lookup(containerTy); ok {
+			return ref, true
+		}
+	}
+	cx := t.typeContext()
+	if !semtypes.IsSubtype(cx, containerTy, semtypes.MAPPING) {
+		t.semanticError("expect first argument to be a subtype of map<any|error>", pos)
+		return model.SymbolRef{}, false
+	}
+	memberType := semtypes.MappingMemberTypeInnerValProj(cx, containerTy, semtypes.STRING)
+	sig := model.FunctionSignature{
+		ParamTypes:    []semtypes.SemType{containerTy, semtypes.STRING},
+		RestParamType: semtypes.NEVER,
+		ReturnType:    memberType,
+		Flags:         model.FuncSymbolFlagIsolated,
+	}
+	return storeMonomorphizedOpaqueFn(t, sym, polymorphicRef, sig, containerTy), true
 }

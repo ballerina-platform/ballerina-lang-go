@@ -16,7 +16,9 @@
 
 package model
 
-import "ballerina-lang-go/semtypes"
+import (
+	"ballerina-lang-go/semtypes"
+)
 
 // OpaqueSymbol is a symbol whose definition cannot be written in Ballerina
 // source, so its real form is built in Go by OpaqueSymbols. It is serialized by
@@ -28,6 +30,50 @@ type OpaqueSymbol interface {
 	// symbol and is the serialization handle.
 	OpaqueID() int
 }
+
+// OpaqueFunctionSymbol represents a function that uses `typeParam` annotation.
+// Actualy type validation and resolution of these functions can't be represented within
+// normal ballerina typing rules. Instead we have logic implemented for these in the type resolver.
+type OpaqueFunctionSymbol struct {
+	name        string
+	ID          int          // per-package opaque id; serialization handle and (with the package) selects the monomorphizer
+	SymbolSpace *SymbolSpace // space the monomorphized function is added to
+	// Monomorphization cache functions, if function it self don't support caching then function pointers are nil
+	Lookup func(keys ...semtypes.SemType) (SymbolRef, bool)
+	Store  func(ref SymbolRef, keys ...semtypes.SemType)
+}
+
+const (
+	// lang.array
+	OpaqueFnArrayPush = 0
+	// lang.map
+	OpaqueFnMapRemove = 0
+)
+
+func newOpaqueFunctionSymbol(name string, id int) *OpaqueFunctionSymbol {
+	return &OpaqueFunctionSymbol{name: name, ID: id}
+}
+
+func (s *OpaqueFunctionSymbol) Name() string     { return s.name }
+func (s *OpaqueFunctionSymbol) OpaqueID() int    { return s.ID }
+func (s *OpaqueFunctionSymbol) Kind() SymbolKind { return SymbolKindFunction }
+func (s *OpaqueFunctionSymbol) IsPublic() bool   { return true }
+func (s *OpaqueFunctionSymbol) Type() semtypes.SemType {
+	panic("opaque function must be monomorphized")
+}
+
+func (s *OpaqueFunctionSymbol) SetType(semtypes.SemType) {
+	panic("opaque function must be monomorphized")
+}
+
+func (s *OpaqueFunctionSymbol) Copy() Symbol {
+	panic("opaque function must be monomorphized")
+}
+
+var (
+	_ Symbol       = &OpaqueFunctionSymbol{}
+	_ OpaqueSymbol = &OpaqueFunctionSymbol{}
+)
 
 // OpaqueTypeSymbol wraps the real TypeSymbol built for a builtin lang library
 // and carries its package-scoped opaque id. Embedding TypeSymbol forwards
@@ -66,6 +112,10 @@ func OpaqueSymbols(pkg PackageIdentifier) []Symbol {
 		return langStringOpaqueSymbols()
 	case "lang.xml":
 		return langXMLOpaqueSymbols()
+	case "lang.array":
+		return []Symbol{newOpaqueFunctionSymbol("push", OpaqueFnArrayPush)}
+	case "lang.map":
+		return []Symbol{newOpaqueFunctionSymbol("remove", OpaqueFnMapRemove)}
 	default:
 		return nil
 	}

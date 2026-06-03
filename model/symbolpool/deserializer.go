@@ -132,6 +132,12 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace, opaque []model.Symb
 		var idx int32
 		read(sr.r, &idx)
 		sym := opaque[idx]
+		// Set the space the (monomorphized) function is added to. No
+		// monomorphization cache is installed here; nil closures mean no
+		// caching (the symbol resolver installs one when compiling from source).
+		if fn, ok := sym.(*model.OpaqueFunctionSymbol); ok {
+			fn.SymbolSpace = space
+		}
 		space.AddSymbol(sym.Name(), sym)
 	case symTagType:
 		sr.readTypeSymbol(space)

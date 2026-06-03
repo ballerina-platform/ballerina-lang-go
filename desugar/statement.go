@@ -19,8 +19,6 @@ package desugar
 
 import (
 	"ballerina-lang-go/ast"
-	array "ballerina-lang-go/lib/array/compile"
-	maplib "ballerina-lang-go/lib/map/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -491,7 +489,7 @@ func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpre
 }
 
 func createLengthInvocation(cx *functionContext, collection ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := array.PackageName
+	pkgName := "lang.array"
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")
@@ -673,7 +671,7 @@ func desugarForEachOnMap(cx *functionContext, collection ast.BLangActionOrExpres
 }
 
 func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := maplib.PackageName
+	pkgName := "lang.map"
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")

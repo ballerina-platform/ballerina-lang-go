@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/fs"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -89,6 +90,22 @@ var migratedLangLibs = []langLib{
 		version:    "0.0.1",
 	},
 	{
+		org:        "ballerina",
+		nameComps:  []string{"lang", "array"},
+		implicitID: "lang.array",
+		srcFS:      langlibs.FS,
+		balPath:    "ballerina/lang.array/0.0.1/any/lang.array.bal",
+		version:    "0.0.1",
+	},
+	{
+		org:        "ballerina",
+		nameComps:  []string{"lang", "map"},
+		implicitID: "lang.map",
+		srcFS:      langlibs.FS,
+		balPath:    "ballerina/lang.map/0.0.1/any/lang.map.bal",
+		version:    "0.0.1",
+	},
+	{
 		org:       "ballerina",
 		nameComps: []string{"io"},
 		srcFS:     stdlibs.FS,
@@ -117,19 +134,18 @@ func ImplicitImports(cx *context.CompilerContext) (map[string]model.ExportedSymb
 	return result, nil
 }
 
-// SeedPublicSymbols compiles the migrated lang libraries that require an
-// explicit import (e.g. ballerina/io) into cx and registers them in
-// publicSymbols keyed by package identifier, so a hand-rolled driver resolves
-// them like any other dependency when the user code imports them. A nil
-// publicSymbols map is initialized and returned.
+// SeedPublicSymbols compiles the migrated lang libraries into cx and registers
+// them in publicSymbols keyed by package identifier, so a hand-rolled driver
+// resolves them like any other dependency when the user code imports them.
+// This includes the implicitly-used libs (e.g. lang.array) so that user code
+// which also imports them explicitly resolves, mirroring the project pipeline
+// where bundled lang libs are published to publicSymbols. A nil publicSymbols
+// map is initialized and returned.
 func SeedPublicSymbols(cx *context.CompilerContext, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) (map[semantics.PackageIdentifier]model.ExportedSymbolSpace, error) {
 	if publicSymbols == nil {
 		publicSymbols = make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
 	}
 	for _, lib := range migratedLangLibs {
-		if lib.implicitID != "" {
-			continue
-		}
 		space, err := compileLangLib(cx, lib)
 		if err != nil {
 			return nil, err
@@ -142,9 +158,25 @@ func SeedPublicSymbols(cx *context.CompilerContext, publicSymbols map[semantics.
 	return publicSymbols, nil
 }
 
+// libCacheKey identifies a compiled lang library within a single compiler
+// context. A library may be requested by both ImplicitImports and
+// SeedPublicSymbols; caching ensures it is compiled (and its source file
+// registered) exactly once per context.
+type libCacheKey struct {
+	cx   *context.CompilerContext
+	path string
+}
+
+var libCache sync.Map // libCacheKey -> model.ExportedSymbolSpace
+
 // compileLangLib compiles a single bundled lang library's source into cx and
-// returns its exported symbol space.
+// returns its exported symbol space, reusing a previous compilation in the same
+// context if present.
 func compileLangLib(cx *context.CompilerContext, lib langLib) (model.ExportedSymbolSpace, error) {
+	key := libCacheKey{cx: cx, path: lib.balPath}
+	if cached, ok := libCache.Load(key); ok {
+		return cached.(model.ExportedSymbolSpace), nil
+	}
 	content, err := fs.ReadFile(lib.srcFS, lib.balPath)
 	if err != nil {
 		return model.ExportedSymbolSpace{}, fmt.Errorf("langlib: read %s: %w", lib.balPath, err)
@@ -173,5 +205,6 @@ func compileLangLib(cx *context.CompilerContext, lib langLib) (model.ExportedSym
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), lib.org)
 	exported := semantics.ResolveSymbols(cx, pkg, imported)
 	semantics.ResolveTopLevelNodes(cx, pkg, imported)
+	libCache.Store(key, exported)
 	return exported, nil
 }
