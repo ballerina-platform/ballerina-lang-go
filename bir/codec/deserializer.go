@@ -761,6 +761,23 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		}
 		lhsOp := br.readOperand(varMap)
 		return bir.NewXMLSequenceInstr(lhsOp, children, pos)
+	case bir.INSTRUCTION_KIND_EVAL_TEMPLATE_EXPR:
+		var kind uint8
+		br.read(&kind)
+		strCount := br.readLength()
+		strs := make([]string, strCount)
+		for k := 0; k < int(strCount); k++ {
+			strs[k] = string(br.readStringCPEntry())
+		}
+		var totalLen int32
+		br.read(&totalLen)
+		insCount := br.readLength()
+		insertions := make([]*bir.BIROperand, insCount)
+		for k := 0; k < int(insCount); k++ {
+			insertions[k] = br.readOperand(varMap)
+		}
+		lhsOp := br.readOperand(varMap)
+		return bir.NewEvalTemplateExpr(bir.TemplateKind(kind), strs, insertions, lhsOp, pos)
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}

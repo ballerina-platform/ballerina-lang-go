@@ -1039,6 +1039,8 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 		return xmlCommentLiteral(ctx, curBB, expr)
 	case *ast.BLangXMLTextLiteral:
 		return xmlTextLiteral(ctx, curBB, expr)
+	case *ast.BLangTemplateExpr:
+		return templateExpression(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
 	}
@@ -1133,6 +1135,26 @@ func buildXMLNamespacesMap(ctx context, curBB *BIRBasicBlock, ns map[string]stri
 	resultOp := ctx.addTempVar(ctx.function().birCx.stringMapType())
 	curBB.Instructions = append(curBB.Instructions, NewMapConstructor(ctx.function().birCx.stringMapType(), resultOp, entries, nil, false, pos))
 	return resultOp, curBB
+}
+
+func templateExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTemplateExpr) expressionEffect {
+	pos := ctx.function().loc(expr.GetPosition())
+	operands := make([]*BIROperand, len(expr.Insertions))
+	for i, ins := range expr.Insertions {
+		eff := handleActionOrExpression(ctx, curBB, ins)
+		curBB = eff.block
+		operands[i] = eff.result
+	}
+	var kind TemplateKind
+	switch expr.Kind {
+	case ast.TemplateExprKindString:
+		kind = TemplateKindString
+	default:
+		panic(fmt.Sprintf("unsupported template expr kind: %d", expr.Kind))
+	}
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewEvalTemplateExpr(kind, expr.Strings, operands, resultOp, pos))
+	return expressionEffect{result: resultOp, block: curBB}
 }
 
 func xmlSequenceLiteral(ctx context, curBB *BIRBasicBlock, expr *ast.BLangXMLSequenceLiteral) expressionEffect {

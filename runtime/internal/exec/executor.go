@@ -290,6 +290,8 @@ func execInstruction(ctx *extern.Context, inst bir.BIRNonTerminator, frame *Fram
 		execNewXMLText(ctx, v, frame)
 	case *bir.NewXMLSequence:
 		execNewXMLSequence(ctx, v, frame)
+	case *bir.EvalTemplateExpr:
+		execEvalTemplateExpr(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}

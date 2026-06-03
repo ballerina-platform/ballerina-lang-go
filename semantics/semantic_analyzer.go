@@ -818,6 +818,10 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 				validateConstantExpr(ctx, kv.ValueExpr, onNonConst)
 			}
 		}
+	case *ast.BLangTemplateExpr:
+		for _, ins := range e.Insertions {
+			validateConstantExpr(ctx, ins, onNonConst)
+		}
 	default:
 		onNonConst(expr)
 	}
@@ -934,6 +938,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangXMLSequenceLiteral, *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangTemplateExpr:
+		return analyzeTemplateExpr(a, expr, expectedType)
 	case *ast.BLangXMLAttribute:
 		// XML attributes are metadata on elements and should not be analyzed as standalone expressions
 		// Their values are already analyzed as part of XMLElement processing
@@ -958,6 +964,17 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 	if !semtypes.IsEmpty(a.tyCtx(), errorPart) {
 		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
 			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
+		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+var templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
+
+func analyzeTemplateExpr[A analyzer](a A, expr *ast.BLangTemplateExpr, expectedType semtypes.SemType) bool {
+	for _, ins := range expr.Insertions {
+		if !analyzeActionOrExpression(a, ins, templateInsertionAllowedTypes) {
+			return false
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)

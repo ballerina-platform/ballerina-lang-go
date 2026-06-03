@@ -102,6 +102,14 @@ const (
 	MappingKeyComputed
 )
 
+type TemplateExprKind uint8
+
+const (
+	TemplateExprKindString TemplateExprKind = iota
+	TemplateExprKindXML
+	TemplateExprKindRaw
+)
+
 type (
 	NarrowedTypes struct {
 		TrueType  BType
@@ -359,6 +367,13 @@ type (
 		bLangExpressionBase
 		// PR-TODO: this should by a slice of XML stuff
 		Children []BLangExpression
+	}
+
+	BLangTemplateExpr struct {
+		bLangExpressionBase
+		Kind       TemplateExprKind
+		Strings    []string
+		Insertions []BLangExpression
 	}
 
 	BLangXMLElementLiteral struct {
@@ -986,12 +1001,14 @@ func createBLangUnaryExpr(location diagnostics.Location, operator model.Operator
 
 var (
 	_ BLangExpression = &BLangXMLSequenceLiteral{}
+	_ BLangExpression = &BLangTemplateExpr{}
 	_ BLangExpression = &BLangXMLElementLiteral{}
 	_ BLangExpression = &BLangXMLAttribute{}
 	_ BLangExpression = &BLangXMLPILiteral{}
 	_ BLangExpression = &BLangXMLCommentLiteral{}
 	_ BLangExpression = &BLangXMLTextLiteral{}
 	_ BLangNode       = &BLangXMLSequenceLiteral{}
+	_ BLangNode       = &BLangTemplateExpr{}
 	_ BLangNode       = &BLangXMLElementLiteral{}
 	_ BLangNode       = &BLangXMLAttribute{}
 	_ BLangNode       = &BLangXMLPILiteral{}
