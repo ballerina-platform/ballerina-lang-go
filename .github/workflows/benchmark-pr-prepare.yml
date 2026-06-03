@@ -42,8 +42,8 @@ jobs:
         run: |
           mkdir -p benchmark-output
           ./bin/benchmark \
-            --runs 10 \
-            --warmup 2 \
+            --runs 3 \
+            --warmup 1 \
             --export-html benchmark-output/output.html \
             origin/main \
             HEAD \
