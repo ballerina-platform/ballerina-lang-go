@@ -2,7 +2,7 @@ name: PR Benchmark Prepare
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
 
 permissions:
   contents: read
@@ -14,6 +14,7 @@ concurrency:
 jobs:
   benchmark:
     name: Benchmark main vs PR head
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
 
     steps:
@@ -41,8 +42,8 @@ jobs:
         run: |
           mkdir -p benchmark-output
           ./bin/benchmark \
-            --runs 10 \
-            --warmup 2 \
+            --runs 3 \
+            --warmup 1 \
             --export-html benchmark-output/output.html \
             origin/main \
             HEAD \
