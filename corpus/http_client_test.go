@@ -537,7 +537,7 @@ func runNetworkBal(t *testing.T, balFile string) string {
 	return strings.TrimSpace(stdoutBuf.String())
 }
 
-// TestHttpClientJson exercises Response.getJsonPayload against httpbin /json.
+// TestHttpClientJson exercises Response.getJsonPayload against httpbun /json.
 // Asserts that the returned value satisfies `is json` (map<json> semtype).
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientJson(t *testing.T) {
@@ -548,7 +548,7 @@ func TestHttpClientJson(t *testing.T) {
 	}
 }
 
-// TestHttpClientText exercises Response.getTextPayload against httpbin /html.
+// TestHttpClientText exercises Response.getTextPayload against httpbun /html.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientText(t *testing.T) {
 	skipIfNoNetwork(t)
@@ -558,7 +558,7 @@ func TestHttpClientText(t *testing.T) {
 	}
 }
 
-// TestHttpClientBinary exercises Response.getBinaryPayload against httpbin /bytes/16.
+// TestHttpClientBinary exercises Response.getBinaryPayload against httpbun /bytes/16.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientBinary(t *testing.T) {
 	skipIfNoNetwork(t)
@@ -569,7 +569,7 @@ func TestHttpClientBinary(t *testing.T) {
 }
 
 // TestHttpClientPublicMethods exercises POST, PUT, DELETE, and PATCH against
-// dedicated httpbin endpoints that each return 200 for their verb.
+// dedicated httpbun endpoints that each return 200 for their verb.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientPublicMethods(t *testing.T) {
 	skipIfNoNetwork(t)
@@ -580,7 +580,7 @@ func TestHttpClientPublicMethods(t *testing.T) {
 }
 
 // TestHttpClientTimeout verifies that a 1-second timeout fires before
-// httpbin /delay/5 responds, and that the resulting error propagates to
+// httpbun /delay/5 responds, and that the resulting error propagates to
 // Ballerina as an error value.
 // TODO: Replace with a Ballerina HTTP service once server support lands.
 func TestHttpClientTimeout(t *testing.T) {
