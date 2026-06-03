@@ -64,35 +64,43 @@ main() -> nil{
     %9 ? bb5 : bb7;
   }
   bb5 {
-    %11 = ConstantLoad value
-    %10 = r1[%11];
-    %12 = %10;
-    %13 = println(%12) -> bb6;
+    PushScopeFrame 4
+    %1 = ConstantLoad value
+    %0 = (1, r1)[%1];
+    %2 = %0;
+    %3 = println(%2) -> bb6;
   }
   bb6 {
+    PopScopeFrame
     GOTO bb7;
   }
   bb7 {
-    %14 = streamClose s
-    c = %14;
-    %16 = println(c) -> bb8;
+    PushScopeFrame 6
+    %0 = streamClose (1, s)
+    c = %0;
+    %2 = println(c) -> bb8;
   }
   bb8 {
-    %17 = streamNext s
-    r2 = %17;
-    %19 = r2 is {| value: int, never... |}
-    %19 ? bb9 : bb11;
+    %3 = streamNext (1, s)
+    r2 = %3;
+    %5 = r2 is {| value: int, never... |}
+    %5 ? bb9 : bb11;
   }
   bb9 {
-    %21 = ConstantLoad value
-    %20 = r2[%21];
-    %22 = %20;
-    %23 = println(%22) -> bb10;
+    PushScopeFrame 4
+    %1 = ConstantLoad value
+    %0 = (1, r2)[%1];
+    %2 = %0;
+    %3 = println(%2) -> bb10;
   }
   bb10 {
+    PopScopeFrame
     GOTO bb11;
   }
   bb11 {
+    PushScopeFrame 0
+    PopScopeFrame
+    PopScopeFrame
     return;
   }
 }

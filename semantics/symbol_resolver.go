@@ -384,8 +384,16 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for _, globalVar := range pkg.GlobalVars {
 		name := globalVar.Name.Value
 		isPublic := globalVar.IsPublic()
-		isFinal := globalVar.IsFinal()
-		symbol := model.NewValueSymbol(name, isPublic, isFinal, false)
+		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		if globalVar.IsFinal() {
+			symbol.SetFinal()
+		}
+		if globalVar.IsConfigurable() {
+			symbol.SetConfigurable()
+		}
+		if globalVar.Flags().Has(model.FlagIsolated) {
+			symbol.SetIsolated()
+		}
 		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
 	}
 	if pkg.InitFunction != nil {
@@ -631,7 +639,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangForeach:
 		resolveForeachSymbols(bs, n)
 		return nil
-	case *ast.BLangBlockStmt, *ast.BLangDo:
+	case *ast.BLangBlockStmt, *ast.BLangDo, *ast.BLangLock:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable(), n.GetVariable().(*ast.BLangSimpleVariable).IsFinal())
@@ -848,6 +856,9 @@ func defineVariable(resolver *blockSymbolResolver, variable ast.VariableNode, is
 			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, isFinal, false)
+		if isFinal {
+			symbol.SetFinal()
+		}
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())

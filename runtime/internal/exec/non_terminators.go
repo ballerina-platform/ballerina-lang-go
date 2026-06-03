@@ -96,10 +96,6 @@ func execNewError(ctx *extern.Context, newError *bir.NewError, frame *Frame) {
 func execNewObject(ctx *extern.Context, newObject *bir.NewObject, frame *Frame) {
 	classDef := ctx.Env.Registry.(*modules.Registry).GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
-	for _, field := range classDef.Fields {
-		fv, _ := values.FillerValue(ctx.TypeCtx, field.Ty)
-		fieldValues[field.Name] = fv
-	}
 	methodKeys := make(map[string]string, len(classDef.VTable))
 	for methodName, method := range classDef.VTable {
 		methodKeys[methodName] = method.FunctionLookupKey

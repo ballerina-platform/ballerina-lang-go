@@ -38,12 +38,16 @@ foo(any) -> float{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %0 = v;
+    PushScopeFrame 0
+    (1, %0) = (1, v);
+    PopScopeFrame
     return;
   }
   bb2 {
-    %3 = ConstantLoad 2.5
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad 2.5
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb3 {

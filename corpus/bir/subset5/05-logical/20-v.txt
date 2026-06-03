@@ -37,12 +37,16 @@ f(int|string) -> boolean{
     %2 ? bb3 : bb4;
   }
   bb3 {
+    PushScopeFrame 0
+    PopScopeFrame
     GOTO bb5;
   }
   bb4 {
-    unused1 = x;
-    %6 = ConstantLoad true
-    %0 = %6;
+    PushScopeFrame 2
+    unused1 = (1, x);
+    %1 = ConstantLoad true
+    (1, %0) = %1;
+    PopScopeFrame
     return;
   }
   bb5 {

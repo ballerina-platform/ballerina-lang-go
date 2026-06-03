@@ -25,11 +25,15 @@ ifElse(boolean,boolean,int) -> any{
     t ? bb1 : bb2;
   }
   bb1 {
-    %0 = b;
+    PushScopeFrame 0
+    (1, %0) = (1, b);
+    PopScopeFrame
     return;
   }
   bb2 {
-    %0 = n;
+    PushScopeFrame 0
+    (1, %0) = (1, n);
+    PopScopeFrame
     return;
   }
   bb3 {

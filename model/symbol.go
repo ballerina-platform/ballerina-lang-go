@@ -271,8 +271,11 @@ type (
 
 	ValueSymbol struct {
 		symbolBase
-		isConst     bool
-		isParameter bool
+		isConst        bool
+		isParameter    bool
+		isIsolated     bool
+		isFinal        bool
+		isConfigurable bool
 	}
 
 	functionSymbol struct {
@@ -764,6 +767,20 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 func (vs *ValueSymbol) IsConst() bool {
 	return vs.isConst || vs.isParameter
 }
+
+func (vs *ValueSymbol) IsParameter() bool { return vs.isParameter }
+
+func (vs *ValueSymbol) IsIsolated() bool { return vs.isIsolated }
+
+func (vs *ValueSymbol) SetIsolated() { vs.isIsolated = true }
+
+func (vs *ValueSymbol) IsFinal() bool { return vs.isFinal }
+
+func (vs *ValueSymbol) SetFinal() { vs.isFinal = true }
+
+func (vs *ValueSymbol) IsConfigurable() bool { return vs.isConfigurable }
+
+func (vs *ValueSymbol) SetConfigurable() { vs.isConfigurable = true }
 
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs

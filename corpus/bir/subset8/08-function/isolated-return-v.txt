@@ -11,12 +11,16 @@ foo() -> float{
     %3 ? bb1 : bb2;
   }
   bb1 {
-    %7 = ConstantLoad 0
-    %0 = %7;
+    PushScopeFrame 1
+    %0 = ConstantLoad 0
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %0 = x;
+    PushScopeFrame 0
+    (1, %0) = (1, x);
+    PopScopeFrame
     return;
   }
   bb3 {

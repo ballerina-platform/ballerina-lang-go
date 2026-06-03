@@ -968,6 +968,10 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.StatementNod
 		return statementEffect{nil, true}, true
 	case *ast.BLangBlockStmt:
 		return resolveBlockStatements(t, chain, s.Stmts)
+	case *ast.BLangLock:
+		effect, ok := resolveBlockStatements(t, chain, s.Body.Stmts)
+		s.Body.SetDeterminedType(semtypes.NEVER)
+		return effect, ok
 	case *ast.BLangForeach:
 		collectionTy, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil)
 		if !ok {
