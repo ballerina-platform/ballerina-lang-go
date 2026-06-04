@@ -1,6 +1,8 @@
 -- stdout --
 -- stderr --
-ballerina: no package found at path /Users/tharmigan/Documents/github/TharmiganK/ballerina-lang-go/corpus/cli/testdata/run/workspaces/run-workspace-corpus/notamember within workspace /Users/tharmigan/Documents/github/TharmiganK/ballerina-lang-go/corpus/cli/testdata/run/workspaces/run-workspace-corpus
+ballerina: no package found at path
+notamember within workspace
+run-workspace-corpus
 
 USAGE:
     run [<source-file.bal> | <package-dir> | .]
