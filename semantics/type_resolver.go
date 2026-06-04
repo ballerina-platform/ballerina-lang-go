@@ -2724,7 +2724,10 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 }
 
 func resolveTypedescExpr(t typeResolver, chain *binding, e *ast.BLangTypedescExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	constraint, _ := resolveBType(t, e.GetTypeDescriptor().(ast.BType), 0)
+	constraint, ok := resolveBType(t, e.GetTypeDescriptor().(ast.BType), 0)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
 	e.Constraint = constraint
 	ty := semtypes.TypedescContaining(t.typeEnv(), constraint)
 	if expectedType != nil && !semtypes.IsSubtype(t.typeContext(), ty, expectedType) {
