@@ -76,7 +76,7 @@ func (c *httpClient) Execute(ctx context.Context, method, targetURL string, body
 		// Check Content-Length first for an early error without reading the body.
 		if resp.ContentLength > c.maxEntityBodySize {
 			_ = resp.Body.Close()
-			return 0, nil, nil, fmt.Errorf("Response entity body size exceeds: %d bytes", c.maxEntityBodySize)
+			return 0, nil, nil, fmt.Errorf("response entity body size exceeds: %d bytes", c.maxEntityBodySize)
 		}
 		respBody = &limitedBodyReadCloser{rc: resp.Body, n: c.maxEntityBodySize, limit: c.maxEntityBodySize}
 	}
@@ -97,14 +97,14 @@ type limitedBodyReadCloser struct {
 
 func (l *limitedBodyReadCloser) Read(p []byte) (int, error) {
 	if l.exceeded {
-		return 0, fmt.Errorf("Response entity body size exceeds: %d bytes", l.limit)
+		return 0, fmt.Errorf("response entity body size exceeds: %d bytes", l.limit)
 	}
 	if l.n <= 0 {
 		var b [1]byte
 		nn, _ := l.rc.Read(b[:])
 		if nn > 0 {
 			l.exceeded = true
-			return 0, fmt.Errorf("Response entity body size exceeds: %d bytes", l.limit)
+			return 0, fmt.Errorf("response entity body size exceeds: %d bytes", l.limit)
 		}
 		return 0, io.EOF
 	}

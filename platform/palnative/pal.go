@@ -49,7 +49,11 @@ func NewPlatform() pal.Platform {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
 				_, err = f.Write(data)
 				return err
 			},
