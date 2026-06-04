@@ -700,7 +700,7 @@ func compileBuiltinWithBIR(env *context.CompilerEnvironment, org, name, version 
 	cx := context.NewCompilerContext(env)
 	virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", name)
 	cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(string(contentBytes)))
-	st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, string(contentBytes))
+	st, err := parser.GetSyntaxTree(cx, virtualPath, string(contentBytes))
 	if err != nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
 	}
@@ -725,7 +725,7 @@ func compileBuiltinWithBIR(env *context.CompilerEnvironment, org, name, version 
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
 	}
 	analyzer := semantics.NewSemanticAnalyzer(cx)
-	analyzer.Analyze(pkg)
+	analyzer.Analyze(pkg, importedSymbols)
 	if cx.HasErrors() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
 	}
