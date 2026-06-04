@@ -14,23 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//go:build !debug
+import ballerina/io;
 
-package main
-
-import "github.com/spf13/cobra"
-
-type disabledProfiler struct{}
-
-func init() {
-	profiler = &disabledProfiler{}
-	// Register profiler flags on the global packCmd; the createPackCmd factory
-	// intentionally omits them so test-instantiated commands stay flag-free.
-	profiler.RegisterFlags(packCmd)
+public function main() {
+    io:println(hello());
 }
-
-func (p *disabledProfiler) RegisterFlags(_ *cobra.Command) {}
-
-func (p *disabledProfiler) Start() error { return nil }
-
-func (p *disabledProfiler) Stop() error { return nil }
