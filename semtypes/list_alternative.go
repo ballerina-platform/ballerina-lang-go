@@ -89,7 +89,7 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 		}
 	}
 	typeAtom := env.listAtom(atom)
-	ty := createBasicSemType(BTList, bddAtom(&typeAtom))
+	ty := createBasicSemType(BTList, bddAtom(typeAtom))
 	return ty, *atom, true
 }
 

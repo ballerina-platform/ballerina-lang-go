@@ -71,7 +71,7 @@ func execNewMap(ctx *extern.Context, newMap *bir.NewMap, frame *Frame) {
 	}
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, newMap.Type)
 	if atomic == nil {
-		panic(fmt.Sprintf("mapping inherent type has no atomic representation: %s", semtypes.ToString(ctx.TypeCtx, newMap.Type)))
+		panic("mapping inherent type has no atomic representation")
 	}
 	m := values.NewMap(newMap.Type, atomic, newMap.IsReadonly, entries)
 	setOperandValue(ctx, newMap.GetLhsOperand(), frame, m)
@@ -239,19 +239,18 @@ func castValue(ctx *extern.Context, value values.BalValue, targetType semtypes.S
 	case semtypes.IsSubtypeSimple(targetType, semtypes.DECIMAL):
 		converted = toDecimal(value)
 	default:
-		panic(badTypeCastError(typeCtx, valueType, targetType))
+		panic(badTypeCastError())
 	}
 	// Numeric conversion only guarantees the basic type; narrow subtypes
 	// (e.g. `2|3|4`, `int:Signed8`, `byte`) still require a membership check.
 	if !semtypes.IsSubtype(typeCtx, values.SemTypeForValue(converted), targetType) {
-		panic(badTypeCastError(typeCtx, valueType, targetType))
+		panic(badTypeCastError())
 	}
 	return converted
 }
 
-func badTypeCastError(typeCtx semtypes.Context, valueType, targetType semtypes.SemType) *values.Error {
-	return values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
-		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType)))
+func badTypeCastError() *values.Error {
+	return values.NewErrorWithMessage("bad type cast")
 }
 
 func toInt(value any) int64 {
