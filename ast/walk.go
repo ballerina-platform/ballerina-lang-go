@@ -543,6 +543,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, child)
 		}
 
+	case *BLangTemplateExpr:
+		for _, ins := range node.Insertions {
+			Walk(v, ins)
+		}
+
 	case *BLangXMLElementLiteral:
 		for i := range node.Attrs {
 			Walk(v, &node.Attrs[i])

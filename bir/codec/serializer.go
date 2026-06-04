@@ -375,6 +375,18 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 			bw.writeOperand(buf, child)
 		}
 		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.EvalTemplateExpr:
+		write(buf, uint8(instr.Kind))
+		bw.writeLength(buf, len(instr.Strings))
+		for _, s := range instr.Strings {
+			bw.writeStringCPEntry(buf, s)
+		}
+		write(buf, int32(instr.LiteralsTotalLen))
+		bw.writeLength(buf, len(instr.Insertions))
+		for _, op := range instr.Insertions {
+			bw.writeOperand(buf, op)
+		}
+		bw.writeOperand(buf, instr.LhsOp)
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
