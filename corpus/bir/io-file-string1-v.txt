@@ -20,7 +20,9 @@ World
     %10 ? bb3 : bb4;
   }
   bb3 {
-    %0 = $desugar$3;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$3);
+    PopScopeFrame
     return;
   }
   bb4 {
@@ -32,7 +34,9 @@ World
     %13 ? bb6 : bb7;
   }
   bb6 {
-    %0 = $desugar$4;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$4);
+    PopScopeFrame
     return;
   }
   bb7 {
