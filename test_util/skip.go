@@ -190,4 +190,3 @@ func MatchesSkip(path string, entries []string) bool {
 	}
 	return false
 }
-
