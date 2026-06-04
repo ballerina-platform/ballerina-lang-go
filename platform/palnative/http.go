@@ -39,7 +39,7 @@ import (
 
 type httpClient struct {
 	client            *http.Client
-	maxEntityBodySize int64 // -1 = no limit
+	maxEntityBodySize int64 // -1 = no limit; 0 or positive = byte cap
 }
 
 func (c *httpClient) Execute(ctx context.Context, method, targetURL string, body io.Reader, contentLength int64, contentType string, reqHeaders map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
@@ -72,7 +72,7 @@ func (c *httpClient) Execute(ctx context.Context, method, targetURL string, body
 		return 0, nil, nil, err
 	}
 	respBody := io.ReadCloser(resp.Body)
-	if c.maxEntityBodySize >= 0 {
+	if c.maxEntityBodySize != -1 {
 		// Check Content-Length first for an early error without reading the body.
 		if resp.ContentLength > c.maxEntityBodySize {
 			_ = resp.Body.Close()
