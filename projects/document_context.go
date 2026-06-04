@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 
+	common "ballerina-lang-go/common"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
@@ -76,27 +77,27 @@ func (d *documentContext) registrationKey() string {
 // parseContent parses the content string and returns a SyntaxTree.
 // The textDoc parameter is passed to avoid circular dependency with TextDocument().
 func (d *documentContext) parseContent(content string, textDoc text.TextDocument) *tree.SyntaxTree {
-	// Dependency files (diagKeyPrefix != "") are not the user's own source, so
-	// suppress debug dump output (DUMP_TOKENS, DUMP_ST) for them using per-instance
-	// flags rather than mutating shared global state.
-	suppressDebug := d.diagKeyPrefix != ""
-
 	// Create CharReader from content
 	charReader := text.CharReaderFromText(content)
 
 	// Create Lexer
 	lexer := parser.NewLexer(charReader)
-	lexer.SetSuppressDebug(suppressDebug)
 
 	// Create TokenReader from Lexer
 	tokenReader := parser.CreateTokenReader(lexer)
 
 	// Create Parser from TokenReader
 	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader)
-	ballerinaParser.SetSuppressDebug(suppressDebug)
 
-	// Parse the content
-	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
+	// Dependency files are not the user's own source — suppress debug dump output
+	// (DUMP_TOKENS, DUMP_ST) so they don't pollute --dump-tokens / --dump-st output.
+	var rawAST tree.STNode
+	if d.diagKeyPrefix != "" {
+		common.WithSuppressedDebug(func() { rawAST = ballerinaParser.Parse() })
+	} else {
+		rawAST = ballerinaParser.Parse()
+	}
+	rootNode := rawAST.(*tree.STModulePart)
 
 	// Create the ModulePart node
 	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)

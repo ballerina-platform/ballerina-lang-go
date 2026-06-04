@@ -303,7 +303,6 @@ func (a *abstractParser) addInvalidTokenToNextToken(invalidNode tree.STToken) {
 
 type BallerinaParser struct {
 	abstractParser
-	suppressDebug bool
 }
 
 func NewBallerinaParserFromTokenReader(tokenReader *TokenReader) BallerinaParser {
@@ -318,10 +317,6 @@ func NewBallerinaParserFromTokenReader(tokenReader *TokenReader) BallerinaParser
 	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.tokenReader)
 	this.errorHandler = &errorHandler
 	return this
-}
-
-func (b *BallerinaParser) SetSuppressDebug(suppress bool) {
-	b.suppressDebug = suppress
 }
 
 func isParameterizedTypeToken(tokenKind common.SyntaxKind) bool {
@@ -605,9 +600,7 @@ func isDigit(c byte) bool {
 
 func (b *BallerinaParser) Parse() tree.STNode {
 	ast := b.parseCompUnit()
-	if !b.suppressDebug {
-		debugcommon.DebugWriteLazy(debugcommon.DUMP_ST, func() string { return tree.GenerateJSON(ast) })
-	}
+	debugcommon.DebugWriteLazy(debugcommon.DUMP_ST, func() string { return tree.GenerateJSON(ast) })
 	return ast
 }
 
