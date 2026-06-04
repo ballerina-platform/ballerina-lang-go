@@ -55,13 +55,17 @@ bar(int|string) -> 2|3{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %3 = ConstantLoad 2
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad 2
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %4 = ConstantLoad 3
-    %0 = %4;
+    PushScopeFrame 1
+    %0 = ConstantLoad 3
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
 }

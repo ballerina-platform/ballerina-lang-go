@@ -66,6 +66,16 @@ type (
 		BIRTerminatorBase
 		ErrorOp *BIROperand
 	}
+
+	LockStart struct {
+		BIRTerminatorBase
+		LockKey string
+	}
+
+	LockEnd struct {
+		BIRTerminatorBase
+		LockKey string
+	}
 )
 
 var (
@@ -74,6 +84,8 @@ var (
 	_ BIRTerminator        = &Return{}
 	_ BIRTerminator        = &Branch{}
 	_ BIRTerminator        = &Panic{}
+	_ BIRTerminator        = &LockStart{}
+	_ BIRTerminator        = &LockEnd{}
 )
 
 func (g *Goto) GetKind() InstructionKind {
@@ -140,6 +152,38 @@ func (b *Branch) GetKind() InstructionKind {
 
 func (p *Panic) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_PANIC
+}
+
+func (l *LockStart) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_LOCK
+}
+
+func (l *LockEnd) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_UNLOCK
+}
+
+func NewLockStart(key string, thenBB *BIRBasicBlock, pos Location) *LockStart {
+	return &LockStart{
+		BIRTerminatorBase: BIRTerminatorBase{
+			BIRInstructionBase: BIRInstructionBase{
+				BIRNodeBase: BIRNodeBase{Pos: pos},
+			},
+			ThenBB: thenBB,
+		},
+		LockKey: key,
+	}
+}
+
+func NewLockEnd(key string, thenBB *BIRBasicBlock, pos Location) *LockEnd {
+	return &LockEnd{
+		BIRTerminatorBase: BIRTerminatorBase{
+			BIRInstructionBase: BIRInstructionBase{
+				BIRNodeBase: BIRNodeBase{Pos: pos},
+			},
+			ThenBB: thenBB,
+		},
+		LockKey: key,
+	}
 }
 
 func NewPanic(errorOp *BIROperand, pos Location) *Panic {

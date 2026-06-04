@@ -12,14 +12,18 @@ main() -> nil{
     %7 ? bb1 : bb3;
   }
   bb1 {
-    %9 = ConstantLoad 0
-    %8 = j[%9];
-    %10 = println(%8) -> bb2;
+    PushScopeFrame 3
+    %1 = ConstantLoad 0
+    %0 = (1, j)[%1];
+    %2 = println(%0) -> bb2;
   }
   bb2 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb3 {
+    PushScopeFrame 0
+    PopScopeFrame
     return;
   }
 }

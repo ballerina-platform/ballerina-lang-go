@@ -25,16 +25,20 @@ foo(int|string) -> nil{
     %2 ? bb1 : bb3;
   }
   bb1 {
-    %3 = intFoo(x) -> bb2;
+    PushScopeFrame 1
+    %0 = intFoo((1, x)) -> bb2;
   }
   bb2 {
+    PopScopeFrame
     GOTO bb5;
   }
   bb3 {
-    _ = x;
-    %5 = stringFoo(x) -> bb4;
+    PushScopeFrame 2
+    _ = (1, x);
+    %1 = stringFoo((1, x)) -> bb4;
   }
   bb4 {
+    PopScopeFrame
     GOTO bb5;
   }
   bb5 {

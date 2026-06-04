@@ -19,6 +19,7 @@ package exec
 import (
 	"fmt"
 	"math"
+	"unsafe"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/decimal"
@@ -96,10 +97,6 @@ func execNewError(ctx *extern.Context, newError *bir.NewError, frame *Frame) {
 func execNewObject(ctx *extern.Context, newObject *bir.NewObject, frame *Frame) {
 	classDef := ctx.Env.Registry.(*modules.Registry).GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
-	for _, field := range classDef.Fields {
-		fv, _ := values.FillerValue(ctx.TypeCtx, field.Ty)
-		fieldValues[field.Name] = fv
-	}
 	methodKeys := make(map[string]string, len(classDef.VTable))
 	for methodName, method := range classDef.VTable {
 		methodKeys[methodName] = method.FunctionLookupKey
@@ -343,6 +340,24 @@ func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Fra
 		namespaces = getOperandValue(ctx, instr.NamespacesOp, frame).(*values.Map)
 	}
 	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children})
+}
+
+func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, frame *Frame) {
+	if instr.Kind != bir.TemplateKindString {
+		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
+	}
+	n := len(instr.Insertions)
+	buf := make([]byte, 0, instr.LiteralsTotalLen+8*n)
+	for i := 0; i < n; i++ {
+		buf = append(buf, instr.Strings[i]...)
+		buf = append(buf, values.String(getOperandValue(ctx, instr.Insertions[i], frame), nil)...)
+	}
+	buf = append(buf, instr.Strings[n]...)
+	var result string
+	if len(buf) > 0 {
+		result = unsafe.String(&buf[0], len(buf))
+	}
+	setOperandValue(ctx, instr.LhsOp, frame, result)
 }
 
 func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *Frame) {

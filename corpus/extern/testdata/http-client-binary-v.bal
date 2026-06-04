@@ -18,7 +18,7 @@ import ballerina/http;
 import ballerina/io;
 
 public function main() returns error? {
-    http:Client c = check new ("https://httpbin.org");
+    http:Client c = check new ("https://httpbun.com");
     http:Response r = check c->get("/bytes/16");
     byte[] b = check r.getBinaryPayload();
     io:println(b.length() > 0);

@@ -40,6 +40,7 @@ type analyzer interface {
 	internalErr(message string, loc diagnostics.Location)
 	parentAnalyzer() analyzer
 	loc() diagnostics.Location
+	moduleVarMetadata(ref model.SymbolRef) (varDeclMetadata, bool)
 }
 
 type (
@@ -51,8 +52,10 @@ type (
 		compilerCtx *context.CompilerContext
 		typeCtx     semtypes.Context
 		// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
-		pkg          *ast.BLangPackage
-		importedPkgs map[string]*ast.BLangImportPackage
+		pkg              *ast.BLangPackage
+		importedPkgs     map[string]*ast.BLangImportPackage
+		importedSymbols  map[string]model.ExportedSymbolSpace
+		moduleVarMetaMap map[model.SymbolRef]varDeclMetadata
 	}
 	constantAnalyzer struct {
 		analyzerBase
@@ -64,11 +67,25 @@ type (
 		analyzerBase
 		function *ast.BLangFunction
 		retTy    semtypes.SemType
+		// enclosingClass is set when the function is a method of a class
+		// definition (including the init function). nil for free functions.
+		enclosingClass *ast.BLangClassDefinition
+		// locals tracks variable declarations visible inside this function's
+		// body, populated as normal semantic analysis walks the body. Used to
+		// hand an outer-function scope to the isolation check when validating
+		// closure expressions (record-field defaults, default-param exprs,
+		// nested isolated function bodies).
+		locals *localScope
 	}
 
 	loopAnalyzer struct {
 		analyzerBase
 		loop ast.BLangNode
+	}
+
+	lockAnalyzer struct {
+		analyzerBase
+		lock *ast.BLangLock
 	}
 )
 
@@ -77,6 +94,7 @@ var (
 	_ analyzer = &SemanticAnalyzer{}
 	_ analyzer = &functionAnalyzer{}
 	_ analyzer = &loopAnalyzer{}
+	_ analyzer = &lockAnalyzer{}
 )
 
 // expectedReturnType walks up the analyzer chain and returns the enclosing function's return type.
@@ -88,6 +106,26 @@ func expectedReturnType(a analyzer) semtypes.SemType {
 			return fa.retTy
 		}
 		current = current.parentAnalyzer()
+	}
+	return nil
+}
+
+// enclosingFunctionAnalyzer walks up the analyzer chain and returns the
+// nearest enclosing functionAnalyzer, or nil if there is none.
+func enclosingFunctionAnalyzer(a analyzer) *functionAnalyzer {
+	for current := a; current != nil; current = current.parentAnalyzer() {
+		if fa, ok := current.(*functionAnalyzer); ok {
+			return fa
+		}
+	}
+	return nil
+}
+
+// enclosingFunctionLocals returns the locals scope of the nearest enclosing
+// functionAnalyzer, or nil if none exists.
+func enclosingFunctionLocals(a analyzer) *localScope {
+	if fa := enclosingFunctionAnalyzer(a); fa != nil {
+		return fa.locals
 	}
 	return nil
 }
@@ -133,6 +171,10 @@ func (ab *analyzerBase) tyCtx() semtypes.Context {
 	return ab.parentAnalyzer().tyCtx()
 }
 
+func (ab *analyzerBase) moduleVarMetadata(ref model.SymbolRef) (varDeclMetadata, bool) {
+	return ab.parentAnalyzer().moduleVarMetadata(ref)
+}
+
 func (sa *SemanticAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
@@ -157,6 +199,12 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return fa
 	case *ast.BLangIdentifier:
 		return nil
+	case *ast.BLangSimpleVarRef:
+		checkIsolatedModuleVarOutsideLock(fa, n)
+		return visitInner(fa, n)
+	case *ast.BLangFieldBaseAccess:
+		checkIsolatedFieldOutsideLock(fa, n)
+		return visitInner(fa, n)
 	default:
 		// Delegate loop creation and common nodes to visitInner
 		return visitInner(fa, node)
@@ -286,18 +334,32 @@ func (la *loopAnalyzer) internalErr(message string, loc diagnostics.Location) {
 
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
-		compilerCtx:  ctx,
-		typeCtx:      semtypes.ContextFrom(ctx.GetTypeEnv()),
-		importedPkgs: make(map[string]*ast.BLangImportPackage),
+		compilerCtx:     ctx,
+		typeCtx:         semtypes.ContextFrom(ctx.GetTypeEnv()),
+		importedPkgs:    make(map[string]*ast.BLangImportPackage),
+		importedSymbols: make(map[string]model.ExportedSymbolSpace),
 	}
 }
 
-func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
+func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
 	sa.pkg = pkg
 	sa.importedPkgs = make(map[string]*ast.BLangImportPackage)
+	if importedSymbols == nil {
+		importedSymbols = make(map[string]model.ExportedSymbolSpace)
+	}
+	sa.importedSymbols = importedSymbols
+	sa.moduleVarMetaMap = sa.buildModuleVarMetadata()
+	sa.validateModuleLevelIsolatedDecls(pkg)
 	ast.Walk(sa, pkg)
 	sa.pkg = nil
 	sa.importedPkgs = nil
+	sa.importedSymbols = nil
+	sa.moduleVarMetaMap = nil
+}
+
+func (sa *SemanticAnalyzer) moduleVarMetadata(ref model.SymbolRef) (varDeclMetadata, bool) {
+	md, ok := sa.moduleVarMetaMap[ref]
+	return md, ok
 }
 
 func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *constantAnalyzer {
@@ -317,8 +379,9 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangConstant:
 		return createConstantAnalyzer(sa, n)
 	case *ast.BLangSimpleVariable:
-		// Module-level variables don't need constant-expression validation.
-		// Type checking is handled by the type resolver.
+		return sa
+	case *ast.BLangSimpleVarRef:
+		checkIsolatedModuleVarOutsideLock(sa, n)
 		return nil
 	case *ast.BLangReturn:
 		// Error: return only valid in functions
@@ -389,7 +452,7 @@ func validateMainFunction(a analyzer, fnSymbol model.FunctionSymbol, pos diagnos
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := initializeFunctionAnalyzerInner(parent, function)
+	fa := initializeFunctionAnalyzerInner(parent, function, nil)
 	// Validate main function constraints
 	if function.Name.Value == "main" {
 		fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
@@ -406,8 +469,13 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 	return fa
 }
 
-func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
+func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
+	fa := &functionAnalyzer{
+		analyzerBase:   analyzerBase{parent: parent},
+		function:       function,
+		enclosingClass: classDef,
+		locals:         buildFunctionLocals(parent, function),
+	}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	if depSym, ok := fnSymbol.(model.DependentlyTypedFunctionSymbol); ok {
 		validateDependentFunction(parent, function, depSym)
@@ -418,19 +486,58 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fa.retTy = fnSymbol.Signature().ReturnType
 	validateDefaultParamTypes(parent, function)
 	if function.IsIsolated() && !function.IsNative() {
-		isIsolatedFuncInner(fa, function.GetBody().(ast.BLangNode))
+		validateIsolatedFunction(fa, function)
 		validateIsolatedDefaultParams(fa, function)
 	}
 	return fa
 }
 
+// buildFunctionLocals creates the per-function locals scope, seeded with
+// the function's parameters (and `self` for methods). Body-local variables
+// are added later as normal semantic analysis encounters their definitions.
+func buildFunctionLocals(parent analyzer, fn *ast.BLangFunction) *localScope {
+	scope := newLocalScope(nil, true)
+	for _, param := range fn.RequiredParams {
+		sym := param.Symbol()
+		scope.define(sym, varDeclMetadata{Type: parent.ctx().SymbolType(sym), Final: true})
+	}
+	if fn.RestParam != nil {
+		sym := fn.RestParam.Symbol()
+		scope.define(sym, varDeclMetadata{Type: parent.ctx().SymbolType(sym), Final: true})
+	}
+	return scope
+}
+
+// validateIsolatedDefaultParams runs the isolated-closure analysis on
+// each non-`<>` default parameter expression of an isolated function.
+// Default expressions are themselves closures invoked at call time, so
+// for an isolated function they must independently satisfy the
+// isolated-closure rules. The function-body's normal walker handles the
+// non-isolated case implicitly: default expressions are walked through
+// the function-analyzer, and `enclosingLockAnalyzer` stops at that
+// boundary, so any isolated module variable reference is reported by
+// `checkIsolatedModuleVarOutsideLock` exactly as it would be for any
+// other unprotected read.
 func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction) {
+	fa := enclosingFunctionAnalyzer(a)
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
-		if !param.IsDefaultableParam() || param.Expr == nil {
+		if !param.IsDefaultableParam() {
 			continue
 		}
-		isIsolatedFuncInner(a, param.Expr.(ast.BLangNode))
+		// `<>` (inferred typedesc default) is a marker, not a real expression.
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); ok {
+			continue
+		}
+		// We turn defaultable parameters to closures and for isolated functions those closures need to be isolated.
+		// The function's own params (already in fa.locals) are visible as captures to each default expression.
+		var parent *localScope
+		if fa != nil {
+			parent = fa.locals
+		}
+		expr := param.Expr.(ast.BLangNode)
+		validateIsolatedCapture(a, parent, expr)
+		isIsolatedFunctionInner(a, expr, parent)
 	}
 }
 
@@ -536,8 +643,25 @@ func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
 	}
 }
 
-func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	return initializeFunctionAnalyzerInner(parent, function)
+func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
+	return initializeFunctionAnalyzerInner(parent, function, classDef)
+}
+
+// walkMethodBody descends through a method's body using the provided
+// functionAnalyzer. We avoid walking the BLangFunction node itself because
+// functionAnalyzer.Visit on that node would re-initialize a fresh analyzer
+// (losing context like enclosingClass).
+func walkMethodBody(fa *functionAnalyzer, method *ast.BLangFunction) {
+	for i := range method.RequiredParams {
+		ast.Walk(fa, &method.RequiredParams[i])
+	}
+	if method.RestParam != nil {
+		ast.Walk(fa, method.RestParam.(ast.BLangNode))
+	}
+	if method.Body == nil {
+		return
+	}
+	ast.Walk(fa, method.GetBody().(ast.BLangNode))
 }
 
 func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
@@ -545,6 +669,70 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 		analyzerBase: analyzerBase{parent: parent},
 		loop:         loop,
 	}
+}
+
+func initializeLockAnalyzer(parent analyzer, lock *ast.BLangLock) *lockAnalyzer {
+	return &lockAnalyzer{
+		analyzerBase: analyzerBase{parent: parent},
+		lock:         lock,
+	}
+}
+
+func (la *lockAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	return visitInner(la, node)
+}
+
+func (la *lockAnalyzer) VisitTypeData(_ *ast.TypeData) ast.Visitor { return la }
+
+func (la *lockAnalyzer) loc() diagnostics.Location { return la.lock.GetPosition() }
+
+func (la *lockAnalyzer) ctx() *context.CompilerContext { return la.parent.ctx() }
+func (la *lockAnalyzer) tyCtx() semtypes.Context       { return la.parent.tyCtx() }
+func (la *lockAnalyzer) unimplementedErr(m string, l diagnostics.Location) {
+	la.parent.ctx().Unimplemented(m, l)
+}
+
+func (la *lockAnalyzer) semanticErr(m string, l diagnostics.Location) {
+	la.parent.ctx().SemanticError(m, l)
+}
+
+func (la *lockAnalyzer) syntaxErr(m string, l diagnostics.Location) {
+	la.parent.ctx().SyntaxError(m, l)
+}
+
+func (la *lockAnalyzer) internalErr(m string, l diagnostics.Location) {
+	la.parent.ctx().InternalError(m, l)
+}
+
+// enclosingLockAnalyzer walks the analyzer parent chain looking for a
+// lockAnalyzer that is in the same closure as `a`. The search stops at
+// the nearest functionAnalyzer because a function/lambda body is a
+// fresh closure: locks visible above it belong to the surrounding
+// closure and may not be held when this closure runs (a lambda value
+// can escape its defining lock and be invoked later, and a default
+// parameter expression is itself a closure invoked at each call).
+//
+// Two callers depend on this scoping:
+//
+//   - the nested-lock check in visitInner (a `lock` inside another
+//     `lock` is rejected, but a `lock` inside a lambda inside a `lock`
+//     is fine because the lambda is a separate closure);
+//   - checkIsolatedModuleVarOutsideLock (an isolated module variable
+//     read inside a lambda inside a `lock` is still "outside a lock"
+//     because the surrounding lock does not protect the lambda body).
+func enclosingLockAnalyzer(a analyzer) *lockAnalyzer {
+	for cur := a; cur != nil; cur = cur.parentAnalyzer() {
+		if lock, ok := cur.(*lockAnalyzer); ok {
+			return lock
+		}
+		if _, isFn := cur.(*functionAnalyzer); isFn {
+			return nil
+		}
+	}
+	return nil
 }
 
 func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
@@ -621,6 +809,10 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 			if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
 				validateConstantExpr(ctx, kv.ValueExpr, onNonConst)
 			}
+		}
+	case *ast.BLangTemplateExpr:
+		for _, ins := range e.Insertions {
+			validateConstantExpr(ctx, ins, onNonConst)
 		}
 	default:
 		onNonConst(expr)
@@ -738,6 +930,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangXMLSequenceLiteral, *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangTemplateExpr:
+		return analyzeTemplateExpr(a, expr, expectedType)
 	case *ast.BLangXMLAttribute:
 		// XML attributes are metadata on elements and should not be analyzed as standalone expressions
 		// Their values are already analyzed as part of XMLElement processing
@@ -762,6 +956,17 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 	if !semtypes.IsEmpty(a.tyCtx(), errorPart) {
 		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
 			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
+		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+var templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
+
+func analyzeTemplateExpr[A analyzer](a A, expr *ast.BLangTemplateExpr, expectedType semtypes.SemType) bool {
+	for _, ins := range expr.Insertions {
+		if !analyzeActionOrExpression(a, ins, templateInsertionAllowedTypes) {
+			return false
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)
@@ -1006,7 +1211,20 @@ func validateStreamCloseMethod[A analyzer](a A, impl ast.BLangExpression, comple
 
 func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
 	fa := initializeFunctionAnalyzer(a, expr.Function)
-	ast.Walk(fa, expr.Function)
+	fn := expr.Function
+	// Walk params + body directly rather than the BLangFunction node
+	// itself; otherwise the walker's first visit on BLangFunction would
+	// re-enter visitInner's BLangFunction case and re-initialize the
+	// analyzer, double-firing all per-init checks.
+	for i := range fn.RequiredParams {
+		ast.Walk(fa, &fn.RequiredParams[i])
+	}
+	if fn.RestParam != nil {
+		ast.Walk(fa, fn.RestParam.(ast.BLangNode))
+	}
+	if fn.Body != nil {
+		ast.Walk(fa, fn.GetBody().(ast.BLangNode))
+	}
 	return true
 }
 
@@ -1441,6 +1659,12 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 
 func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangLambdaFunction:
+		// Lambdas are analyzed exactly once via analyzeLambdaFunction
+		// (called from analyzeActionOrExpression). Stop the walker here
+		// to avoid re-initializing/re-walking the same lambda body.
+		_ = n
+		return nil
 	case *ast.BLangFunction:
 		if _, isDep := a.ctx().GetSymbol(n.Symbol()).(model.DependentlyTypedFunctionSymbol); isDep {
 			initializeFunctionAnalyzer(a, n)
@@ -1457,6 +1681,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			return nil
 		}
 		return initializeLoopAnalyzer(a, n)
+	case *ast.BLangLock:
+		if enclosingLockAnalyzer(a) != nil {
+			a.semanticErr("lock statement cannot be nested inside another lock statement", n.GetPosition())
+			return nil
+		}
+		validateLockStmt(a, n)
+		return initializeLockAnalyzer(a, n)
 	case *ast.BLangIf:
 		if !analyzeIf(a, n) {
 			return nil
@@ -1476,6 +1707,17 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangSimpleVariableDef:
 		if !analyzeSimpleVariableDef(a, n) {
 			return nil
+		}
+		if fa := enclosingFunctionAnalyzer(a); fa != nil && fa.locals != nil {
+			v := n.Var
+			final := v.IsFinal()
+			if sym, ok := a.ctx().GetSymbol(v.Symbol()).(*model.ValueSymbol); ok && sym.IsFinal() {
+				final = true
+			}
+			fa.locals.define(v.Symbol(), varDeclMetadata{
+				Type:  v.GetDeterminedType(),
+				Final: final,
+			})
 		}
 		return a
 	case *ast.BLangAssignment:
@@ -1525,16 +1767,20 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			if field.Expr != nil {
 				expectedType := a.ctx().SymbolType(field.Symbol())
 				analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
+				// Drive the visitor through the initializer so per-node
+				// semantic checks (e.g. isolated-module-var refs) fire
+				// uniformly with every other walked initializer.
+				ast.Walk(a, field.Expr.(ast.BLangNode))
 			}
 		}
 		if n.InitFunction != nil {
-			fa := initializeMethodAnalyzer(a, n.InitFunction)
-			ast.Walk(fa, n.InitFunction)
+			fa := initializeMethodAnalyzer(a, n.InitFunction, n)
+			walkMethodBody(fa, n.InitFunction)
 		}
 		for name := range n.Methods {
 			method := n.Methods[name]
-			fa := initializeMethodAnalyzer(a, method)
-			ast.Walk(fa, method)
+			fa := initializeMethodAnalyzer(a, method, n)
+			walkMethodBody(fa, method)
 		}
 		validateClassDefn(a, n)
 		return nil
@@ -1667,22 +1913,25 @@ func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
 	e.SetDeterminedType(expectedType)
 }
 
-// validateRecordFieldDefaults checks that all record field default expressions satisfy
-// isolation rules: all variable references must be const, regardless of scope.
-// Record field defaults are evaluated at record construction time and must not capture
-// mutable state from any scope.
+// validateRecordFieldDefaults checks that all record field default expressions
+// satisfy the isolated-function rules. Field defaults are turned into closures
+// at record construction time, so they must not call non-isolated functions or
+// access mutable module state.
 func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
+	parent := enclosingFunctionLocals(a)
 	for _, field := range node.Fields() {
-		if field.DefaultExpr != nil {
-			isIsolatedFuncInner(a, field.DefaultExpr.(ast.BLangNode))
+		if field.DefaultExpr == nil {
+			continue
 		}
+		expr := field.DefaultExpr.(ast.BLangNode)
+		validateIsolatedCapture(a, parent, expr)
+		isIsolatedFunctionInner(a, expr, parent)
 	}
 }
 
 func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
 	if classDef.IsIsolated() {
 		validateIsolatedClassFields(a, classDef)
-		validateIsolatedClassMutableFieldAccess(a, classDef)
 	} else {
 		validateObjInclusions(a, classDef.Inclusions, classDef.InclusionPositions)
 	}
@@ -1702,42 +1951,6 @@ func validateIsolatedClassFields[A analyzer](a A, classDef *ast.BLangClassDefini
 	}
 }
 
-func validateIsolatedClassMutableFieldAccess[A analyzer](a A, classDef *ast.BLangClassDefinition) {
-	tyCtx := a.tyCtx()
-	fieldsByName := make(map[string]*ast.BLangSimpleVariable)
-	for _, f := range classDef.Fields {
-		field := f.(*ast.BLangSimpleVariable)
-		fieldsByName[field.Name.Value] = field
-	}
-	isMutableSelfFieldAccess := func(node ast.BLangNode) bool {
-		fieldAccess, ok := node.(*ast.BLangFieldBaseAccess)
-		if !ok || !isSelfFieldAccess(fieldAccess) {
-			return false
-		}
-		field, exists := fieldsByName[fieldAccess.Field.Value]
-		return exists && !isImmutableField(tyCtx, field)
-	}
-	checkMutableSelfAccess := func(method *ast.BLangFunction) {
-		everyNode(a, method.GetBody().(ast.BLangNode), func(_ A, inner ast.BLangNode) bool {
-			switch n := inner.(type) {
-			case *ast.BLangAssignment:
-				if isMutableSelfFieldAccess(n.GetVariable().(ast.BLangNode)) {
-					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
-					return false
-				}
-			case *ast.BLangFieldBaseAccess:
-				if isMutableSelfFieldAccess(n) {
-					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
-				}
-			}
-			return true
-		})
-	}
-	for _, method := range classDef.Methods {
-		checkMutableSelfAccess(method)
-	}
-}
-
 // validateObjInclusions validate all the inclusions of non isolated objects are non-isolated as well.
 // For isolated objects there are no restrictions
 func validateObjInclusions[A analyzer](a A, inclusions []model.SymbolRef, positions []diagnostics.Location) {
@@ -1750,8 +1963,8 @@ func validateObjInclusions[A analyzer](a A, inclusions []model.SymbolRef, positi
 	}
 }
 
-func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.SymbolRef) bool {
-	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
+func isIsolatedFnSymbol[A analyzer](a A, tyCtx semtypes.Context, symbol model.SymbolRef) bool {
+	isolatedTop := semtypes.CreateIsolatedFn(tyCtx)
 	fnTy := a.ctx().SymbolType(symbol)
 	return semtypes.IsSubtype(tyCtx, fnTy, isolatedTop)
 }
@@ -1770,11 +1983,11 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			if ast.IsStreamOperation(inner) {
 				return true
 			}
-			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
+			if !isIsolatedFnSymbol(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
 			}
 		case *ast.BLangRemoteMethodCallAction:
-			if !isIsolatedInvocation(a, tyCtx, inner.MethodSymbol()) {
+			if !isIsolatedFnSymbol(a, tyCtx, inner.MethodSymbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
 			}
 		case *ast.BLangNewExpression:
@@ -1783,7 +1996,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			}
 			classTy := a.ctx().SymbolType(inner.ClassSymbol)
 			initTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("init"), classTy)
-			if initTy != nil && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedTop(tyCtx)) {
+			if initTy != nil && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedFn(tyCtx)) {
 				a.semanticErr("non isolated initialization", inner.GetPosition())
 			}
 		case *ast.BLangSimpleVarRef:

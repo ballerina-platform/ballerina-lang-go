@@ -40,13 +40,17 @@ incFn("neg"|"pos") -> function(int) returns int{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %4 = fp $anon/.:posInc
-    %0 = %4;
+    PushScopeFrame 1
+    %0 = fp $anon/.:posInc
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %5 = fp $anon/.:negInc
-    %0 = %5;
+    PushScopeFrame 1
+    %0 = fp $anon/.:negInc
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb3 {

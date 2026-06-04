@@ -78,12 +78,16 @@ bar(int) -> boolean|int{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %0 = a;
+    PushScopeFrame 0
+    (1, %0) = (1, a);
+    PopScopeFrame
     return;
   }
   bb2 {
-    %6 = ConstantLoad true
-    %0 = %6;
+    PushScopeFrame 1
+    %0 = ConstantLoad true
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
 }
@@ -93,12 +97,16 @@ foobar(int) -> int:Unsigned8{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %0 = a;
+    PushScopeFrame 0
+    (1, %0) = (1, a);
+    PopScopeFrame
     return;
   }
   bb2 {
-    %3 = ConstantLoad 0
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad 0
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
 }
@@ -108,12 +116,16 @@ barbaz(int) -> boolean|int:Unsigned8{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %0 = a;
+    PushScopeFrame 0
+    (1, %0) = (1, a);
+    PopScopeFrame
     return;
   }
   bb2 {
-    %3 = ConstantLoad true
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad true
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
 }

@@ -76,7 +76,7 @@ type stdlibEntry struct {
 }
 
 // builtinStdlibs is the ordered list of standard-library packages baked into the
-// binary. They are compiled with no imports of their own, so order is irrelevant.
+// binary. Order matters if any entry imports another.
 var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
@@ -85,12 +85,11 @@ var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "url", "0.0.1"},
 }
 
-// loadBuiltinPublicSymbols compiles the embedded standard-library packages into a
-// sibling CompilerContext that shares the same CompilerEnvironment (and thus the
-// same type-env and symbol table) as mainCx. The returned map can be merged
-// directly into the publicSymbols passed to semantics.ResolveImports.
-func loadBuiltinPublicSymbols(mainCx *context.CompilerContext) map[semantics.PackageIdentifier]model.ExportedSymbolSpace {
-	env := mainCx.GetEnvironment()
+// loadBuiltinPublicSymbols compiles the embedded standard-library packages into
+// sibling CompilerContexts that share env (and thus the same type-env and
+// symbol table). The returned map can be merged directly into the publicSymbols
+// passed to semantics.ResolveImports.
+func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.PackageIdentifier]model.ExportedSymbolSpace {
 	result := make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
 
 	for _, entry := range builtinStdlibs {
@@ -105,7 +104,7 @@ func loadBuiltinPublicSymbols(mainCx *context.CompilerContext) map[semantics.Pac
 		virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", entry.name)
 		cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(content))
 
-		st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, content)
+		st, err := parser.GetSyntaxTree(cx, virtualPath, content)
 		if err != nil || cx.HasDiagnostics() {
 			continue
 		}
@@ -142,7 +141,7 @@ func loadBuiltinPublicSymbols(mainCx *context.CompilerContext) map[semantics.Pac
 
 // RunPipeline runs the frontend compilation pipeline up to the specified phase.
 // It returns a PipelineResult containing the outputs relevant to that phase.
-func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
+func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
 	result := &PipelineResult{}
 
 	// Register source file with DiagnosticEnv
@@ -152,7 +151,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	}
 
 	// Phase 1: Parse
-	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, string(content))
 	if err != nil {
 		return nil, fmt.Errorf("parsing failed: %w", err)
 	}
@@ -172,7 +171,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 
 	// Pre-compile the embedded standard-library packages so that imports like
 	// ballerina/io and ballerina/http resolve correctly during symbol resolution.
-	stdlibSymbols := loadBuiltinPublicSymbols(cx)
+	stdlibSymbols := loadBuiltinPublicSymbols(env)
 
 	// Phase 3: Symbol Resolution
 	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), stdlibSymbols, "")
@@ -195,7 +194,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 
 	// Phase 6: Semantic Analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(result.Package)
+	semanticAnalyzer.Analyze(result.Package, importedSymbols)
 	if phase == PhaseSemanticAnalysis || cx.HasDiagnostics() {
 		return result, nil
 	}

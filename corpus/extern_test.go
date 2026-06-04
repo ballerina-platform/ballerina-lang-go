@@ -600,7 +600,8 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	// symbols. If dependent-fn metadata failed to survive serialization, type
 	// resolution of `int a = helper:inferred(0)` would widen to VAL (or error)
 	// and main compilation would fail.
-	// main.bal also imports ballerina/io, so compile io in env2 first.
+	// main.bal imports ballerina/io (but not http), so only io needs to be
+	// compiled into env2 before resolving main's imports.
 	publicSymbols := map[semantics.PackageIdentifier]model.ExportedSymbolSpace{
 		{OrgName: org, ModuleName: helperMod}: deserializedHelperExported,
 	}
@@ -664,7 +665,7 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 	cx := context.NewCompilerContext(env)
 	virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", name)
 	cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(string(contentBytes)))
-	st, err := parser.GetSyntaxTreeFromContent(cx, virtualPath, string(contentBytes))
+	st, err := parser.GetSyntaxTree(cx, virtualPath, string(contentBytes))
 	if err != nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
@@ -762,7 +763,7 @@ func compileSingleFileModule(
 		t.Fatalf("reading %s: %v", balPath, err)
 	}
 	cx.DiagnosticEnv().RegisterFile(absPath, text.NewStringTextDocument(string(content)))
-	st, err := parser.GetSyntaxTree(cx, absPath)
+	st, err := parser.GetSyntaxTree(cx, absPath, string(content))
 	if err != nil {
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}
@@ -778,7 +779,7 @@ func compileSingleFileModule(
 	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveLocalNodes")
 	analyzer := semantics.NewSemanticAnalyzer(cx)
-	analyzer.Analyze(pkg)
+	analyzer.Analyze(pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "SemanticAnalyzer")
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 	assertNoDiagnostics(t, cx, "CreateControlFlowGraph")

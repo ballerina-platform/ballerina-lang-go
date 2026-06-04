@@ -191,8 +191,13 @@ func (r *PackageResolution) resolveTransitiveDependencies(
 		for _, dep := range pkg.Manifest().Dependencies() {
 			key := dep.Org().Value() + "/" + dep.Name().Value()
 
-			// Skip if already visited (first-seen wins)
 			if visited[key] {
+				// Node was already discovered via another path (e.g. as a direct
+				// dep of root). We must still record this edge so that topological
+				// sort preserves the correct compilation order.
+				if existing := r.resolvedDependencies[key]; existing != nil {
+					builder.addDependency(current, *existing)
+				}
 				continue
 			}
 			visited[key] = true
