@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"ballerina-lang-go/bir"
@@ -49,8 +48,8 @@ func init() {
 	runtime.RegisterModuleInitializer(initHttpModule)
 }
 
-// httpTypes holds the lazily-built semtypes used by the http runtime.
-// All entries are computed once on first use (so concurrent reads shouldn't be a problem);
+// httpTypes holds the semtypes used by the http runtime. They are built once
+// in initHttpModule (single-threaded) and captured by the handler closures.
 type httpTypes struct {
 	byteArrTy  semtypes.SemType
 	strArrTy   semtypes.SemType
@@ -85,28 +84,20 @@ func initHttpModule(rt *runtime.Runtime) {
 		"ballerina/http:TRAILING": "TRAILING",
 	})
 
-	var (
-		once  sync.Once
-		types httpTypes
-	)
-	ensureTypes := func() {
-		once.Do(func() {
-			env := rt.GetTypeEnv()
-			bld := semtypes.NewListDefinition()
-			types.byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-			sld := semtypes.NewListDefinition()
-			types.strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-			typCtx := semtypes.ContextFrom(env)
-			jsonTy := semtypes.CreateJSON(typCtx)
-			jmd := semtypes.NewMappingDefinition()
-			types.jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-			jld := semtypes.NewListDefinition()
-			types.jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-		})
+	env := rt.GetTypeEnv()
+	jsonTy := semtypes.CreateJSON(semtypes.ContextFrom(env))
+	byteArrLd := semtypes.NewListDefinition()
+	strArrLd := semtypes.NewListDefinition()
+	jsonMapMd := semtypes.NewMappingDefinition()
+	jsonListLd := semtypes.NewListDefinition()
+	types := httpTypes{
+		byteArrTy:  byteArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
+		strArrTy:   strArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING),
+		jsonMapTy:  jsonMapMd.DefineMappingTypeWrapped(env, nil, jsonTy),
+		jsonListTy: jsonListLd.DefineListTypeWrappedWithEnvSemType(env, jsonTy),
 	}
 
 	msgToBody := func(tc semtypes.Context, msg values.BalValue) ([]byte, string) {
-		ensureTypes()
 		switch v := msg.(type) {
 		case string:
 			return []byte(v), "text/plain"
@@ -486,7 +477,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			body := bodyVal.(string)
@@ -501,7 +491,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getBinaryPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			body := bodyVal.(string)
@@ -550,7 +539,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getHeaderNames",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			keys := responseHeaders(self).Keys()
 			items := make([]values.BalValue, len(keys))
