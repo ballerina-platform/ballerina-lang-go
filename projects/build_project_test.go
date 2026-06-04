@@ -582,12 +582,14 @@ func TestMultiModuleDependencyOrder(t *testing.T) {
 	// Get package resolution which performs topological sorting
 	resolution := result.Project().CurrentPackage().Resolution()
 	sortedModuleNames := resolution.TopologicallySortedModuleNames()
-	require.Len(sortedModuleNames, 3)
+	require.Len(sortedModuleNames, 4)
 
-	// Verify the order
-	assert.Equal("multimoduleproject.storage", sortedModuleNames[0])
-	assert.Equal("multimoduleproject.services", sortedModuleNames[1])
-	assert.Equal("multimoduleproject", sortedModuleNames[2])
+	// Verify the order: ballerina/io comes first because storage depends on it,
+	// then the intra-package order: storage → services → root.
+	assert.Equal("io", sortedModuleNames[0])
+	assert.Equal("multimoduleproject.storage", sortedModuleNames[1])
+	assert.Equal("multimoduleproject.services", sortedModuleNames[2])
+	assert.Equal("multimoduleproject", sortedModuleNames[3])
 }
 
 // TestBuildProject_CompilationDiagnosticUnresolvedImport verifies that a build

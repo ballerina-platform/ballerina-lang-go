@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package http
+package native
 
 import (
 	"encoding/json"
@@ -25,13 +25,19 @@ import (
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/decimal"
-	"ballerina-lang-go/lib/http/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
+)
+
+var httpPackageID = model.NewPackageID(
+	model.DefaultPackageIDInterner,
+	model.Name("ballerina"),
+	[]model.Name{model.Name("http")},
+	model.Name("0.0.1"),
 )
 
 const (
@@ -74,7 +80,7 @@ func initHttpModule(rt *runtime.Runtime) {
 	// Register module-level constants so BIR global-variable loads of http:LEADING
 	// and http:TRAILING resolve correctly. Keys use buildGlobalVarLookupKey format:
 	// org/pkg:varName = "ballerina/http:LEADING".
-	runtime.RegisterModuleGlobals(rt, compile.HttpPackageID, map[string]values.BalValue{
+	runtime.RegisterModuleGlobals(rt, httpPackageID, map[string]values.BalValue{
 		"ballerina/http:LEADING":  "LEADING",
 		"ballerina/http:TRAILING": "TRAILING",
 	})
@@ -171,31 +177,18 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"init":            {FunctionLookupKey: "ballerina/http:Client.init"},
-			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.get"},
-			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.post"},
-			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.head"},
-			"$remote$options": {FunctionLookupKey: "ballerina/http:Client.options"},
-			"$remote$put":     {FunctionLookupKey: "ballerina/http:Client.put"},
-			"$remote$patch":   {FunctionLookupKey: "ballerina/http:Client.patch"},
-			"$remote$delete":  {FunctionLookupKey: "ballerina/http:Client.delete"},
-			"$remote$execute": {FunctionLookupKey: "ballerina/http:Client.execute"},
+			"initExtern":      {FunctionLookupKey: "ballerina/http:Client.initExtern"},
+			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
+			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
+			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
+			"$remote$options": {FunctionLookupKey: "ballerina/http:Client.$remote$options"},
+			"$remote$put":     {FunctionLookupKey: "ballerina/http:Client.$remote$put"},
+			"$remote$patch":   {FunctionLookupKey: "ballerina/http:Client.$remote$patch"},
+			"$remote$delete":  {FunctionLookupKey: "ballerina/http:Client.$remote$delete"},
+			"$remote$execute": {FunctionLookupKey: "ballerina/http:Client.$remote$execute"},
 		},
 	}
 	runtime.RegisterExternClassDef(rt, clientClassDef)
-
-	// Default lambda for config param: called as $Client.init$default$1(url) → returns {}.
-	// Receives [url] (the preceding arg) and ignores it; the default is always {}.
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.init$default$1",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return newMappingValue(ctx.TypeCtx), nil
-		})
-
-	// Default lambda for headers param: called as $Client.get$default$1(path) → returns () = nil.
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.get$default$1",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return nil, nil
-		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "parseHeader",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
@@ -210,7 +203,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			return result, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.init",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initExtern",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			url := args[1].(string)
@@ -365,7 +358,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			return nil, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.get",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$get",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			path := args[1].(string)
@@ -384,21 +377,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			return buildResponse(ctx.TypeCtx, statusCode, respHeaders, body), nil
 		})
 
-	// Default lambdas for post optional params (both return nil = Ballerina ())
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.post$default$2",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.post$default$3",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.post",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$post",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "POST", args)
 		})
 
 	// head: body-less, like get
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.head$default$1",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.head",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$head",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			path := args[1].(string)
@@ -416,9 +401,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 
 	// options: body-less, like get
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.options$default$1",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.options",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$options",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			path := args[1].(string)
@@ -436,43 +419,25 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 
 	// put: body required, like post
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.put$default$2",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.put$default$3",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.put",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$put",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "PUT", args)
 		})
 
 	// patch: body required, like post
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.patch$default$2",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.patch$default$3",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.patch",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$patch",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "PATCH", args)
 		})
 
 	// delete: message is optional (defaults to nil = empty body)
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.delete$default$1",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.delete$default$2",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.delete$default$3",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.delete",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$delete",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return execBody(ctx, "DELETE", args)
 		})
 
 	// execute: args = [self, httpVerb, path, message, headers?, mediaType?]
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.execute$default$3",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Client.execute$default$4",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) { return nil, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.execute",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$execute",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			verb := args[1].(string)
@@ -547,17 +512,6 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			return newTypedListValue(ctx.TypeCtx, types.byteArrTy, items), nil
 		})
-
-	// Default lambdas for position param (all return "LEADING")
-	leading := values.BalValue("LEADING")
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.hasHeader$default$1",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeader$default$1",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeaders$default$1",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeaderNames$default$0",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.hasHeader",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {

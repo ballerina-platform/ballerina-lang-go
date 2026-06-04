@@ -14,17 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+public isolated function println(any|error... vals) = external;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-	_ "ballerina-lang-go/lib/string/runtime"
-
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.2/native"
-)
+public isolated function print(any|error... vals) = external;

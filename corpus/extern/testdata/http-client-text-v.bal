@@ -18,7 +18,7 @@ import ballerina/http;
 import ballerina/io;
 
 public function main() returns error? {
-    http:Client c = check new ("https://httpbin.org");
+    http:Client c = check new ("https://httpbun.com");
     http:Response r = check c->get("/html");
     string text = r.getTextPayload();
     io:println(text.length() > 0);
