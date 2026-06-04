@@ -322,6 +322,9 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
+	case *BLangLock:
+		Walk(v, &node.Body)
+
 	case *BLangMatchStatement:
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
@@ -538,6 +541,11 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangXMLSequenceLiteral:
 		for _, child := range node.Children {
 			Walk(v, child)
+		}
+
+	case *BLangTemplateExpr:
+		for _, ins := range node.Insertions {
+			Walk(v, ins)
 		}
 
 	case *BLangXMLElementLiteral:

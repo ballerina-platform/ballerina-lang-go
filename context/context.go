@@ -182,11 +182,6 @@ func (c *CompilerContext) GetTypeEnv() semtypes.Env {
 	return c.env.GetTypeEnv()
 }
 
-// GetEnvironment returns the shared compiler environment backing this context.
-func (c *CompilerContext) GetEnvironment() *CompilerEnvironment {
-	return c.env
-}
-
 func (c *CompilerContext) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
 	return c.env.GetNextAnonymousFunctionKey(packageID)
 }

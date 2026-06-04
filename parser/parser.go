@@ -16,8 +16,6 @@
 package parser
 
 import (
-	"fmt"
-	"os"
 	"slices"
 	"strings"
 
@@ -14684,43 +14682,17 @@ func (b *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 }
 
 // GetSyntaxTreeFromContent parses Ballerina source from an in-memory string.
+// It is the counterpart to GetSyntaxTree for sources that have no real
+// filesystem path (e.g. stdlib .bal files embedded via embed.FS).
 // virtualPath is used only for diagnostic messages; no file I/O is performed.
-func GetSyntaxTreeFromContent(ctx *context.CompilerContext, virtualPath, content string) (*tree.SyntaxTree, error) {
+// GetSyntaxTree parses content into a syntax tree, attributing it to fileName
+// (used for diagnostics and the syntax tree's text document).
+func GetSyntaxTree(ctx *context.CompilerContext, fileName string, content string) (*tree.SyntaxTree, error) {
 	reader := text.CharReaderFromText(content)
 	lexer := NewLexer(reader)
 	tokenReader := CreateTokenReader(lexer)
 	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)
 	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
-	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
-	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, nil, virtualPath, false)
-	if syntaxTree.HasDiagnostics() {
-		ctx.SyntaxError("syntax error at", diagnostics.Location{})
-	}
-	return &syntaxTree, nil
-}
-
-// TODO: clean this interface we should only need compiler context.
-func GetSyntaxTree(ctx *context.CompilerContext, fileName string) (*tree.SyntaxTree, error) {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file %s: %v", fileName, err)
-	}
-
-	// Create CharReader from file content
-	reader := text.CharReaderFromText(string(content))
-
-	// Create Lexer
-	lexer := NewLexer(reader)
-
-	// Create TokenReader from Lexer
-	tokenReader := CreateTokenReader(lexer)
-
-	// Create Parser from TokenReader
-	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)
-
-	// Parse the entire file (parser will internally call tokenizer)
-	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
-
 	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
 	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, nil, fileName, false)
 	if syntaxTree.HasDiagnostics() {

@@ -178,6 +178,22 @@ type (
 		BIRInstructionBase
 		Children []*BIROperand
 	}
+
+	EvalTemplateExpr struct {
+		BIRInstructionBase
+		Kind             TemplateKind
+		Strings          []string
+		LiteralsTotalLen int
+		Insertions       []*BIROperand
+	}
+)
+
+type TemplateKind uint8
+
+const (
+	TemplateKindString TemplateKind = iota
+	TemplateKindXML
+	TemplateKindRaw
 )
 
 type (
@@ -210,6 +226,7 @@ var (
 	_ BIRAssignInstruction    = &NewXMLComment{}
 	_ BIRAssignInstruction    = &NewXMLText{}
 	_ BIRAssignInstruction    = &NewXMLSequence{}
+	_ BIRAssignInstruction    = &EvalTemplateExpr{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -628,5 +645,25 @@ func NewXMLSequenceInstr(lhsOp *BIROperand, children []*BIROperand, pos Location
 			LhsOp:       lhsOp,
 		},
 		Children: children,
+	}
+}
+
+func (e *EvalTemplateExpr) GetLhsOperand() *BIROperand { return e.LhsOp }
+func (e *EvalTemplateExpr) GetKind() InstructionKind   { return INSTRUCTION_KIND_EVAL_TEMPLATE_EXPR }
+
+func NewEvalTemplateExpr(kind TemplateKind, strings []string, insertions []*BIROperand, lhsOp *BIROperand, pos Location) *EvalTemplateExpr {
+	literalTotalLen := 0
+	for _, each := range strings {
+		literalTotalLen += len(each)
+	}
+	return &EvalTemplateExpr{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{Pos: pos},
+			LhsOp:       lhsOp,
+		},
+		Kind:             kind,
+		Strings:          strings,
+		LiteralsTotalLen: literalTotalLen,
+		Insertions:       insertions,
 	}
 }

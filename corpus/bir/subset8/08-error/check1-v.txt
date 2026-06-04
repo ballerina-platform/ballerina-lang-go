@@ -21,7 +21,9 @@ errorViaCheck() -> nil|error{
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb3 {

@@ -29,28 +29,6 @@ import (
 	"ballerina-lang-go/test_util"
 )
 
-// TestBIRSerializationRoundtrip compiles .bal files to BIR, serializes the BIR, deserializes it
-// with a fresh compiler context, executes the deserialized BIR, and validates the output matches
-// the expected integration test output.
-// birSerializationRoundtripSkipList is the BIR-roundtrip *additional* skip
-// list, on top of the shared test_util.UnsupportedTests baseline (which is
-// applied via isTestSkipped below). Currently empty -- every known failure
-// is already covered by the shared baseline.
-// birSerializationRoundtripSkipList skips tests whose BIR cannot be
-// round-tripped in isolation because they depend on stdlib modules whose
-// Ballerina-level functions (e.g. http:Client.init) live in the http BIR
-// rather than being registered as native Go functions. Running only the
-// deserialized consumer BIR in a fresh env would panic on those calls.
-var birSerializationRoundtripSkipList = []string{
-	"subset8/08-network/http-client-v.bal",
-	"subset8/08-network/http-client-post-v.bal",
-	"subset8/08-network/http-client-methods-v.bal",
-	"subset8/08-network/http-client-tls-v.bal",
-	"subset8/08-network/http-client-response-headers-v.bal",
-	"subset8/08-network/http-client-response-payload-v.bal",
-	"subset8/08-network/http-client-compression-v.bal",
-}
-
 func TestBIRSerializationRoundtrip(t *testing.T) {
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
 		if test_util.IsFutureTest(path) {
@@ -68,7 +46,7 @@ func TestBIRSerializationRoundtrip(t *testing.T) {
 }
 
 func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
-	if isTestSkipped(testPair) || test_util.MatchesSkip(testPair.InputPath, birSerializationRoundtripSkipList) {
+	if isTestSkipped(testPair) {
 		t.Skipf("Skipping BIR serialization roundtrip test for %s", testPair.InputPath)
 		return
 	}
@@ -79,40 +57,36 @@ func testBIRSerializationRoundtrip(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
-	// Step 1: Compile .bal to BIR.
+	// Step 1: Compile .bal to BIR (all packages in topological order).
 	var stdoutBuf, stderrBuf bytes.Buffer
 	birPkgs, tyEnv, _, compileErr := runCompilePhase(testPair.InputPath, &stdoutBuf, &stderrBuf)
 	if len(birPkgs) == 0 || compileErr != nil {
 		t.Fatalf("compilation failed for %s: %v", testPair.InputPath, compileErr)
 	}
 
-	// Step 2: Serialize ALL BIR packages (in topological order).
-	serializedPkgs := make([][]byte, len(birPkgs))
-	for i, pkg := range birPkgs {
-		serialized, err := bircodec.Marshal(tyEnv, pkg)
-		if err != nil {
-			t.Fatalf("BIR serialization failed for package %d of %s: %v", i, testPair.InputPath, err)
-		}
-		serializedPkgs[i] = serialized
-	}
-
-	// Step 3: Deserialize ALL packages into the same fresh compiler context.
+	// Step 2: Serialize and deserialize every package into a fresh env,
+	// preserving topological order so stdlib packages are interpreted before
+	// the consumer that depends on them.
 	freshEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	freshCtx := context.NewCompilerContext(freshEnv)
-	deserializedPkgs := make([]*bir.BIRPackage, len(serializedPkgs))
-	for i, serialized := range serializedPkgs {
+	deserializedPkgs := make([]*bir.BIRPackage, 0, len(birPkgs))
+	for _, pkg := range birPkgs {
+		serialized, err := bircodec.Marshal(tyEnv, pkg)
+		if err != nil {
+			t.Fatalf("BIR serialization failed for %s (pkg %s): %v", testPair.InputPath, pkg.PackageID.PkgName.Value(), err)
+		}
 		deserialized, err := bircodec.Unmarshal(freshCtx, serialized)
 		if err != nil {
-			t.Fatalf("BIR deserialization failed for package %d of %s: %v", i, testPair.InputPath, err)
+			t.Fatalf("BIR deserialization failed for %s (pkg %s): %v", testPair.InputPath, pkg.PackageID.PkgName.Value(), err)
 		}
-		deserializedPkgs[i] = deserialized
+		deserializedPkgs = append(deserializedPkgs, deserialized)
 	}
 
-	// Step 4: Execute all deserialized BIR packages in topological order.
+	// Step 3: Execute all deserialized packages.
 	var rtStdoutBuf, rtStderrBuf bytes.Buffer
 	runInterpretPhase(deserializedPkgs, freshEnv.GetTypeEnv(), &rtStdoutBuf, &rtStderrBuf)
 
-	// Step 5: Compare against expected output.
+	// Step 4: Compare against expected output.
 	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
 	if err != nil {
 		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)

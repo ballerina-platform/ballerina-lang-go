@@ -41,6 +41,8 @@ func walkStatement(cx *functionContext, node ast.StatementNode) desugaredNode[as
 		return walkWhile(cx, stmt)
 	case *ast.BLangDo:
 		return walkDo(cx, stmt)
+	case *ast.BLangLock:
+		return walkLock(cx, stmt)
 	case *ast.BLangForeach:
 		return visitForEach(cx, stmt)
 	case *ast.BLangSimpleVariableDef:
@@ -206,6 +208,12 @@ func walkWhile(cx *functionContext, stmt *ast.BLangWhile) desugaredNode[ast.Stat
 		initStmts:       initStmts,
 		replacementNode: stmt,
 	}
+}
+
+func walkLock(cx *functionContext, stmt *ast.BLangLock) desugaredNode[ast.StatementNode] {
+	bodyResult := walkBlockStmt(cx, &stmt.Body)
+	stmt.Body = *bodyResult.replacementNode.(*ast.BLangBlockStmt)
+	return desugaredNode[ast.StatementNode]{replacementNode: stmt}
 }
 
 func walkDo(cx *functionContext, stmt *ast.BLangDo) desugaredNode[ast.StatementNode] {

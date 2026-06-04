@@ -76,6 +76,7 @@ type (
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]ast.TypeDefinition
 		prevPos        map[string]prevPos
+		usedPrefixes   map[string]bool
 		defaultCounter int
 	}
 
@@ -102,12 +103,13 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		XMLNS:      map[string]string{model.XMLNSReservedPrefix: model.XMLNSReservedURI},
 	}
 	return &moduleSymbolResolver{
-		ctx:       ctx,
-		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
-		scope:     scope,
-		pkgID:     pkgID,
-		typeDefns: make(map[model.SymbolRef]ast.TypeDefinition),
-		prevPos:   make(map[string]prevPos),
+		ctx:          ctx,
+		tyCtx:        semtypes.ContextFrom(ctx.GetTypeEnv()),
+		scope:        scope,
+		pkgID:        pkgID,
+		typeDefns:    make(map[model.SymbolRef]ast.TypeDefinition),
+		prevPos:      make(map[string]prevPos),
+		usedPrefixes: make(map[string]bool),
 	}
 }
 
@@ -147,6 +149,9 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 }
 
 func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
+	if prefix != "" {
+		ms.usedPrefixes[prefix] = true
+	}
 	return ms.scope.GetPrefixedSymbol(prefix, name)
 }
 
@@ -385,8 +390,16 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for _, globalVar := range pkg.GlobalVars {
 		name := globalVar.Name.Value
 		isPublic := globalVar.IsPublic()
-		isFinal := globalVar.IsFinal()
-		symbol := model.NewValueSymbol(name, isPublic, isFinal, false)
+		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		if globalVar.IsFinal() {
+			symbol.SetFinal()
+		}
+		if globalVar.IsConfigurable() {
+			symbol.SetConfigurable()
+		}
+		if globalVar.Flags().Has(model.FlagIsolated) {
+			symbol.SetIsolated()
+		}
 		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
 	}
 	if pkg.InitFunction != nil {
@@ -407,8 +420,22 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	}
 	processModuleXMLNS(moduleResolver, pkg)
 	ast.Walk(moduleResolver, pkg)
+	reportUnusedImports(moduleResolver, pkg)
 	pkg.Scope = moduleResolver.scope
 	return moduleResolver.scope.Exports()
+}
+
+func reportUnusedImports(resolver *moduleSymbolResolver, pkg *ast.BLangPackage) {
+	for i := range pkg.Imports {
+		imp := &pkg.Imports[i]
+		alias := imp.Alias.Value
+		if alias == string(model.IGNORE) {
+			continue
+		}
+		if !resolver.usedPrefixes[alias] {
+			resolver.ctx.SemanticError("unused import prefix '"+alias+"'", imp.GetPosition())
+		}
+	}
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
@@ -633,7 +660,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangForeach:
 		resolveForeachSymbols(bs, n)
 		return nil
-	case *ast.BLangBlockStmt, *ast.BLangDo:
+	case *ast.BLangBlockStmt, *ast.BLangDo, *ast.BLangLock:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable(), n.GetVariable().(*ast.BLangSimpleVariable).IsFinal())
@@ -850,6 +877,9 @@ func defineVariable(resolver *blockSymbolResolver, variable ast.VariableNode, is
 			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, isFinal, false)
+		if isFinal {
+			symbol.SetFinal()
+		}
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
@@ -1132,6 +1162,23 @@ func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn ast.Typ
 	}
 }
 
+type namedClassMethod struct {
+	name   string
+	method *ast.BLangFunction
+}
+
+// classMethodsInResolutionOrder returns class methods in sorted name order so
+// that default-param symbol counter assignments are deterministic regardless of
+// Go's map iteration order.
+func classMethodsInResolutionOrder(classDef *ast.BLangClassDefinition) []namedClassMethod {
+	names := slices.Sorted(maps.Keys(classDef.Methods))
+	result := make([]namedClassMethod, len(names))
+	for i, name := range names {
+		result[i] = namedClassMethod{name: name, method: classDef.Methods[name]}
+	}
+	return result
+}
+
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
@@ -1152,22 +1199,22 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 
 	isPublicClass := classDef.IsPublic()
 	className := classDef.Name.Value
-	for methodName := range classDef.Methods {
-		method := classDef.Methods[methodName]
-		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(methodName)+"'", method.Name.GetPosition())
+	methods := classMethodsInResolutionOrder(classDef)
+	for _, m := range methods {
+		if _, sk, exists := classResolver.GetSymbol(m.name); exists && sk == blockScopeKind {
+			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(m.name)+"'", m.method.Name.GetPosition())
 			continue
 		}
-		isPublic := method.IsPublic()
-		symbol := ms.allocateFunctionSymbol(method, methodName, isPublic)
+		isPublic := m.method.IsPublic()
+		symbol := ms.allocateFunctionSymbol(m.method, m.name, isPublic)
 		if isPublicClass && isPublic {
-			moduleName := className + "." + methodName
+			moduleName := className + "." + m.name
 			ms.scope.AddSymbol(moduleName, symbol)
 			moduleRef, _ := ms.scope.GetSymbol(moduleName)
-			classResolver.AddSymbol(methodName, symbol)
-			method.SetSymbol(moduleRef)
+			classResolver.AddSymbol(m.name, symbol)
+			m.method.SetSymbol(moduleRef)
 		} else {
-			addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
+			addSymbolAndSetOnNode(classResolver, m.name, symbol, m.method)
 		}
 	}
 
@@ -1199,20 +1246,14 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
 	}
 
-	// Iterate in sorted order so that default-param symbol counter assignments
-	// are deterministic regardless of Go's map iteration order.
-	for _, methodName := range slices.Sorted(maps.Keys(classDef.Methods)) {
-		method := classDef.Methods[methodName]
-		methodResolver := newFunctionResolver(classResolver, method)
-		method.SetScope(methodResolver.scope)
-		resolveFunction(methodResolver, method)
-		allocateDefaultParamSymbols(ms, ms.scope, method)
-	}
-
 	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
 	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
-	for name, method := range classDef.Methods {
-		methodTable[name] = method.Symbol()
+	for _, m := range methods {
+		methodResolver := newFunctionResolver(classResolver, m.method)
+		m.method.SetScope(methodResolver.scope)
+		resolveFunction(methodResolver, m.method)
+		allocateDefaultParamSymbols(ms, ms.scope, m.method)
+		methodTable[m.name] = m.method.Symbol()
 	}
 	if classDef.InitFunction != nil {
 		methodTable["init"] = classDef.InitFunction.Symbol()

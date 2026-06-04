@@ -190,12 +190,14 @@ func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemTy
 	}
 }
 
-func CreateIsolatedTop(cx Context) SemType {
-	if cx._isolatedTopMemo == nil {
+// CreateIsolatedFn returns the top type of isolated functions:
+// the type of every `isolated function` value.
+func CreateIsolatedFn(cx Context) SemType {
+	if cx._isolatedFnMemo == nil {
 		fd := NewFunctionDefinition()
 		env := cx.Env()
-		cx._isolatedTopMemo = fd.Define(env, NEVER, VAL, FunctionQualifiersFrom(env, true, false))
+		cx._isolatedFnMemo = fd.Define(env, NEVER, VAL, FunctionQualifiersFrom(env, true, false))
 	}
 
-	return cx._isolatedTopMemo
+	return cx._isolatedFnMemo
 }

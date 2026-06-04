@@ -290,6 +290,8 @@ func execInstruction(ctx *extern.Context, inst bir.BIRNonTerminator, frame *Fram
 		execNewXMLText(ctx, v, frame)
 	case *bir.NewXMLSequence:
 		execNewXMLSequence(ctx, v, frame)
+	case *bir.EvalTemplateExpr:
+		execEvalTemplateExpr(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
@@ -337,6 +339,12 @@ func execTerminator(ctx *extern.Context, term bir.BIRTerminator, frame *Frame) *
 		}
 	case *bir.Return:
 		return nil
+	case *bir.LockStart:
+		ctx.AcquireLock(v.LockKey)
+		return v.ThenBB
+	case *bir.LockEnd:
+		ctx.ReleaseLock()
+		return v.ThenBB
 	default:
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}

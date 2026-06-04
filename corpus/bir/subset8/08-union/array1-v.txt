@@ -13,13 +13,17 @@ main() -> nil{
     %8 ? bb1 : bb3;
   }
   bb1 {
-    %9 = ConstantLoad yes
-    %10 = println(%9) -> bb2;
+    PushScopeFrame 2
+    %0 = ConstantLoad yes
+    %1 = println(%0) -> bb2;
   }
   bb2 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb3 {
+    PushScopeFrame 0
+    PopScopeFrame
     return;
   }
 }

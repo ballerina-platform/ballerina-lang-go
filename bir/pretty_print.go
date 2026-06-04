@@ -192,6 +192,10 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintTypeTest(instruction)
 	case *Panic:
 		return p.PrintPanic(instruction)
+	case *LockStart:
+		return p.PrintLockStart(instruction)
+	case *LockEnd:
+		return p.PrintLockEnd(instruction)
 	case *NewObject:
 		return p.PrintNewObject(instruction)
 	case *NewStream:
@@ -216,6 +220,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintNewXMLText(instruction)
 	case *NewXMLSequence:
 		return p.PrintNewXMLSequence(instruction)
+	case *EvalTemplateExpr:
+		return p.PrintEvalTemplateExpr(instruction)
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -355,6 +361,14 @@ func (p *PrettyPrinter) PrintReturn(r *Return) string {
 
 func (p *PrettyPrinter) PrintPanic(pa *Panic) string {
 	return fmt.Sprintf("panic %s;", p.PrintOperand(*pa.ErrorOp))
+}
+
+func (p *PrettyPrinter) PrintLockStart(l *LockStart) string {
+	return fmt.Sprintf("lock-start %q GOTO %s;", l.LockKey, l.ThenBB.Id.Value())
+}
+
+func (p *PrettyPrinter) PrintLockEnd(l *LockEnd) string {
+	return fmt.Sprintf("lock-end %q GOTO %s;", l.LockKey, l.ThenBB.Id.Value())
 }
 
 func (p *PrettyPrinter) PrintBranch(b *Branch) string {
@@ -509,6 +523,22 @@ func (p *PrettyPrinter) PrintNewXMLComment(n *NewXMLComment) string {
 
 func (p *PrettyPrinter) PrintNewXMLText(n *NewXMLText) string {
 	return fmt.Sprintf("%s = newXMLText(%s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.BodyOp))
+}
+
+func (p *PrettyPrinter) PrintEvalTemplateExpr(n *EvalTemplateExpr) string {
+	kindStr := "string"
+	parts := strings.Builder{}
+	for i, s := range n.Strings {
+		if i > 0 {
+			parts.WriteString(", ")
+		}
+		fmt.Fprintf(&parts, "%q", s)
+		if i < len(n.Insertions) {
+			parts.WriteString(", ")
+			parts.WriteString(p.PrintOperand(*n.Insertions[i]))
+		}
+	}
+	return fmt.Sprintf("%s = evalTemplate[%s](%s)", p.PrintOperand(*n.LhsOp), kindStr, parts.String())
 }
 
 func (p *PrettyPrinter) PrintNewXMLSequence(n *NewXMLSequence) string {

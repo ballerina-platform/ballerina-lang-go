@@ -366,6 +366,14 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 				}
 			case *bir.Panic:
 				// Panic has no ThenBB
+			case *bir.LockStart:
+				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
+					t.ThenBB = target
+				}
+			case *bir.LockEnd:
+				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
+					t.ThenBB = target
+				}
 			}
 		}
 	}
@@ -753,6 +761,23 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		}
 		lhsOp := br.readOperand(varMap)
 		return bir.NewXMLSequenceInstr(lhsOp, children, pos)
+	case bir.INSTRUCTION_KIND_EVAL_TEMPLATE_EXPR:
+		var kind uint8
+		br.read(&kind)
+		strCount := br.readLength()
+		strs := make([]string, strCount)
+		for k := 0; k < int(strCount); k++ {
+			strs[k] = string(br.readStringCPEntry())
+		}
+		var totalLen int32
+		br.read(&totalLen)
+		insCount := br.readLength()
+		insertions := make([]*bir.BIROperand, insCount)
+		for k := 0; k < int(insCount); k++ {
+			insertions[k] = br.readOperand(varMap)
+		}
+		lhsOp := br.readOperand(varMap)
+		return bir.NewEvalTemplateExpr(bir.TemplateKind(kind), strs, insertions, lhsOp, pos)
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
@@ -867,6 +892,30 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 				},
 			},
 			ErrorOp: errorOp,
+		}
+	case bir.INSTRUCTION_KIND_LOCK:
+		key := br.readStringCPEntry()
+		thenBBId := br.readStringCPEntry()
+		return &bir.LockStart{
+			BIRTerminatorBase: bir.BIRTerminatorBase{
+				BIRInstructionBase: bir.BIRInstructionBase{
+					BIRNodeBase: bir.BIRNodeBase{Pos: pos},
+				},
+				ThenBB: &bir.BIRBasicBlock{Id: thenBBId},
+			},
+			LockKey: string(key),
+		}
+	case bir.INSTRUCTION_KIND_UNLOCK:
+		key := br.readStringCPEntry()
+		thenBBId := br.readStringCPEntry()
+		return &bir.LockEnd{
+			BIRTerminatorBase: bir.BIRTerminatorBase{
+				BIRInstructionBase: bir.BIRInstructionBase{
+					BIRNodeBase: bir.BIRNodeBase{Pos: pos},
+				},
+				ThenBB: &bir.BIRBasicBlock{Id: thenBBId},
+			},
+			LockKey: string(key),
 		}
 	default:
 		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))

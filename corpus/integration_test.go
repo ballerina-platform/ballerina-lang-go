@@ -823,24 +823,18 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 ) (*bir.BIRPackage, error) {
 	cx := context.NewCompilerContext(env)
 
-	// Register source files with DiagnosticEnv
+	// Register source files with DiagnosticEnv and parse them.
 	de := cx.DiagnosticEnv()
+	var syntaxTrees []*ast.BLangCompilationUnit
 	for _, docID := range module.DocumentIDs() {
 		relPath := project.DocumentPath(docID)
 		absPath := filepath.Join(absProjectDir, relPath)
 		content, err := os.ReadFile(absPath)
-		if err == nil {
-			de.RegisterFile(absPath, text.NewStringTextDocument(string(content)))
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %v", relPath, err)
 		}
-	}
-
-	// Parse all source files in the module
-	docIDs := module.DocumentIDs()
-	var syntaxTrees []*ast.BLangCompilationUnit
-	for _, docID := range docIDs {
-		relPath := project.DocumentPath(docID)
-		absPath := filepath.Join(absProjectDir, relPath)
-		st, err := parser.GetSyntaxTree(cx, absPath)
+		de.RegisterFile(absPath, text.NewStringTextDocument(string(content)))
+		st, err := parser.GetSyntaxTree(cx, absPath, string(content))
 		if err != nil {
 			return nil, fmt.Errorf("parsing %s: %v", relPath, err)
 		}
@@ -915,7 +909,7 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	}
 
 	analyzer := semantics.NewSemanticAnalyzer(cx)
-	analyzer.Analyze(pkg)
+	analyzer.Analyze(pkg, importedSymbols)
 	if cx.HasDiagnostics() {
 		return nil, fmt.Errorf("semantic analysis failed")
 	}

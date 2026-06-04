@@ -6,23 +6,27 @@ foo([string...]|{| a: string, b: string, never... |}) -> nil{
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %3 = ConstantLoad <nil>
-    %0 = %3;
+    PushScopeFrame 1
+    %0 = ConstantLoad <nil>
+    (1, %0) = %0;
+    PopScopeFrame
     return;
   }
   bb2 {
-    %4 = ConstantLoad A is: 
-    %6 = ConstantLoad a
-    %5 = input[%6];
-    %7 = println(%4,%5) -> bb3;
+    PushScopeFrame 8
+    %0 = ConstantLoad A is: 
+    %2 = ConstantLoad a
+    %1 = (1, input)[%2];
+    %3 = println(%0,%1) -> bb3;
   }
   bb3 {
-    %8 = ConstantLoad B is: 
-    %10 = ConstantLoad b
-    %9 = input[%10];
-    %11 = println(%8,%9) -> bb4;
+    %4 = ConstantLoad B is: 
+    %6 = ConstantLoad b
+    %5 = (1, input)[%6];
+    %7 = println(%4,%5) -> bb4;
   }
   bb4 {
+    PopScopeFrame
     return;
   }
 }
