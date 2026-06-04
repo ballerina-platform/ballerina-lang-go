@@ -264,8 +264,8 @@ func TestNewHTTPClient_RedirectsDisabled(t *testing.T) {
 	defer server.Close()
 
 	client := NewHTTPClient(pal.ClientConfig{
-		FollowRedirects:  pal.FollowRedirects{Enabled: false},
-		ResponseLimits:   pal.ResponseLimitConfig{MaxEntityBodySize: -1},
+		FollowRedirects: pal.FollowRedirects{Enabled: false},
+		ResponseLimits:  pal.ResponseLimitConfig{MaxEntityBodySize: -1},
 	})
 	status, _, body, err := client.Execute(context.Background(), "GET", server.URL+"/redirect", nil, 0, "", nil)
 	if body != nil {

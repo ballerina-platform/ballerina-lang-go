@@ -31,11 +31,11 @@ import (
 )
 
 type fileIOTypes struct {
-	strArrTy        semtypes.SemType
-	byteArrTy       semtypes.SemType
-	jsonListTy       semtypes.SemType
-	jsonMapTy        semtypes.SemType
-	stringMapTy      semtypes.SemType
+	strArrTy          semtypes.SemType
+	byteArrTy         semtypes.SemType
+	jsonListTy        semtypes.SemType
+	jsonMapTy         semtypes.SemType
+	stringMapTy       semtypes.SemType
 	stringMapAtomicTy *semtypes.MappingAtomicType
 }
 

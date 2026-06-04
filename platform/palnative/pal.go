@@ -42,7 +42,7 @@ func NewPlatform() pal.Platform {
 				return os.ReadFile(path)
 			},
 			WriteFile: func(path string, data []byte) error {
-			return os.WriteFile(path, data, 0o644)
+				return os.WriteFile(path, data, 0o644)
 			},
 			AppendFile: func(path string, data []byte) error {
 				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
