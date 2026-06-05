@@ -108,7 +108,7 @@ Failing to update `TestPal` causes nil-pointer dereferences in corpus tests even
 Add corpus tests under the existing `corpus/bal/subset8/<NN>-<name>/` directory for this stdlib. If no directory exists for this stdlib yet, pick the next free `<NN>` prefix. Suffixes per `AGENTS.md`: `*-v.bal` (valid), `*-e.bal` (compile errors), `*-p.bal` (panics). No leading zeros in numeric parts.
 
 Regenerate goldens via the **`update-corpus-tests`** skill:
-```
+```shell
 go test ./corpus --update
 ```
 Review `git diff corpus/` before committing.
