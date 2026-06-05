@@ -24,11 +24,14 @@ import (
 	"strings"
 	"testing"
 
+	gofs "io/fs"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	bircodec "ballerina-lang-go/bir/codec"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/desugar"
+	"ballerina-lang-go/lib/stdlibs"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/parser"
@@ -587,8 +590,13 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	// symbols. If dependent-fn metadata failed to survive serialization, type
 	// resolution of `int a = helper:inferred(0)` would widen to VAL (or error)
 	// and main compilation would fail.
+	// main.bal imports ballerina/io (but not http), so only io needs to be
+	// compiled into env2 before resolving main's imports.
 	publicSymbols := map[semantics.PackageIdentifier]model.ExportedSymbolSpace{
 		{OrgName: org, ModuleName: helperMod}: deserializedHelperExported,
+	}
+	if ioID, ioExported, ok := compileBuiltinInEnv(env2, "ballerina", "io", "0.0.1"); ok {
+		publicSymbols[ioID] = ioExported
 	}
 	_, mainBIR := compileSingleFileModule(t, env2, mainBalPath,
 		model.Name(org),
@@ -627,6 +635,42 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	}
 }
 
+// compileBuiltinInEnv compiles a single embedded stdlib .bal file (e.g., "io" or
+// "http") inside env, returning its exported symbol space. The types end up in
+// env's type system, so they are compatible with other modules compiled in the
+// same env.
+func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version string) (semantics.PackageIdentifier, model.ExportedSymbolSpace, bool) {
+	balPath := fmt.Sprintf("ballerina/%s/%s/go1.2/%s.bal", name, version, name)
+	contentBytes, err := gofs.ReadFile(stdlibs.FS, balPath)
+	if err != nil {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	cx := context.NewCompilerContext(env)
+	virtualPath := fmt.Sprintf("$stdlib/ballerina/%s.bal", name)
+	cx.DiagnosticEnv().RegisterFile(virtualPath, text.NewStringTextDocument(string(contentBytes)))
+	st, err := parser.GetSyntaxTree(cx, virtualPath, string(contentBytes))
+	if err != nil || cx.HasDiagnostics() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	cu := ast.GetCompilationUnit(cx, st)
+	if cu == nil || cx.HasDiagnostics() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	pkg := ast.ToPackage(cu)
+	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
+	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
+	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
+	if cx.HasErrors() {
+		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	return semantics.PackageIdentifier{OrgName: org, ModuleName: name}, exported, true
+}
+
 // compileSingleFileModule parses a .bal file and runs the full compilation
 // pipeline for it as its own module with the given package identity. The
 // publicSymbols map is consulted for any imports. Returns the module's
@@ -651,7 +695,7 @@ func compileSingleFileModule(
 		t.Fatalf("reading %s: %v", balPath, err)
 	}
 	cx.DiagnosticEnv().RegisterFile(absPath, text.NewStringTextDocument(string(content)))
-	st, err := parser.GetSyntaxTree(cx, absPath)
+	st, err := parser.GetSyntaxTree(cx, absPath, string(content))
 	if err != nil {
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}

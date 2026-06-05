@@ -2564,6 +2564,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
 	case *ast.BLangXMLSequenceLiteral:
 		return resolveXMLSequenceLiteral(t, chain, e, expectedType)
+	case *ast.BLangTemplateExpr:
+		return resolveTemplateExpr(t, chain, e)
 	case *ast.BLangXMLElementLiteral:
 		return resolveXMLElementLiteral(t, chain, e)
 	case *ast.BLangXMLPILiteral:
@@ -2700,6 +2702,45 @@ func resolveXMLElementLiteral(t typeResolver, chain *binding, e *ast.BLangXMLEle
 	ty := semtypes.XML_ELEMENT
 	setExpectedType(e, ty)
 	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveTemplateExpr(t typeResolver, chain *binding, e *ast.BLangTemplateExpr) (semtypes.SemType, expressionEffect, bool) {
+	var ty semtypes.SemType
+	if len(e.Insertions) == 0 {
+		ty = semtypes.StringConst(e.Strings[0])
+	} else {
+		var ok bool
+		ty, ok = resolveStringTemplateType(t, chain, e)
+		if !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveStringTemplateType(t typeResolver, chain *binding, e *ast.BLangTemplateExpr) (semtypes.SemType, bool) {
+	allSingleton := true
+	var sb strings.Builder
+	sb.WriteString(e.Strings[0])
+	for i, ins := range e.Insertions {
+		insTy, _, ok := resolveActionOrExpression(t, chain, ins, templateInsertionAllowedTypes)
+		if !ok {
+			return nil, false
+		}
+		if allSingleton && semtypes.IsSubtypeSimple(insTy, semtypes.STRING) {
+			if shape := semtypes.SingleShape(insTy); !shape.IsEmpty() {
+				sb.WriteString(shape.Get().Value.(string))
+				sb.WriteString(e.Strings[i+1])
+				continue
+			}
+		}
+		allSingleton = false
+	}
+	if allSingleton {
+		return semtypes.StringConst(sb.String()), true
+	}
+	return semtypes.STRING, true
 }
 
 func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSequenceLiteral, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {

@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected boolean|int|float|decimal|string, got [int...]
+  --> bad-type-e.bal:20:27
+   |
+20 |     string s1 = string `${a}`; // @error invalid type for template interpolation
+   |                           ^
+
+error[SEMANTIC_ERROR]: incompatible type: expected boolean|int|float|decimal|string, got nil
+  --> bad-type-e.bal:21:27
+   |
+21 |     string s2 = string `${n}`; // @error invalid type for template interpolation
+   |                           ^

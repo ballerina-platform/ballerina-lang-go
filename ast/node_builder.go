@@ -2975,12 +2975,23 @@ func (n *NodeBuilder) TransformLetVariableDeclaration(letVariableDeclarationNode
 
 func (n *NodeBuilder) TransformTemplateExpression(templateBLangExpression *tree.TemplateExpressionNode) BLangNode {
 	typeToken := templateBLangExpression.Type()
-	if typeToken == nil || typeToken.Text() != "xml" {
-		n.cx.Unimplemented("non-xml template expressions not yet supported", getPosition(n.de(), templateBLangExpression))
-		placeholder := &BLangLiteral{}
-		placeholder.SetPosition(getPosition(n.de(), templateBLangExpression))
-		return placeholder
+	pos := getPosition(n.de(), templateBLangExpression)
+	if typeToken == nil {
+		n.cx.Unimplemented("raw templates not supported", pos)
+		return nil
 	}
+	switch typeToken.Text() {
+	case "string":
+		return n.buildStringTemplateExpr(templateBLangExpression, pos)
+	case "xml":
+		return n.buildXmlTemplateExpr(templateBLangExpression, pos)
+	default:
+		n.cx.Unimplemented("unsupported template expression kind", pos)
+		return nil
+	}
+}
+
+func (n *NodeBuilder) buildXmlTemplateExpr(templateBLangExpression *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {
 	var children []BLangExpression
 	content := templateBLangExpression.Content()
 	for child := range content.Iterator() {
@@ -2999,9 +3010,51 @@ func (n *NodeBuilder) TransformTemplateExpression(templateBLangExpression *tree.
 		return children[0]
 	}
 	seq := &BLangXMLSequenceLiteral{}
-	seq.pos = getPosition(n.de(), templateBLangExpression)
+	seq.pos = pos
 	seq.Children = children
 	return seq
+}
+
+func (n *NodeBuilder) buildStringTemplateExpr(node *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {
+	// We maintain fallowing 2 invariants
+	// 1. First and last elements are always strings
+	// 2. Between any two expressions there is a string
+	// For this we will add empty strings. This is meant to reducing the number of branchings needed in runtime
+	var strs []string
+	var insertions []BLangExpression
+	content := node.Content()
+	lastStr := false
+	for child := range content.Iterator() {
+		switch c := child.(type) {
+		case tree.Token:
+			if c.Kind() != common.TEMPLATE_STRING {
+				n.cx.InternalError(fmt.Sprintf("unexpected token kind in string template: %v", c.Kind()), getPosition(n.de(), c))
+				continue
+			}
+			strs = append(strs, c.Text())
+			lastStr = true
+		case *tree.InterpolationNode:
+			if !lastStr {
+				strs = append(strs, "")
+			}
+			expr := n.createActionOrExpression(c.Expression())
+			be, ok := expr.(BLangExpression)
+			if !ok {
+				n.cx.InternalError("interpolation did not produce BLangExpression", getPosition(n.de(), c))
+				return nil
+			}
+			insertions = append(insertions, be)
+			lastStr = false
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected node in string template: %T", c), getPosition(n.de(), child))
+		}
+	}
+	if !lastStr {
+		strs = append(strs, "")
+	}
+	tpl := &BLangTemplateExpr{Kind: TemplateExprKindString, Strings: strs, Insertions: insertions}
+	tpl.SetPosition(pos)
+	return tpl
 }
 
 func (n *NodeBuilder) xmlNameToString(name tree.XMLNameNode) string {

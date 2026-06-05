@@ -258,12 +258,19 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(os.Stderr, compilation.StatsReport())
 	}
 
-	// Dump BIR if requested
+	// Dump BIR if requested — only include packages belonging to the root package
+	// (same org + package name), so all sub-modules are covered while external
+	// imports are excluded.
 	tyEnv := project.Environment().TypeEnv()
 	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
 		tyCtx := semtypes.ContextFrom(tyEnv)
+		rootOrgName := pkg.PackageOrg().Value()
+		rootPkgName := pkg.PackageName().Value()
 		for _, birPkg := range birPkgs {
+			if birPkg.PackageID.OrgName.Value() != rootOrgName || birPkg.PackageID.PkgName.Value() != rootPkgName {
+				continue
+			}
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
 			fmt.Fprintln(os.Stderr, strings.TrimSpace(prettyPrinter.Print(tyCtx, *birPkg)))

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	_ "ballerina-lang-go/lib/rt" // register stdlib runtime functions (io.println etc.)
+	"ballerina-lang-go/lib/stdlibs"
 	"ballerina-lang-go/projects"
 )
 
@@ -39,7 +40,10 @@ func TestMixedBalaFormat(t *testing.T) {
 		os.DirFS(userProjectPath),
 		".",
 		projects.ProjectLoadConfig{
-			Repositories: []projects.Repository{repo},
+			Repositories: []projects.Repository{
+				repo,
+				projects.NewFileSystemRepository(stdlibs.FS, "."),
+			},
 		},
 	)
 	if err != nil {

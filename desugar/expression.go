@@ -126,6 +126,8 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		return desugaredNode[ast.BLangActionOrExpression]{initStmts: initStmts, replacementNode: expr}
 	case *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
+	case *ast.BLangTemplateExpr:
+		return walkTemplateExpr(cx, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", node))
 	}
@@ -428,6 +430,22 @@ func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) de
 		initStmts:       initStmts,
 		replacementNode: indexAccess,
 	}
+}
+
+func walkTemplateExpr(cx *functionContext, expr *ast.BLangTemplateExpr) desugaredNode[ast.BLangActionOrExpression] {
+	if len(expr.Insertions) == 0 {
+		lit := &ast.BLangLiteral{Value: expr.Strings[0], OriginalValue: expr.Strings[0]}
+		lit.SetPosition(expr.GetPosition())
+		lit.SetDeterminedType(semtypes.StringConst(expr.Strings[0]))
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: lit}
+	}
+	var initStmts []ast.StatementNode
+	for i, ins := range expr.Insertions {
+		r := walkExpression(cx, ins)
+		initStmts = append(initStmts, r.initStmts...)
+		expr.Insertions[i] = r.replacementNode.(ast.BLangExpression)
+	}
+	return desugaredNode[ast.BLangActionOrExpression]{initStmts: initStmts, replacementNode: expr}
 }
 
 func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLangActionOrExpression] {

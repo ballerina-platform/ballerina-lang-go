@@ -222,6 +222,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printMarkdownReferenceDocumentation(t)
 	case *BLangXMLSequenceLiteral:
 		p.printXMLSequenceLiteral(t)
+	case *BLangTemplateExpr:
+		p.printTemplateExpr(t)
 	case *BLangXMLElementLiteral:
 		p.printXMLElementLiteral(t)
 	case *BLangXMLAttribute:
@@ -397,6 +399,28 @@ func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
 
 func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
 	p.printString(string(typeKind))
+}
+
+func (p *PrettyPrinter) printTemplateExpr(node *BLangTemplateExpr) {
+	p.startNode()
+	switch node.Kind {
+	case TemplateExprKindString:
+		p.printString("string-template-literal")
+	default:
+		panic("unsupported template expr kind")
+	}
+	p.indentLevel++
+	for i, s := range node.Strings {
+		p.startNode()
+		p.printString("template-string")
+		p.printString(fmt.Sprintf("%q", s))
+		p.endNode()
+		if i < len(node.Insertions) {
+			p.PrintInner(node.Insertions[i].(BLangNode))
+		}
+	}
+	p.indentLevel--
+	p.endNode()
 }
 
 func (p *PrettyPrinter) printXMLSequenceLiteral(node *BLangXMLSequenceLiteral) {

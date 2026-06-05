@@ -31,6 +31,7 @@ import (
 	// so the interpreter can dispatch foo:add() at runtime.
 	"ballerina-lang-go/bir"
 	_ "ballerina-lang-go/corpus/package-resolution/testdata/bundled-embed/ballerina/foo/0.1.0/go1.2/native"
+	"ballerina-lang-go/lib/stdlibs"
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
@@ -148,7 +149,10 @@ func TestBundledRepository_ConsumerProjectRuns(t *testing.T) {
 	projectFs := os.DirFS(filepath.Join(packageResolutionTestDataDir, "userProject"))
 
 	result, err := projects.Load(projectFs, ".", projects.ProjectLoadConfig{
-		Repositories: []projects.Repository{bundledEmbedRepo(t)},
+		Repositories: []projects.Repository{
+			bundledEmbedRepo(t),
+			projects.NewFileSystemRepository(stdlibs.FS, "."),
+		},
 	})
 	if err != nil {
 		t.Fatalf("Load: %v", err)
