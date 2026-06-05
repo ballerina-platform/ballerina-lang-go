@@ -36,4 +36,6 @@ const (
 	typeTagUnsigned16 typeTag = 43
 	typeTagUnsigned8  typeTag = 44
 	typeTagCharString typeTag = 45
+	typeTagMap        typeTag = 46
+	typeTagTypedesc   typeTag = 47
 )

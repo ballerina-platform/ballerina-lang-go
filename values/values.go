@@ -36,7 +36,8 @@ type Function struct {
 // TypeDesc is the runtime representation of a typedesc value — a thin wrapper
 // around a semtype.
 type TypeDesc struct {
-	Type semtypes.SemType
+	Type        semtypes.SemType
+	Annotations map[string]BalValue
 }
 
 // FillerFactory produces a fresh filler value each time it is invoked.

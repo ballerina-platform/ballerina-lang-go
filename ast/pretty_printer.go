@@ -128,6 +128,12 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printListConstructorExpr(t)
 	case *BLangMappingConstructorExpr:
 		p.printMappingConstructor(t)
+	case *BLangAnnotation:
+		p.printAnnotation(t)
+	case *BLangAnnotationAttachment:
+		p.printAnnotationAttachment(t)
+	case *BLangAnnotAccessExpr:
+		p.printAnnotAccessExpr(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
 	case *BLangTypeTestExpr:
@@ -319,6 +325,9 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	for i := range node.GlobalVars {
 		p.printSimpleVariable(&node.GlobalVars[i])
 	}
+	for i := range node.Annotations {
+		p.printAnnotation(&node.Annotations[i])
+	}
 	for i := range node.TypeDefinitions {
 		p.printTypeDefinition(&node.TypeDefinitions[i])
 	}
@@ -473,6 +482,24 @@ func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
 	} else {
 		p.printString(node.VariableName.Value)
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printAnnotAccessExpr(node *BLangAnnotAccessExpr) {
+	p.startNode()
+	p.printString("annot-access-expr")
+	if node.AnnotationName != nil {
+		if node.PkgAlias != nil && node.PkgAlias.Value != "" {
+			p.printString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
+		} else {
+			p.printString(node.AnnotationName.Value)
+		}
+	}
+	p.indentLevel++
+	if node.Expr != nil {
+		p.PrintInner(node.Expr.(BLangNode))
+	}
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -1086,6 +1113,53 @@ func (p *PrettyPrinter) printMappingConstructor(node *BLangMappingConstructorExp
 		if kv, ok := f.(*BLangMappingKeyValueField); ok {
 			p.printMappingKeyValueField(kv)
 		}
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printAnnotation(node *BLangAnnotation) {
+	p.startNode()
+	p.printString("annotation")
+	if node.Name != nil {
+		p.printString(node.Name.Value)
+	}
+	if node.IsPublic() {
+		p.printString("public")
+	}
+	if node.IsConst() {
+		p.printString("const")
+	}
+	p.indentLevel++
+	if node.typeDescriptor != nil {
+		p.PrintInner(node.typeDescriptor.(BLangNode))
+	}
+	for _, attachPoint := range node.AttachPoints() {
+		p.startNode()
+		p.printString("attach-point")
+		if attachPoint.Source {
+			p.printString("source")
+		}
+		p.printString(string(attachPoint.Point))
+		p.endNode()
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printAnnotationAttachment(node *BLangAnnotationAttachment) {
+	p.startNode()
+	p.printString("annotation-attachment")
+	if node.AnnotationName != nil {
+		if node.PkgAlias != nil && node.PkgAlias.Value != "" {
+			p.printString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
+		} else {
+			p.printString(node.AnnotationName.Value)
+		}
+	}
+	p.indentLevel++
+	if node.Expr != nil {
+		p.PrintInner(node.Expr.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()

@@ -210,6 +210,9 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
+		for _, ann := range node.AnnAttachments {
+			Walk(v, ann.(BLangNode))
+		}
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
@@ -220,6 +223,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
+		}
+		for _, ann := range node.AnnAttachments {
+			Walk(v, ann.(BLangNode))
 		}
 		if tn := node.TypeNode(); tn != nil {
 			Walk(v, tn.(BLangNode))
@@ -237,6 +243,9 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 3: Function & Body
 	case *BLangFunction:
 		Walk(v, &node.Name)
+		for i := range node.AnnAttachments {
+			Walk(v, &node.AnnAttachments[i])
+		}
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}

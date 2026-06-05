@@ -31,6 +31,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bError "ballerina-lang-go/lib/error/compile"
@@ -724,6 +725,11 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
+	for i := range pkg.Annotations {
+		if !resolveAnnotationDeclaration(t, &pkg.Annotations[i]) {
+			return
+		}
+	}
 	populateClassSymbolByType(t, pkg)
 	populateMappingAtomMaps(t, pkg, t.importedSymbols)
 	for i := range pkg.Functions {
@@ -745,6 +751,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
+	resolveTopLevelAnnotationAttachments(t, pkg)
 	for i := range pkg.Imports {
 		setOtherNodesAsNever(&pkg.Imports[i])
 	}
@@ -776,6 +783,206 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 
 	t.drainDeferredEmptinessChecks()
+}
+
+func annotationAllowedType(t typeResolver) semtypes.SemType {
+	anydataMap := semtypes.Intersect(semtypes.MAPPING, semtypes.CreateAnydata(t.typeContext()))
+	return semtypes.Union(semtypes.BooleanConst(true), anydataMap)
+}
+
+func resolveAnnotationDeclaration(t typeResolver, annotation *ast.BLangAnnotation) bool {
+	if annotation.Name != nil {
+		setOtherNodesAsNever(annotation.Name)
+	}
+	var ty semtypes.SemType
+	var ok bool
+	if typeDesc := annotation.GetTypeDescriptor(); typeDesc != nil {
+		ty, ok = resolveBType(t, typeDesc.(ast.BType), 0)
+		if !ok {
+			return false
+		}
+		if !semtypes.IsSubtype(t.typeContext(), ty, annotationAllowedType(t)) {
+			t.semanticError("annotation type must be a subtype of true|map<anydata>", typeDesc.GetPosition())
+			return false
+		}
+		if annotation.IsConst() && !semtypes.IsSubtype(t.typeContext(), ty, semtypes.VAL_READONLY) {
+			t.semanticError("const annotation type must be readonly", typeDesc.GetPosition())
+			return false
+		}
+	} else {
+		ty = semtypes.BooleanConst(true)
+	}
+	t.setSymbolType(annotation.Symbol(), ty)
+	annotation.SetDeterminedType(semtypes.NEVER)
+	return true
+}
+
+func resolveTopLevelAnnotationAttachments(t typeResolver, pkg *ast.BLangPackage) {
+	for i := range pkg.Annotations {
+		resolveAnnotationAttachments(t, &pkg.Annotations[i], ast.Point_ANNOTATION, model.SymbolRef{})
+	}
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		resolveAnnotationAttachments(t, defn, ast.Point_TYPE, defn.Symbol())
+	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		resolveAnnotationAttachments(t, classDef, ast.Point_CLASS, classDef.Symbol())
+		for j := range classDef.Fields {
+			resolveAnnotationAttachments(t, classDef.Fields[j], ast.Point_OBJECT_FIELD, model.SymbolRef{})
+		}
+		if classDef.InitFunction != nil {
+			resolveFunctionAnnotationAttachments(t, classDef.InitFunction, true)
+		}
+		for _, method := range classDef.Methods {
+			resolveFunctionAnnotationAttachments(t, method, true)
+		}
+	}
+	for i := range pkg.Functions {
+		resolveFunctionAnnotationAttachments(t, &pkg.Functions[i], false)
+	}
+	if pkg.InitFunction != nil {
+		resolveFunctionAnnotationAttachments(t, pkg.InitFunction, false)
+	}
+	for i := range pkg.Constants {
+		resolveAnnotationAttachments(t, &pkg.Constants[i], ast.Point_CONST, model.SymbolRef{})
+	}
+	for i := range pkg.GlobalVars {
+		resolveAnnotationAttachments(t, &pkg.GlobalVars[i], ast.Point_VAR, model.SymbolRef{})
+	}
+}
+
+func resolveFunctionAnnotationAttachments(t typeResolver, fn *ast.BLangFunction, attached bool) {
+	point := ast.Point_FUNCTION
+	if attached {
+		point = ast.Point_OBJECT_METHOD
+	}
+	resolveAnnotationAttachments(t, fn, point, model.SymbolRef{})
+	for i := range fn.RequiredParams {
+		resolveAnnotationAttachments(t, &fn.RequiredParams[i], ast.Point_PARAMETER, model.SymbolRef{})
+	}
+	if fn.RestParam != nil {
+		resolveAnnotationAttachments(t, fn.RestParam, ast.Point_PARAMETER, model.SymbolRef{})
+	}
+}
+
+func resolveAnnotationAttachments(t typeResolver, node ast.AnnotatableNode, point ast.Point, typeSymbol model.SymbolRef) {
+	for _, attachment := range node.GetAnnotationAttachments() {
+		ann, ok := attachment.(*ast.BLangAnnotationAttachment)
+		if !ok || !ast.SymbolIsSet(ann) {
+			continue
+		}
+		sym, ok := t.getSymbol(ann.Symbol()).(*model.AnnotationSymbol)
+		if !ok {
+			t.internalError("annotation reference does not resolve to an annotation symbol", ann.GetPosition())
+			continue
+		}
+		pointKey := string(point)
+		if !sym.AllowsAttachPoint(pointKey) {
+			t.semanticError("annotation '"+sym.Name()+"' is not allowed on "+pointKey, ann.GetPosition())
+			continue
+		}
+		expectedType := sym.Type()
+		if expectedType == nil {
+			t.internalError("annotation type is not resolved", ann.GetPosition())
+			continue
+		}
+		if _, _, ok := resolveActionOrExpression(t, nil, ann.Expr, expectedType); !ok {
+			continue
+		}
+		ann.SetDeterminedType(semtypes.NEVER)
+		if ann.PkgAlias != nil {
+			setOtherNodesAsNever(ann.PkgAlias)
+		}
+		if ann.AnnotationName != nil {
+			setOtherNodesAsNever(ann.AnnotationName)
+		}
+		value, ok := evaluateAnnotationValue(t, ann.Expr)
+		if !ok {
+			t.semanticError("annotation value must be a constant expression", ann.Expr.GetPosition())
+			continue
+		}
+		ann.AnnotationValue = value
+		if typeSymbol != (model.SymbolRef{}) && sym.IsRuntimeVisibleAt(pointKey) {
+			setTypeAnnotationValue(t.getSymbol(typeSymbol), model.AnnotationKey(ann.Symbol().Package, sym.Name()), value)
+		}
+	}
+}
+
+func setTypeAnnotationValue(symbol model.Symbol, key string, value values.BalValue) {
+	switch sym := symbol.(type) {
+	case *model.TypeSymbol:
+		sym.SetAnnotationValue(key, value)
+	case *model.RecordSymbol:
+		sym.SetAnnotationValue(key, value)
+	case *model.ObjectTypeSymbol:
+		sym.SetAnnotationValue(key, value)
+	case *model.ClassSymbol:
+		sym.SetAnnotationValue(key, value)
+	}
+}
+
+func evaluateAnnotationValue(t typeResolver, expr ast.BLangExpression) (values.BalValue, bool) {
+	switch expr := expr.(type) {
+	case *ast.BLangLiteral:
+		return expr.Value, true
+	case *ast.BLangNumericLiteral:
+		return expr.Value, true
+	case *ast.BLangGroupExpr:
+		return evaluateAnnotationValue(t, expr.Expression)
+	case *ast.BLangConstRef:
+		if p, ok := t.(*packageTypeResolver); ok {
+			ref := t.unnarrowedSymbol(expr.Symbol())
+			if constant, ok := p.packageConstants[ref]; ok {
+				return evaluateAnnotationValue(t, constant.Expr.(ast.BLangExpression))
+			}
+		}
+		shape := semtypes.SingleShape(expr.GetDeterminedType())
+		if shape.IsEmpty() {
+			return nil, false
+		}
+		return shape.Get().Value, true
+	case *ast.BLangMappingConstructorExpr:
+		entries := make([]values.MapEntry, 0, len(expr.Fields))
+		for _, field := range expr.Fields {
+			kv, ok := field.(*ast.BLangMappingKeyValueField)
+			if !ok {
+				return nil, false
+			}
+			key, ok := annotationMappingKey(kv.Key)
+			if !ok {
+				return nil, false
+			}
+			value, ok := evaluateAnnotationValue(t, kv.ValueExpr)
+			if !ok {
+				return nil, false
+			}
+			entries = append(entries, values.MapEntry{Key: key, Value: value})
+		}
+		ty := expr.GetDeterminedType()
+		atomic := semtypes.ToMappingAtomicType(t.typeContext(), ty)
+		if atomic == nil {
+			return nil, false
+		}
+		return values.NewMap(ty, atomic, semtypes.IsSubtype(t.typeContext(), ty, semtypes.VAL_READONLY), entries), true
+	default:
+		return nil, false
+	}
+}
+
+func annotationMappingKey(key *ast.BLangMappingKey) (string, bool) {
+	if key == nil || key.Expr == nil {
+		return "", false
+	}
+	switch expr := key.Expr.(type) {
+	case *ast.BLangLiteral:
+		value, ok := expr.Value.(string)
+		return value, ok
+	case *ast.BLangSimpleVarRef:
+		return expr.VariableName.Value, true
+	default:
+		return "", false
+	}
 }
 
 func resolveBlockStatements(t typeResolver, chain *binding, stmts []ast.StatementNode) (statementEffect, bool) {
@@ -2329,6 +2536,10 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveTypeConversionExpr(t, chain, e)
 	case *ast.BLangTypeTestExpr:
 		return resolveTypeTestExpr(t, chain, e)
+	case *ast.BLangTypedescExpr:
+		return resolveTypedescExpr(t, chain, e)
+	case *ast.BLangAnnotAccessExpr:
+		return resolveAnnotAccessExpr(t, chain, e)
 	case *ast.BLangCheckedExpr:
 		return resolveCheckedExpr(t, chain, e, expectedType)
 	case *ast.BLangCheckPanickedExpr:
@@ -2381,6 +2592,76 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 	}
 	setExpectedType(e, expectedType)
 	return expectedType, defaultExpressionEffect(chain), true
+}
+
+func resolveTypedescExpr(t typeResolver, chain *binding, e *ast.BLangTypedescExpr) (semtypes.SemType, expressionEffect, bool) {
+	typeDesc := e.GetTypeDescriptor()
+	if typeDesc == nil {
+		t.internalError("typedesc expression has no type descriptor", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	constraint, ok := resolveBType(t, typeDesc.(ast.BType), 0)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	e.Constraint = constraint
+	e.AnnotationValues = annotationValuesForTypeDescriptor(t, typeDesc)
+	ty := semtypes.TypedescContaining(t.typeEnv(), constraint)
+	setExpectedType(e, ty)
+	return ty, defaultExpressionEffect(chain), true
+}
+
+func resolveAnnotAccessExpr(t typeResolver, chain *binding, e *ast.BLangAnnotAccessExpr) (semtypes.SemType, expressionEffect, bool) {
+	receiverTy, effect, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	if !semtypes.IsSubtype(t.typeContext(), receiverTy, semtypes.TYPEDESC) {
+		t.semanticError("annotation access is only allowed on typedesc values", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	sym, ok := t.getSymbol(e.Symbol()).(*model.AnnotationSymbol)
+	if !ok {
+		t.internalError("annotation access does not resolve to an annotation symbol", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	annTy := sym.Type()
+	if annTy == nil {
+		t.internalError("annotation type is not resolved", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	ty := semtypes.Union(annTy, semtypes.NIL)
+	setExpectedType(e, ty)
+	if e.PkgAlias != nil {
+		setOtherNodesAsNever(e.PkgAlias)
+	}
+	if e.AnnotationName != nil {
+		setOtherNodesAsNever(e.AnnotationName)
+	}
+	return ty, effect, true
+}
+
+func annotationValuesForTypeDescriptor(t typeResolver, typeDesc ast.TypeDescriptor) map[string]any {
+	udt, ok := typeDesc.(*ast.BLangUserDefinedType)
+	if !ok || !ast.SymbolIsSet(udt) {
+		return map[string]any{}
+	}
+	return annotationValuesForTypeSymbol(t.getSymbol(udt.Symbol()))
+}
+
+func annotationValuesForTypeSymbol(symbol model.Symbol) map[string]any {
+	switch sym := symbol.(type) {
+	case *model.TypeSymbol:
+		return sym.AnnotationValues()
+	case *model.RecordSymbol:
+		return sym.AnnotationValues()
+	case *model.ObjectTypeSymbol:
+		return sym.AnnotationValues()
+	case *model.ClassSymbol:
+		return sym.AnnotationValues()
+	default:
+		return map[string]any{}
+	}
 }
 
 func resolveXMLTextLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLTextLiteral) (semtypes.SemType, expressionEffect, bool) {
@@ -3565,6 +3846,9 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 		return nil, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
+	if t.getSymbol(sym).Kind() == model.SymbolKindType {
+		ty = semtypes.TypedescContaining(t.typeEnv(), ty)
+	}
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(expr)
 	return ty, defaultExpressionEffect(chain), true

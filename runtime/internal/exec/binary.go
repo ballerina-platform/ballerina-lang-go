@@ -244,6 +244,23 @@ func execBinaryOpRefNotEqual(ctx *extern.Context, binaryOp *bir.BinaryOp, frame 
 	setOperandValue(ctx, binaryOp.LhsOp, frame, !refEqual(op1, op2))
 }
 
+func execBinaryOpAnnotAccess(ctx *extern.Context, binaryOp *bir.BinaryOp, frame *Frame) {
+	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
+	typedesc, ok := op1.(*values.TypeDesc)
+	if !ok {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("annotation access requires typedesc, got %T", op1)))
+	}
+	key, ok := op2.(string)
+	if !ok {
+		panic(values.NewErrorWithMessage(fmt.Sprintf("annotation key must be string, got %T", op2)))
+	}
+	var value values.BalValue
+	if typedesc.Annotations != nil {
+		value = typedesc.Annotations[key]
+	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, value)
+}
+
 func refEqual(op1, op2 values.BalValue) bool {
 	if op1 == nil && op2 == nil {
 		return true

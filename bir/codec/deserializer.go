@@ -513,11 +513,7 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		var isWrapped bool
 		br.read(&isWrapped)
 
-		var tagByte int8
-		br.read(&tagByte)
-
-		tag := typeTag(tagByte)
-		value := br.readConstValueByTag(tag)
+		value := br.readConstValue()
 
 		if isWrapped {
 			value = bir.ConstValue{
@@ -1005,6 +1001,32 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 		var idx int32
 		br.read(&idx)
 		return nil
+	case typeTagMap:
+		ty := br.readType()
+		var count int64
+		br.read(&count)
+		entries := make([]values.MapEntry, 0, count)
+		for i := int64(0); i < count; i++ {
+			key := string(br.readStringCPEntry())
+			value := br.readConstValue()
+			entries = append(entries, values.MapEntry{Key: key, Value: value})
+		}
+		tyCtx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+		atomic := semtypes.ToMappingAtomicType(tyCtx, ty)
+		if atomic == nil {
+			panic("map constant type is not atomic")
+		}
+		return values.NewMap(ty, atomic, semtypes.IsSubtype(tyCtx, ty, semtypes.VAL_READONLY), entries)
+	case typeTagTypedesc:
+		ty := br.readType()
+		var count int64
+		br.read(&count)
+		annotations := make(map[string]values.BalValue)
+		for i := int64(0); i < count; i++ {
+			key := string(br.readStringCPEntry())
+			annotations[key] = br.readConstValue()
+		}
+		return &values.TypeDesc{Type: ty, Annotations: annotations}
 	default:
 		var idx int32
 		br.read(&idx)

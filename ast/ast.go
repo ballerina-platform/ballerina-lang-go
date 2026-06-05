@@ -86,17 +86,21 @@ type (
 	BLangAnnotation struct {
 		bLangNodeBase
 		Name                            *BLangIdentifier
+		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		typeDescriptor                  TypeDescriptor
 		attachPoints                    common.UnorderedSet[AttachPoint]
+		flags                           model.Flag
 	}
 
 	BLangAnnotationAttachment struct {
 		bLangNodeBase
-		Expr           BLangExpression
-		AnnotationName *BLangIdentifier
-		PkgAlias       *BLangIdentifier
+		Expr            BLangExpression
+		AnnotationName  *BLangIdentifier
+		PkgAlias        *BLangIdentifier
+		symbol          model.SymbolRef
+		AnnotationValue any
 	}
 
 	bLangFunctionBodyBase struct {
@@ -370,8 +374,12 @@ func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.Has(model.Flag
 func (b *BLangTypeDefinition) SetPublic()        { b.flags |= model.FlagPublic }
 func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymous }
 
+func (b *BLangAnnotation) IsPublic() bool { return b.flags.Has(model.FlagPublic) }
+func (b *BLangAnnotation) IsConst() bool  { return b.flags.Has(model.FlagConstant) }
+func (b *BLangAnnotation) SetPublic()     { b.flags |= model.FlagPublic }
+func (b *BLangAnnotation) SetConst()      { b.flags |= model.FlagConstant }
+
 // Stub IsPublic for types with no flags
-func (b *BLangAnnotation) IsPublic() bool     { return false }
 func (b *BLangService) IsPublic() bool        { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
@@ -447,8 +455,26 @@ func (n *BLangTypeDefinition) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
+func (n *BLangAnnotation) Symbol() model.SymbolRef {
+	return n.symbol
+}
+
+func (n *BLangAnnotation) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
+}
+
+func (n *BLangAnnotationAttachment) Symbol() model.SymbolRef {
+	return n.symbol
+}
+
+func (n *BLangAnnotationAttachment) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
+}
+
 var (
 	_ AnnotationAttachmentNode                    = &BLangAnnotationAttachment{}
+	_ BNodeWithSymbol                             = &BLangAnnotation{}
+	_ BNodeWithSymbol                             = &BLangAnnotationAttachment{}
 	_ ImportPackageNode                           = &BLangImportPackage{}
 	_ ClassDefinition                             = &BLangClassDefinition{}
 	_ TypeDefinition                              = &BLangClassDefinition{}
@@ -555,6 +581,18 @@ func (b *BLangAnnotation) SetTypeDescriptor(typeDescriptor TypeDescriptor) {
 		return
 	}
 	b.typeDescriptor = typeDescriptor.(BType)
+}
+
+func (b *BLangAnnotation) AddAttachPoint(attachPoint AttachPoint) {
+	b.attachPoints.Add(attachPoint)
+}
+
+func (b *BLangAnnotation) AttachPoints() []AttachPoint {
+	result := []AttachPoint{}
+	for attachPoint := range b.attachPoints.Values() {
+		result = append(result, attachPoint)
+	}
+	return result
 }
 
 func (b *BLangAnnotation) GetAnnotationAttachments() []AnnotationAttachmentNode {

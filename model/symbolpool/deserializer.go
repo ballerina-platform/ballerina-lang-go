@@ -123,6 +123,8 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readObjectTypeSymbol(space)
 	case symTagValue:
 		sr.readValueSymbol(space)
+	case symTagAnnotation:
+		sr.readAnnotationSymbol(space)
 	case symTagFunction:
 		sr.readFunctionSymbol(space)
 	case symTagDependentlyTypedFunction:
@@ -270,6 +272,21 @@ func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 	if isIsolated {
 		sym.SetIsolated()
 	}
+	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) readAnnotationSymbol(space *model.SymbolSpace) {
+	name, isPublic, ty := sr.readSymbolBase()
+	var isConst bool
+	read(sr.r, &isConst)
+	var count int64
+	read(sr.r, &count)
+	attachPoints := make([]string, 0, count)
+	for i := int64(0); i < count; i++ {
+		attachPoints = append(attachPoints, sr.readStringCP())
+	}
+	sym := model.NewAnnotationSymbol(name, isPublic, isConst, attachPoints)
+	sym.SetType(ty)
 	space.AddSymbol(name, &sym)
 }
 

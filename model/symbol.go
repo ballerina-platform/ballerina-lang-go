@@ -173,7 +173,10 @@ const (
 	SymbolKindVariable
 	SymbolKindParemeter
 	SymbolKindFunction
+	SymbolKindAnnotation
 )
+
+const sourceAnnotationAttachPointPrefix = "source:"
 
 type (
 	PackageIdentifier struct {
@@ -239,6 +242,13 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
+		annotations map[string]any
+	}
+
+	AnnotationSymbol struct {
+		symbolBase
+		isConst      bool
+		attachPoints map[string]bool
 	}
 
 	// memberHolderBase carries direct + type-inclusion-inherited members
@@ -429,6 +439,7 @@ var (
 	_ Scope                          = &FunctionScope{}
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
+	_ Symbol                         = &AnnotationSymbol{}
 	_ Symbol                         = &ClassSymbol{}
 	_ Symbol                         = &RecordSymbol{}
 	_ Symbol                         = &ObjectTypeSymbol{}
@@ -564,6 +575,20 @@ func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) 
 	return exported.GetSymbol(name)
 }
 
+func (ms *ModuleScope) GetAnnotationSymbol(prefix, name string) (SymbolRef, bool) {
+	if prefix == "" {
+		return ms.Annotation.GetSymbol(name)
+	}
+	exported, ok := ms.Prefix[prefix]
+	if !ok {
+		exported, ok = ms.Prefix[mapToLangPrefixIfNeeded(prefix)]
+		if !ok {
+			return SymbolRef{}, false
+		}
+	}
+	return exported.GetAnnotationSymbol(name)
+}
+
 func (ms *ModuleScope) AddSymbol(name string, symbol Symbol) {
 	ms.Main.AddSymbol(name, symbol)
 }
@@ -607,6 +632,21 @@ func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 		return SymbolRef{}, false
 	}
 	sym := space.Main.SymbolAt(ref.Index)
+	if !sym.IsPublic() {
+		return SymbolRef{}, false
+	}
+	return ref, true
+}
+
+func (space *ExportedSymbolSpace) GetAnnotationSymbol(name string) (SymbolRef, bool) {
+	if space.Annotation == nil {
+		return SymbolRef{}, false
+	}
+	ref, ok := space.Annotation.GetSymbol(name)
+	if !ok {
+		return SymbolRef{}, false
+	}
+	sym := space.Annotation.SymbolAt(ref.Index)
 	if !sym.IsPublic() {
 		return SymbolRef{}, false
 	}
@@ -697,6 +737,74 @@ func (ts *TypeSymbol) Kind() SymbolKind {
 
 func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
+}
+
+func (ts *TypeSymbol) SetAnnotationValue(key string, value any) {
+	if ts.annotations == nil {
+		ts.annotations = make(map[string]any)
+	}
+	ts.annotations[key] = value
+}
+
+func (ts *TypeSymbol) AnnotationValues() map[string]any {
+	if ts.annotations == nil {
+		return map[string]any{}
+	}
+	result := make(map[string]any, len(ts.annotations))
+	for key, value := range ts.annotations {
+		result[key] = value
+	}
+	return result
+}
+
+func (as *AnnotationSymbol) Kind() SymbolKind {
+	return SymbolKindAnnotation
+}
+
+func (as *AnnotationSymbol) Copy() Symbol {
+	cp := *as
+	cp.attachPoints = make(map[string]bool, len(as.attachPoints))
+	for key, value := range as.attachPoints {
+		cp.attachPoints[key] = value
+	}
+	return &cp
+}
+
+func (as *AnnotationSymbol) IsConst() bool {
+	return as.isConst
+}
+
+func (as *AnnotationSymbol) AttachPointKeys() []string {
+	keys := make([]string, 0, len(as.attachPoints))
+	for key := range as.attachPoints {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func (as *AnnotationSymbol) AllowsAttachPoint(point string) bool {
+	if len(as.attachPoints) == 0 {
+		return true
+	}
+	if as.attachPoints[point] {
+		return true
+	}
+	return as.attachPoints[SourceAnnotationAttachPointKey(point)]
+}
+
+func (as *AnnotationSymbol) IsRuntimeVisibleAt(point string) bool {
+	if len(as.attachPoints) == 0 {
+		return true
+	}
+	return as.attachPoints[point]
+}
+
+func AnnotationKey(pkg PackageIdentifier, name string) string {
+	return pkg.Organization + "/" + pkg.Package + ":" + pkg.Version + ":" + name
+}
+
+func SourceAnnotationAttachPointKey(point string) string {
+	return sourceAnnotationAttachPointPrefix + point
 }
 
 // MemberCarrier is implemented by symbols that carry direct + inclusion-inherited members.
@@ -917,14 +1025,28 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
-		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+		annotations: make(map[string]any),
+	}
+}
+
+func NewAnnotationSymbol(name string, isPublic bool, isConst bool, attachPoints []string) AnnotationSymbol {
+	attachPointMap := make(map[string]bool)
+	for _, point := range attachPoints {
+		attachPointMap[point] = true
+	}
+	return AnnotationSymbol{
+		symbolBase:   symbolBase{name: name, ty: nil, isPublic: isPublic},
+		isConst:      isConst,
+		attachPoints: attachPointMap,
 	}
 }
 
 func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 	return ClassSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			annotations: make(map[string]any),
 		},
 	}
 }
@@ -932,7 +1054,8 @@ func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 	return RecordSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			annotations: make(map[string]any),
 		},
 	}
 }
@@ -940,7 +1063,8 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			annotations: make(map[string]any),
 		},
 	}
 }

@@ -924,6 +924,11 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypedescExpr:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangAnnotAccessExpr:
+		if !analyzeActionOrExpression(a, expr.Expr, nil) {
+			return false
+		}
+		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangXMLElementLiteral:
 		for i := range expr.Attrs {
 			attr := &expr.Attrs[i]
@@ -1806,6 +1811,9 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 			return false
 		case model.SymbolKindType:
 			a.semanticErr("cannot assign to type", variable.GetPosition())
+			return false
+		case model.SymbolKindAnnotation:
+			a.semanticErr("cannot assign to annotation", variable.GetPosition())
 			return false
 		}
 	}

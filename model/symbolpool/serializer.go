@@ -19,6 +19,7 @@ package symbolpool
 import (
 	"bytes"
 	"fmt"
+	"sort"
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -38,6 +39,7 @@ const (
 	symTagDependentlyTypedFunction
 	symTagRecord
 	symTagObjectType
+	symTagAnnotation
 )
 
 const (
@@ -150,6 +152,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeTypeSymbol(buf, s)
 	case *model.ValueSymbol:
 		return sw.writeValueSymbol(buf, s)
+	case *model.AnnotationSymbol:
+		return sw.writeAnnotationSymbol(buf, s)
 	case model.DependentlyTypedFunctionSymbol:
 		return sw.writeDependentlyTypedFunctionSymbol(buf, s)
 	case model.FunctionSymbol:
@@ -313,6 +317,29 @@ func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymb
 		return err
 	}
 	return write(buf, sym.IsIsolated())
+}
+
+func (sw *symbolWriter) writeAnnotationSymbol(buf *bytes.Buffer, sym *model.AnnotationSymbol) error {
+	if err := write(buf, symTagAnnotation); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := write(buf, sym.IsConst()); err != nil {
+		return err
+	}
+	keys := sym.AttachPointKeys()
+	sort.Strings(keys)
+	if err := write(buf, int64(len(keys))); err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if err := sw.writeStringCP(buf, key); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.FunctionSymbol) error {

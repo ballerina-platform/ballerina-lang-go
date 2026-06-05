@@ -453,6 +453,8 @@ func (p *PrettyPrinter) PrintInstructionKind(kind InstructionKind) string {
 		return "!"
 	case INSTRUCTION_KIND_BITWISE_COMPLEMENT:
 		return "~"
+	case INSTRUCTION_KIND_ANNOT_ACCESS:
+		return ".@"
 	}
 	return "unknown"
 }

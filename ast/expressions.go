@@ -143,6 +143,7 @@ type (
 		Expr           BLangExpression
 		PkgAlias       *BLangIdentifier
 		AnnotationName *BLangIdentifier
+		symbol         model.SymbolRef
 	}
 
 	BLangArrowFunction struct {
@@ -281,7 +282,8 @@ type (
 		// Constraint is the semtype of the type this typedesc denotes — the T in
 		// typedesc<T>. BIR lowers the expression to a TypeDesc{Type: Constraint}
 		// constant.
-		Constraint semtypes.SemType
+		Constraint       semtypes.SemType
+		AnnotationValues map[string]any
 	}
 
 	BLangInferredTypedescDefault struct {
@@ -485,6 +487,7 @@ var (
 	_ BNodeWithSymbol = &BLangSimpleVarRef{}
 	_ BNodeWithSymbol = &BLangLocalVarRef{}
 	_ BNodeWithSymbol = &BLangConstRef{}
+	_ BNodeWithSymbol = &BLangAnnotAccessExpr{}
 	_ BNodeWithSymbol = &BLangInvocation{}
 )
 
@@ -515,6 +518,14 @@ func (n *BLangInvocation) Symbol() model.SymbolRef {
 
 func (n *BLangInvocation) SetSymbol(symbolRef model.SymbolRef) {
 	n.RawSymbol = &symbolRef
+}
+
+func (n *BLangAnnotAccessExpr) Symbol() model.SymbolRef {
+	return n.symbol
+}
+
+func (n *BLangAnnotAccessExpr) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
 func (n *BLangRemoteMethodCallAction) MethodSymbol() model.SymbolRef {

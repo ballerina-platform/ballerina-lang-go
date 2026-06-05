@@ -1017,6 +1017,8 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 		return typeTestExpression(ctx, curBB, expr)
 	case *ast.BLangMappingConstructorExpr:
 		return mappingConstructorExpression(ctx, curBB, expr)
+	case *ast.BLangAnnotAccessExpr:
+		return annotAccessExpression(ctx, curBB, expr)
 	case *ast.BLangErrorConstructorExpr:
 		return errorConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangTrapExpr:
@@ -1046,12 +1048,36 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 
 func typedescExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	td := &values.TypeDesc{Type: expr.Constraint}
+	td := &values.TypeDesc{Type: expr.Constraint, Annotations: copyAnnotationValues(expr.AnnotationValues)}
 	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 	return expressionEffect{
 		result: resultOperand,
 		block:  curBB,
 	}
+}
+
+func annotAccessExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangAnnotAccessExpr) expressionEffect {
+	pos := ctx.function().loc(expr.GetPosition())
+	receiver := handleActionOrExpression(ctx, curBB, expr.Expr)
+	curBB = receiver.block
+	symRef := expr.Symbol()
+	sym := ctx.getSymbol(symRef)
+	keyOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(keyOp, model.AnnotationKey(symRef.Package, sym.Name()), pos))
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewBinaryOp(INSTRUCTION_KIND_ANNOT_ACCESS, resultOperand, receiver.result, keyOp, pos))
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
+	}
+}
+
+func copyAnnotationValues(valuesMap map[string]any) map[string]values.BalValue {
+	result := make(map[string]values.BalValue)
+	for key, value := range valuesMap {
+		result[key] = value
+	}
+	return result
 }
 
 func xmlTextLiteral(ctx context, curBB *BIRBasicBlock, expr *ast.BLangXMLTextLiteral) expressionEffect {
@@ -1653,6 +1679,18 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 
 	// Try function lookup
 	sym := ctx.getSymbol(symRef)
+	if sym.Kind() == model.SymbolKindType {
+		resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+		td := &values.TypeDesc{
+			Type:        ctx.symbolType(symRef),
+			Annotations: copyAnnotationValues(annotationValuesForTypeSymbol(sym)),
+		}
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
+		return expressionEffect{
+			result: resultOperand,
+			block:  curBB,
+		}
+	}
 	if sym.Kind() == model.SymbolKindFunction {
 		funcType := ctx.symbolType(symRef)
 		lookupKey := buildFunctionLookupKeyFromSymbol(ctx.function().birCx, symRef)
@@ -1679,6 +1717,21 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 	return expressionEffect{
 		result: &BIROperand{VariableDcl: gv},
 		block:  curBB,
+	}
+}
+
+func annotationValuesForTypeSymbol(symbol model.Symbol) map[string]any {
+	switch sym := symbol.(type) {
+	case *model.TypeSymbol:
+		return sym.AnnotationValues()
+	case *model.RecordSymbol:
+		return sym.AnnotationValues()
+	case *model.ObjectTypeSymbol:
+		return sym.AnnotationValues()
+	case *model.ClassSymbol:
+		return sym.AnnotationValues()
+	default:
+		return map[string]any{}
 	}
 }
 
