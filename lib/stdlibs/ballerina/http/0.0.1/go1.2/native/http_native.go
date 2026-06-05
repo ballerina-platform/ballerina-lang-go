@@ -106,15 +106,17 @@ type requestBodyHolder struct {
 	once          sync.Once
 	stream        io.ReadCloser
 	buf           []byte
+	readErr       error
 	contentLength int64 // -1 if unknown; >=0 is the known byte count
 }
 
 func (h *requestBodyHolder) materialize() []byte {
 	h.once.Do(func() {
 		if h.stream != nil {
-			data, _ := io.ReadAll(h.stream)
+			data, err := io.ReadAll(h.stream)
 			_ = h.stream.Close()
 			h.stream = nil
+			h.readErr = err
 			h.buf = data
 		}
 		if h.buf == nil {
@@ -806,9 +808,15 @@ func initHttpModule(rt *runtime.Runtime) {
 				if stream := holder.takeStream(); stream != nil {
 					bodyReader = stream
 					forwardContentLength = holder.contentLength
-				} else if buf := holder.materialize(); len(buf) > 0 {
-					bodyReader = bytes.NewReader(buf)
-					forwardContentLength = int64(len(buf))
+				} else {
+					buf := holder.materialize()
+					if holder.readErr != nil {
+						return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+					}
+					if len(buf) > 0 {
+						bodyReader = bytes.NewReader(buf)
+						forwardContentLength = int64(len(buf))
+					}
 				}
 			}
 
@@ -1123,7 +1131,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			if holder == nil {
 				return "", nil
 			}
-			return string(holder.materialize()), nil
+			buf := holder.materialize()
+			if holder.readErr != nil {
+				return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+			}
+			return string(buf), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getJsonPayload",
@@ -1135,6 +1147,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			var body []byte
 			if holder != nil {
 				body = holder.materialize()
+				if holder.readErr != nil {
+					return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+				}
 			}
 			dec := json.NewDecoder(bytes.NewReader(body))
 			dec.UseNumber()
@@ -1154,6 +1169,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			var raw []byte
 			if holder != nil {
 				raw = holder.materialize()
+				if holder.readErr != nil {
+					return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+				}
 			}
 			items := make([]values.BalValue, len(raw))
 			for i, b := range raw {

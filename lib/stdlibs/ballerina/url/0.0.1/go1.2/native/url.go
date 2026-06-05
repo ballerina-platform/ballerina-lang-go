@@ -24,6 +24,7 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/runtime/extern"
@@ -35,6 +36,39 @@ const (
 	moduleName = "url"
 )
 
+// asciiEncoding is a 7-bit ASCII codec that replaces any byte or rune > 0x7F
+// with '?' on both encode and decode, matching Java URLEncoder/URLDecoder semantics.
+type asciiEncoding struct{}
+
+func (asciiEncoding) NewDecoder() *encoding.Decoder {
+	return &encoding.Decoder{Transformer: asciiTransformer{}}
+}
+
+func (asciiEncoding) NewEncoder() *encoding.Encoder {
+	return &encoding.Encoder{Transformer: asciiTransformer{}}
+}
+
+type asciiTransformer struct{}
+
+func (asciiTransformer) Transform(dst, src []byte, _ bool) (nDst, nSrc int, err error) {
+	for nSrc < len(src) {
+		if nDst >= len(dst) {
+			return nDst, nSrc, transform.ErrShortDst
+		}
+		b := src[nSrc]
+		if b > 0x7F {
+			dst[nDst] = '?'
+		} else {
+			dst[nDst] = b
+		}
+		nDst++
+		nSrc++
+	}
+	return
+}
+
+func (asciiTransformer) Reset() {}
+
 // resolveEncoding maps a Java/IANA charset name to an x/text Encoding.
 // Returns nil for unrecognised charsets.
 func resolveEncoding(charset string) encoding.Encoding {
@@ -44,7 +78,7 @@ func resolveEncoding(charset string) encoding.Encoding {
 	case "ISO-8859-1", "ISO8859-1", "ISO_8859_1", "LATIN-1", "LATIN1":
 		return charmap.ISO8859_1
 	case "US-ASCII", "ASCII":
-		return charmap.ISO8859_1 // ASCII is a subset; ISO-8859-1 encoder errors on >U+00FF
+		return asciiEncoding{}
 	case "UTF-16":
 		return unicode.UTF16(unicode.BigEndian, unicode.UseBOM)
 	case "UTF-16BE":
@@ -86,7 +120,10 @@ func percentDecodeToBytes(s string) ([]byte, error) {
 		case s[i] == '+':
 			buf = append(buf, ' ')
 			i++
-		case s[i] == '%' && i+2 < len(s):
+		case s[i] == '%':
+			if i+2 >= len(s) {
+				return nil, fmt.Errorf("invalid percent-encoding at position %d", i)
+			}
 			hi, ok1 := fromHex(s[i+1])
 			lo, ok2 := fromHex(s[i+2])
 			if !ok1 || !ok2 {

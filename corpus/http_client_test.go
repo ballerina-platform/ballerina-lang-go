@@ -51,13 +51,13 @@ type rewritingHTTPClient struct {
 	client    *http.Client
 }
 
-func (c *rewritingHTTPClient) Execute(_ context.Context, method, url string, body io.Reader, _ int64, contentType string, reqHeaders map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
+func (c *rewritingHTTPClient) Execute(ctx context.Context, method, url string, body io.Reader, _ int64, contentType string, reqHeaders map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
 	const prefix = "http://testserver"
 	if !strings.HasPrefix(url, prefix) {
 		return 0, nil, nil, fmt.Errorf("rewritingHTTPClient: expected URL with prefix %q, got %q", prefix, url)
 	}
 	realURL := c.serverURL + url[len(prefix):]
-	req, err := http.NewRequest(method, realURL, body)
+	req, err := http.NewRequestWithContext(ctx, method, realURL, body)
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -725,14 +725,20 @@ public function main() returns error? {
 // TestHttpClientForward verifies that Client.forward correctly forwards the
 // original method, headers, and body from an http:Request to a backend server.
 func TestHttpClientForward(t *testing.T) {
-	var receivedMethod string
-	var receivedBody []byte
-	var receivedHeader string
+	type forwardResult struct {
+		method string
+		body   []byte
+		header string
+	}
+	resultCh := make(chan forwardResult, 1)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedMethod = r.Method
-		receivedHeader = r.Header.Get("X-Forwarded-From")
-		receivedBody, _ = io.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
+		resultCh <- forwardResult{
+			method: r.Method,
+			body:   body,
+			header: r.Header.Get("X-Forwarded-From"),
+		}
 		w.WriteHeader(200)
 		_, _ = fmt.Fprint(w, "forwarded ok")
 	}))
@@ -788,14 +794,15 @@ func TestHttpClientForward(t *testing.T) {
 		}
 	}
 
-	if receivedMethod != "POST" {
-		t.Errorf("expected forwarded method POST, got %q", receivedMethod)
+	received := <-resultCh
+	if received.method != "POST" {
+		t.Errorf("expected forwarded method POST, got %q", received.method)
 	}
-	if string(receivedBody) != "hello body" {
-		t.Errorf("expected forwarded body %q, got %q", "hello body", string(receivedBody))
+	if string(received.body) != "hello body" {
+		t.Errorf("expected forwarded body %q, got %q", "hello body", string(received.body))
 	}
-	if receivedHeader != "test" {
-		t.Errorf("expected X-Forwarded-From header %q, got %q", "test", receivedHeader)
+	if received.header != "test" {
+		t.Errorf("expected X-Forwarded-From header %q, got %q", "test", received.header)
 	}
 	expected := "200\nforwarded ok\n"
 	if stdoutBuf.String() != expected {

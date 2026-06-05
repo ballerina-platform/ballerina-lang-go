@@ -56,6 +56,6 @@ func DebugWriteLazy(flag uint16, msgFn func() string) {
 func WithSuppressedDebug(fn func()) {
 	saved := debugFlags
 	debugFlags = 0
+	defer func() { debugFlags = saved }()
 	fn()
-	debugFlags = saved
 }

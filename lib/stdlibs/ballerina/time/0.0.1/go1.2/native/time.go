@@ -19,6 +19,7 @@ package native
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,9 +56,20 @@ func utcToGoTime(utc *values.List) time.Time {
 	frac, _ := utc.Get(1).(*decimal.Decimal)
 	nanos := int64(0)
 	if frac != nil {
-		nanos = int64(frac.Float64() * 1e9)
+		nanos = decimalToNanos(frac)
 	}
 	return time.Unix(epochSec, nanos).UTC()
+}
+
+// decimalToNanos converts a decimal number of seconds to nanoseconds using
+// pure decimal arithmetic to avoid float64 rounding drift.
+func decimalToNanos(d *decimal.Decimal) int64 {
+	if d == nil {
+		return 0
+	}
+	product, _ := d.Mul(nanosPerSec)
+	n, _, _ := product.Int64()
+	return n
 }
 
 // nanosToFrac converts nanoseconds to a Ballerina Seconds fraction [0,1).
@@ -485,7 +497,7 @@ func initTimeModule(rt *runtime.Runtime) {
 			seconds, _ := args[1].(*decimal.Decimal)
 			t := utcToGoTime(utc)
 			if seconds != nil {
-				dur := time.Duration(seconds.Float64() * float64(time.Second))
+				dur := time.Duration(decimalToNanos(seconds))
 				t = t.Add(dur)
 			}
 			return goTimeToUtc(env, ctx.TypeCtx, t), nil
@@ -671,7 +683,7 @@ func initTimeModule(rt *runtime.Runtime) {
 			t = t.AddDate(duYear, duMonth, duDay)
 			t = t.Add(time.Duration(duHour)*time.Hour +
 				time.Duration(duMinute)*time.Minute +
-				time.Duration(duSecond.Float64()*float64(time.Second)))
+				time.Duration(decimalToNanos(duSecond)))
 
 			return buildCivil(ctx.TypeCtx, t), nil
 		})
@@ -788,44 +800,54 @@ func initTimeModule(rt *runtime.Runtime) {
 			t = t.AddDate(duYear, duMonth, duDay)
 			t = t.Add(time.Duration(duHour)*time.Hour +
 				time.Duration(duMinute)*time.Minute +
-				time.Duration(duSecond.Float64()*float64(time.Second)))
+				time.Duration(decimalToNanos(duSecond)))
 
 			return buildCivilWithZone(ctx.TypeCtx, t.In(loc), true, true), nil
 		})
 }
 
-// isNumericOffset reports whether s looks like "+HH:MM" or "-HH:MM".
+// isNumericOffset reports whether s is exactly "+HHMM" or "+HH:MM" (and the '-' variants).
 func isNumericOffset(s string) bool {
-	if len(s) < 3 {
+	n := len(s)
+	if n != 5 && n != 6 {
 		return false
 	}
-	return (s[0] == '+' || s[0] == '-') && s[1] >= '0' && s[1] <= '9'
+	if s[0] != '+' && s[0] != '-' {
+		return false
+	}
+	if s[1] < '0' || s[1] > '9' || s[2] < '0' || s[2] > '9' {
+		return false
+	}
+	if n == 6 {
+		return s[3] == ':' && s[4] >= '0' && s[4] <= '9' && s[5] >= '0' && s[5] <= '9'
+	}
+	return s[3] >= '0' && s[3] <= '9' && s[4] >= '0' && s[4] <= '9'
 }
 
-// parseNumericOffset parses "+HH:MM" or "-HH:MM" to total seconds east of UTC.
+// parseNumericOffset parses "+HHMM" or "+HH:MM" (and '-' variants) to seconds east of UTC.
+// Returns an error for out-of-range or malformed inputs.
 func parseNumericOffset(s string) (int, error) {
 	sign := 1
 	if s[0] == '-' {
 		sign = -1
 	}
-	s = s[1:] // strip sign
-	var h, m int
-	if strings.Contains(s, ":") {
-		parts := strings.SplitN(s, ":", 2)
-		_, err := fmt.Sscanf(parts[0], "%d", &h)
-		if err != nil {
-			return 0, err
-		}
-		_, err = fmt.Sscanf(parts[1], "%d", &m)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		// "+HHMM" format (from email parsing)
-		_, err := fmt.Sscanf(s, "%02d%02d", &h, &m)
-		if err != nil {
-			return 0, err
-		}
+	rest := s[1:]
+	var hStr, mStr string
+	if len(rest) == 5 { // HH:MM
+		hStr, mStr = rest[:2], rest[3:]
+	} else { // HHMM
+		hStr, mStr = rest[:2], rest[2:]
+	}
+	h, err := strconv.Atoi(hStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid offset %q", s)
+	}
+	m, err := strconv.Atoi(mStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid offset %q", s)
+	}
+	if h > 23 || m > 59 {
+		return 0, fmt.Errorf("offset out of range in %q", s)
 	}
 	return sign * (h*3600 + m*60), nil
 }

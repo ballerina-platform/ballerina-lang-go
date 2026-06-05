@@ -135,14 +135,8 @@ func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx nsCtx, 
 		}
 	}
 
-	var attrs *values.Map
-	if len(attrsEntries) > 0 {
-		attrs = values.NewMap(ty, atomic, false, attrsEntries)
-	}
-	var namespaces *values.Map
-	if len(nsEntries) > 0 {
-		namespaces = values.NewMap(ty, atomic, false, nsEntries)
-	}
+	attrs := values.NewMap(ty, atomic, false, attrsEntries)
+	namespaces := values.NewMap(ty, atomic, false, nsEntries)
 
 	children, err := parseXMLItems(dec, ctx, ty, atomic, false)
 	if err != nil {

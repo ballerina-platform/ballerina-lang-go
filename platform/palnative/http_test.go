@@ -126,8 +126,8 @@ func TestNewHTTPClient_HTTP1_TLS(t *testing.T) {
 	if status != 200 {
 		t.Errorf("expected status 200, got %d", status)
 	}
-	if !strings.HasPrefix(gotProto, "HTTP/1") {
-		t.Errorf("expected HTTP/1.x connection with HTTPVersion 1.1, got proto: %s", gotProto)
+	if gotProto != "HTTP/1.1" {
+		t.Errorf("expected HTTP/1.1 connection with HTTPVersion 1.1, got proto: %s", gotProto)
 	}
 }
 

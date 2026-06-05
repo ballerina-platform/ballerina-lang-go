@@ -17,7 +17,7 @@
 
 # Encodes the given string value into a `string` using the provided charset.
 # ```ballerina
-# string value = "param1=http://xyz.com/?a=12&b=55¶m2=99";
+# string value = "param1=http://xyz.com/?a=12&b=55&param2=99";
 # string encoded = check url:encode(value, "UTF-8");
 # ```
 #
@@ -28,7 +28,7 @@ public isolated function encode(string value, string charset) returns string|err
 
 # Decodes the given string value into a `string` using the provided charset.
 # ```ballerina
-# string value = "http://www.domain.com/?param1=http%3A%2F%2Fxyz.com%2F%3Fa%3D12%26b%3D55¶m2=99";
+# string value = "http://www.domain.com/?param1=http%3A%2F%2Fxyz.com%2F%3Fa%3D12%26b%3D55&param2=99";
 # string decoded = check url:decode(value, "UTF-8");
 # ```
 #
