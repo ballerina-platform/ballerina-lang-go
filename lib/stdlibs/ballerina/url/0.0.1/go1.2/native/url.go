@@ -116,11 +116,11 @@ func encodeBytes(raw []byte) string {
 func percentDecodeToBytes(s string) ([]byte, error) {
 	buf := make([]byte, 0, len(s))
 	for i := 0; i < len(s); {
-		switch {
-		case s[i] == '+':
+		switch s[i] {
+		case '+':
 			buf = append(buf, ' ')
 			i++
-		case s[i] == '%':
+		case '%':
 			if i+2 >= len(s) {
 				return nil, fmt.Errorf("invalid percent-encoding at position %d", i)
 			}
