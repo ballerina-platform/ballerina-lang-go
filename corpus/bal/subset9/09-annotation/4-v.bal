@@ -16,29 +16,25 @@
 
 import ballerina/io;
 
-type Info record {|
-    string name;
+type meta record {|
+    string label;
     int code;
 |};
 
-annotation Info info on type;
-annotation marker on type;
+const string LABEL = "from-const";
+const int CODE = 42;
 
-@info {name: "person", code: 7}
-@marker
-type Person record {|
-    string name;
+annotation meta meta on type;
+
+@meta {label: LABEL, code: CODE}
+type Target record {|
+    string id;
 |};
 
 public function main() {
-    Info? infoValue = Person.@info;
-    if infoValue is Info {
-        io:println(infoValue.name); // @output person
-        io:println(infoValue.code); // @output 7
-    }
-
-    boolean? markerValue = Person.@marker;
-    if markerValue is boolean {
-        io:println(markerValue); // @output true
+    meta? value = Target.@meta;
+    if value is meta {
+        io:println(value.label); // @output from-const
+        io:println(value.code); // @output 42
     }
 }

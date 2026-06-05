@@ -2720,48 +2720,30 @@ func (n *NodeBuilder) createAnnotationAttachPoint(annotationAttachPointNode *tre
 	}
 }
 
+var annotationAttachPointByName = map[string]Point{
+	"type":                    Point_TYPE,
+	"object":                  Point_OBJECT,
+	"function":                Point_FUNCTION,
+	"object function":         Point_OBJECT_METHOD,
+	"service remote function": Point_SERVICE_REMOTE,
+	"parameter":               Point_PARAMETER,
+	"return":                  Point_RETURN,
+	"service":                 Point_SERVICE,
+	"field":                   Point_FIELD,
+	"object field":            Point_OBJECT_FIELD,
+	"record field":            Point_RECORD_FIELD,
+	"listener":                Point_LISTENER,
+	"annotation":              Point_ANNOTATION,
+	"external":                Point_EXTERNAL,
+	"var":                     Point_VAR,
+	"const":                   Point_CONST,
+	"worker":                  Point_WORKER,
+	"class":                   Point_CLASS,
+}
+
 func annotationAttachPointFromParts(parts []string) (Point, bool) {
-	key := strings.Join(parts, " ")
-	switch key {
-	case "type":
-		return Point_TYPE, true
-	case "object":
-		return Point_OBJECT, true
-	case "function":
-		return Point_FUNCTION, true
-	case "object function":
-		return Point_OBJECT_METHOD, true
-	case "service remote function":
-		return Point_SERVICE_REMOTE, true
-	case "parameter":
-		return Point_PARAMETER, true
-	case "return":
-		return Point_RETURN, true
-	case "service":
-		return Point_SERVICE, true
-	case "field":
-		return Point_FIELD, true
-	case "object field":
-		return Point_OBJECT_FIELD, true
-	case "record field":
-		return Point_RECORD_FIELD, true
-	case "listener":
-		return Point_LISTENER, true
-	case "annotation":
-		return Point_ANNOTATION, true
-	case "external":
-		return Point_EXTERNAL, true
-	case "var":
-		return Point_VAR, true
-	case "const":
-		return Point_CONST, true
-	case "worker":
-		return Point_WORKER, true
-	case "class":
-		return Point_CLASS, true
-	default:
-		return "", false
-	}
+	point, ok := annotationAttachPointByName[strings.Join(parts, " ")]
+	return point, ok
 }
 
 type xmlNamespaceDeclarationNode interface {

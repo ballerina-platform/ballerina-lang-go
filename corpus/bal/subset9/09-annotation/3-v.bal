@@ -16,29 +16,28 @@
 
 import ballerina/io;
 
-type Info record {|
+type Meta record {|
     string name;
     int code;
 |};
 
-annotation Info info on type;
-annotation marker on type;
+annotation Meta fnInfo on function;
+annotation paramInfo on parameter;
+annotation Meta constInfo on source const;
+annotation Meta varInfo on source var;
 
-@info {name: "person", code: 7}
-@marker
-type Person record {|
-    string name;
-|};
+@constInfo {name: "limit", code: 1}
+const LIMIT = 10;
+
+@varInfo {name: "offset", code: 2}
+int offset = 1;
+
+@fnInfo {name: "add", code: 3}
+function add(@paramInfo int left, @paramInfo int right) returns int {
+    return left + right;
+}
 
 public function main() {
-    Info? infoValue = Person.@info;
-    if infoValue is Info {
-        io:println(infoValue.name); // @output person
-        io:println(infoValue.code); // @output 7
-    }
-
-    boolean? markerValue = Person.@marker;
-    if markerValue is boolean {
-        io:println(markerValue); // @output true
-    }
+    io:println(add(2, 3)); // @output 5
+    io:println(LIMIT + offset); // @output 11
 }

@@ -17,28 +17,24 @@
 import ballerina/io;
 
 type Info record {|
-    string name;
-    int code;
+    string label;
 |};
 
-annotation Info info on type;
-annotation marker on type;
+annotation Info runtimeInfo on type;
+annotation Info sourceInfo on source type;
 
-@info {name: "person", code: 7}
-@marker
+@runtimeInfo {label: "runtime"}
+@sourceInfo {label: "source"}
 type Person record {|
     string name;
 |};
 
 public function main() {
-    Info? infoValue = Person.@info;
-    if infoValue is Info {
-        io:println(infoValue.name); // @output person
-        io:println(infoValue.code); // @output 7
+    Info? runtimeValue = Person.@runtimeInfo;
+    if runtimeValue is Info {
+        io:println(runtimeValue.label); // @output runtime
     }
 
-    boolean? markerValue = Person.@marker;
-    if markerValue is boolean {
-        io:println(markerValue); // @output true
-    }
+    Info? sourceValue = Person.@sourceInfo;
+    io:println(sourceValue is ()); // @output true
 }

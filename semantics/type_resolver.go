@@ -930,18 +930,10 @@ func evaluateAnnotationValue(t typeResolver, expr ast.BLangExpression) (values.B
 		return expr.Value, true
 	case *ast.BLangGroupExpr:
 		return evaluateAnnotationValue(t, expr.Expression)
+	case *ast.BLangSimpleVarRef:
+		return evaluateAnnotationConstantReference(t, expr.Symbol(), expr.GetDeterminedType())
 	case *ast.BLangConstRef:
-		if p, ok := t.(*packageTypeResolver); ok {
-			ref := t.unnarrowedSymbol(expr.Symbol())
-			if constant, ok := p.packageConstants[ref]; ok {
-				return evaluateAnnotationValue(t, constant.Expr.(ast.BLangExpression))
-			}
-		}
-		shape := semtypes.SingleShape(expr.GetDeterminedType())
-		if shape.IsEmpty() {
-			return nil, false
-		}
-		return shape.Get().Value, true
+		return evaluateAnnotationConstantReference(t, expr.Symbol(), expr.GetDeterminedType())
 	case *ast.BLangMappingConstructorExpr:
 		entries := make([]values.MapEntry, 0, len(expr.Fields))
 		for _, field := range expr.Fields {
@@ -968,6 +960,24 @@ func evaluateAnnotationValue(t typeResolver, expr ast.BLangExpression) (values.B
 	default:
 		return nil, false
 	}
+}
+
+func evaluateAnnotationConstantReference(t typeResolver, ref model.SymbolRef, ty semtypes.SemType) (values.BalValue, bool) {
+	if p, ok := t.(*packageTypeResolver); ok {
+		ref := t.unnarrowedSymbol(ref)
+		if constant, ok := p.packageConstants[ref]; ok {
+			expr, ok := constant.Expr.(ast.BLangExpression)
+			if !ok {
+				return nil, false
+			}
+			return evaluateAnnotationValue(t, expr)
+		}
+	}
+	shape := semtypes.SingleShape(ty)
+	if shape.IsEmpty() {
+		return nil, false
+	}
+	return shape.Get().Value, true
 }
 
 func annotationMappingKey(key *ast.BLangMappingKey) (string, bool) {

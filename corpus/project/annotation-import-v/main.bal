@@ -16,29 +16,17 @@
 
 import ballerina/io;
 
-type Info record {|
-    string name;
-    int code;
-|};
+import testorg/annotation_import_v.meta;
 
-annotation Info info on type;
-annotation marker on type;
-
-@info {name: "person", code: 7}
-@marker
+@meta:info {name: "imported", code: 11}
 type Person record {|
     string name;
 |};
 
 public function main() {
-    Info? infoValue = Person.@info;
-    if infoValue is Info {
-        io:println(infoValue.name); // @output person
-        io:println(infoValue.code); // @output 7
-    }
-
-    boolean? markerValue = Person.@marker;
-    if markerValue is boolean {
-        io:println(markerValue); // @output true
+    meta:Info? info = Person.@meta:info;
+    if info is meta:Info {
+        io:println(info.name); // @output imported
+        io:println(info.code); // @output 11
     }
 }
