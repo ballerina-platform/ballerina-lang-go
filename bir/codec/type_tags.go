@@ -38,4 +38,5 @@ const (
 	typeTagCharString typeTag = 45
 	typeTagMap        typeTag = 46
 	typeTagTypedesc   typeTag = 47
+	typeTagList       typeTag = 48
 )

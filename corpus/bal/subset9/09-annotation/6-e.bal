@@ -14,19 +14,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type Info record {|
-    string name;
+type Info record {|
     int code;
-    int[] values;
 |};
 
-public annotation Info info on type;
-public annotation marker on type;
-public annotation Info sourceInfo on source type;
+annotation Info info on type;
 
-@info {name: "dependency", code: 17, values: [17, 18]}
-@marker
-@sourceInfo {name: "dependency-source", code: 18, values: [18, 19]}
-public type Tagged record {|
-    string value;
+function code() returns int {
+    return 1;
+}
+
+@info {code: code()} // @error
+type Target record {|
+    string id;
 |};

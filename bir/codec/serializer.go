@@ -31,7 +31,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 77
+	BIR_VERSION = 78
 )
 
 type birWriter struct {
@@ -564,12 +564,24 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value 
 			panic(fmt.Sprintf("expected map for tag %v, got %T", tag, value))
 		}
 		bw.writeType(buf, m.Type)
+		write(buf, m.IsReadonly())
 		keys := m.Keys()
 		write(buf, int64(len(keys)))
 		for _, key := range keys {
 			bw.writeStringCPEntry(buf, key)
 			value, _ := m.Get(key)
 			bw.writeConstValue(buf, value)
+		}
+	case typeTagList:
+		list, ok := value.(*values.List)
+		if !ok {
+			panic(fmt.Sprintf("expected list for tag %v, got %T", tag, value))
+		}
+		bw.writeType(buf, list.Type)
+		write(buf, list.IsReadonly())
+		write(buf, int64(list.Len()))
+		for i := 0; i < list.Len(); i++ {
+			bw.writeConstValue(buf, list.Get(i))
 		}
 	case typeTagTypedesc:
 		td, ok := value.(*values.TypeDesc)
@@ -611,6 +623,8 @@ func (bw *birWriter) inferTag(value any) (typeTag, error) {
 		return typeTagDecimal, nil
 	case *values.Map:
 		return typeTagMap, nil
+	case *values.List:
+		return typeTagList, nil
 	case *values.TypeDesc:
 		return typeTagTypedesc, nil
 	case nil:

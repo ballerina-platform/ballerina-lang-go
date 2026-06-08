@@ -2,10 +2,12 @@
 local
 imported
 11
+12
 true
 true
 dependency
 17
+18
 true
 true
 -- stderr --

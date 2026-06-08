@@ -37,6 +37,7 @@ const (
 	annotationValueTagBoolean
 	annotationValueTagNil
 	annotationValueTagMap
+	annotationValueTagList
 	annotationValueTagTypedesc
 )
 
@@ -118,6 +119,9 @@ func (sw *symbolWriter) writeAnnotationValue(buf *bytes.Buffer, value values.Ann
 		if err := sw.writeType(buf, m.Type); err != nil {
 			return err
 		}
+		if err := write(buf, m.IsReadonly()); err != nil {
+			return err
+		}
 		keys := m.Keys()
 		if err := write(buf, int64(len(keys))); err != nil {
 			return err
@@ -128,6 +132,23 @@ func (sw *symbolWriter) writeAnnotationValue(buf *bytes.Buffer, value values.Ann
 			}
 			entry, _ := m.Get(key)
 			if err := sw.writeAnnotationValue(buf, entry); err != nil {
+				return err
+			}
+		}
+		return nil
+	case annotationValueTagList:
+		list := value.(*values.List)
+		if err := sw.writeType(buf, list.Type); err != nil {
+			return err
+		}
+		if err := write(buf, list.IsReadonly()); err != nil {
+			return err
+		}
+		if err := write(buf, int64(list.Len())); err != nil {
+			return err
+		}
+		for i := 0; i < list.Len(); i++ {
+			if err := sw.writeAnnotationValue(buf, list.Get(i)); err != nil {
 				return err
 			}
 		}
@@ -160,6 +181,8 @@ func inferAnnotationValueTag(value values.AnnotationValue) (annotationValueTag, 
 		return annotationValueTagNil, nil
 	case *values.Map:
 		return annotationValueTagMap, nil
+	case *values.List:
+		return annotationValueTagList, nil
 	case *values.TypeDesc:
 		return annotationValueTagTypedesc, nil
 	default:
@@ -213,6 +236,8 @@ func (sr *symbolReader) readAnnotationValue() values.AnnotationValue {
 		return nil
 	case annotationValueTagMap:
 		ty := sr.readType()
+		var isReadonly bool
+		read(sr.r, &isReadonly)
 		var count int64
 		read(sr.r, &count)
 		entries := make([]values.MapEntry, 0, count)
@@ -225,7 +250,24 @@ func (sr *symbolReader) readAnnotationValue() values.AnnotationValue {
 		if atomic == nil {
 			panic("annotation map type is not atomic")
 		}
-		return values.NewMap(ty, atomic, semtypes.IsSubtype(tyCtx, ty, semtypes.VAL_READONLY), entries)
+		return values.NewMap(ty, atomic, isReadonly, entries)
+	case annotationValueTagList:
+		ty := sr.readType()
+		var isReadonly bool
+		read(sr.r, &isReadonly)
+		var count int64
+		read(sr.r, &count)
+		initial := make([]values.BalValue, count)
+		for i := int64(0); i < count; i++ {
+			initial[i] = sr.readAnnotationValue()
+		}
+		tyCtx := semtypes.TypeCheckContext(sr.env.GetTypeEnv())
+		atomic := semtypes.ToListAtomicType(tyCtx, ty)
+		if atomic == nil {
+			panic("annotation list type is not atomic")
+		}
+		restFiller, _ := values.FillerFactoryFor(tyCtx, atomic.Rest())
+		return values.NewList(ty, atomic, isReadonly, restFiller, int(count), initial)
 	case annotationValueTagTypedesc:
 		return &values.TypeDesc{
 			Type:        sr.readType(),

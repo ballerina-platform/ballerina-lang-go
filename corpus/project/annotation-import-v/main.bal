@@ -25,9 +25,9 @@ type LocalInfo record {|
 annotation LocalInfo info on type;
 
 @info {name: "local"}
-@meta:info {name: "imported", code: 11}
+@meta:info {name: "imported", code: 11, values: [11, 12]}
 @meta:marker
-@meta:sourceInfo {name: "local-source", code: 12}
+@meta:sourceInfo {name: "local-source", code: 12, values: [12, 13]}
 type Person record {|
     string name;
 |};
@@ -42,6 +42,7 @@ public function main() {
     if importedInfo is meta:Info {
         io:println(importedInfo.name); // @output imported
         io:println(importedInfo.code); // @output 11
+        io:println(importedInfo.values[1]); // @output 12
     }
 
     boolean? importedMarker = Person.@meta:marker;
@@ -56,6 +57,7 @@ public function main() {
     if dependencyInfo is meta:Info {
         io:println(dependencyInfo.name); // @output dependency
         io:println(dependencyInfo.code); // @output 17
+        io:println(dependencyInfo.values[1]); // @output 18
     }
 
     boolean? dependencyMarker = meta:Tagged.@meta:marker;

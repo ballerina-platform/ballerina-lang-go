@@ -1020,6 +1020,8 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 		return nil
 	case typeTagMap:
 		ty := br.readType()
+		var isReadonly bool
+		br.read(&isReadonly)
 		var count int64
 		br.read(&count)
 		entries := make([]values.MapEntry, 0, count)
@@ -1033,7 +1035,24 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 		if atomic == nil {
 			panic("map constant type is not atomic")
 		}
-		return values.NewMap(ty, atomic, semtypes.IsSubtype(tyCtx, ty, semtypes.VAL_READONLY), entries)
+		return values.NewMap(ty, atomic, isReadonly, entries)
+	case typeTagList:
+		ty := br.readType()
+		var isReadonly bool
+		br.read(&isReadonly)
+		var count int64
+		br.read(&count)
+		initial := make([]values.BalValue, count)
+		for i := int64(0); i < count; i++ {
+			initial[i] = br.readConstValue()
+		}
+		tyCtx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())
+		atomic := semtypes.ToListAtomicType(tyCtx, ty)
+		if atomic == nil {
+			panic("list constant type is not atomic")
+		}
+		restFiller, _ := values.FillerFactoryFor(tyCtx, atomic.Rest())
+		return values.NewList(ty, atomic, isReadonly, restFiller, int(count), initial)
 	case typeTagTypedesc:
 		ty := br.readType()
 		var count int64
