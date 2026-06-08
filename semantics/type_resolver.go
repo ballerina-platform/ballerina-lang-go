@@ -938,7 +938,7 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 		return
 	}
 	results := make([]annotationEvaluationResult, len(tasks))
-	workerCount := annotationEvaluationWorkerCount(len(tasks))
+	workerCount := annotationEvaluationWorkerCount(tasks)
 	cache := newConstantEvaluationCache(workerCount > 1)
 	if workerCount == 1 {
 		for i := range tasks {
@@ -975,9 +975,10 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 	}
 }
 
-func annotationEvaluationWorkerCount(taskCount int) int {
-	const minParallelAnnotationTasks = 64
-	if taskCount < minParallelAnnotationTasks {
+func annotationEvaluationWorkerCount(tasks []annotationEvaluationTask) int {
+	const minParallelAnnotationCost = 4096
+	taskCount := len(tasks)
+	if taskCount < 2 || annotationEvaluationCost(tasks, minParallelAnnotationCost) < minParallelAnnotationCost {
 		return 1
 	}
 	workers := runtime.GOMAXPROCS(0)
@@ -988,6 +989,20 @@ func annotationEvaluationWorkerCount(taskCount int) int {
 		return taskCount
 	}
 	return workers
+}
+
+func annotationEvaluationCost(tasks []annotationEvaluationTask, limit int) int {
+	cost := 0
+	for _, task := range tasks {
+		if cost >= limit {
+			return limit
+		}
+		cost += constantExpressionCost(task.ann.Expr, limit-cost)
+	}
+	if cost > limit {
+		return limit
+	}
+	return cost
 }
 
 func evaluateAnnotationTask(t typeResolver, cache *constantEvaluationCache, task annotationEvaluationTask) (result annotationEvaluationResult) {

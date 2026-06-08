@@ -103,6 +103,75 @@ func (c *constantEvaluationCache) set(ref model.SymbolRef, result constantEvalua
 	return result
 }
 
+func constantExpressionCost(expr ast.BLangExpression, limit int) int {
+	if expr == nil || limit <= 0 {
+		return 0
+	}
+
+	cost := 1
+	add := func(child ast.BLangExpression) {
+		if cost >= limit {
+			return
+		}
+		cost += constantExpressionCost(child, limit-cost)
+		if cost > limit {
+			cost = limit
+		}
+	}
+
+	switch expr := expr.(type) {
+	case *ast.BLangLiteral, *ast.BLangNumericLiteral:
+	case *ast.BLangSimpleVarRef, *ast.BLangConstRef:
+		cost += 2
+	case *ast.BLangGroupExpr:
+		add(expr.Expression)
+	case *ast.BLangUnaryExpr:
+		add(expr.Expr)
+	case *ast.BLangBinaryExpr:
+		add(expr.LhsExpr)
+		add(expr.RhsExpr)
+	case *ast.BLangTypeConversionExpr:
+		cost += 2
+		add(expr.Expression)
+	case *ast.BLangMappingConstructorExpr:
+		for _, field := range expr.Fields {
+			cost++
+			if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
+				add(kv.ValueExpr)
+			}
+			if cost >= limit {
+				break
+			}
+		}
+	case *ast.BLangListConstructorExpr:
+		for i, member := range expr.Exprs {
+			if expr.IsSpreadMember(i) {
+				cost++
+			}
+			add(member)
+			if cost >= limit {
+				break
+			}
+		}
+		if fillerCount := expr.AtomicType.Members.FixedLength - len(expr.Exprs); fillerCount > 0 {
+			cost += min(fillerCount, limit-cost)
+		}
+	case *ast.BLangTemplateExpr:
+		cost += len(expr.Strings)
+		for _, insertion := range expr.Insertions {
+			add(insertion)
+			if cost >= limit {
+				break
+			}
+		}
+	}
+
+	if cost > limit {
+		return limit
+	}
+	return cost
+}
+
 func (e *constantExpressionEvaluator) evaluate(expr ast.BLangExpression) (values.BalValue, error) {
 	switch expr := expr.(type) {
 	case *ast.BLangLiteral:

@@ -1,0 +1,71 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition HeavyInfo
+    (record-type
+      (field id
+        (value-type int))
+      (field values
+        (array-type
+          (value-type int) dimensions: 1 ([
+          (literal 1024)])))))
+  (annotation heavy
+    (user-defined-type HeavyInfo)
+    (attach-point type))
+  (type-definition T1
+    (value-type int))
+  (type-definition T2
+    (value-type int))
+  (type-definition T3
+    (value-type int))
+  (type-definition T4
+    (value-type int))
+  (type-definition T5
+    (value-type int))
+  (type-definition T6
+    (value-type int))
+  (type-definition T7
+    (value-type int))
+  (type-definition T8
+    (value-type int))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable first (type
+          (union-type
+            (user-defined-type HeavyInfo)
+            (value-type null))) (expr
+          (annot-access-expr heavy
+            (simple-var-ref T1)))))
+      (var-def
+        (variable last (type
+          (union-type
+            (user-defined-type HeavyInfo)
+            (value-type null))) (expr
+          (annot-access-expr heavy
+            (simple-var-ref T8)))))
+      (if
+        (binary-expr &&
+          (type-test-expr is
+            (simple-var-ref first)
+            (user-defined-type HeavyInfo))
+          (type-test-expr is
+            (simple-var-ref last)
+            (user-defined-type HeavyInfo)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (field-based-access id
+                (simple-var-ref first)))))
+          (expression-stmt
+            (invocation io println (
+              (field-based-access id
+                (simple-var-ref last)))))
+          (expression-stmt
+            (invocation io println (
+              (index-based-access
+                (field-based-access values
+                  (simple-var-ref last))
+                (literal 1023)))))) ())
+      (block-stmt))))

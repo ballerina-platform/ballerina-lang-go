@@ -1,0 +1,57 @@
+(package
+  (import-package ballerina io (as io))
+  (const BASE (
+    (value-type int)) ())
+  (annotation tiny
+    (user-defined-type TinyInfo)
+    (attach-point type))
+  (type-definition TinyInfo
+    (record-type
+      (field value
+        (value-type int))))
+  (type-definition First
+    (value-type int))
+  (type-definition Second
+    (value-type int))
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref BASE)
+        (literal 10))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable first (type
+          (union-type
+            (user-defined-type TinyInfo)
+            (value-type null))) (expr
+          (annot-access-expr tiny
+            (simple-var-ref First)))))
+      (var-def
+        (variable second (type
+          (union-type
+            (user-defined-type TinyInfo)
+            (value-type null))) (expr
+          (annot-access-expr tiny
+            (simple-var-ref Second)))))
+      (if
+        (binary-expr &&
+          (type-test-expr is
+            (simple-var-ref first)
+            (user-defined-type TinyInfo))
+          (type-test-expr is
+            (simple-var-ref second)
+            (user-defined-type TinyInfo)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (index-based-access
+                (simple-var-ref first)
+                (literal value)))))
+          (expression-stmt
+            (invocation io println (
+              (index-based-access
+                (simple-var-ref second)
+                (literal value)))))) ())
+      (block-stmt))))
