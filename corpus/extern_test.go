@@ -694,7 +694,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 // env's type system, so they are compatible with other modules compiled in the
 // same env.
 func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version string) (semantics.PackageIdentifier, model.ExportedSymbolSpace, bool) {
-	balPath := fmt.Sprintf("ballerina/%s/%s/go1.2/%s.bal", name, version, name)
+	balPath := fmt.Sprintf("ballerina/%s/%s/go1.26/%s.bal", name, version, name)
 	contentBytes, err := gofs.ReadFile(stdlibs.FS, balPath)
 	if err != nil {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
