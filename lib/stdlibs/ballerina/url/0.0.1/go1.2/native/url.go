@@ -57,10 +57,9 @@ func (asciiTransformer) Transform(dst, src []byte, _ bool) (nDst, nSrc int, err 
 		}
 		b := src[nSrc]
 		if b > 0x7F {
-			dst[nDst] = '?'
-		} else {
-			dst[nDst] = b
+			return nDst, nSrc, fmt.Errorf("invalid ASCII byte: %#x", b)
 		}
+		dst[nDst] = b
 		nDst++
 		nSrc++
 	}
@@ -122,7 +121,10 @@ func percentDecodeToBytes(s string) ([]byte, error) {
 			i++
 		case '%':
 			if i+2 >= len(s) {
-				return nil, fmt.Errorf("invalid percent-encoding at position %d", i)
+				// Not enough chars for a full %XX sequence: pass through as literal.
+				buf = append(buf, s[i])
+				i++
+				continue
 			}
 			hi, ok1 := fromHex(s[i+1])
 			lo, ok2 := fromHex(s[i+2])

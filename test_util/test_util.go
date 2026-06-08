@@ -223,7 +223,7 @@ func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 			WriteFile: func(path string, data []byte) error {
 				return os.WriteFile(normalizePath(path), data, 0o644)
 			},
-			AppendFile: func(path string, data []byte) error {
+			AppendFile: func(path string, data []byte) (err error) {
 				f, err := os.OpenFile(normalizePath(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 				if err != nil {
 					return err
