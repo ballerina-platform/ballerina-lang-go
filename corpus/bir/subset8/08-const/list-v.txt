@@ -1,9 +1,12 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
 A  [int, int, int, never...];
 B  [string, string, never...];
+BASE  10;
 C  [int, string, int, never...];
 D  [[int, int, never...], [int, int, never...], never...];
+E  [int, int...];
 main() -> nil{
   bb0 {
     %1 = println(A) -> bb1;
@@ -18,6 +21,9 @@ main() -> nil{
     %4 = println(D) -> bb4;
   }
   bb4 {
+    %5 = println(E) -> bb5;
+  }
+  bb5 {
     return;
   }
 }

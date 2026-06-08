@@ -466,6 +466,10 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
 	dcl.Flags = c.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
+	if c.ConstantValueKnown {
+		dcl.InitialValue = c.ConstantValue
+		dcl.HasInitialValue = true
+	}
 	return dcl
 }
 

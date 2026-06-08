@@ -6249,9 +6249,19 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 		}
 	}
 
-	exprTy, _, ok := resolveActionOrExpression(t, nil, constant.Expr.(ast.BLangExpression), annotationType)
+	expr, ok := constant.Expr.(ast.BLangExpression)
+	if !ok {
+		t.internalError("constant expression is not an expression", constant.GetPosition())
+		return false
+	}
+	exprTy, _, ok := resolveActionOrExpression(t, nil, expr, annotationType)
 	if !ok {
 		return false
+	}
+	value, err := evaluateConstantExpression(t, expr, newConstantEvaluationCache(false))
+	if err == nil {
+		constant.ConstantValue = value
+		constant.ConstantValueKnown = true
 	}
 
 	// TODO: I am not sure if this is strictly correct given expression type would have changed based on the contextually expected type in things like structure constructor expressions.

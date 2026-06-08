@@ -1,11 +1,17 @@
 (package
   (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (const BASE () ())
   (const A () ())
   (const B () ())
   (const C () ())
   (const D () ())
+  (const E () ())
   (function init () ()
     (block-function-body
+      (assignment
+        (simple-var-ref BASE)
+        (literal 10))
       (assignment
         (simple-var-ref A)
         (list-constructor-expr
@@ -31,7 +37,48 @@
             (literal 2))
           (list-constructor-expr
             (literal 3)
-            (literal 4))))))
+            (literal 4))))
+      (var-def
+        (variable $desugar$0 (expr
+          (list-constructor-expr))))
+      (expression-stmt
+        (invocation lang.array push (
+          (simple-var-ref $desugar$0)
+          (simple-var-ref BASE))))
+      (var-def
+        (variable $desugar$1 (expr
+          (list-constructor-expr
+            (binary-expr +
+              (simple-var-ref BASE)
+              (literal 1))
+            (unary-expr -
+              (literal 3))))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$1))))))
+      (var-def
+        (variable $desugar$3 (expr
+          (numeric-literal 0))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$3)
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref $desugar$0)
+              (index-based-access
+                (simple-var-ref $desugar$1)
+                (simple-var-ref $desugar$3)))))
+          (assignment
+            (simple-var-ref $desugar$3)
+            (binary-expr +
+              (simple-var-ref $desugar$3)
+              (numeric-literal 1)))))
+      (assignment
+        (simple-var-ref E)
+        (simple-var-ref $desugar$0))))
   (function main () (
     (value-type null))
     (block-function-body
@@ -46,4 +93,7 @@
           (simple-var-ref C))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref D)))))))
+          (simple-var-ref D))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref E)))))))

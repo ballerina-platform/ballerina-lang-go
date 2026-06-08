@@ -191,13 +191,39 @@ func (e *constantExpressionEvaluator) evaluate(expr ast.BLangExpression) (values
 	case *ast.BLangUnaryExpr:
 		return e.evaluateUnaryExpression(expr)
 	case *ast.BLangBinaryExpr:
+		ty := expr.GetDeterminedType()
+		if expr.OpKind == model.OperatorKind_ADD && ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.STRING) {
+			if value, ok := constantSingleShapeValue(ty); ok {
+				return value, nil
+			}
+		}
 		return e.evaluateBinaryExpression(expr)
 	case *ast.BLangTypeConversionExpr:
 		return e.evaluateTypeConversion(expr)
 	case *ast.BLangTemplateExpr:
+		if value, ok := constantSingleShapeValue(expr.GetDeterminedType()); ok {
+			return value, nil
+		}
 		return e.evaluateStringTemplate(expr)
 	default:
 		return nil, fmt.Errorf("%w: %T", errNotConstantExpression, expr)
+	}
+}
+
+func constantSingleShapeValue(ty semtypes.SemType) (values.BalValue, bool) {
+	if ty == nil {
+		return nil, false
+	}
+	shape := semtypes.SingleShape(ty)
+	if shape.IsEmpty() {
+		return nil, false
+	}
+	value := shape.Get().Value
+	switch value.(type) {
+	case nil, bool, int64, float64, string, *decimal.Decimal:
+		return value, true
+	default:
+		return nil, false
 	}
 }
 
@@ -208,6 +234,9 @@ func (e *constantExpressionEvaluator) evaluateConstantReference(ref model.Symbol
 	}
 	if p, ok := e.resolver.(*packageTypeResolver); ok {
 		if constant, ok := p.packageConstants[ref]; ok {
+			if constant.ConstantValueKnown {
+				return constant.ConstantValue, nil
+			}
 			if e.visiting[ref] {
 				return nil, fmt.Errorf("cyclic constant reference to %s", e.resolver.symbolName(ref))
 			}
@@ -223,11 +252,11 @@ func (e *constantExpressionEvaluator) evaluateConstantReference(ref model.Symbol
 		}
 	}
 
-	shape := semtypes.SingleShape(ty)
-	if shape.IsEmpty() {
+	value, ok := constantSingleShapeValue(ty)
+	if !ok {
 		return nil, errNotConstantExpression
 	}
-	return shape.Get().Value, nil
+	return value, nil
 }
 
 func (e *constantExpressionEvaluator) evaluateMappingConstructor(expr *ast.BLangMappingConstructorExpr) (values.BalValue, error) {

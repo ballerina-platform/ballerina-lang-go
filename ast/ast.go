@@ -257,7 +257,9 @@ type (
 
 	BLangConstant struct {
 		BLangVariableBase
-		Name *BLangIdentifier
+		Name               *BLangIdentifier
+		ConstantValue      values.BalValue
+		ConstantValueKnown bool
 	}
 
 	BLangSimpleVariable struct {
