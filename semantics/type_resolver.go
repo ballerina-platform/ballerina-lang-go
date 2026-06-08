@@ -788,8 +788,14 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 }
 
 func annotationAllowedType(t typeResolver) semtypes.SemType {
-	anydataMap := semtypes.Intersect(semtypes.MAPPING, semtypes.CreateAnydata(t.typeContext()))
-	return semtypes.Union(semtypes.BooleanConst(true), anydataMap)
+	cloneableMap := annotationMapType(t)
+	ld := semtypes.NewListDefinition()
+	cloneableMapList := ld.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), cloneableMap)
+	return semtypes.Union(semtypes.BooleanConst(true), semtypes.Union(cloneableMap, cloneableMapList))
+}
+
+func annotationMapType(t typeResolver) semtypes.SemType {
+	return semtypes.Intersect(semtypes.MAPPING, semtypes.CreateCloneable(t.typeContext()))
 }
 
 func resolveAnnotationDeclaration(t typeResolver, annotation *ast.BLangAnnotation) bool {
@@ -804,7 +810,7 @@ func resolveAnnotationDeclaration(t typeResolver, annotation *ast.BLangAnnotatio
 			return false
 		}
 		if !semtypes.IsSubtype(t.typeContext(), ty, annotationAllowedType(t)) {
-			t.semanticError("annotation type must be a subtype of true|map<anydata>", typeDesc.GetPosition())
+			t.semanticError("annotation type must be a subtype of true|map<Cloneable>|map<Cloneable>[]", typeDesc.GetPosition())
 			return false
 		}
 		if annotation.IsConst() && !semtypes.IsSubtype(t.typeContext(), ty, semtypes.VAL_READONLY) {
@@ -814,9 +820,22 @@ func resolveAnnotationDeclaration(t typeResolver, annotation *ast.BLangAnnotatio
 	} else {
 		ty = semtypes.BooleanConst(true)
 	}
+	if annotationHasSourceAttachPoint(annotation) && !annotation.IsConst() {
+		t.semanticError("annotation declaration with source attach point must be const", annotation.GetPosition())
+		return false
+	}
 	t.setSymbolType(annotation.Symbol(), ty)
 	annotation.SetDeterminedType(semtypes.NEVER)
 	return true
+}
+
+func annotationHasSourceAttachPoint(annotation *ast.BLangAnnotation) bool {
+	for _, attachPoint := range annotation.AttachPoints() {
+		if attachPoint.Source {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveTopLevelAnnotationAttachments(t typeResolver, pkg *ast.BLangPackage) {
@@ -880,6 +899,8 @@ type annotationEvaluationTask struct {
 	sym        *model.AnnotationSymbol
 	pointKey   string
 	typeSymbol model.SymbolRef
+	listType   semtypes.SemType
+	repeated   bool
 }
 
 func collectAnnotationEvaluationTasks(
@@ -889,6 +910,7 @@ func collectAnnotationEvaluationTasks(
 	typeSymbol model.SymbolRef,
 	tasks *[]annotationEvaluationTask,
 ) {
+	seen := make(map[string]bool)
 	for _, attachment := range node.GetAnnotationAttachments() {
 		ann, ok := attachment.(*ast.BLangAnnotationAttachment)
 		if !ok || !ast.SymbolIsSet(ann) {
@@ -909,7 +931,25 @@ func collectAnnotationEvaluationTasks(
 			t.internalError("annotation type is not resolved", ann.GetPosition())
 			continue
 		}
-		if _, _, ok := resolveActionOrExpression(t, nil, ann.Expr, expectedType); !ok {
+		valueType, repeated := annotationAttachmentValueType(t, expectedType)
+		if valueType == nil {
+			t.internalError("annotation attachment type is not supported", ann.GetPosition())
+			continue
+		}
+		key := model.AnnotationKey(ann.Symbol().Package, sym.Name())
+		if seen[key] && !repeated {
+			t.semanticError("duplicate annotation '"+sym.Name()+"' on "+pointKey, ann.GetPosition())
+			continue
+		}
+		seen[key] = true
+		if ann.HasValue && semtypes.IsSubtype(t.typeContext(), valueType, semtypes.BooleanConst(true)) {
+			t.semanticError("annotation '"+sym.Name()+"' does not allow a value", ann.GetPosition())
+			continue
+		}
+		if !ann.HasValue && !prepareImplicitAnnotationValue(t, ann, expectedType, valueType) {
+			continue
+		}
+		if _, _, ok := resolveActionOrExpression(t, nil, ann.Expr, valueType); !ok {
 			continue
 		}
 		ann.SetDeterminedType(semtypes.NEVER)
@@ -924,8 +964,42 @@ func collectAnnotationEvaluationTasks(
 			sym:        sym,
 			pointKey:   pointKey,
 			typeSymbol: typeSymbol,
+			listType:   expectedType,
+			repeated:   repeated,
 		})
 	}
+}
+
+func annotationAttachmentValueType(t typeResolver, annotationType semtypes.SemType) (semtypes.SemType, bool) {
+	if semtypes.IsSubtypeSimple(annotationType, semtypes.LIST) {
+		memberTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), annotationType, semtypes.INT)
+		if semtypes.IsNever(memberTy) {
+			return nil, true
+		}
+		return memberTy, true
+	}
+	return annotationType, false
+}
+
+func prepareImplicitAnnotationValue(
+	t typeResolver,
+	ann *ast.BLangAnnotationAttachment,
+	annotationType semtypes.SemType,
+	valueType semtypes.SemType,
+) bool {
+	if semtypes.IsSubtype(t.typeContext(), semtypes.BooleanConst(true), annotationType) {
+		return true
+	}
+	if !semtypes.IsSubtype(t.typeContext(), valueType, annotationMapType(t)) {
+		t.semanticError("annotation '"+t.symbolName(ann.Symbol())+"' requires a value", ann.GetPosition())
+		return false
+	}
+	expr := &ast.BLangMappingConstructorExpr{
+		Fields: make([]ast.MappingField, 0),
+	}
+	expr.SetPosition(ann.GetPosition())
+	ann.Expr = expr
+	return true
 }
 
 type annotationEvaluationResult struct {
@@ -958,21 +1032,59 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 		wg.Wait()
 	}
 
+	repeatedValues := make(map[repeatedAnnotationKey]*repeatedAnnotationValue)
 	for i, task := range tasks {
 		result := results[i]
 		if result.err != nil {
-			message := "annotation value must be a constant expression"
-			if !errors.Is(result.err, errNotConstantExpression) {
-				message = "cannot evaluate annotation constant expression: " + result.err.Error()
+			if errors.Is(result.err, errNotConstantExpression) {
+				if task.sym.IsConst() {
+					t.semanticError("const annotation value must be a constant expression", task.ann.Expr.GetPosition())
+				} else {
+					t.unimplemented("runtime evaluation of non-const annotation values is not supported", task.ann.Expr.GetPosition())
+				}
+			} else {
+				t.semanticError("cannot evaluate annotation constant expression: "+result.err.Error(), task.ann.Expr.GetPosition())
 			}
-			t.semanticError(message, task.ann.Expr.GetPosition())
 			continue
 		}
 		task.ann.AnnotationValue = result.value
-		if task.typeSymbol != (model.SymbolRef{}) && task.sym.IsRuntimeVisibleAt(task.pointKey) {
-			setTypeAnnotationValue(t.getSymbol(task.typeSymbol), model.AnnotationKey(task.ann.Symbol().Package, task.sym.Name()), result.value)
+		if task.typeSymbol == (model.SymbolRef{}) || !task.sym.IsRuntimeVisibleAt(task.pointKey) {
+			continue
 		}
+		key := model.AnnotationKey(task.ann.Symbol().Package, task.sym.Name())
+		if !task.repeated {
+			setTypeAnnotationValue(t.getSymbol(task.typeSymbol), key, result.value)
+			continue
+		}
+		groupKey := repeatedAnnotationKey{symbol: task.typeSymbol, key: key}
+		group := repeatedValues[groupKey]
+		if group == nil {
+			group = &repeatedAnnotationValue{listType: task.listType}
+			repeatedValues[groupKey] = group
+		}
+		group.values = append(group.values, result.value)
 	}
+
+	for key, group := range repeatedValues {
+		atomic := semtypes.ToListAtomicType(t.typeContext(), group.listType)
+		if atomic == nil {
+			t.internalError("repeated annotation type is not an atomic list", diagnostics.Location{})
+			continue
+		}
+		restFiller, _ := values.FillerFactoryFor(t.typeContext(), atomic.Rest())
+		value := values.NewList(group.listType, atomic, true, restFiller, len(group.values), group.values)
+		setTypeAnnotationValue(t.getSymbol(key.symbol), key.key, value)
+	}
+}
+
+type repeatedAnnotationKey struct {
+	symbol model.SymbolRef
+	key    string
+}
+
+type repeatedAnnotationValue struct {
+	listType semtypes.SemType
+	values   []values.BalValue
 }
 
 func annotationEvaluationWorkerCount(tasks []annotationEvaluationTask) int {

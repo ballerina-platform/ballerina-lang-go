@@ -98,6 +98,7 @@ type (
 	BLangAnnotationAttachment struct {
 		bLangNodeBase
 		Expr            BLangExpression
+		HasValue        bool
 		AnnotationName  *BLangIdentifier
 		PkgAlias        *BLangIdentifier
 		symbol          model.SymbolRef

@@ -16,15 +16,15 @@
 
 import ballerina/io;
 
-type Meta record {|
+type Meta readonly & record {|
     string name;
     int code;
 |};
 
 annotation Meta fnInfo on function;
 annotation paramInfo on parameter;
-annotation Meta constInfo on source const;
-annotation Meta varInfo on source var;
+const annotation Meta constInfo on source const;
+const annotation Meta varInfo on source var;
 
 @constInfo {name: "limit", code: 1}
 const LIMIT = 10;

@@ -2,20 +2,22 @@
 (package-id $anon . 0.0.0)
   (import-package ballerina io (as io))
   (type-definition Meta
-    (record-type
-      (field name
-        (value-type string))
-      (field code
-        (value-type int))))
+    (intersection-type
+      (value-type readonly)
+      (record-type
+        (field name
+          (value-type string))
+        (field code
+          (value-type int)))))
   (annotation fnInfo
     (user-defined-type Meta)
     (attach-point function))
   (annotation paramInfo
     (attach-point parameter))
-  (annotation constInfo
+  (annotation constInfo const
     (user-defined-type Meta)
     (attach-point source const))
-  (annotation varInfo
+  (annotation varInfo const
     (user-defined-type Meta)
     (attach-point source var))
   (const LIMIT () (

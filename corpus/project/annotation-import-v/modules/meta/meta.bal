@@ -20,13 +20,18 @@ public type Info record {|
     int[] values;
 |};
 
+public type SourceInfo readonly & record {|
+    string name;
+    int code;
+|};
+
 public annotation Info info on type;
 public annotation marker on type;
-public annotation Info sourceInfo on source type;
+public const annotation SourceInfo sourceInfo on source type;
 
 @info {name: "dependency", code: 17, values: [17, 18]}
 @marker
-@sourceInfo {name: "dependency-source", code: 18, values: [18, 19]}
+@sourceInfo {name: "dependency-source", code: 18}
 public type Tagged record {|
     string value;
 |};

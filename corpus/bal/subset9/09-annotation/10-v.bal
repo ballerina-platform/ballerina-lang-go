@@ -16,25 +16,28 @@
 
 import ballerina/io;
 
-type Info readonly & record {|
-    string label;
+type Meta record {|
+    string name?;
+    int code?;
 |};
 
-annotation Info runtimeInfo on type;
-const annotation Info sourceInfo on source type;
+annotation Meta meta on type;
+annotation Meta[] tag on type;
 
-@runtimeInfo {label: "runtime"}
-@sourceInfo {label: "source"}
-type Person record {|
-    string name;
+@meta
+@tag {name: "first", code: 1}
+@tag {name: "second", code: 2}
+type Target record {|
+    string id;
 |};
 
 public function main() {
-    Info? runtimeValue = Person.@runtimeInfo;
-    if runtimeValue is Info {
-        io:println(runtimeValue.label); // @output runtime
-    }
+    Meta? metaValue = Target.@meta;
+    io:println(metaValue is Meta); // @output true
 
-    Info? sourceValue = Person.@sourceInfo;
-    io:println(sourceValue is ()); // @output true
+    Meta[]? tags = Target.@tag;
+    if tags is Meta[] {
+        io:println(tags[0].name); // @output first
+        io:println(tags[1].code); // @output 2
+    }
 }

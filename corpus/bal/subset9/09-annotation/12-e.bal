@@ -14,27 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
-type Info readonly & record {|
-    string label;
+type Info record {|
+    int code;
 |};
 
-annotation Info runtimeInfo on type;
-const annotation Info sourceInfo on source type;
+annotation Info info on type;
+annotation marker on type;
 
-@runtimeInfo {label: "runtime"}
-@sourceInfo {label: "source"}
-type Person record {|
-    string name;
+@info {code: 1}
+@info {code: 2} // @error
+@marker {} // @error
+type Target record {|
+    string id;
 |};
-
-public function main() {
-    Info? runtimeValue = Person.@runtimeInfo;
-    if runtimeValue is Info {
-        io:println(runtimeValue.label); // @output runtime
-    }
-
-    Info? sourceValue = Person.@sourceInfo;
-    io:println(sourceValue is ()); // @output true
-}

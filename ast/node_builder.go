@@ -2563,6 +2563,7 @@ func (n *NodeBuilder) TransformAnnotation(annotationNode *tree.AnnotationNode) B
 	annotation.AnnotationName = &nameReference[1]
 	if value := annotationNode.AnnotValue(); value != nil && !value.IsMissing() {
 		annotation.Expr = n.createExpression(value)
+		annotation.HasValue = true
 	} else {
 		annotation.Expr = n.createTrueLiteral(annotation.GetPosition())
 	}

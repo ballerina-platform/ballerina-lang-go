@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Info record {|
+type Info readonly & record {|
     int code;
 |};
 
-annotation Info info on type;
+const annotation Info info on type;
 
 function code() returns int {
     return 1;

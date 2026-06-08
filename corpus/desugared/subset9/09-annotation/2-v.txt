@@ -3,13 +3,15 @@
   (annotation runtimeInfo
     (user-defined-type Info)
     (attach-point type))
-  (annotation sourceInfo
+  (annotation sourceInfo const
     (user-defined-type Info)
     (attach-point source type))
   (type-definition Info
-    (record-type
-      (field label
-        (value-type string))))
+    (intersection-type
+      (value-type readonly)
+      (record-type
+        (field label
+          (value-type string)))))
   (type-definition Person
     (record-type
       (field name

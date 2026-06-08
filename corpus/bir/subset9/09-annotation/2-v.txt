@@ -6,7 +6,7 @@ main() -> nil{
     %2 = ConstantLoad $anon/.:0.0.0:runtimeInfo
     %3 = .@ %1 %2;
     runtimeValue = %3;
-    %5 = runtimeValue is {| label: string, never... |}
+    %5 = runtimeValue is readonly&{| label: string, never... |}
     %5 ? bb1 : bb3;
   }
   bb1 {
