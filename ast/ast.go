@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 type BNodeWithSymbol interface {
@@ -100,7 +101,7 @@ type (
 		AnnotationName  *BLangIdentifier
 		PkgAlias        *BLangIdentifier
 		symbol          model.SymbolRef
-		AnnotationValue any
+		AnnotationValue values.AnnotationValue
 	}
 
 	bLangFunctionBodyBase struct {

@@ -26,9 +26,8 @@ import (
 )
 
 const (
-	symMagic = "\x53\x59\x4d\x42"
-	// This will perpetually remain 1 unless we create a spec for this
-	symVersion = 1
+	symMagic   = "\x53\x59\x4d\x42"
+	symVersion = 2
 )
 
 const (
@@ -180,6 +179,9 @@ func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
+	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+		return err
+	}
 	return sw.writeInclusionMembers(buf, nil)
 }
 
@@ -190,6 +192,9 @@ func (sw *symbolWriter) writeRecordSymbol(buf *bytes.Buffer, sym *model.RecordSy
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
+	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+		return err
+	}
 	return sw.writeInclusionMembers(buf, sym.Members())
 }
 
@@ -198,6 +203,9 @@ func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.Obje
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
 		return err
 	}
 	return sw.writeInclusionMembers(buf, sym.Members())
@@ -292,6 +300,9 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymb
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
 		return err
 	}
 	return sw.writeInclusionMembers(buf, sym.Members())

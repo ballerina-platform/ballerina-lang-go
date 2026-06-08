@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 type BLangActionOrExpression interface {
@@ -291,7 +292,7 @@ type (
 		// typedesc<T>. BIR lowers the expression to a TypeDesc{Type: Constraint}
 		// constant.
 		Constraint       semtypes.SemType
-		AnnotationValues map[string]any
+		AnnotationValues values.AnnotationValues
 	}
 
 	BLangInferredTypedescDefault struct {

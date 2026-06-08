@@ -145,6 +145,7 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewTypeSymbol(name, isPublic)
 	sym.SetType(ty)
+	sr.setAnnotationValues(&sym)
 	_ = sr.readInclusionMembers(space)
 	space.AddSymbol(name, &sym)
 }
@@ -153,6 +154,7 @@ func (sr *symbolReader) readRecordSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewRecordSymbol(name, isPublic)
 	sym.SetType(ty)
+	sr.setAnnotationValues(&sym.TypeSymbol)
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
@@ -163,6 +165,7 @@ func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewObjectTypeSymbol(name, isPublic)
 	sym.SetType(ty)
+	sr.setAnnotationValues(&sym.TypeSymbol)
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
@@ -242,6 +245,7 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewClassSymbol(name, isPublic)
 	sym.SetType(ty)
+	sr.setAnnotationValues(&sym.TypeSymbol)
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
@@ -251,6 +255,12 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 	}
 	sym.SetMethods(methods)
 	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) setAnnotationValues(sym *model.TypeSymbol) {
+	for key, value := range sr.readAnnotationValues() {
+		sym.SetAnnotationValue(key, value)
+	}
 }
 
 func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {

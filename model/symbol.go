@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type Scope interface {
@@ -242,7 +243,7 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
-		annotations map[string]any
+		annotations values.AnnotationValues
 	}
 
 	AnnotationSymbol struct {
@@ -739,22 +740,15 @@ func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
 }
 
-func (ts *TypeSymbol) SetAnnotationValue(key string, value any) {
+func (ts *TypeSymbol) SetAnnotationValue(key string, value values.AnnotationValue) {
 	if ts.annotations == nil {
-		ts.annotations = make(map[string]any)
+		ts.annotations = values.NewAnnotationValues()
 	}
 	ts.annotations[key] = value
 }
 
-func (ts *TypeSymbol) AnnotationValues() map[string]any {
-	if ts.annotations == nil {
-		return map[string]any{}
-	}
-	result := make(map[string]any, len(ts.annotations))
-	for key, value := range ts.annotations {
-		result[key] = value
-	}
-	return result
+func (ts *TypeSymbol) AnnotationValues() values.AnnotationValues {
+	return ts.annotations.Clone()
 }
 
 func (as *AnnotationSymbol) Kind() SymbolKind {
@@ -1026,7 +1020,7 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
 		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
-		annotations: make(map[string]any),
+		annotations: values.NewAnnotationValues(),
 	}
 }
 
@@ -1046,7 +1040,7 @@ func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 	return ClassSymbol{
 		TypeSymbol: TypeSymbol{
 			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
-			annotations: make(map[string]any),
+			annotations: values.NewAnnotationValues(),
 		},
 	}
 }
@@ -1055,7 +1049,7 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 	return RecordSymbol{
 		TypeSymbol: TypeSymbol{
 			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
-			annotations: make(map[string]any),
+			annotations: values.NewAnnotationValues(),
 		},
 	}
 }
@@ -1064,7 +1058,7 @@ func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
 			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
-			annotations: make(map[string]any),
+			annotations: values.NewAnnotationValues(),
 		},
 	}
 }

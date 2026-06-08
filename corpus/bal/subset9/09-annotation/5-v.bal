@@ -14,18 +14,38 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type Info record {|
+import ballerina/io;
+
+type Info record {|
     string name;
     int code;
 |};
 
-public annotation Info info on type;
-public annotation marker on type;
-public annotation Info sourceInfo on source type;
+annotation Info info on type;
+annotation marker on type;
 
-@info {name: "dependency", code: 17}
+@info {name: "person", code: 23}
 @marker
-@sourceInfo {name: "dependency-source", code: 18}
-public type Tagged record {|
-    string value;
+type Person record {|
+    string name;
 |};
+
+function personType() returns typedesc<Person> {
+    return Person;
+}
+
+public function main() {
+    typedesc<Person> descriptor = personType();
+    typedesc<Person> copied = descriptor;
+
+    Info? infoValue = copied.@info;
+    if infoValue is Info {
+        io:println(infoValue.name); // @output person
+        io:println(infoValue.code); // @output 23
+    }
+
+    boolean? markerValue = copied.@marker;
+    if markerValue is boolean {
+        io:println(markerValue); // @output true
+    }
+}

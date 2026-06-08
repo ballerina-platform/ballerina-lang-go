@@ -1038,7 +1038,7 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 		ty := br.readType()
 		var count int64
 		br.read(&count)
-		annotations := make(map[string]values.BalValue)
+		annotations := values.NewAnnotationValues()
 		for i := int64(0); i < count; i++ {
 			key := string(br.readStringCPEntry())
 			annotations[key] = br.readConstValue()

@@ -26,6 +26,26 @@ import (
 // Currently this is just an alias on any but I think we will need to add methods to this like type
 type BalValue any
 
+// AnnotationValue is the evaluated Ballerina value stored for an annotation.
+type AnnotationValue = BalValue
+
+// AnnotationValues maps fully-qualified annotation keys to evaluated values.
+type AnnotationValues map[string]AnnotationValue
+
+// NewAnnotationValues returns an initialized annotation value map.
+func NewAnnotationValues() AnnotationValues {
+	return make(AnnotationValues)
+}
+
+// Clone returns a shallow copy of the annotation value map.
+func (values AnnotationValues) Clone() AnnotationValues {
+	result := NewAnnotationValues()
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
+}
+
 type Function struct {
 	Type      semtypes.SemType
 	LookupKey string
@@ -37,7 +57,7 @@ type Function struct {
 // around a semtype.
 type TypeDesc struct {
 	Type        semtypes.SemType
-	Annotations map[string]BalValue
+	Annotations AnnotationValues
 }
 
 // FillerFactory produces a fresh filler value each time it is invoked.

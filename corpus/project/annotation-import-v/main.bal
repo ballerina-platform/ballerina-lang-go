@@ -18,15 +18,51 @@ import ballerina/io;
 
 import testorg/annotation_import_v.meta;
 
+type LocalInfo record {|
+    string name;
+|};
+
+annotation LocalInfo info on type;
+
+@info {name: "local"}
 @meta:info {name: "imported", code: 11}
+@meta:marker
+@meta:sourceInfo {name: "local-source", code: 12}
 type Person record {|
     string name;
 |};
 
 public function main() {
-    meta:Info? info = Person.@meta:info;
-    if info is meta:Info {
-        io:println(info.name); // @output imported
-        io:println(info.code); // @output 11
+    LocalInfo? localInfo = Person.@info;
+    if localInfo is LocalInfo {
+        io:println(localInfo.name); // @output local
     }
+
+    meta:Info? importedInfo = Person.@meta:info;
+    if importedInfo is meta:Info {
+        io:println(importedInfo.name); // @output imported
+        io:println(importedInfo.code); // @output 11
+    }
+
+    boolean? importedMarker = Person.@meta:marker;
+    if importedMarker is boolean {
+        io:println(importedMarker); // @output true
+    }
+
+    meta:Info? localSourceInfo = Person.@meta:sourceInfo;
+    io:println(localSourceInfo is ()); // @output true
+
+    meta:Info? dependencyInfo = meta:Tagged.@meta:info;
+    if dependencyInfo is meta:Info {
+        io:println(dependencyInfo.name); // @output dependency
+        io:println(dependencyInfo.code); // @output 17
+    }
+
+    boolean? dependencyMarker = meta:Tagged.@meta:marker;
+    if dependencyMarker is boolean {
+        io:println(dependencyMarker); // @output true
+    }
+
+    meta:Info? dependencySourceInfo = meta:Tagged.@meta:sourceInfo;
+    io:println(dependencySourceInfo is ()); // @output true
 }

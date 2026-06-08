@@ -909,15 +909,13 @@ func resolveAnnotationAttachments(t typeResolver, node ast.AnnotatableNode, poin
 	}
 }
 
-func setTypeAnnotationValue(symbol model.Symbol, key string, value values.BalValue) {
-	switch sym := symbol.(type) {
-	case *model.TypeSymbol:
-		sym.SetAnnotationValue(key, value)
-	case *model.RecordSymbol:
-		sym.SetAnnotationValue(key, value)
-	case *model.ObjectTypeSymbol:
-		sym.SetAnnotationValue(key, value)
-	case *model.ClassSymbol:
+type annotationValueSymbol interface {
+	SetAnnotationValue(key string, value values.AnnotationValue)
+	AnnotationValues() values.AnnotationValues
+}
+
+func setTypeAnnotationValue(symbol model.Symbol, key string, value values.AnnotationValue) {
+	if sym, ok := symbol.(annotationValueSymbol); ok {
 		sym.SetAnnotationValue(key, value)
 	}
 }
@@ -2653,27 +2651,19 @@ func resolveAnnotAccessExpr(t typeResolver, chain *binding, e *ast.BLangAnnotAcc
 	return ty, effect, true
 }
 
-func annotationValuesForTypeDescriptor(t typeResolver, typeDesc ast.TypeDescriptor) map[string]any {
+func annotationValuesForTypeDescriptor(t typeResolver, typeDesc ast.TypeDescriptor) values.AnnotationValues {
 	udt, ok := typeDesc.(*ast.BLangUserDefinedType)
 	if !ok || !ast.SymbolIsSet(udt) {
-		return map[string]any{}
+		return values.NewAnnotationValues()
 	}
 	return annotationValuesForTypeSymbol(t.getSymbol(udt.Symbol()))
 }
 
-func annotationValuesForTypeSymbol(symbol model.Symbol) map[string]any {
-	switch sym := symbol.(type) {
-	case *model.TypeSymbol:
+func annotationValuesForTypeSymbol(symbol model.Symbol) values.AnnotationValues {
+	if sym, ok := symbol.(annotationValueSymbol); ok {
 		return sym.AnnotationValues()
-	case *model.RecordSymbol:
-		return sym.AnnotationValues()
-	case *model.ObjectTypeSymbol:
-		return sym.AnnotationValues()
-	case *model.ClassSymbol:
-		return sym.AnnotationValues()
-	default:
-		return map[string]any{}
 	}
+	return values.NewAnnotationValues()
 }
 
 func resolveXMLTextLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLTextLiteral) (semtypes.SemType, expressionEffect, bool) {
