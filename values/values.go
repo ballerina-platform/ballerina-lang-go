@@ -75,9 +75,11 @@ func fillerFactoryFromDesc(cx semtypes.Context, f semtypes.Filler) FillerFactory
 		return func() BalValue { return NewMap(ty, atomic, readonly, nil) }
 	case semtypes.ListFiller:
 		return listFillerFactory(cx, f)
-	case semtypes.ObjectFiller, semtypes.StreamFiller, semtypes.TableFiller, semtypes.XMLFiller:
+	case semtypes.XMLFiller:
+		return func() BalValue { return &XMLText{} }
+	case semtypes.ObjectFiller, semtypes.StreamFiller, semtypes.TableFiller:
 		return func() BalValue {
-			panic("internal error: filler factory not implemented for object/stream/table/xml types")
+			panic("internal error: filler factory not implemented for object/stream/table types")
 		}
 	default:
 		panic("unknown filler kind")

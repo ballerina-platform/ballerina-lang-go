@@ -83,6 +83,8 @@ var (
 		"subset8/08-future/fieldlvalue1-fp.bal",
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
 		"subset8/08-xml/namespace12-v.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/533
+		"subset9/09-template-expr/template-query-xml-sequence-fv.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.

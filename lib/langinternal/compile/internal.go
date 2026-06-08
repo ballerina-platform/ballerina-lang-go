@@ -25,7 +25,10 @@ import (
 
 var PackageID = model.INTERNAL_PKG
 
-const PackageName = "lang.__internal"
+const (
+	PackageName                   = "lang.__internal"
+	templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
+)
 
 func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*PackageID)
@@ -40,6 +43,14 @@ func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace 
 	addInternalFunction(ctx, space, "queryCollect", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.INT, semtypes.LIST},
 		ReturnType: semtypes.LIST,
+	})
+	addInternalFunction(ctx, space, "escapeXMLContent", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{templateInsertionAllowedTypes},
+		ReturnType: semtypes.STRING,
+	})
+	addInternalFunction(ctx, space, "escapeXMLAttribute", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{templateInsertionAllowedTypes},
+		ReturnType: semtypes.STRING,
 	})
 	return model.NewExportedSymbolSpace(space, nil)
 }
