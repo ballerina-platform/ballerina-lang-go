@@ -36,8 +36,9 @@ const (
 	moduleName = "url"
 )
 
-// asciiEncoding is a 7-bit ASCII codec that replaces any byte or rune > 0x7F
-// with '?' on both encode and decode, matching Java URLEncoder/URLDecoder semantics.
+// asciiEncoding is a 7-bit ASCII codec that errors on any byte > 0x7F on both
+// encode and decode. Encoding a non-ASCII string returns an error rather than
+// substituting a replacement character.
 type asciiEncoding struct{}
 
 func (asciiEncoding) NewDecoder() *encoding.Decoder {
@@ -111,7 +112,8 @@ func encodeBytes(raw []byte) string {
 }
 
 // percentDecodeToBytes decodes a percent-encoded string to raw bytes.
-// Treats '+' as space, matching Java URLDecoder for all charsets.
+// Treats '+' as space. Incomplete '%' sequences (lone '%' or '%X') are passed
+// through as literal bytes rather than returning an error.
 func percentDecodeToBytes(s string) ([]byte, error) {
 	buf := make([]byte, 0, len(s))
 	for i := 0; i < len(s); {
@@ -154,6 +156,80 @@ func fromHex(c byte) (byte, bool) {
 	}
 }
 
+// decodeWithCharset decodes a percent-encoded string, applying the charset
+// decoder to the accumulated byte stream built from %XX escapes, '+', and
+// literal ASCII characters (which the encoder leaves un-escaped as raw
+// octets). Non-ASCII bytes in the URL string represent literal Unicode
+// characters that were never part of the encoded byte stream; those are
+// flushed and written through unchanged without charset conversion.
+func decodeWithCharset(s string, enc encoding.Encoding) (string, error) {
+	var out strings.Builder
+	escaped := make([]byte, 0, len(s))
+
+	flush := func() error {
+		if len(escaped) == 0 {
+			return nil
+		}
+		var decoded []byte
+		if enc == encoding.Nop {
+			if !utf8.Valid(escaped) {
+				return fmt.Errorf("invalid UTF-8 sequence")
+			}
+			decoded = escaped
+		} else {
+			var err error
+			decoded, err = enc.NewDecoder().Bytes(escaped)
+			if err != nil {
+				return err
+			}
+		}
+		out.Write(decoded)
+		escaped = escaped[:0]
+		return nil
+	}
+
+	for i := 0; i < len(s); {
+		switch s[i] {
+		case '+':
+			escaped = append(escaped, ' ')
+			i++
+		case '%':
+			if i+2 >= len(s) {
+				// Incomplete %XX: treat % as a raw byte.
+				escaped = append(escaped, s[i])
+				i++
+			} else {
+				hi, ok1 := fromHex(s[i+1])
+				lo, ok2 := fromHex(s[i+2])
+				if !ok1 || !ok2 {
+					return "", fmt.Errorf("invalid percent-encoding at position %d", i)
+				}
+				escaped = append(escaped, byte(hi<<4|lo))
+				i += 3
+			}
+		default:
+			if s[i] > 0x7F {
+				// Non-ASCII byte: part of a literal Unicode character in the URL
+				// string, not an encoded octet. Flush any pending raw bytes first,
+				// then write this byte directly without charset conversion.
+				if err := flush(); err != nil {
+					return "", err
+				}
+				out.WriteByte(s[i])
+			} else {
+				// ASCII byte: a raw octet the encoder left un-escaped.
+				// Collect it for charset decoding along with %XX bytes.
+				escaped = append(escaped, s[i])
+			}
+			i++
+		}
+	}
+	if err := flush(); err != nil {
+		return "", err
+	}
+	return out.String(), nil
+}
+
 // encodeExtern replicates Java URLEncoder.encode() + Ballerina post-processing:
 //   - space -> %20 (Java uses +, Ballerina converts to %20)
 //   - * -> %2A (encoded, unlike RFC 3986 sub-delimiters)
@@ -191,8 +267,8 @@ func encodeExtern() extern.NativeFunc {
 }
 
 // decodeExtern replicates Java URLDecoder.decode().
-// For non-UTF-8 charsets the percent-decoded bytes are interpreted in the
-// target charset and converted to UTF-8.
+// Only bytes originating from %XX escapes and '+' are passed through the
+// charset decoder; literal (un-encoded) characters are preserved as-is.
 func decodeExtern() extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		value, ok := args[0].(string)
@@ -207,24 +283,11 @@ func decodeExtern() extern.NativeFunc {
 		if enc == nil {
 			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while decoding. %s", charset)), nil
 		}
-
-		raw, err := percentDecodeToBytes(value)
+		result, err := decodeWithCharset(value, enc)
 		if err != nil {
 			return values.NewErrorWithMessage("Error occurred while decoding. " + err.Error()), nil
 		}
-
-		if enc == encoding.Nop {
-			if !utf8.Valid(raw) {
-				return values.NewErrorWithMessage("Error occurred while decoding. invalid UTF-8 sequence"), nil
-			}
-			return string(raw), nil
-		}
-
-		utf8Bytes, err := enc.NewDecoder().Bytes(raw)
-		if err != nil {
-			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while decoding. %s", err.Error())), nil
-		}
-		return string(utf8Bytes), nil
+		return result, nil
 	}
 }
 

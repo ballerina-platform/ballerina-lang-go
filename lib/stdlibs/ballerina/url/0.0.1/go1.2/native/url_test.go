@@ -229,6 +229,9 @@ func TestDecodeExtern(t *testing.T) {
 		{[]values.BalValue{"hello", 42}, "", true, "non-string charset is error"},
 		{[]values.BalValue{"%GG", "UTF-8"}, "", true, "invalid percent encoding is error"},
 		{[]values.BalValue{"%FF", "UTF-8"}, "", true, "invalid UTF-8 byte is error"},
+		// Literal non-ASCII chars must pass through unchanged, not be re-interpreted
+		// through the charset decoder (e.g. ISO-8859-1 would corrupt UTF-8 bytes).
+		{[]values.BalValue{"caf\xc3\xa9", "ISO-8859-1"}, "caf\xc3\xa9", false, "ISO-8859-1: literal non-ASCII not charset-decoded"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
