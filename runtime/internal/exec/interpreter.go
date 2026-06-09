@@ -25,7 +25,7 @@ import (
 
 func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 	ctx := extern.CreateContext(env)
-	cs := &callStack{elements: make([]*Frame, 0, 32)}
+	cs := &callStack{elements: make([]callStackEntry, 0, 32)}
 	ctx.CallStack = cs
 	env.Registry.(*modules.Registry).RegisterModule(pkg.PackageID, modules.NewBIRModule(ctx, &pkg))
 	defer func() {

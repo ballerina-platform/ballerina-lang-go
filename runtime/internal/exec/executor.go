@@ -44,7 +44,7 @@ func executeFunction(ctx *extern.Context, birFunc bir.BIRFunction, args []values
 
 func popFrame(ctx *extern.Context) {
 	cs := getCallStack(ctx)
-	frame := cs.elements[len(cs.elements)-1]
+	frame := cs.elements[len(cs.elements)-1].frame
 	cs.Pop()
 	frame.Free()
 }
@@ -154,23 +154,19 @@ func executeBasicBlockWithTrap(ctx *extern.Context, bb *bir.BIRBasicBlock, frame
 		}
 	}()
 	for _, inst := range bb.Instructions {
-		posProvider := inst.(interface{ GetPos() bir.Location })
-		frame.SetLocation(posProvider.GetPos())
+		getCallStack(ctx).SetCurrentLocation(inst.GetPos())
 		currentFrame = execInstruction(ctx, inst, currentFrame)
 	}
-	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
-	frame.SetLocation(posProvider.GetPos())
+	getCallStack(ctx).SetCurrentLocation(bb.Terminator.GetPos())
 	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame, nil
 }
 
 func executeBasicBlock(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
-		posProvider := inst.(interface{ GetPos() bir.Location })
-		frame.SetLocation(posProvider.GetPos())
+		getCallStack(ctx).SetCurrentLocation(inst.GetPos())
 		currentFrame = execInstruction(ctx, inst, currentFrame)
 	}
-	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
-	frame.SetLocation(posProvider.GetPos())
+	getCallStack(ctx).SetCurrentLocation(bb.Terminator.GetPos())
 	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame
 }
 
@@ -398,7 +394,7 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 }
 
 func unwindCallStackToFrame(ctx *extern.Context, frame *Frame) {
-	for callStackDepth(ctx) > 0 && getCallStack(ctx).elements[callStackDepth(ctx)-1] != frame {
+	for callStackDepth(ctx) > 0 && getCallStack(ctx).elements[callStackDepth(ctx)-1].frame != frame {
 		popFrame(ctx)
 	}
 }

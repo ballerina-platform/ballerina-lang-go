@@ -16,15 +16,11 @@
 
 package frame
 
-import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/values"
-)
+import "ballerina-lang-go/values"
 
 type Frame struct {
 	locals      []values.BalValue
 	functionKey string
-	location    bir.Location
 	parent      *Frame
 }
 
@@ -45,14 +41,6 @@ func (f *Frame) FunctionKey() string {
 
 func (f *Frame) SetFunctionKey(functionKey string) {
 	f.functionKey = functionKey
-}
-
-func (f *Frame) Location() bir.Location {
-	return f.location
-}
-
-func (f *Frame) SetLocation(location bir.Location) {
-	f.location = location
 }
 
 func (f *Frame) Local(idx int) values.BalValue {
