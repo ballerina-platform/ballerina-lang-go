@@ -36,7 +36,7 @@ import (
 	"ballerina-lang-go/tools/text"
 )
 
-type langLib struct {
+type bundledLib struct {
 	org       string
 	nameComps []string
 	// implicitID, when set, is the key under which the lib is exposed in the
@@ -48,7 +48,7 @@ type langLib struct {
 	version    string
 }
 
-var migratedLangLibs = []langLib{
+var migratedLangLibs = []bundledLib{
 	{
 		org:        "ballerina",
 		nameComps:  []string{"lang", "int"},
@@ -105,6 +105,9 @@ var migratedLangLibs = []langLib{
 		balPath:    "ballerina/lang.map/0.0.1/any/lang.map.bal",
 		version:    "0.0.1",
 	},
+}
+
+var bundledStdlibs = []bundledLib{
 	{
 		org:       "ballerina",
 		nameComps: []string{"io"},
@@ -125,7 +128,7 @@ func ImplicitImports(cx *context.CompilerContext) (map[string]model.ExportedSymb
 		if lib.implicitID == "" {
 			continue
 		}
-		space, err := compileLangLib(cx, lib)
+		space, err := compileBundledLib(cx, lib)
 		if err != nil {
 			return nil, err
 		}
@@ -134,34 +137,36 @@ func ImplicitImports(cx *context.CompilerContext) (map[string]model.ExportedSymb
 	return result, nil
 }
 
-// SeedPublicSymbols compiles the migrated lang libraries into cx and registers
-// them in publicSymbols keyed by package identifier, so a hand-rolled driver
-// resolves them like any other dependency when the user code imports them.
-// This includes the implicitly-used libs (e.g. lang.array) so that user code
-// which also imports them explicitly resolves, mirroring the project pipeline
-// where bundled lang libs are published to publicSymbols. A nil publicSymbols
-// map is initialized and returned.
+// SeedPublicSymbols compiles bundled libraries into cx and registers them in
+// publicSymbols keyed by package identifier, so a hand-rolled driver resolves
+// them like any other dependency when the user code imports them. This includes
+// implicitly-used langlibs (e.g. lang.array) so user code which also imports
+// them explicitly resolves, plus bundled stdlibs that corpus tests import
+// directly (e.g. ballerina/io). A nil publicSymbols map is initialized and
+// returned.
 func SeedPublicSymbols(cx *context.CompilerContext, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) (map[semantics.PackageIdentifier]model.ExportedSymbolSpace, error) {
 	if publicSymbols == nil {
 		publicSymbols = make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
 	}
-	for _, lib := range migratedLangLibs {
-		space, err := compileLangLib(cx, lib)
-		if err != nil {
-			return nil, err
+	for _, libs := range [][]bundledLib{migratedLangLibs, bundledStdlibs} {
+		for _, lib := range libs {
+			space, err := compileBundledLib(cx, lib)
+			if err != nil {
+				return nil, err
+			}
+			publicSymbols[semantics.PackageIdentifier{
+				OrgName:    lib.org,
+				ModuleName: strings.Join(lib.nameComps, "."),
+			}] = space
 		}
-		publicSymbols[semantics.PackageIdentifier{
-			OrgName:    lib.org,
-			ModuleName: strings.Join(lib.nameComps, "."),
-		}] = space
 	}
 	return publicSymbols, nil
 }
 
-// libCacheKey identifies a compiled lang library within a single compiler
-// context. A library may be requested by both ImplicitImports and
-// SeedPublicSymbols; caching ensures it is compiled (and its source file
-// registered) exactly once per context.
+// libCacheKey identifies a compiled bundled library within a single compiler
+// context. A lang library may be requested by both ImplicitImports and
+// SeedPublicSymbols; caching ensures each library is compiled (and its source
+// file registered) exactly once per context.
 type libCacheKey struct {
 	cx   *context.CompilerContext
 	path string
@@ -169,10 +174,10 @@ type libCacheKey struct {
 
 var libCache sync.Map // libCacheKey -> model.ExportedSymbolSpace
 
-// compileLangLib compiles a single bundled lang library's source into cx and
+// compileBundledLib compiles a single bundled library's source into cx and
 // returns its exported symbol space, reusing a previous compilation in the same
 // context if present.
-func compileLangLib(cx *context.CompilerContext, lib langLib) (model.ExportedSymbolSpace, error) {
+func compileBundledLib(cx *context.CompilerContext, lib bundledLib) (model.ExportedSymbolSpace, error) {
 	key := libCacheKey{cx: cx, path: lib.balPath}
 	if cached, ok := libCache.Load(key); ok {
 		return cached.(model.ExportedSymbolSpace), nil
