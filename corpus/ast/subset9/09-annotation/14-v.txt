@@ -448,13 +448,6 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable intDescriptor (type
-          (constrained-type
-            (value-type typedesc)
-            (value-type int))) (expr
-          (typedesc-expr
-            (value-type int)))))
-      (var-def
         (variable value (type
           (union-type
             (user-defined-type Operations)

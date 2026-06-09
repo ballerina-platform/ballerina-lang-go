@@ -27,7 +27,11 @@ func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 	ctx := extern.CreateContext(env)
 	cs := &callStack{elements: make([]*Frame, 0, 32)}
 	ctx.CallStack = cs
-	env.Registry.(*modules.Registry).RegisterModule(pkg.PackageID, modules.NewBIRModule(ctx, &pkg))
+	birModule, err := modules.NewBIRModule(ctx, &pkg)
+	if err != nil {
+		return err
+	}
+	env.Registry.(*modules.Registry).RegisterModule(pkg.PackageID, birModule)
 	defer func() {
 		if r := recover(); r != nil {
 			ctx.ReleaseAllHeldLocks()

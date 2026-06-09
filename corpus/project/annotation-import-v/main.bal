@@ -67,4 +67,11 @@ public function main() {
 
     meta:SourceInfo? dependencySourceInfo = meta:Tagged.@meta:sourceInfo;
     io:println(dependencySourceInfo is ()); // @output true
+
+    meta:Info? runtimeDependencyInfo = meta:RuntimeTagged.@meta:info;
+    if runtimeDependencyInfo is meta:Info {
+        io:println(runtimeDependencyInfo.name); // @output runtime-dependency
+        io:println(runtimeDependencyInfo.code); // @output 23
+        io:println(runtimeDependencyInfo.values[1]); // @output 24
+    }
 }

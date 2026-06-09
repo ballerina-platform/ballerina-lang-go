@@ -626,12 +626,16 @@ func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
 	for i := range node.RequiredParams {
 		p.PrintInner(&node.RequiredParams[i])
 	}
+	if ret := ReturnTypeAnnotatableOf(node); ret != nil {
+		p.printAnnotationAttachments(ret)
+	}
 	if node.GetReturnTypeDescriptor() != nil {
 		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
 	}
 	if node.Body != nil {
 		p.PrintInner(node.Body.(BLangNode))
 	}
+	p.printAnnotationAttachments(node)
 	p.indentLevel--
 	p.endNode()
 }
@@ -827,6 +831,11 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 
 	// Print return type
 	p.printString("(")
+	if ret := ReturnTypeAnnotatableOf(node); ret != nil {
+		p.indentLevel++
+		p.printAnnotationAttachments(ret)
+		p.indentLevel--
+	}
 	if node.GetReturnTypeDescriptor() != nil {
 		p.indentLevel++
 		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
@@ -1734,7 +1743,7 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 	p.startNode()
 	p.printString("record-type")
 	p.indentLevel++
-	for name, field := range node.Fields() {
+	for name, field := range node.FieldPtrs() {
 		p.startNode()
 		p.printString("field")
 		p.printString(name)
@@ -1745,6 +1754,7 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 			p.printString("optional")
 		}
 		p.indentLevel++
+		p.printAnnotationAttachments(field)
 		p.PrintInner(field.Type.(BLangNode))
 		if field.DefaultExpr != nil {
 			p.PrintInner(field.DefaultExpr.(BLangNode))
@@ -1795,6 +1805,7 @@ func (p *PrettyPrinter) printObjectField(node *BObjectField) {
 		p.printString("public")
 	}
 	p.indentLevel++
+	p.printAnnotationAttachments(node)
 	p.PrintInner(node.Ty.(BLangNode))
 	p.indentLevel--
 	p.endNode()

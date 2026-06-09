@@ -142,7 +142,6 @@ annotation Operations operations on type;
 type Target int;
 
 public function main() {
-    typedesc<int> intDescriptor = int;
     Operations? value = Target.@operations;
     if value is Operations {
         io:println(value.addInt); // @output 22

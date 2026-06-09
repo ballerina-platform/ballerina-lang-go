@@ -62,6 +62,22 @@ class Counter {
     }
   }
 }
+class MetadataClient {
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  resource get value MetadataClient.$resource$get$0() -> int{
+    bb0 {
+      %2 = ConstantLoad 1
+      %0 = %2;
+      return;
+    }
+  }
+}
 main() -> nil{
   bb0 {
     %1 = newObject $anon/.:Counter

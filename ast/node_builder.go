@@ -1456,9 +1456,7 @@ func (n *NodeBuilder) populateFuncSignatureOnBase(bLFunction *bLangInvokableNode
 		// Pop "return" from the stack
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 		annots := retTypeDescNode.Annotations()
-		if annots.Size() > 0 {
-			panic("unimplemented")
-		}
+		n.addAnnotationAttachments(annots, &ReturnTypeAnnotatable{base: bLFunction})
 	} else {
 		// Default return type is nil when not specified
 		nilReturnType := &BLangValueType{TypeKind: TypeKind_NIL}
@@ -2397,6 +2395,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			if vis := objectField.VisibilityQualifier(); vis != nil && vis.Kind() == common.PUBLIC_KEYWORD {
 				bField.flags |= model.FlagPublic
 			}
+			n.populateMetadata(objectField.Metadata(), bField)
 			if objectType.AddMember(bField) {
 				n.cx.SyntaxError("redeclared symbol '"+fieldName+"'", bField.pos)
 			}
@@ -2490,6 +2489,7 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			if recordField.QuestionMarkToken() != nil {
 				bField.SetOptional()
 			}
+			n.populateMetadata(recordField.Metadata(), &bField)
 			recordType.AddField(fieldName, bField)
 		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
 			recordFieldDV := field.(*tree.RecordFieldWithDefaultValueNode)
@@ -2503,6 +2503,7 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			if recordFieldDV.ReadonlyKeyword() != nil {
 				bField.SetReadonly()
 			}
+			n.populateMetadata(recordFieldDV.Metadata(), &bField)
 			recordType.AddField(fieldName, bField)
 		case common.TYPE_REFERENCE:
 			typeRef := field.(*tree.TypeReferenceNode)
@@ -4374,6 +4375,7 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 			bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
 			bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
 			bLFunction.SetAttached()
+			n.populateMetadata(funcDef.Metadata(), bLFunction)
 
 			funcName := bLFunction.Name.Value
 			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
@@ -4446,6 +4448,7 @@ func (n *NodeBuilder) transformClassField(objectField *tree.ObjectFieldNode) *BL
 		bLSimpleVar.SetInitialExpression(n.createExpression(expr))
 	}
 
+	n.populateMetadata(objectField.Metadata(), bLSimpleVar)
 	return bLSimpleVar
 }
 
@@ -4491,6 +4494,7 @@ func (n *NodeBuilder) createResourceMethodNode(funcDef *tree.FunctionDefinition)
 		}
 	}
 	rm.ResourcePath = n.createResourcePathSegments(funcDef.RelativeResourcePath())
+	n.populateMetadata(funcDef.Metadata(), rm)
 	return rm
 }
 

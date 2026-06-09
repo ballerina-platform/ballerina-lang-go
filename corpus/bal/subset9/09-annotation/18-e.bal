@@ -14,33 +14,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public type Info record {|
-    string name;
-    int code;
-    int[] values;
-|};
+annotation typeOnly on type;
 
-public type SourceInfo readonly & record {|
-    string name;
-    int code;
-|};
-
-public annotation Info info on type;
-public annotation marker on type;
-public const annotation SourceInfo sourceInfo on source type;
-
-@info {name: "dependency", code: 17, values: [17, 18]}
-@marker
-@sourceInfo {name: "dependency-source", code: 18}
-public type Tagged record {|
-    string value;
-|};
-
-function runtimeCode() returns int {
-    return 23;
+function value() returns @typeOnly int { // @error
+    return 1;
 }
 
-@info {name: "runtime-dependency", code: runtimeCode(), values: [23, 24]}
-public type RuntimeTagged record {|
-    string value;
+type RecordWithInvalidMetadata record {|
+    @typeOnly // @error
+    int value;
 |};
+
+type ObjectWithInvalidMetadata object {
+    @typeOnly // @error
+    public int value;
+};

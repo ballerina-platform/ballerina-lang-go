@@ -18,6 +18,7 @@ package ast
 
 import (
 	"iter"
+	"sort"
 	"strings"
 
 	"ballerina-lang-go/common"
@@ -278,6 +279,7 @@ type (
 		Name                            BLangIdentifier
 		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
+		ReturnTypeAnnAttachments        []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       SimpleVariableNode
@@ -600,6 +602,7 @@ func (b *BLangAnnotation) SetTypeDescriptor(typeDescriptor TypeDescriptor) {
 	b.typeDescriptor = typeDescriptor.(BType)
 }
 
+// AddAttachPoint adds an attachment point and is safe on a zero-value annotation.
 func (b *BLangAnnotation) AddAttachPoint(attachPoint AttachPoint) {
 	b.attachPoints.Add(attachPoint)
 }
@@ -609,6 +612,12 @@ func (b *BLangAnnotation) AttachPoints() []AttachPoint {
 	for attachPoint := range b.attachPoints.Values() {
 		result = append(result, attachPoint)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Point != result[j].Point {
+			return result[i].Point < result[j].Point
+		}
+		return !result[i].Source && result[j].Source
+	})
 	return result
 }
 
@@ -1130,6 +1139,44 @@ func (b *bLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 		b.MarkdownDocumentationAttachment = doc
 	} else {
 		panic("markdownDocumentationAttachment is not a BLangMarkdownDocumentation")
+	}
+}
+
+// ReturnTypeAnnotatable wraps the return-type annotation slice of an invokable
+// node and exposes it as an AnnotatableNode so the type resolver can process
+// return-type annotations uniformly.
+type ReturnTypeAnnotatable struct {
+	base *bLangInvokableNodeBase
+}
+
+func (r *ReturnTypeAnnotatable) GetPosition() diagnostics.Location { return r.base.GetPosition() }
+func (r *ReturnTypeAnnotatable) GetDeterminedType() semtypes.SemType {
+	return r.base.GetDeterminedType()
+}
+func (r *ReturnTypeAnnotatable) IsPublic() bool { return false }
+
+func (r *ReturnTypeAnnotatable) AddAnnotationAttachment(ann AnnotationAttachmentNode) {
+	r.base.ReturnTypeAnnAttachments = append(r.base.ReturnTypeAnnAttachments, *ann.(*BLangAnnotationAttachment))
+}
+
+func (r *ReturnTypeAnnotatable) GetAnnotationAttachments() []AnnotationAttachmentNode {
+	result := make([]AnnotationAttachmentNode, len(r.base.ReturnTypeAnnAttachments))
+	for i := range r.base.ReturnTypeAnnAttachments {
+		result[i] = &r.base.ReturnTypeAnnAttachments[i]
+	}
+	return result
+}
+
+// ReturnTypeAnnotatableOf returns a view of the given invokable node that
+// exposes its return-type annotation attachments as an AnnotatableNode.
+func ReturnTypeAnnotatableOf(fn InvokableNode) AnnotatableNode {
+	switch n := fn.(type) {
+	case *BLangFunction:
+		return &ReturnTypeAnnotatable{base: &n.bLangInvokableNodeBase}
+	case *BLangResourceMethod:
+		return &ReturnTypeAnnotatable{base: &n.bLangInvokableNodeBase}
+	default:
+		return nil
 	}
 }
 

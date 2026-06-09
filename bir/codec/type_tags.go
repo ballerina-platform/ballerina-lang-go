@@ -39,4 +39,5 @@ const (
 	typeTagMap        typeTag = 46
 	typeTagTypedesc   typeTag = 47
 	typeTagList       typeTag = 48
+	typeTagRuntimeRef typeTag = 49
 )

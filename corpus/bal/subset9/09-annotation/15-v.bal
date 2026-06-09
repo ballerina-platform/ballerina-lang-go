@@ -25,6 +25,10 @@ annotation Meta classMeta on class;
 annotation Meta fieldMeta on object field;
 annotation Meta methodMeta on object function;
 annotation parameterMeta on parameter;
+annotation returnMeta on return;
+annotation recordFieldMeta on record field;
+annotation objectFieldMeta on object field;
+annotation anyFieldMeta on field;
 
 @annotationMeta {name: "type annotation"}
 annotation Meta typeMeta on type;
@@ -35,7 +39,7 @@ class Counter {
     private int value = 0;
 
     @methodMeta {name: "add"}
-    function add(@parameterMeta int amount, @parameterMeta int... extras) returns int {
+    function add(@parameterMeta int amount, @parameterMeta int... extras) returns @returnMeta int {
         self.value += amount;
         foreach int extra in extras {
             self.value += extra;
@@ -46,6 +50,24 @@ class Counter {
 
 @typeMeta {name: "result"}
 type Result int;
+
+type RecordWithMetadata record {|
+    @recordFieldMeta
+    @anyFieldMeta
+    int value;
+|};
+
+type ObjectWithMetadata object {
+    @objectFieldMeta
+    @anyFieldMeta
+    public int value;
+};
+
+client class MetadataClient {
+    resource function get value() returns @returnMeta int {
+        return 1;
+    }
+}
 
 public function main() {
     Counter counter = new;

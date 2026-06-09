@@ -872,6 +872,8 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		for _, ins := range e.Insertions {
 			validateConstantExpr(ctx, ins, onNonConst)
 		}
+	case *ast.BLangAnnotAccessExpr:
+		validateConstantExpr(ctx, e.Expr, onNonConst)
 	default:
 		onNonConst(expr)
 	}

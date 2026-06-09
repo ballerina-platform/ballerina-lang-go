@@ -25,6 +25,14 @@
     )
   )
 )
+(MetadataClient
+  (MetadataClient.$resource$get$0
+    (bb0 () ()
+      (return
+        (literal 1))
+    )
+  )
+)
 (main
   (bb0 () ()
     (var-def

@@ -1,7 +1,0 @@
--- stdout --
--- stderr --
-fatal[UNIMPLEMENTED_ERROR]: runtime evaluation of non-const annotation values is not supported
-  --> 13-fv.bal:27:7
-   |
-27 | @info {code: code()} // @error runtime evaluation of non-const annotation values is not supported
-   |       ^^^^^^^^^^^^^^

@@ -1056,7 +1056,7 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 
 func typedescExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	td := &values.TypeDesc{Type: expr.Constraint, Annotations: expr.AnnotationValues.Clone()}
+	td := values.NewTypeDesc(expr.Constraint, expr.AnnotationValues.Clone())
 	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 	return expressionEffect{
 		result: resultOperand,
@@ -1736,10 +1736,7 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 	sym := ctx.getSymbol(symRef)
 	if sym.Kind() == model.SymbolKindType {
 		resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-		td := &values.TypeDesc{
-			Type:        ctx.symbolType(symRef),
-			Annotations: annotationValuesForTypeSymbol(sym),
-		}
+		td := values.NewTypeDesc(ctx.symbolType(symRef), annotationValuesForTypeSymbol(sym).Clone())
 		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 		return expressionEffect{
 			result: resultOperand,

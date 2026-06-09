@@ -804,12 +804,20 @@ func (as *AnnotationSymbol) AllowsAttachPoint(point string) bool {
 	if as.attachPoints[point] {
 		return true
 	}
+	if point == "recordfield" || point == "objectfield" {
+		if as.attachPoints["field"] || as.attachPoints[SourceAnnotationAttachPointKey("field")] {
+			return true
+		}
+	}
 	return as.attachPoints[SourceAnnotationAttachPointKey(point)]
 }
 
 func (as *AnnotationSymbol) IsRuntimeVisibleAt(point string) bool {
 	if len(as.attachPoints) == 0 {
 		return true
+	}
+	if point == "recordfield" || point == "objectfield" {
+		return as.attachPoints[point] || as.attachPoints["field"]
 	}
 	return as.attachPoints[point]
 }

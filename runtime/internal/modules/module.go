@@ -17,6 +17,8 @@
 package modules
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/values"
@@ -32,18 +34,21 @@ type ExternFunction struct {
 	Impl extern.NativeFunc
 }
 
-func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) *BIRModule {
+func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) (*BIRModule, error) {
 	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
 	for key, gv := range pkg.GlobalVars {
 		if gv.HasInitialValue {
-			globals[key] = gv.InitialValue
+			globals[key] = values.DeepClone(gv.InitialValue)
 		} else {
-			v, _ := values.FillerValue(ctx.TypeCtx, gv.GetType())
+			v, ok := values.FillerValue(ctx.TypeCtx, gv.GetType())
+			if !ok {
+				return nil, fmt.Errorf("no filler value for global variable %q", key)
+			}
 			globals[key] = v
 		}
 	}
 	return &BIRModule{
 		Pkg:     pkg,
 		Globals: globals,
-	}
+	}, nil
 }

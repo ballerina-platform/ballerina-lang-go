@@ -10,4 +10,7 @@ dependency
 18
 true
 true
+runtime-dependency
+23
+24
 -- stderr --

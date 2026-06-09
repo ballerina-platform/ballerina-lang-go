@@ -31,7 +31,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 79
+	BIR_VERSION = 80
 )
 
 type birWriter struct {
@@ -641,6 +641,14 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value 
 			bw.writeStringCPEntry(buf, key)
 			bw.writeConstValue(buf, td.Annotations[key])
 		}
+	case typeTagRuntimeRef:
+		ref, ok := value.(*values.RuntimeAnnotationValueRef)
+		if !ok {
+			panic(fmt.Sprintf("expected runtime annotation reference for tag %v, got %T", tag, value))
+		}
+		bw.writeStringCPEntry(buf, ref.Organization)
+		bw.writeStringCPEntry(buf, ref.Module)
+		bw.writeStringCPEntry(buf, ref.GlobalName)
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
 	}
@@ -669,6 +677,8 @@ func (bw *birWriter) inferTag(value any) (typeTag, error) {
 		return typeTagList, nil
 	case *values.TypeDesc:
 		return typeTagTypedesc, nil
+	case *values.RuntimeAnnotationValueRef:
+		return typeTagRuntimeRef, nil
 	case nil:
 		return typeTagNil, nil
 	default:

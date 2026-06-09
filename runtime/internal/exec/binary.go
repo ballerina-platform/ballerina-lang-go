@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
@@ -257,6 +258,18 @@ func execBinaryOpAnnotAccess(ctx *extern.Context, binaryOp *bir.BinaryOp, frame 
 	var value values.BalValue
 	if typedesc.Annotations != nil {
 		value = typedesc.Annotations[key]
+	}
+	if ref, ok := value.(*values.RuntimeAnnotationValueRef); ok {
+		registry := ctx.Env.Registry.(*modules.Registry)
+		module := registry.GetModuleByName(ref.Organization, ref.Module)
+		if module == nil {
+			panic(values.NewErrorWithMessage("annotation value module is not loaded"))
+		}
+		var found bool
+		value, found = module.Globals[ref.GlobalLookupKey()]
+		if !found {
+			panic(values.NewErrorWithMessage("annotation value global is not loaded"))
+		}
 	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, value)
 }

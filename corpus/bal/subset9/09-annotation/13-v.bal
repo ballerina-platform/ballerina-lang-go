@@ -14,17 +14,45 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 type Info record {|
     int code;
 |};
 
 annotation Info info on type;
+annotation Info[] infos on type;
 
 function code() returns int {
     return 1;
 }
 
-@info {code: code()} // @error runtime evaluation of non-const annotation values is not supported
+@info {code: code()}
 type Target record {|
     string id;
 |};
+
+@infos {code: 2}
+@infos {code: code()}
+type RepeatedTarget record {|
+    string id;
+|};
+
+Info? moduleMetadata = Target.@info;
+
+public function main() {
+    if moduleMetadata is Info {
+        io:println(moduleMetadata.code); // @output 1
+    }
+
+    Info? metadata = Target.@info;
+    if metadata is Info {
+        io:println(metadata.code); // @output 1
+    }
+
+    Info[]? repeatedMetadata = RepeatedTarget.@infos;
+    if repeatedMetadata is Info[] {
+        io:println(repeatedMetadata[0].code); // @output 2
+        io:println(repeatedMetadata[1].code); // @output 1
+    }
+}

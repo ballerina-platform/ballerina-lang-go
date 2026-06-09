@@ -130,8 +130,8 @@ type (
 
 	BObjectField struct {
 		bObjectFieldBase
-		Ty BType
-		// TODO: add metadata
+		Ty             BType
+		AnnAttachments []BLangAnnotationAttachment
 	}
 
 	BMethodDecl struct {
@@ -393,6 +393,18 @@ func (b *bObjectFieldBase) IsReadonly() bool {
 
 func (b *BObjectField) MemberKind() ObjectMemberKind {
 	return ObjectMemberKindField
+}
+
+func (b *BObjectField) GetAnnotationAttachments() []AnnotationAttachmentNode {
+	result := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i := range b.AnnAttachments {
+		result[i] = &b.AnnAttachments[i]
+	}
+	return result
+}
+
+func (b *BObjectField) AddAnnotationAttachment(ann AnnotationAttachmentNode) {
+	b.AnnAttachments = append(b.AnnAttachments, *ann.(*BLangAnnotationAttachment))
 }
 
 func (b *BMethodDecl) MemberKind() ObjectMemberKind {

@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 type desugaredNode[E ast.Node] struct {
@@ -313,9 +314,10 @@ func clearModuleInitExprs(pkg *ast.BLangPackage) {
 // Accumulate all the nodes referred by a given node. Assume all references to be valid
 // (semantic analysis should have cought any invalid cases) and is agnostic towards the exact expression
 type dependencyVisitor struct {
-	compilerCtx *context.CompilerContext
-	nodeSet     map[model.SymbolRef]int // symbol → index into nodes slice
-	deps        map[int]struct{}
+	compilerCtx    *context.CompilerContext
+	nodeSet        map[model.SymbolRef]int // symbol → index into nodes slice
+	runtimeGlobals map[string]model.SymbolRef
+	deps           map[int]struct{}
 }
 
 // mark current node depnds on on the given
@@ -332,16 +334,45 @@ func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
 		v.depends(n.Symbol())
 	case *ast.BLangSimpleVarRef:
 		v.depends(n.Symbol())
+	case *ast.BLangAnnotAccessExpr:
+		v.dependsOnRuntimeAnnotation(n)
 	}
 	return v
 }
 
 func (v *dependencyVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
 
+type annotationValueCarrier interface {
+	AnnotationValues() values.AnnotationValues
+}
+
+func (v *dependencyVisitor) dependsOnRuntimeAnnotation(expr *ast.BLangAnnotAccessExpr) {
+	receiver, ok := expr.Expr.(ast.BNodeWithSymbol)
+	if !ok {
+		return
+	}
+	carrier, ok := v.compilerCtx.GetSymbol(receiver.Symbol()).(annotationValueCarrier)
+	if !ok {
+		return
+	}
+	annotationSymbol := v.compilerCtx.GetSymbol(expr.Symbol())
+	key := model.AnnotationKey(expr.Symbol().Package, annotationSymbol.Name())
+	ref, ok := carrier.AnnotationValues()[key].(*values.RuntimeAnnotationValueRef)
+	if !ok {
+		return
+	}
+	if global, ok := v.runtimeGlobals[ref.GlobalLookupKey()]; ok {
+		v.depends(global)
+	}
+}
+
 func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleInitNode) ([]int, bool) {
 	nodeSet := make(map[model.SymbolRef]int, len(nodes))
+	runtimeGlobals := make(map[string]model.SymbolRef, len(nodes))
 	for i, n := range nodes {
 		nodeSet[n.sym] = i
+		ref := n.sym
+		runtimeGlobals[ref.Package.Organization+"/"+ref.Package.Package+":"+n.name.GetValue()] = ref
 	}
 
 	deps := make([][]int, len(nodes))
@@ -350,9 +381,10 @@ func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleI
 			continue
 		}
 		v := &dependencyVisitor{
-			compilerCtx: compilerCtx,
-			nodeSet:     nodeSet,
-			deps:        make(map[int]struct{}),
+			compilerCtx:    compilerCtx,
+			nodeSet:        nodeSet,
+			runtimeGlobals: runtimeGlobals,
+			deps:           make(map[int]struct{}),
 		}
 		ast.Walk(v, nodes[i].expr)
 		for d := range v.deps {

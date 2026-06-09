@@ -21,6 +21,14 @@
     (attach-point objectfunction))
   (annotation parameterMeta
     (attach-point parameter))
+  (annotation returnMeta
+    (attach-point return))
+  (annotation recordFieldMeta
+    (attach-point recordfield))
+  (annotation objectFieldMeta
+    (attach-point objectfield))
+  (annotation anyFieldMeta
+    (attach-point field))
   (annotation typeMeta
     (annotation-attachment annotationMeta
       (mapping-constructor-expr
@@ -41,6 +49,8 @@
     (function add (
       (variable amount (type
         (value-type int)))) (
+      (annotation-attachment returnMeta
+        (literal true))
       (value-type int))
       (block-function-body
         (compound-assignment +
@@ -59,7 +69,12 @@
               (simple-var-ref extra))))
         (return
           (field-based-access value
-            (simple-var-ref self))))))
+            (simple-var-ref self))))
+      (annotation-attachment methodMeta
+        (mapping-constructor-expr
+          (key-value
+            (literal name)
+            (literal add))))))
   (type-definition Result
     (annotation-attachment typeMeta
       (mapping-constructor-expr
@@ -67,6 +82,30 @@
           (literal name)
           (literal result))))
     (value-type int))
+  (type-definition RecordWithMetadata
+    (record-type
+      (field value
+        (annotation-attachment recordFieldMeta
+          (literal true))
+        (annotation-attachment anyFieldMeta
+          (literal true))
+        (value-type int))))
+  (type-definition ObjectWithMetadata
+    (object-type
+      (field value public
+        (annotation-attachment objectFieldMeta
+          (literal true))
+        (annotation-attachment anyFieldMeta
+          (literal true))
+        (value-type int))))
+  (class-definition MetadataClient
+    (resource-function get name:value
+      (annotation-attachment returnMeta
+        (literal true))
+      (value-type int)
+      (block-function-body
+        (return
+          (literal 1)))))
   (function main () (
     (value-type null))
     (block-function-body

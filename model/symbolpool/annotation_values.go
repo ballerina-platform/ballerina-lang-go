@@ -39,6 +39,7 @@ const (
 	annotationValueTagMap
 	annotationValueTagList
 	annotationValueTagTypedesc
+	annotationValueTagRuntimeRef
 )
 
 func (sw *symbolWriter) writeAnnotationValues(buf *bytes.Buffer, annotations values.AnnotationValues) error {
@@ -159,6 +160,15 @@ func (sw *symbolWriter) writeAnnotationValue(buf *bytes.Buffer, value values.Ann
 			return err
 		}
 		return sw.writeAnnotationValues(buf, td.Annotations)
+	case annotationValueTagRuntimeRef:
+		ref := value.(*values.RuntimeAnnotationValueRef)
+		if err := sw.writeStringCP(buf, ref.Organization); err != nil {
+			return err
+		}
+		if err := sw.writeStringCP(buf, ref.Module); err != nil {
+			return err
+		}
+		return sw.writeStringCP(buf, ref.GlobalName)
 	}
 	return fmt.Errorf("unsupported annotation value tag: %d", tag)
 }
@@ -185,6 +195,8 @@ func inferAnnotationValueTag(value values.AnnotationValue) (annotationValueTag, 
 		return annotationValueTagList, nil
 	case *values.TypeDesc:
 		return annotationValueTagTypedesc, nil
+	case *values.RuntimeAnnotationValueRef:
+		return annotationValueTagRuntimeRef, nil
 	default:
 		return 0, fmt.Errorf("unsupported annotation value type: %T", value)
 	}
@@ -269,9 +281,12 @@ func (sr *symbolReader) readAnnotationValue() values.AnnotationValue {
 		restFiller, _ := values.FillerFactoryFor(tyCtx, atomic.Rest())
 		return values.NewList(ty, atomic, isReadonly, restFiller, int(count), initial)
 	case annotationValueTagTypedesc:
-		return &values.TypeDesc{
-			Type:        sr.readType(),
-			Annotations: sr.readAnnotationValues(),
+		return values.NewTypeDesc(sr.readType(), sr.readAnnotationValues())
+	case annotationValueTagRuntimeRef:
+		return &values.RuntimeAnnotationValueRef{
+			Organization: sr.readStringCP(),
+			Module:       sr.readStringCP(),
+			GlobalName:   sr.readStringCP(),
 		}
 	default:
 		panic(fmt.Sprintf("unknown annotation value tag: %d", tag))

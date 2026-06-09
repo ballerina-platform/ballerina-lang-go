@@ -1136,7 +1136,13 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 			key := string(br.readStringCPEntry())
 			annotations[key] = br.readConstValue()
 		}
-		return &values.TypeDesc{Type: ty, Annotations: annotations}
+		return values.NewTypeDesc(ty, annotations)
+	case typeTagRuntimeRef:
+		return &values.RuntimeAnnotationValueRef{
+			Organization: string(br.readStringCPEntry()),
+			Module:       string(br.readStringCPEntry()),
+			GlobalName:   string(br.readStringCPEntry()),
+		}
 	default:
 		var idx int32
 		br.read(&idx)

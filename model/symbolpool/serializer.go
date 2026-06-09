@@ -27,7 +27,7 @@ import (
 
 const (
 	symMagic   = "\x53\x59\x4d\x42"
-	symVersion = 3
+	symVersion = 4
 )
 
 const (

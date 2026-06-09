@@ -501,7 +501,7 @@ func constantSub(lhs, rhs values.BalValue) (values.BalValue, error) {
 }
 
 func constantMul(lhs, rhs values.BalValue) (values.BalValue, error) {
-	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs, true)
+	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +524,7 @@ func constantMul(lhs, rhs values.BalValue) (values.BalValue, error) {
 }
 
 func constantDiv(lhs, rhs values.BalValue) (values.BalValue, error) {
-	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs, false)
+	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs)
 	if err != nil {
 		return nil, err
 	}
@@ -548,7 +548,7 @@ func constantDiv(lhs, rhs values.BalValue) (values.BalValue, error) {
 }
 
 func constantMod(lhs, rhs values.BalValue) (values.BalValue, error) {
-	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs, false)
+	lhs, rhs, err := promoteConstantMultiplicativeOperands(lhs, rhs)
 	if err != nil {
 		return nil, err
 	}
@@ -568,7 +568,7 @@ func constantMod(lhs, rhs values.BalValue) (values.BalValue, error) {
 	}
 }
 
-func promoteConstantMultiplicativeOperands(lhs, rhs values.BalValue, isMul bool) (values.BalValue, values.BalValue, error) {
+func promoteConstantMultiplicativeOperands(lhs, rhs values.BalValue) (values.BalValue, values.BalValue, error) {
 	if rhsInt, ok := rhs.(int64); ok {
 		switch lhs := lhs.(type) {
 		case int64:
@@ -581,14 +581,12 @@ func promoteConstantMultiplicativeOperands(lhs, rhs values.BalValue, isMul bool)
 			return nil, nil, fmt.Errorf("unsupported constant numeric type %T", lhs)
 		}
 	}
-	if isMul {
-		if lhsInt, ok := lhs.(int64); ok {
-			switch rhs.(type) {
-			case float64:
-				return float64(lhsInt), rhs, nil
-			case *decimal.Decimal:
-				return decimal.FromInt64(lhsInt), rhs, nil
-			}
+	if lhsInt, ok := lhs.(int64); ok {
+		switch rhs.(type) {
+		case float64:
+			return float64(lhsInt), rhs, nil
+		case *decimal.Decimal:
+			return decimal.FromInt64(lhsInt), rhs, nil
 		}
 	}
 	return lhs, rhs, nil
