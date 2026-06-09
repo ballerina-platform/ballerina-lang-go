@@ -19,10 +19,14 @@ package values
 import (
 	"fmt"
 	"strings"
+
+	"ballerina-lang-go/semtypes"
 )
 
 type (
 	XMLValue interface {
+		Type() semtypes.SemType
+		Readonly() bool
 		XMLString() string
 	}
 
@@ -34,23 +38,32 @@ type (
 		// values are URIs.
 		Namespaces *Map
 		Children   XMLValue
+		semType    semtypes.SemType
+		isReadonly bool
 	}
 
 	XMLSequence struct {
-		Children []XMLValue
+		Children   []XMLValue
+		semType    semtypes.SemType
+		isReadonly bool
 	}
 
 	XMLProcessingInstruction struct {
-		Target string
-		Data   string
+		Target     string
+		Data       string
+		semType    semtypes.SemType
+		isReadonly bool
 	}
 
 	XMLText struct {
-		Body string
+		Body    string
+		semType semtypes.SemType
 	}
 
 	XMLComment struct {
-		Body string
+		Body       string
+		semType    semtypes.SemType
+		isReadonly bool
 	}
 )
 
@@ -61,6 +74,10 @@ var (
 	_ XMLValue = &XMLText{}
 	_ XMLValue = &XMLComment{}
 )
+
+func (e *XMLElement) Type() semtypes.SemType { return e.semType }
+
+func (e *XMLElement) Readonly() bool { return e.isReadonly }
 
 func (e *XMLElement) XMLString() string {
 	var b strings.Builder
@@ -124,6 +141,10 @@ func EscapeXMLAttribute(s string) string {
 	return xmlAttributeEscaper.Replace(s)
 }
 
+func (s *XMLSequence) Type() semtypes.SemType { return s.semType }
+
+func (s *XMLSequence) Readonly() bool { return s.isReadonly }
+
 func (s *XMLSequence) XMLString() string {
 	var b strings.Builder
 	for _, child := range s.Children {
@@ -132,6 +153,10 @@ func (s *XMLSequence) XMLString() string {
 	return b.String()
 }
 
+func (p *XMLProcessingInstruction) Type() semtypes.SemType { return p.semType }
+
+func (p *XMLProcessingInstruction) Readonly() bool { return p.isReadonly }
+
 func (p *XMLProcessingInstruction) XMLString() string {
 	if strings.Contains(p.Data, "?>") {
 		panic(NewErrorWithMessage(fmt.Sprintf("xml processing instruction %q data must not contain '?>'", p.Target)))
@@ -139,15 +164,61 @@ func (p *XMLProcessingInstruction) XMLString() string {
 	return "<?" + p.Target + " " + p.Data + "?>"
 }
 
+func (t *XMLText) Type() semtypes.SemType { return t.semType }
+
+func (t *XMLText) Readonly() bool { return true }
+
 func (t *XMLText) XMLString() string {
 	return EscapeXMLContent(t.Body)
 }
+
+func (c *XMLComment) Type() semtypes.SemType { return c.semType }
+
+func (c *XMLComment) Readonly() bool { return c.isReadonly }
 
 func (c *XMLComment) XMLString() string {
 	if strings.Contains(c.Body, "--") || strings.HasSuffix(c.Body, "-") {
 		panic(NewErrorWithMessage("xml comment body must not contain '--' or end with '-'"))
 	}
 	return "<!--" + c.Body + "-->"
+}
+
+func NewXMLElement(name string, attrs, namespaces *Map, children XMLValue, isReadonly bool) *XMLElement {
+	ty := semtypes.XML_ELEMENT
+	if isReadonly {
+		ty = semtypes.XMLSingleton(semtypes.XML_PRIMITIVE_ELEMENT_RO)
+	}
+	return &XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children, semType: ty, isReadonly: isReadonly}
+}
+
+func NewXMLProcessingInstruction(target, data string, isReadonly bool) *XMLProcessingInstruction {
+	ty := semtypes.XML_PI
+	if isReadonly {
+		ty = semtypes.XMLSingleton(semtypes.XML_PRIMITIVE_PI_RO)
+	}
+	return &XMLProcessingInstruction{Target: target, Data: data, semType: ty, isReadonly: isReadonly}
+}
+
+func NewXMLText(body string) *XMLText {
+	return &XMLText{Body: body, semType: semtypes.XMLSingleton(semtypes.XML_PRIMITIVE_TEXT)}
+}
+
+func NewXMLComment(body string, isReadonly bool) *XMLComment {
+	ty := semtypes.XML_COMMENT
+	if isReadonly {
+		ty = semtypes.XMLSingleton(semtypes.XML_PRIMITIVE_COMMENT_RO)
+	}
+	return &XMLComment{Body: body, semType: ty, isReadonly: isReadonly}
+}
+
+func xmlSequenceType(children []XMLValue) (semtypes.SemType, bool) {
+	var childUnion = semtypes.NEVER
+	isReadonly := true
+	for _, child := range children {
+		childUnion = semtypes.Union(childUnion, child.Type())
+		isReadonly = isReadonly && child.Readonly()
+	}
+	return semtypes.XMLSequence(childUnion), isReadonly
 }
 
 // NewNormalizedXMLSequence builds an XML sequence in normalized form.
@@ -175,11 +246,13 @@ func NewNormalizedXMLSequence(items []XMLValue) *XMLSequence {
 		}
 		merged = append(merged, item)
 	}
-	return &XMLSequence{Children: merged}
+	ty, isReadonly := xmlSequenceType(merged)
+	return &XMLSequence{Children: merged, semType: ty, isReadonly: isReadonly}
 }
 
 // NewXMLConcatSequence builds a sequence for XML concatenation without copying values.
 // It reuses the passed-in backing slice; mutating it after the call has undefined behavior.
 func NewXMLConcatSequence(items ...XMLValue) *XMLSequence {
-	return &XMLSequence{Children: items}
+	ty, isReadonly := xmlSequenceType(items)
+	return &XMLSequence{Children: items, semType: ty, isReadonly: isReadonly}
 }

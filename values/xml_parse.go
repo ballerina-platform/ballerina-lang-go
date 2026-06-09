@@ -52,7 +52,7 @@ func ParseAsXMLValue(content string) (XMLValue, error) {
 			ns := cloneStringMap(currentNS)
 			attrs, namespaces := xmlAttrsAndNamespaces(t.Attr, ns)
 			name := xmlQualifiedName(t.Name, ns, true)
-			stack = append(stack, xmlParseElement{e: &XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces}, ns: currentNS})
+			stack = append(stack, xmlParseElement{e: NewXMLElement(name, attrs, namespaces, nil, true), ns: currentNS})
 			currentNS = ns
 			continue
 		case xml.EndElement:
@@ -67,14 +67,14 @@ func ParseAsXMLValue(content string) (XMLValue, error) {
 			if len(t) == 0 {
 				continue
 			}
-			item = &XMLText{Body: string(t)}
+			item = NewXMLText(string(t))
 		case xml.Comment:
-			item = &XMLComment{Body: string(t)}
+			item = NewXMLComment(string(t), true)
 		case xml.ProcInst:
 			if strings.EqualFold(t.Target, "xml") {
 				return nil, fmt.Errorf("xml processing instruction target %q is reserved", t.Target)
 			}
-			item = &XMLProcessingInstruction{Target: t.Target, Data: string(t.Inst)}
+			item = NewXMLProcessingInstruction(t.Target, string(t.Inst), true)
 		case xml.Directive:
 			return nil, fmt.Errorf("xml directive not allowed in template content: <!%s>", string(t))
 		default:
@@ -102,7 +102,7 @@ func appendXMLChild(children XMLValue, item XMLValue) XMLValue {
 
 func collapseXMLItems(items []XMLValue) XMLValue {
 	if len(items) == 0 {
-		return &XMLText{}
+		return NewXMLText("")
 	}
 	if len(items) == 1 {
 		return items[0]
