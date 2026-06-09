@@ -73,6 +73,7 @@ func createFunctionFrame(ctx *extern.Context, birFunc *bir.BIRFunction, args []v
 }
 
 func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue, frame *Frame) {
+	frame.SetLocal(0, nil)
 	localVars := &birFunc.LocalVars
 	argOffset := 0
 	if birFunc.Flags.Has(model.FlagAttached) {
