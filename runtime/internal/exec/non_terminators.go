@@ -395,5 +395,5 @@ func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *F
 		}
 		items = append(items, x)
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLSequence(items))
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewNormalizedXMLSequence(items))
 }

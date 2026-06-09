@@ -150,9 +150,10 @@ func (c *XMLComment) XMLString() string {
 	return "<!--" + c.Body + "-->"
 }
 
-// NewXMLSequence builds a sequence flattening any nested XMLSequence children
-// and merging adjacent XMLText.
-func NewXMLSequence(items []XMLValue) *XMLSequence {
+// NewNormalizedXMLSequence builds an XML sequence in normalized form.
+// It drops nil items, flattens nested XMLSequence values, and merges adjacent
+// XMLText values. Merging reuses the left XMLText operand and mutates its Body.
+func NewNormalizedXMLSequence(items []XMLValue) *XMLSequence {
 	var flat []XMLValue
 	for _, item := range items {
 		if item == nil {
@@ -175,4 +176,10 @@ func NewXMLSequence(items []XMLValue) *XMLSequence {
 		merged = append(merged, item)
 	}
 	return &XMLSequence{Children: merged}
+}
+
+// NewXMLConcatSequence builds a sequence for XML concatenation without copying values.
+// It reuses the passed-in backing slice; mutating it after the call has undefined behavior.
+func NewXMLConcatSequence(items ...XMLValue) *XMLSequence {
+	return &XMLSequence{Children: items}
 }

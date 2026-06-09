@@ -97,7 +97,7 @@ func appendXMLChild(children XMLValue, item XMLValue) XMLValue {
 	if children == nil {
 		return item
 	}
-	return NewXMLSequence([]XMLValue{children, item})
+	return NewNormalizedXMLSequence([]XMLValue{children, item})
 }
 
 func collapseXMLItems(items []XMLValue) XMLValue {
@@ -107,7 +107,7 @@ func collapseXMLItems(items []XMLValue) XMLValue {
 	if len(items) == 1 {
 		return items[0]
 	}
-	return NewXMLSequence(items)
+	return NewNormalizedXMLSequence(items)
 }
 
 func xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) {
