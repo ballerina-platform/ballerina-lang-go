@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/extern"
+	runtimeframe "ballerina-lang-go/runtime/internal/frame"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
@@ -36,12 +37,16 @@ func executeFunction(ctx *extern.Context, birFunc bir.BIRFunction, args []values
 	} else {
 		executeFunctionNoTrap(ctx, bb, frame)
 	}
+	result := frame.Local(0)
 	popFrame(ctx)
-	return frame.locals[0]
+	return result
 }
 
 func popFrame(ctx *extern.Context) {
-	getCallStack(ctx).Pop()
+	cs := getCallStack(ctx)
+	frame := cs.elements[len(cs.elements)-1]
+	cs.Pop()
+	frame.Free()
 }
 
 func pushFrame(ctx *extern.Context, frame *Frame) {
@@ -57,8 +62,9 @@ func getCallStack(ctx *extern.Context) *callStack {
 }
 
 func createFunctionFrame(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) *Frame {
-	locals := initLocalsForFunction(ctx, birFunc, args)
-	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
+	frame := runtimeframe.New(len(birFunc.LocalVars), parentFrame)
+	frame.SetFunctionKey(birFunc.FunctionLookupKey)
+	initLocalsForFunction(ctx, birFunc, args, frame)
 	pushFrame(ctx, frame)
 	if callStackDepth(ctx) > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))
@@ -66,17 +72,16 @@ func createFunctionFrame(ctx *extern.Context, birFunc *bir.BIRFunction, args []v
 	return frame
 }
 
-func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
+func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue, frame *Frame) {
 	localVars := &birFunc.LocalVars
-	locals := make([]values.BalValue, len(*localVars))
 	argOffset := 0
 	if birFunc.Flags.Has(model.FlagAttached) {
-		locals[1] = args[0]
+		frame.SetLocal(1, args[0])
 		argOffset = 1
 	}
 	requiredCount := len(birFunc.RequiredParams)
 	for i := range requiredCount {
-		locals[i+1+argOffset] = args[i+argOffset]
+		frame.SetLocal(i+1+argOffset, args[i+argOffset])
 	}
 
 	if birFunc.RestParams != nil {
@@ -90,14 +95,12 @@ func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args [
 		initial := make([]values.BalValue, len(restArgs))
 		copy(initial, restArgs)
 		list := values.NewList(restParamType, atomic, true, nil, len(restArgs), initial)
-		locals[restParamIdx] = list
+		frame.SetLocal(restParamIdx, list)
 	} else {
 		if len(args) > requiredCount+argOffset {
 			panic(values.NewErrorWithMessage("too many arguments"))
 		}
 	}
-
-	return locals
 }
 
 func executeFunctionWithTrap(ctx *extern.Context, birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame) {
@@ -114,6 +117,7 @@ func executeFunctionWithTrap(ctx *extern.Context, birFunc *bir.BIRFunction, bb *
 				panic(recovered)
 			}
 			unwindCallStackToFrame(ctx, frame)
+			unwindScopeFramesToFrame(nextFrame, frame)
 			errVal := panicValueToErrorValue(recovered)
 			// After unwinding, the active frame is the function frame.
 			currentFrame = frame
@@ -145,30 +149,39 @@ func executeFunctionNoTrap(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Fr
 func executeBasicBlockWithTrap(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
 	defer func() {
 		if r := recover(); r != nil {
+			nextFrame = currentFrame
 			recovered = r
 		}
 	}()
-	nextBB, nextFrame = executeBasicBlock(ctx, bb, frame, currentFrame)
-	return nextBB, nextFrame, nil
+	for _, inst := range bb.Instructions {
+		posProvider := inst.(interface{ GetPos() bir.Location })
+		frame.SetLocation(posProvider.GetPos())
+		currentFrame = execInstruction(ctx, inst, currentFrame)
+	}
+	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
+	frame.SetLocation(posProvider.GetPos())
+	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame, nil
 }
 
 func executeBasicBlock(ctx *extern.Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
 		posProvider := inst.(interface{ GetPos() bir.Location })
-		frame.location = posProvider.GetPos()
+		frame.SetLocation(posProvider.GetPos())
 		currentFrame = execInstruction(ctx, inst, currentFrame)
 	}
 	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
-	frame.location = posProvider.GetPos()
+	frame.SetLocation(posProvider.GetPos())
 	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame
 }
 
 func execInstruction(ctx *extern.Context, inst bir.BIRNonTerminator, frame *Frame) *Frame {
 	switch v := inst.(type) {
 	case *bir.PushScopeFrame:
-		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
+		return runtimeframe.New(v.NumLocals, frame)
 	case *bir.PopScopeFrame:
-		return frame.parent
+		parent := frame.Parent()
+		frame.Free()
+		return parent
 	case *bir.ConstantLoad:
 		execConstantLoad(ctx, v, frame)
 	case *bir.Move:
@@ -387,5 +400,13 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 func unwindCallStackToFrame(ctx *extern.Context, frame *Frame) {
 	for callStackDepth(ctx) > 0 && getCallStack(ctx).elements[callStackDepth(ctx)-1] != frame {
 		popFrame(ctx)
+	}
+}
+
+func unwindScopeFramesToFrame(currentFrame *Frame, targetFrame *Frame) {
+	for currentFrame != nil && currentFrame != targetFrame {
+		parent := currentFrame.Parent()
+		currentFrame.Free()
+		currentFrame = parent
 	}
 }

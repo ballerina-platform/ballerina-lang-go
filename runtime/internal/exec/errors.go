@@ -52,14 +52,14 @@ func formatCallStack(cs *callStack) []string {
 			break
 		}
 		f := frames[i]
-		loc := f.location
+		loc := f.Location()
 		if bir.IsLocationEmpty(loc) {
-			out = append(out, fmt.Sprintf("%s(unknown)", f.functionKey))
+			out = append(out, fmt.Sprintf("%s(unknown)", f.FunctionKey()))
 			continue
 		}
 		file := filepath.Base(loc.FilePath())
 		line := loc.StartLine() + 1
-		out = append(out, fmt.Sprintf("%s(%s:%d)", prettyFunctionName(f.functionKey), file, line))
+		out = append(out, fmt.Sprintf("%s(%s:%d)", prettyFunctionName(f.FunctionKey()), file, line))
 	}
 	return out
 }
