@@ -50,6 +50,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printImportPackage(t)
 	case *BLangFunction:
 		p.printFunction(t)
+	case *BLangResourceMethod:
+		p.printResourceMethod(t)
 	case *BLangBlockFunctionBody:
 		p.printBlockFunctionBody(t)
 	case *BLangSimpleVariable:
@@ -74,6 +76,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printInvocation(t)
 	case *BLangRemoteMethodCallAction:
 		p.printRemoteMethodCallAction(t)
+	case *BLangClientResourceAccessAction:
+		p.printClientResourceAccessAction(t)
 	case *BLangNamedArgsExpression:
 		p.printNamedArgsExpression(t)
 	case *BLangValueType:
@@ -569,6 +573,73 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 	p.printSticky(")")
 
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printResourcePathParamSegment(kind string, seg *BLangResourcePathSegment) {
+	p.startNode()
+	p.printString(kind)
+	p.printString(seg.Name)
+	if seg.ParamType != nil {
+		p.indentLevel++
+		p.PrintInner(seg.ParamType.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
+	p.startNode()
+	p.printString("resource-function")
+	p.printString(node.Name.Value)
+	p.indentLevel++
+	for i := range node.ResourcePath {
+		seg := &node.ResourcePath[i]
+		switch seg.Kind {
+		case ResourcePathSegmentName:
+			p.printString("name:" + seg.Name)
+		case ResourcePathSegmentParam:
+			p.printResourcePathParamSegment("param", seg)
+		case ResourcePathSegmentParamRest:
+			p.printResourcePathParamSegment("rest", seg)
+		}
+	}
+	for i := range node.RequiredParams {
+		p.PrintInner(&node.RequiredParams[i])
+	}
+	if node.GetReturnTypeDescriptor() != nil {
+		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
+	}
+	if node.Body != nil {
+		p.PrintInner(node.Body.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printClientResourceAccessAction(node *BLangClientResourceAccessAction) {
+	p.startNode()
+	p.printString("client-resource-access")
+	p.printString(node.MethodName)
+	p.indentLevel++
+	if node.Expr != nil {
+		p.printString("expr:")
+		p.PrintInner(node.Expr)
+	}
+	for i := range node.Path {
+		seg := &node.Path[i]
+		switch seg.Kind {
+		case ResourceAccessSegmentName:
+			p.printString("name:" + seg.Name)
+		case ResourceAccessSegmentComputed:
+			p.printString("computed:")
+			p.PrintInner(seg.Expr)
+		}
+	}
+	for _, arg := range node.ArgExprs {
+		p.PrintInner(arg)
+	}
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -1842,6 +1913,9 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	for _, name := range methodNames {
 		method := node.Methods[name]
 		p.printFunction(method)
+	}
+	for _, rm := range node.ResourceMethods {
+		p.printResourceMethod(rm)
 	}
 	p.indentLevel--
 	p.endNode()

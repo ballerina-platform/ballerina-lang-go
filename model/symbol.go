@@ -259,10 +259,19 @@ type (
 		members []InclusionMember
 	}
 
-	ClassSymbol struct {
+	classSymbolBase struct {
 		TypeSymbol
 		memberHolderBase
-		methods map[string]SymbolRef
+		methods         map[string]SymbolRef
+		resourceMethods []SymbolRef
+	}
+
+	classSymbol struct {
+		classSymbolBase
+	}
+
+	NetworkClassSymbol struct {
+		classSymbolBase
 	}
 
 	RecordSymbol struct {
@@ -299,6 +308,13 @@ type (
 	monomorphicFunctionSymbol struct {
 		functionSymbol
 		polymorhpicFn SymbolRef
+	}
+
+	ResourceMethodSymbol struct {
+		functionSymbol
+		methodName   string
+		pathListType semtypes.SemType
+		pathParams   []SymbolRef
 	}
 
 	containerGenericFunctionSymbol struct {
@@ -441,10 +457,14 @@ var (
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
 	_ Symbol                         = &AnnotationSymbol{}
-	_ Symbol                         = &ClassSymbol{}
+	_ Symbol                         = &classSymbol{}
+	_ Symbol                         = &NetworkClassSymbol{}
+	_ ClassSymbol                    = &classSymbol{}
+	_ ClassSymbol                    = &NetworkClassSymbol{}
 	_ Symbol                         = &RecordSymbol{}
 	_ Symbol                         = &ObjectTypeSymbol{}
-	_ MemberCarrier                  = &ClassSymbol{}
+	_ MemberCarrier                  = &classSymbol{}
+	_ MemberCarrier                  = &NetworkClassSymbol{}
 	_ MemberCarrier                  = &RecordSymbol{}
 	_ MemberCarrier                  = &ObjectTypeSymbol{}
 	_ Symbol                         = &ValueSymbol{}
@@ -453,6 +473,7 @@ var (
 	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
 	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
 	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
+	_ FunctionSymbol                 = &ResourceMethodSymbol{}
 	_ Symbol                         = &SymbolRef{}
 	_ SymbolSpaceProvider            = &ModuleScope{}
 )
@@ -809,6 +830,15 @@ type MemberCarrier interface {
 	FieldDefaults() []FieldDefault
 }
 
+type ClassSymbol interface {
+	Symbol
+	MemberCarrier
+	SetAnnotationValue(key string, value values.AnnotationValue)
+	AnnotationValues() values.AnnotationValues
+	SetMethods(map[string]SymbolRef)
+	MethodSymbol(name string) (SymbolRef, bool)
+}
+
 func (m *memberHolderBase) Members() []InclusionMember { return m.members }
 func (m *memberHolderBase) AddMember(im InclusionMember) {
 	m.members = append(m.members, im)
@@ -1037,12 +1067,69 @@ func NewAnnotationSymbol(name string, isPublic bool, isConst bool, attachPoints 
 }
 
 func NewClassSymbol(name string, isPublic bool) ClassSymbol {
-	return ClassSymbol{
+	return &classSymbol{
+		classSymbolBase: newClassSymbolBase(name, isPublic),
+	}
+}
+
+// NewNetworkClassSymbol creates a ClassSymbol for classes representing network
+// interaction objects (e.g. clients and services).
+func NewNetworkClassSymbol(name string, isPublic bool) ClassSymbol {
+	return &NetworkClassSymbol{
+		classSymbolBase: newClassSymbolBase(name, isPublic),
+	}
+}
+
+func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
+	return classSymbolBase{
 		TypeSymbol: TypeSymbol{
 			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
 			annotations: values.NewAnnotationValues(),
 		},
+		methods: map[string]SymbolRef{},
 	}
+}
+
+func (c *classSymbolBase) ResourceMethods() []SymbolRef {
+	return c.resourceMethods
+}
+
+func (c *classSymbolBase) AddResourceMethod(ref SymbolRef) {
+	c.resourceMethods = append(c.resourceMethods, ref)
+}
+
+func NewResourceMethodSymbol(name, methodName string, isPublic bool) *ResourceMethodSymbol {
+	return &ResourceMethodSymbol{
+		functionSymbol: functionSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+		methodName: methodName,
+	}
+}
+
+func (r *ResourceMethodSymbol) MethodName() string {
+	return r.methodName
+}
+
+func (r *ResourceMethodSymbol) PathListType() semtypes.SemType {
+	return r.pathListType
+}
+
+func (r *ResourceMethodSymbol) SetPathListType(ty semtypes.SemType) {
+	r.pathListType = ty
+}
+
+func (r *ResourceMethodSymbol) PathParams() []SymbolRef {
+	return r.pathParams
+}
+
+func (r *ResourceMethodSymbol) SetPathParams(params []SymbolRef) {
+	r.pathParams = params
+}
+
+func (r *ResourceMethodSymbol) Copy() Symbol {
+	cp := *r
+	return &cp
 }
 
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
@@ -1063,11 +1150,11 @@ func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	}
 }
 
-func (c *ClassSymbol) SetMethods(methods map[string]SymbolRef) {
+func (c *classSymbolBase) SetMethods(methods map[string]SymbolRef) {
 	c.methods = methods
 }
 
-func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
+func (c *classSymbolBase) MethodSymbol(name string) (SymbolRef, bool) {
 	ref, ok := c.methods[name]
 	return ref, ok
 }

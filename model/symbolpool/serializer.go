@@ -27,7 +27,7 @@ import (
 
 const (
 	symMagic   = "\x53\x59\x4d\x42"
-	symVersion = 2
+	symVersion = 3
 )
 
 const (
@@ -39,6 +39,8 @@ const (
 	symTagRecord
 	symTagObjectType
 	symTagAnnotation
+	symTagNetworkClass
+	symTagResourceMethod
 )
 
 const (
@@ -141,8 +143,10 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 	switch s := sym.(type) {
-	case *model.ClassSymbol:
-		return sw.writeClassSymbol(buf, s)
+	case *model.NetworkClassSymbol:
+		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
+	case model.ClassSymbol:
+		return sw.writeClassSymbol(buf, symTagClass, s)
 	case *model.RecordSymbol:
 		return sw.writeRecordSymbol(buf, s)
 	case *model.ObjectTypeSymbol:
@@ -155,6 +159,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeAnnotationSymbol(buf, s)
 	case model.DependentlyTypedFunctionSymbol:
 		return sw.writeDependentlyTypedFunctionSymbol(buf, s)
+	case *model.ResourceMethodSymbol:
+		return sw.writeResourceMethodSymbol(buf, s)
 	case model.FunctionSymbol:
 		return sw.writeFunctionSymbol(buf, s)
 	default:
@@ -295,8 +301,8 @@ func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) e
 	return write(buf, int32(ref.SpaceIndex))
 }
 
-func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymbol) error {
-	if err := write(buf, symTagClass); err != nil {
+func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
+	if err := write(buf, tag); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
@@ -305,7 +311,21 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymb
 	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.Members())
+	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	if tag == symTagNetworkClass {
+		refs := sym.(*model.NetworkClassSymbol).ResourceMethods()
+		if err := write(buf, int64(len(refs))); err != nil {
+			return err
+		}
+		for _, ref := range refs {
+			if err := sw.writeSymbolRef(buf, ref); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {
@@ -360,7 +380,12 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	sig := sym.Signature()
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
+}
+
+func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.FunctionSignature,
+	defaults *model.DefaultableParamInfo, included *model.IncludedRecordParamInfo,
+) error {
 	if err := write(buf, int64(len(sig.ParamTypes))); err != nil {
 		return err
 	}
@@ -391,10 +416,26 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := write(buf, uint8(sig.Flags)); err != nil {
 		return err
 	}
-	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes)); err != nil {
+	if err := sw.writeDefaultableParams(buf, defaults, len(sig.ParamTypes)); err != nil {
 		return err
 	}
-	return sw.writeIncludedRecordParams(buf, sym.IncludedRecordParams(), len(sig.ParamTypes))
+	return sw.writeIncludedRecordParams(buf, included, len(sig.ParamTypes))
+}
+
+func (sw *symbolWriter) writeResourceMethodSymbol(buf *bytes.Buffer, sym *model.ResourceMethodSymbol) error {
+	if err := write(buf, symTagResourceMethod); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, sym.MethodName()); err != nil {
+		return err
+	}
+	if err := sw.writeType(buf, sym.PathListType()); err != nil {
+		return err
+	}
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
 }
 
 func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, sym model.DependentlyTypedFunctionSymbol) error {

@@ -81,6 +81,19 @@ type (
 		LookupKey string
 		Fields    []ObjectField
 		VTable    map[string]*BIRFunction
+		RTable    map[string][]BIRResourceMethod
+	}
+
+	BIRResourceMethod struct {
+		PathSegments  []ResourcePathSegmentDef
+		RestSegmentTy semtypes.SemType
+		Fn            *BIRFunction
+	}
+
+	ResourcePathSegmentDef struct {
+		// Ty is a singleton string type for literal path segments
+		// and the parameter type for path-parameter segments.
+		Ty semtypes.SemType
 	}
 
 	BIRImportModule struct {
@@ -242,6 +255,7 @@ const (
 	INSTRUCTION_KIND_WAIT_ALL
 	INSTRUCTION_KIND_WK_ALT_RECEIVE
 	INSTRUCTION_KIND_WK_MULTIPLE_RECEIVE
+	INSTRUCTION_KIND_RESOURCE_CALL
 )
 
 const (

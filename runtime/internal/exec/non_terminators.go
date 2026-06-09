@@ -101,8 +101,24 @@ func execNewObject(ctx *extern.Context, newObject *bir.NewObject, frame *Frame) 
 	for methodName, method := range classDef.VTable {
 		methodKeys[methodName] = method.FunctionLookupKey
 	}
+	rtable := make(map[string][]values.ResourceEntry, len(classDef.RTable))
+	for methodName, entries := range classDef.RTable {
+		copied := make([]values.ResourceEntry, len(entries))
+		for i, entry := range entries {
+			segs := make([]values.ResourcePathSegmentDef, len(entry.PathSegments))
+			for j, seg := range entry.PathSegments {
+				segs[j] = values.ResourcePathSegmentDef{Ty: seg.Ty}
+			}
+			copied[i] = values.ResourceEntry{
+				PathSegments:      segs,
+				RestSegmentTy:     entry.RestSegmentTy,
+				FunctionLookupKey: entry.Fn.FunctionLookupKey,
+			}
+		}
+		rtable[methodName] = copied
+	}
 	objType := newObject.GetLhsOperand().VariableDcl.GetType()
-	obj := values.NewObject(objType, fieldValues, methodKeys)
+	obj := values.NewObject(objType, fieldValues, methodKeys, rtable)
 	setOperandValue(ctx, newObject.GetLhsOperand(), frame, obj)
 }
 

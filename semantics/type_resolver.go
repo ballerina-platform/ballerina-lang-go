@@ -273,7 +273,7 @@ func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemTyp
 	if !ok {
 		return model.SymbolRef{}, false
 	}
-	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	classSym, ok := t.getSymbol(classRef).(model.ClassSymbol)
 	if !ok {
 		return model.SymbolRef{}, false
 	}
@@ -488,7 +488,7 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 	}
 	for _, importedSpace := range t.importedSymbols {
 		for i, sym := range importedSpace.Main.Symbols() {
-			if _, ok := sym.(*model.ClassSymbol); ok {
+			if _, ok := sym.(model.ClassSymbol); ok {
 				ref := importedSpace.Main.RefAt(i)
 				if ty := sym.Type(); ty != nil {
 					t.classSymbolByType[ty] = ref
@@ -600,22 +600,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	p := newPackageTypeResolver(ctx, pkg, importedSymbols, pkg.Scope)
 	populateClassSymbolByType(p, pkg)
 	populateMappingAtomMaps(p, pkg, importedSymbols)
-	var fns []*ast.BLangFunction
-	for i := range pkg.Functions {
-		fns = append(fns, &pkg.Functions[i])
-	}
-	if pkg.InitFunction != nil {
-		fns = append(fns, pkg.InitFunction)
-	}
-	for i := range pkg.ClassDefinitions {
-		classDef := &pkg.ClassDefinitions[i]
-		if classDef.InitFunction != nil {
-			fns = append(fns, classDef.InitFunction)
-		}
-		for name := range classDef.Methods {
-			fns = append(fns, classDef.Methods[name])
-		}
-	}
+	fns := packageFunctionDecls(pkg)
 
 	allImports := make(map[string]ast.BLangImportPackage)
 	for i := range pkg.ClassDefinitions {
@@ -642,7 +627,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	var wg sync.WaitGroup
 	for i, fn := range fns {
 		wg.Add(1)
-		go func(idx int, f *ast.BLangFunction) {
+		go func(idx int, f functionDecl) {
 			defer wg.Done()
 			resolvers[idx] = resolveFunctionBody(p, f)
 		}(i, fn)
@@ -666,7 +651,92 @@ func isPolymorphicFnSymbol(sym model.FunctionSymbol) bool {
 	}
 }
 
-func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functionTypeResolver {
+type functionDecl interface {
+	ast.InvokableNode
+	ast.BNodeWithSymbol
+	Scope() model.Scope
+	IsIsolated() bool
+	IsTransactional() bool
+	FuncSymbolFlags() model.FuncSymbolFlags
+}
+
+// packageFunctionDecls returns every function-like declaration in pkg whose
+// body needs processing: top-level functions, the package init function,
+// and per-class init functions, methods, and resource methods.
+func packageFunctionDecls(pkg *ast.BLangPackage) []functionDecl {
+	var fns []functionDecl
+	for i := range pkg.Functions {
+		fns = append(fns, &pkg.Functions[i])
+	}
+	if pkg.InitFunction != nil {
+		fns = append(fns, pkg.InitFunction)
+	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		if classDef.InitFunction != nil {
+			fns = append(fns, classDef.InitFunction)
+		}
+		for name := range classDef.Methods {
+			fns = append(fns, classDef.Methods[name])
+		}
+		for _, rm := range classDef.ResourceMethods {
+			fns = append(fns, rm)
+		}
+	}
+	return fns
+}
+
+func resolveInvokableSignature(t typeResolver, fn functionDecl, fnSym model.FunctionSymbol, requiredParams []ast.BLangSimpleVariable) (semtypes.SemType, []semtypes.SemType, semtypes.SemType, semtypes.SemType, bool) {
+	paramTypes := make([]semtypes.SemType, len(requiredParams))
+	for i := range requiredParams {
+		resolveSimpleVariable(t, nil, &requiredParams[i])
+		setOtherNodesAsNever(&requiredParams[i])
+		paramTypes[i] = requiredParams[i].GetDeterminedType()
+	}
+	var restTy semtypes.SemType = semtypes.NEVER
+	if rp := fn.GetRestParam(); rp != nil {
+		restParam := rp.(*ast.BLangSimpleVariable)
+		resolveSimpleVariable(t, nil, restParam)
+		setOtherNodesAsNever(restParam)
+		elementType := restParam.GetDeterminedType()
+		restTy = elementType
+		listDefn := semtypes.NewListDefinition()
+		restParamListTy := listDefn.DefineListTypeWrapped(t.typeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
+		restParam.SetDeterminedType(restParamListTy)
+		updateSymbolType(t, restParam, restParamListTy)
+	}
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+	var returnTy semtypes.SemType
+	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
+		var ok bool
+		returnTy, ok = resolveBType(t, retTd.(ast.BType), 0)
+		if !ok {
+			return nil, nil, nil, nil, false
+		}
+		setOtherNodesAsNever(retTd.(ast.BLangNode))
+	} else {
+		returnTy = semtypes.NIL
+	}
+	fnDefn := semtypes.NewFunctionDefinition()
+	fnType := fnDefn.Define(t.typeEnv(), paramListTy, returnTy,
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), fn.IsIsolated(), fn.IsTransactional()))
+	updateSymbolType(t, fn, fnType)
+	sig := fnSym.Signature()
+	sig.Flags |= fn.FuncSymbolFlags()
+	sig.ParamTypes = paramTypes
+	paramNames := make([]string, len(requiredParams))
+	for i := range requiredParams {
+		paramNames[i] = requiredParams[i].GetName().GetValue()
+	}
+	sig.ParamNames = paramNames
+	sig.ReturnType = returnTy
+	sig.RestParamType = restTy
+	fnSym.SetSignature(sig)
+	return fnType, paramTypes, restTy, returnTy, true
+}
+
+func resolveFunctionBody(p *packageTypeResolver, fn functionDecl) *functionTypeResolver {
 	fnSymbol := p.getSymbol(fn.Symbol())
 	fnSym, ok := fnSymbol.(model.FunctionSymbol)
 	if !ok {
@@ -685,7 +755,12 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 	if !isPolymorphicFnSymbol(fnSym) {
 		ft.retTy = fnSym.Signature().ReturnType
 	}
-	switch body := fn.Body.(type) {
+	body := fn.GetBody()
+	if body == nil {
+		p.internalError("function body is nil at body-resolution stage", fn.GetPosition())
+		return ft
+	}
+	switch body := body.(type) {
 	case *ast.BLangExternFunctionBody:
 		_ = body
 	case *ast.BLangBlockFunctionBody:
@@ -694,7 +769,7 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 	case *ast.BLangExprFunctionBody:
 		resolveActionOrExpression(ft, nil, body.Expr, ft.retTy)
 	default:
-		p.internalError("unexpected function body kind", fn.Body.GetPosition())
+		p.internalError("unexpected function body kind", body.GetPosition())
 	}
 	return ft
 }
@@ -1432,56 +1507,11 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	if ty := t.symbolType(fn.Symbol()); ty != nil {
 		return ty, true
 	}
-	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
-	for i := range fn.RequiredParams {
-		resolveSimpleVariable(t, nil, &fn.RequiredParams[i])
-		setOtherNodesAsNever(&fn.RequiredParams[i])
-		paramTypes[i] = fn.RequiredParams[i].GetDeterminedType()
-	}
-	var restTy semtypes.SemType = semtypes.NEVER
-	if fn.RestParam != nil {
-		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
-		resolveSimpleVariable(t, nil, restParam)
-		setOtherNodesAsNever(restParam)
-		elementType := restParam.GetDeterminedType()
-		restTy = elementType
-		// Set the rest param's type to readonly T[]
-		listDefn := semtypes.NewListDefinition()
-		restParamListTy := listDefn.DefineListTypeWrapped(t.typeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
-		restParam.SetDeterminedType(restParamListTy)
-		updateSymbolType(t, restParam, restParamListTy)
-	}
-	paramListDefn := semtypes.NewListDefinition()
-	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
-	var returnTy semtypes.SemType
-	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
-		var ok bool
-		returnTy, ok = resolveBType(t, retTd.(ast.BType), 0)
-		if !ok {
-			return nil, false
-		}
-		setOtherNodesAsNever(retTd.(ast.BLangNode))
-	} else {
-		returnTy = semtypes.NIL
-	}
-	functionDefn := semtypes.NewFunctionDefinition()
-	fnType := functionDefn.Define(t.typeEnv(), paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.typeEnv(), fn.IsIsolated(), fn.IsTransactional()))
-
-	// Update symbol type for the function
-	updateSymbolType(t, fn, fnType)
 	fnSymbol := fnSym.(model.FunctionSymbol)
-	sig := fnSymbol.Signature()
-	sig.Flags |= fn.FuncSymbolFlags()
-	sig.ParamTypes = paramTypes
-	paramNames := make([]string, len(fn.RequiredParams))
-	for i := range fn.RequiredParams {
-		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
+	fnType, paramTypes, _, _, ok := resolveInvokableSignature(t, fn, fnSymbol, fn.RequiredParams)
+	if !ok {
+		return nil, false
 	}
-	sig.ParamNames = paramNames
-	sig.ReturnType = returnTy
-	sig.RestParamType = restTy
-	fnSymbol.SetSignature(sig)
 
 	setDefaultableParamFnSignatures(t, fnSymbol.DefaultableParams(), paramTypes)
 
@@ -1842,7 +1872,7 @@ func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.Mem
 		return s
 	case *model.ObjectTypeSymbol:
 		return s
-	case *model.ClassSymbol:
+	case model.ClassSymbol:
 		return s
 	default:
 		t.internalError("unexpected type definition", defn.GetPosition())
@@ -1857,7 +1887,7 @@ func getMemberCarrier(t typeResolver, ref model.SymbolRef) model.MemberCarrier {
 		return s
 	case *model.ObjectTypeSymbol:
 		return s
-	case *model.ClassSymbol:
+	case model.ClassSymbol:
 		return s
 	default:
 		t.internalError("symbol is not a member carrier", diagnostics.NewBuiltinLocation())
@@ -2064,6 +2094,15 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		}
 		method.SetDeterminedType(semtypes.NEVER)
 		method.Name.SetDeterminedType(semtypes.NEVER)
+	}
+
+	// Resolve resource method signatures and path types
+	for _, rm := range classDef.ResourceMethods {
+		if !resolveResourceMethodSignature(t, classDef, rm) {
+			return nil, false
+		}
+		rm.SetDeterminedType(semtypes.NEVER)
+		rm.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
 	// Collect included members from symbols
@@ -2713,6 +2752,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveLambdaFunctionExpr(t, chain, e)
 	case *ast.BLangRemoteMethodCallAction:
 		return resolveRemoteMethodCallAction(t, chain, e, expectedType)
+	case *ast.BLangClientResourceAccessAction:
+		return resolveClientResourceAccessAction(t, chain, e, expectedType)
 	case *ast.BLangInferredTypedescDefault:
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
 	case *ast.BLangXMLSequenceLiteral:
@@ -2997,7 +3038,7 @@ func padNewExprArgTypesForDefaults(t typeResolver, objectTy semtypes.SemType, ar
 	if !ok {
 		return argTys, false
 	}
-	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	classSym, ok := t.getSymbol(classRef).(model.ClassSymbol)
 	if !ok {
 		return argTys, false
 	}
@@ -5220,6 +5261,153 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 	symbolRef := t.createFunctionSymbol(methodSymbol.space, methodName, sig, fnTy)
 	setExpectedType(node, retTy)
 	return symbolRef, retTy, defaultExpressionEffect(chain), true
+}
+
+func resolveResourceMethodSignature(t typeResolver, classDef *ast.BLangClassDefinition, method *ast.BLangResourceMethod) bool {
+	if !classDef.IsClient() && !classDef.IsService() {
+		t.semanticError("resource methods are only allowed in client or service classes", method.GetPosition())
+		return false
+	}
+	sym, ok := t.getSymbol(method.Symbol()).(*model.ResourceMethodSymbol)
+	if !ok {
+		t.internalError("expected resource method symbol", method.GetPosition())
+		return false
+	}
+	pathTy, pathParamRefs, ok := resolveResourcePathType(t, method)
+	if !ok {
+		return false
+	}
+	sym.SetPathListType(pathTy)
+	sym.SetPathParams(pathParamRefs)
+
+	_, _, _, _, ok = resolveInvokableSignature(t, method, sym, method.RequiredParams)
+	return ok
+}
+
+func resolveResourcePathType(t typeResolver, method *ast.BLangResourceMethod) (semtypes.SemType, []model.SymbolRef, bool) {
+	anydata := semtypes.CreateAnydata(t.typeContext())
+	var members []semtypes.SemType
+	var restMember semtypes.SemType = semtypes.NEVER
+	var paramRefs []model.SymbolRef
+	for i := range method.ResourcePath {
+		seg := &method.ResourcePath[i]
+		switch seg.Kind {
+		case ast.ResourcePathSegmentName:
+			literalTy := semtypes.StringConst(seg.Name)
+			seg.SetDeterminedType(literalTy)
+			members = append(members, literalTy)
+		case ast.ResourcePathSegmentParam, ast.ResourcePathSegmentParamRest:
+			if seg.ParamType == nil {
+				t.internalError("resource path parameter is missing type", seg.GetPosition())
+				return nil, nil, false
+			}
+			paramTy, ok := resolveBType(t, seg.ParamType, 0)
+			if !ok {
+				return nil, nil, false
+			}
+			if !semtypes.IsSubtype(t.typeContext(), paramTy, anydata) {
+				// Not sure if we should allow anydata here? spec says it can be anydata but jBallerina only allow simple basic types
+				t.semanticError("resource path parameter type must be a subtype of anydata", seg.GetPosition())
+				return nil, nil, false
+			}
+			seg.SetDeterminedType(paramTy)
+			symbolTy := paramTy
+			if seg.Kind == ast.ResourcePathSegmentParamRest {
+				restListDefn := semtypes.NewListDefinition()
+				symbolTy = restListDefn.DefineListTypeWrapped(t.typeEnv(), []semtypes.SemType{}, 0, paramTy, semtypes.CellMutability_CELL_MUT_NONE)
+			}
+			if seg.Name != "" {
+				ref, ok := method.Scope().GetSymbol(seg.Name)
+				if !ok {
+					t.internalError("resource path parameter symbol not found in scope", seg.GetPosition())
+					return nil, nil, false
+				}
+				t.setSymbolType(ref, symbolTy)
+				paramRefs = append(paramRefs, ref)
+			}
+			if seg.Kind == ast.ResourcePathSegmentParamRest {
+				restMember = paramTy
+			} else {
+				members = append(members, paramTy)
+			}
+		}
+	}
+	listDefn := semtypes.NewListDefinition()
+	pathTy := listDefn.DefineListTypeWrapped(t.typeEnv(), members, len(members), restMember, semtypes.CellMutability_CELL_MUT_NONE)
+	return pathTy, paramRefs, true
+}
+
+func resolveClientResourceAccessAction(t typeResolver, chain *binding, expr *ast.BLangClientResourceAccessAction, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	receiverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	if !semtypes.IsClientObject(t.typeContext(), receiverTy) {
+		t.semanticError("resource access action is only allowed on client objects", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	atomicType := semtypes.ToObjectAtomicType(t.typeContext(), receiverTy)
+	if atomicType == nil {
+		t.unimplemented("non-atomic receiver for resource access action", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	classRef, ok := t.getClassAtomSymbol(atomicType)
+	if !ok {
+		t.internalError("failed to find class definition for receiver type", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	networkSym, ok := t.getSymbol(classRef).(*model.NetworkClassSymbol)
+	if !ok {
+		t.internalError("client reciever must have network class symbol", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	argPathTy, _, ok := resolveResourceAccessPathType(t, chain, expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	methodName := expr.MethodName
+	var matches []model.SymbolRef
+	for _, rmRef := range networkSym.ResourceMethods() {
+		rmSym, ok := t.getSymbol(rmRef).(*model.ResourceMethodSymbol)
+		if !ok {
+			t.internalError("expected resource method symbol", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		if rmSym.MethodName() != methodName || !semtypes.IsSubtype(t.typeContext(), argPathTy, rmSym.PathListType()) {
+			continue
+		}
+		matches = append(matches, rmRef)
+	}
+	if len(matches) == 0 {
+		t.semanticError(fmt.Sprintf("no matching resource method '%s'", methodName), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	if len(matches) > 1 {
+		t.unimplemented("ambiguous resource method dispatch", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	expr.SetMethodSymbol(matches[0])
+	return resolveFunctionCall(t, chain, expr, matches[0], expectedType)
+}
+
+func resolveResourceAccessPathType(t typeResolver, chain *binding, expr *ast.BLangClientResourceAccessAction) (semtypes.SemType, int, bool) {
+	var members []semtypes.SemType
+	for i := range expr.Path {
+		seg := &expr.Path[i]
+		switch seg.Kind {
+		case ast.ResourceAccessSegmentName:
+			members = append(members, semtypes.StringConst(seg.Name))
+		case ast.ResourceAccessSegmentComputed:
+			segTy, _, ok := resolveActionOrExpression(t, chain, seg.Expr, nil)
+			if !ok {
+				return nil, 0, false
+			}
+			members = append(members, segTy)
+		}
+	}
+	listDefn := semtypes.NewListDefinition()
+	pathTy := listDefn.DefineListTypeWrapped(t.typeEnv(), members, len(members), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	return pathTy, len(members), true
 }
 
 func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {

@@ -960,6 +960,19 @@ func createServiceObject(context Context) SemType {
 	return serviceObj
 }
 
+func CreateClientObject(context Context) SemType {
+	memo := context.clientObjectMemo()
+	if memo != nil {
+		return memo
+	}
+
+	quals := ObjectQualifiersFrom(false, false, NetworkQualifierClient)
+	od := NewObjectDefinition()
+	clientObj := od.Define(context.Env(), quals, []Member{})
+	context.setClientObjectMemo(clientObj)
+	return clientObj
+}
+
 func CreateIterable(context Context) SemType {
 	memo := context.iterableMemo()
 	if memo != nil {

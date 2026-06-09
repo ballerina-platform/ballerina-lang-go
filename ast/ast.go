@@ -153,6 +153,7 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
 		Methods                         map[string]*BLangFunction
+		ResourceMethods                 []*BLangResourceMethod
 		Fields                          []SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
 		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
@@ -283,11 +284,23 @@ type (
 		returnTypeDescriptor            TypeDescriptor
 		Body                            FunctionBodyNode
 		flags                           model.Flag
+		scope                           model.Scope
 	}
 
 	BLangFunction struct {
 		bLangInvokableNodeBase
-		scope model.Scope
+	}
+
+	BLangResourcePathSegment struct {
+		bLangNodeBase
+		Kind      ResourcePathSegmentKind
+		Name      string
+		ParamType BType
+	}
+
+	BLangResourceMethod struct {
+		bLangInvokableNodeBase
+		ResourcePath []BLangResourcePathSegment
 	}
 
 	BLangTypeDefinition struct {
@@ -1051,15 +1064,26 @@ func (b *BLangService) SetMarkdownDocumentationAttachment(documentationNode Mark
 	}
 }
 
-func (b *BLangFunction) Scope() model.Scope {
+func (b *bLangInvokableNodeBase) Scope() model.Scope {
 	return b.scope
 }
 
-func (b *BLangFunction) SetScope(scope model.Scope) {
+func (b *bLangInvokableNodeBase) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-var _ NodeWithScope = &BLangFunction{}
+var (
+	_ NodeWithScope = &BLangFunction{}
+	_ NodeWithScope = &BLangResourceMethod{}
+)
+
+type ResourcePathSegmentKind uint8
+
+const (
+	ResourcePathSegmentName ResourcePathSegmentKind = iota
+	ResourcePathSegmentParam
+	ResourcePathSegmentParamRest
+)
 
 func (b *bLangInvokableNodeBase) GetName() IdentifierNode {
 	return &b.Name
@@ -1123,6 +1147,12 @@ func (b *bLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
 	} else {
 		panic("param is not a BLangSimpleVariable")
 	}
+}
+
+// RequiredParameters returns the concrete required-parameter nodes backing this
+// invokable so callers can take the address of an individual parameter.
+func (b *bLangInvokableNodeBase) RequiredParameters() []BLangSimpleVariable {
+	return b.RequiredParams
 }
 
 func (b *bLangInvokableNodeBase) GetRequiredParams() []SimpleVariableNode {

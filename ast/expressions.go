@@ -95,6 +95,16 @@ func (*bLangExpressionBase) expressionNode()     {}
 func (*BLangRemoteMethodCallAction) actionNode()         {}
 func (*BLangRemoteMethodCallAction) actionOrExpression() {}
 
+func (*BLangClientResourceAccessAction) actionNode()         {}
+func (*BLangClientResourceAccessAction) actionOrExpression() {}
+
+type ResourceAccessSegmentKind uint8
+
+const (
+	ResourceAccessSegmentName ResourceAccessSegmentKind = iota
+	ResourceAccessSegmentComputed
+)
+
 type MappingKeyKind uint8
 
 const (
@@ -280,6 +290,20 @@ type (
 		bLangInvocationBase
 	}
 
+	BLangResourceAccessSegment struct {
+		bLangNodeBase
+		Kind ResourceAccessSegmentKind
+		Name string
+		Expr BLangExpression
+	}
+
+	BLangClientResourceAccessAction struct {
+		bLangNodeBase
+		bLangInvocationBase
+		Path       []BLangResourceAccessSegment
+		MethodName string
+	}
+
 	BLangGroupExpr struct {
 		bLangExpressionBase
 		Expression BLangExpression
@@ -435,6 +459,7 @@ var (
 	_ InvocationNode                                         = &BLangInvocation{}
 	_ BLangExpression                                        = &BLangInvocation{}
 	_ BLangAction                                            = &BLangRemoteMethodCallAction{}
+	_ BLangAction                                            = &BLangClientResourceAccessAction{}
 	_ BLangExpression                                        = &BLangQueryExpr{}
 	_ GroupExpressionNode                                    = &BLangGroupExpr{}
 	_ TypedescExpressionNode                                 = &BLangTypedescExpr{}
@@ -549,6 +574,14 @@ func (n *BLangRemoteMethodCallAction) MethodSymbol() model.SymbolRef {
 }
 
 func (n *BLangRemoteMethodCallAction) SetMethodSymbol(symbolRef model.SymbolRef) {
+	n.RawSymbol = &symbolRef
+}
+
+func (n *BLangClientResourceAccessAction) MethodSymbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
+}
+
+func (n *BLangClientResourceAccessAction) SetMethodSymbol(symbolRef model.SymbolRef) {
 	n.RawSymbol = &symbolRef
 }
 

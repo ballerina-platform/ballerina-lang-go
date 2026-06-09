@@ -114,14 +114,14 @@ type blockState struct {
 // uninitVarAnalyzer performs data flow analysis for uninitialized variables
 type uninitVarAnalyzer struct {
 	ctx               *context.CompilerContext
-	fn                *ast.BLangFunction
+	fn                ast.BLangNode
 	fcfg              *functionCFG
 	states            map[int]*blockState
 	implicitInitState *varInitState // vars initialized by language constructs, used as entry state baseline
 }
 
 // newUninitVarAnalyzer creates a new analyzer for a function
-func newUninitVarAnalyzer(ctx *context.CompilerContext, fn *ast.BLangFunction, fcfg *functionCFG) *uninitVarAnalyzer {
+func newUninitVarAnalyzer(ctx *context.CompilerContext, fn ast.BLangNode, fcfg *functionCFG) *uninitVarAnalyzer {
 	analyzer := &uninitVarAnalyzer{
 		ctx:               ctx,
 		fn:                fn,
@@ -141,7 +141,7 @@ func newUninitVarAnalyzer(ctx *context.CompilerContext, fn *ast.BLangFunction, f
 	return analyzer
 }
 
-func buildImplicitInitState(fn *ast.BLangFunction) *varInitState {
+func buildImplicitInitState(fn ast.BLangNode) *varInitState {
 	state := newVarInitState()
 	ast.Walk(&implicitVarMarker{state: state}, fn)
 	return state
@@ -310,38 +310,18 @@ func (v *varRefChecker) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 // analyzeUninitializedVars is the public entry point for uninitialized variable analysis
 func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-
-	for i := range pkg.Functions {
-		fn := &pkg.Functions[i]
+	for _, fn := range packageFunctionDecls(pkg) {
 		wg.Add(1)
-		go func(f *ast.BLangFunction) {
+		go func(fn functionDecl) {
 			defer wg.Done()
-			analyzeFunctionUninitializedVars(ctx, f, cfg)
+			analyzeFunctionUninitializedVars(ctx, fn, cfg)
 		}(fn)
 	}
-	for i := range pkg.ClassDefinitions {
-		classDef := &pkg.ClassDefinitions[i]
-		if classDef.InitFunction != nil {
-			wg.Add(1)
-			go func(f *ast.BLangFunction) {
-				defer wg.Done()
-				analyzeFunctionUninitializedVars(ctx, f, cfg)
-			}(classDef.InitFunction)
-		}
-		for _, method := range classDef.Methods {
-			wg.Add(1)
-			go func(f *ast.BLangFunction) {
-				defer wg.Done()
-				analyzeFunctionUninitializedVars(ctx, f, cfg)
-			}(method)
-		}
-	}
-
 	wg.Wait()
 }
 
 // analyzeFunctionUninitializedVars analyzes a single function for uninitialized variables
-func analyzeFunctionUninitializedVars(ctx *context.CompilerContext, fn *ast.BLangFunction, cfg *PackageCFG) {
+func analyzeFunctionUninitializedVars(ctx *context.CompilerContext, fn functionDecl, cfg *PackageCFG) {
 	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
 		return

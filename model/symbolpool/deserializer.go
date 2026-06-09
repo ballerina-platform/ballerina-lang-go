@@ -80,6 +80,20 @@ func (sr *symbolReader) deserialize() (result model.ExportedSymbolSpace, err err
 	return model.NewExportedSymbolSpace(mainSpace, annotationSpace), nil
 }
 
+func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {
+	name, isPublic, ty := sr.readSymbolBase()
+	methodName := sr.readStringCP()
+	pathType := sr.readType()
+	sig, defaults, included := sr.readFunctionSignatureBody(space)
+	rm := model.NewResourceMethodSymbol(name, methodName, isPublic)
+	rm.SetType(ty)
+	rm.SetSignature(sig)
+	rm.SetDefaultableParams(defaults)
+	rm.SetIncludedRecordParams(included)
+	rm.SetPathListType(pathType)
+	space.AddSymbol(name, rm)
+}
+
 func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 	org := sr.readStringCP()
 	pkg := sr.readStringCP()
@@ -116,7 +130,9 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 	case symTagType:
 		sr.readTypeSymbol(space)
 	case symTagClass:
-		sr.readClassSymbol(space)
+		sr.readClassSymbol(space, false)
+	case symTagNetworkClass:
+		sr.readClassSymbol(space, true)
 	case symTagRecord:
 		sr.readRecordSymbol(space)
 	case symTagObjectType:
@@ -129,6 +145,8 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readFunctionSymbol(space)
 	case symTagDependentlyTypedFunction:
 		sr.readDependentlyTypedFunctionSymbol(space)
+	case symTagResourceMethod:
+		sr.readResourceMethodSymbol(space)
 	default:
 		panic(fmt.Sprintf("unknown symbol tag: %d", tag))
 	}
@@ -241,11 +259,18 @@ func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef 
 	}
 }
 
-func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool) {
 	name, isPublic, ty := sr.readSymbolBase()
-	sym := model.NewClassSymbol(name, isPublic)
+	var sym model.ClassSymbol
+	if isNetwork {
+		sym = model.NewNetworkClassSymbol(name, isPublic)
+	} else {
+		sym = model.NewClassSymbol(name, isPublic)
+	}
 	sym.SetType(ty)
-	sr.setAnnotationValues(&sym.TypeSymbol)
+	for key, value := range sr.readAnnotationValues() {
+		sym.SetAnnotationValue(key, value)
+	}
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
@@ -254,7 +279,15 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 		}
 	}
 	sym.SetMethods(methods)
-	space.AddSymbol(name, &sym)
+	if isNetwork {
+		var rmCount int64
+		read(sr.r, &rmCount)
+		networkSym := sym.(*model.NetworkClassSymbol)
+		for i := int64(0); i < rmCount; i++ {
+			networkSym.AddResourceMethod(sr.readSymbolRef(space))
+		}
+	}
+	space.AddSymbol(name, sym)
 }
 
 func (sr *symbolReader) setAnnotationValues(sym *model.TypeSymbol) {
@@ -303,6 +336,15 @@ func (sr *symbolReader) readAnnotationSymbol(space *model.SymbolSpace) {
 func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 
+	sig, defaultInfo, inclInfo := sr.readFunctionSignatureBody(space)
+	sym := model.NewFunctionSymbol(name, sig, isPublic)
+	sym.SetType(ty)
+	sym.SetDefaultableParams(defaultInfo)
+	sym.SetIncludedRecordParams(inclInfo)
+	space.AddSymbol(name, sym)
+}
+
+func (sr *symbolReader) readFunctionSignatureBody(space *model.SymbolSpace) (model.FunctionSignature, model.DefaultableParamInfo, *model.IncludedRecordParamInfo) {
 	var paramCount int64
 	read(sr.r, &paramCount)
 	paramTypes := make([]semtypes.SemType, paramCount)
@@ -322,10 +364,8 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	if hasRestParam {
 		restParamType = sr.readType()
 	}
-
 	var flags uint8
 	read(sr.r, &flags)
-
 	sig := model.FunctionSignature{
 		ParamTypes:    paramTypes,
 		ParamNames:    paramNames,
@@ -333,13 +373,9 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 		RestParamType: restParamType,
 		Flags:         model.FuncSymbolFlags(flags),
 	}
-	sym := model.NewFunctionSymbol(name, sig, isPublic)
-	sym.SetType(ty)
 	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
-	sym.SetDefaultableParams(defaultInfo)
 	inclInfo := sr.readIncludedRecordParams(int(paramCount))
-	sym.SetIncludedRecordParams(inclInfo)
-	space.AddSymbol(name, sym)
+	return sig, defaultInfo, inclInfo
 }
 
 func (sr *symbolReader) readDependentlyTypedFunctionSymbol(space *model.SymbolSpace) {

@@ -511,8 +511,8 @@ func (sa *SemanticAnalyzer) validateModuleLevelIsolatedDecls(pkg *ast.BLangPacka
 // the rules described on isIsolatedFunctionInner, using the enclosing
 // function-analyzer's locals scope (seeded with parameters) so that inner
 // closures resolving past it land on the capture branch of checkRead.
-func validateIsolatedFunction(a analyzer, fn *ast.BLangFunction) {
-	if fn.Body == nil {
+func validateIsolatedFunction(a analyzer, fn invokableSignatureNode) {
+	if fn.GetBody() == nil {
 		if !fn.IsNative() {
 			a.ctx().InternalError("non-native function with nil body", fn.GetPosition())
 		}

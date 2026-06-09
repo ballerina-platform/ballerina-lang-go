@@ -484,6 +484,60 @@ func TestDependentlyTypedMethod(t *testing.T) {
 	}
 }
 
+func TestExternResourceMethod(t *testing.T) {
+	projectDir := filepath.Join(externTestDataDir, "resource-method-v")
+	absPath, err := filepath.Abs(projectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath))
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		for _, d := range compilation.DiagnosticResult().Diagnostics() {
+			t.Logf("diagnostic: %v", d)
+		}
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkgs := backend.BIRPackages()
+
+	stdoutBuf := &bytes.Buffer{}
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr), result.Project().Environment().TypeEnv())
+
+	// args layout: [receiver, path-computed-segments..., user-args...]
+	runtime.RegisterExternFunction(rt, "testorg", "externresourcemethod.api",
+		"Client.$resource$get$0",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			id := values.String(args[1], nil)
+			return "items/" + id, nil
+		})
+	runtime.RegisterExternFunction(rt, "testorg", "externresourcemethod.api",
+		"Client.$resource$get$1",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			n := args[2].(int64)
+			return n * 2, nil
+		})
+
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
+	}
+
+	expected := "items/foo\n14\n"
+	if stdoutBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}
+
 func TestExternHandle(t *testing.T) {
 	balFile := filepath.Join(externTestDataDir, "4-v.bal")
 	absPath, err := filepath.Abs(balFile)

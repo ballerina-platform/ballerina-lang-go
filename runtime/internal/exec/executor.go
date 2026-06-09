@@ -345,6 +345,8 @@ func execTerminator(ctx *extern.Context, term bir.BIRTerminator, frame *Frame) *
 	case *bir.LockEnd:
 		ctx.ReleaseLock()
 		return v.ThenBB
+	case *bir.ResourceFunctionCall:
+		return execResourceCall(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
