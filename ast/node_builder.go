@@ -1368,22 +1368,26 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 }
 
 func setFunctionQualifiers(bLFunction *BLangFunction, qualifierList tree.NodeList[tree.Token]) {
+	setFunctionQualifiersOnBase(&bLFunction.bLangInvokableNodeBase, qualifierList)
+}
+
+func setFunctionQualifiersOnBase(base *bLangInvokableNodeBase, qualifierList tree.NodeList[tree.Token]) {
 	for qualifier := range qualifierList.Iterator() {
 		kind := qualifier.Kind()
 
 		switch kind {
 		case common.PUBLIC_KEYWORD:
-			bLFunction.SetPublic()
+			base.SetPublic()
 		case common.PRIVATE_KEYWORD:
 			// private is the default
 		case common.REMOTE_KEYWORD:
-			bLFunction.SetRemote()
+			base.SetRemote()
 		case common.TRANSACTIONAL_KEYWORD:
-			bLFunction.SetTransactional()
+			base.SetTransactional()
 		case common.RESOURCE_KEYWORD:
-			bLFunction.SetResource()
+			base.SetResource()
 		case common.ISOLATED_KEYWORD:
-			bLFunction.SetIsolated()
+			base.SetIsolated()
 		default:
 			// Skip unknown qualifiers
 			continue
@@ -1392,6 +1396,10 @@ func setFunctionQualifiers(bLFunction *BLangFunction, qualifierList tree.NodeLis
 }
 
 func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSignature *tree.FunctionSignatureNode) {
+	n.populateFuncSignatureOnBase(&bLFunction.bLangInvokableNodeBase, funcSignature)
+}
+
+func (n *NodeBuilder) populateFuncSignatureOnBase(bLFunction *bLangInvokableNodeBase, funcSignature *tree.FunctionSignatureNode) {
 	// Set Parameters
 	parameters := funcSignature.Parameters()
 	for param := range parameters.Iterator() {
@@ -4291,6 +4299,10 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 				}
 				blangClass.AddMethod(funcName, bLFunction)
 			}
+		case common.RESOURCE_ACCESSOR_DEFINITION:
+			funcDef := member.(*tree.FunctionDefinition)
+			rm := n.createResourceMethodNode(funcDef)
+			blangClass.ResourceMethods = append(blangClass.ResourceMethods, rm)
 		case common.TYPE_REFERENCE:
 			typeRef := member.(*tree.TypeReferenceNode)
 			blangClass.unresolvedInclusions = append(blangClass.unresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
@@ -4349,7 +4361,71 @@ func (n *NodeBuilder) transformClassField(objectField *tree.ObjectFieldNode) *BL
 }
 
 func (n *NodeBuilder) TransformResourcePathParameter(resourcePathParameterNode *tree.ResourcePathParameterNode) BLangNode {
-	panic("TransformResourcePathParameter unimplemented")
+	seg := &BLangResourcePathSegment{}
+	switch resourcePathParameterNode.Kind() {
+	case common.RESOURCE_PATH_SEGMENT_PARAM:
+		seg.Kind = ResourcePathSegmentParam
+	case common.RESOURCE_PATH_REST_PARAM:
+		seg.Kind = ResourcePathSegmentParamRest
+	default:
+		n.cx.InternalError(fmt.Sprintf("unexpected resource path parameter node kind: %v", resourcePathParameterNode.Kind()), getPosition(n.de(), resourcePathParameterNode))
+	}
+	seg.pos = getPosition(n.de(), resourcePathParameterNode)
+	nameTok := resourcePathParameterNode.ParamName()
+	if nameTok != nil && !nameTok.IsMissing() {
+		seg.Name = createIdentifierFromToken(getPosition(n.de(), nameTok), nameTok).Value
+	}
+	if td := resourcePathParameterNode.TypeDescriptor(); td != nil {
+		seg.ParamType = n.createTypeNode(td).(BType)
+	}
+	return seg
+}
+
+func (n *NodeBuilder) createResourceMethodNode(funcDef *tree.FunctionDefinition) *BLangResourceMethod {
+	rm := &BLangResourceMethod{}
+	rm.pos = getPositionWithoutMetadata(n.de(), funcDef)
+	rm.Name = createIdentifierFromTokenInternal(getPosition(n.de(), funcDef.FunctionName()), funcDef.FunctionName(), false)
+	setFunctionQualifiersOnBase(&rm.bLangInvokableNodeBase, funcDef.QualifierList())
+	rm.SetAttached()
+	rm.SetResource()
+	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, rm.Name.Value)
+	n.populateFuncSignatureOnBase(&rm.bLangInvokableNodeBase, funcDef.FunctionSignature())
+	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	body := funcDef.FunctionBody()
+	if body == nil {
+		rm.SetInterface()
+	} else {
+		bodyNode := n.TransformSyntaxNode(body).(FunctionBodyNode)
+		rm.Body = bodyNode
+		if _, ok := bodyNode.(*BLangExternFunctionBody); ok {
+			rm.SetNative()
+		}
+	}
+	rm.ResourcePath = n.createResourcePathSegments(funcDef.RelativeResourcePath())
+	return rm
+}
+
+func (n *NodeBuilder) createResourcePathSegments(pathNodes tree.NodeList[tree.Node]) []BLangResourcePathSegment {
+	var segments []BLangResourcePathSegment
+	for node := range pathNodes.Iterator() {
+		switch node.Kind() {
+		case common.SLASH_TOKEN:
+			continue
+		case common.DOT_TOKEN:
+			continue
+		case common.IDENTIFIER_TOKEN:
+			tok := node.(tree.Token)
+			seg := BLangResourcePathSegment{Kind: ResourcePathSegmentName, Name: tok.Text()}
+			seg.pos = getPosition(n.de(), node)
+			segments = append(segments, seg)
+		case common.RESOURCE_PATH_SEGMENT_PARAM, common.RESOURCE_PATH_REST_PARAM:
+			param := node.(*tree.ResourcePathParameterNode)
+			segments = append(segments, *n.TransformResourcePathParameter(param).(*BLangResourcePathSegment))
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected resource path node kind: %v", node.Kind()), getPosition(n.de(), node))
+		}
+	}
+	return segments
 }
 
 func (n *NodeBuilder) TransformRequiredExpression(requiredBLangExpression *tree.RequiredExpressionNode) BLangNode {
@@ -4480,12 +4556,62 @@ func (n *NodeBuilder) TransformSpreadMember(spreadMemberNode *tree.SpreadMemberN
 	return n.createExpression(spreadMemberNode.Expression()).(BLangNode)
 }
 
-func (n *NodeBuilder) TransformClientResourceAccessAction(clientResourceAccessActionNode *tree.ClientResourceAccessActionNode) BLangNode {
-	panic("TransformClientResourceAccessAction unimplemented")
+func (n *NodeBuilder) TransformClientResourceAccessAction(node *tree.ClientResourceAccessActionNode) BLangNode {
+	action := &BLangClientResourceAccessAction{}
+	action.pos = getPosition(n.de(), node)
+	action.Expr = n.createExpression(node.Expression())
+	action.MethodName = "get"
+	if methodName := node.MethodName(); methodName != nil {
+		nameTok := methodName.Name()
+		if nameTok == nil || nameTok.IsMissing() {
+			n.cx.InternalError("missing method name token in resource access action", action.pos)
+		} else {
+			action.MethodName = nameTok.Text()
+		}
+	}
+	nameID := &BLangIdentifier{Value: action.MethodName}
+	nameID.SetPosition(action.pos)
+	action.Name = nameID
+	action.Path = n.createResourceAccessSegments(node.ResourceAccessPath())
+	if args := node.Arguments(); args != nil {
+		var argExprs []BLangExpression
+		argList := args.Arguments()
+		for arg := range argList.Iterator() {
+			argExprs = append(argExprs, n.createExpression(arg))
+		}
+		action.ArgExprs = argExprs
+	}
+	return action
 }
 
-func (n *NodeBuilder) TransformComputedResourceAccessSegment(computedResourceAccessSegmentNode *tree.ComputedResourceAccessSegmentNode) BLangNode {
-	panic("TransformComputedResourceAccessSegment unimplemented")
+func (n *NodeBuilder) createResourceAccessSegments(pathNodes tree.NodeList[tree.Node]) []BLangResourceAccessSegment {
+	var segments []BLangResourceAccessSegment
+	for node := range pathNodes.Iterator() {
+		switch node.Kind() {
+		case common.SLASH_TOKEN, common.DOT_TOKEN:
+			continue
+		case common.IDENTIFIER_TOKEN:
+			tok := node.(tree.Token)
+			seg := BLangResourceAccessSegment{Kind: ResourceAccessSegmentName, Name: tok.Text()}
+			seg.pos = getPosition(n.de(), node)
+			segments = append(segments, seg)
+		case common.COMPUTED_RESOURCE_ACCESS_SEGMENT:
+			computed := node.(*tree.ComputedResourceAccessSegmentNode)
+			segments = append(segments, *n.TransformComputedResourceAccessSegment(computed).(*BLangResourceAccessSegment))
+		case common.RESOURCE_ACCESS_REST_SEGMENT:
+			n.cx.Unimplemented("resource access rest segments are not yet supported", getPosition(n.de(), node))
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected resource access segment kind: %v", node.Kind()), getPosition(n.de(), node))
+		}
+	}
+	return segments
+}
+
+func (n *NodeBuilder) TransformComputedResourceAccessSegment(node *tree.ComputedResourceAccessSegmentNode) BLangNode {
+	seg := &BLangResourceAccessSegment{Kind: ResourceAccessSegmentComputed}
+	seg.pos = getPosition(n.de(), node)
+	seg.Expr = n.createExpression(node.Expression())
+	return seg
 }
 
 func (n *NodeBuilder) TransformResourceAccessRestSegment(resourceAccessRestSegmentNode *tree.ResourceAccessRestSegmentNode) BLangNode {

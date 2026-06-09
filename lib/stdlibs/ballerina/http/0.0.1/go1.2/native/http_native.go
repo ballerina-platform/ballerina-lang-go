@@ -1461,6 +1461,7 @@ func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][
 			"getHeaders":       "ballerina/http:Response.getHeaders",
 			"getHeaderNames":   "ballerina/http:Response.getHeaderNames",
 		},
+		nil,
 	)
 }
 

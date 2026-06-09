@@ -98,6 +98,8 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		}
 	case *ast.BLangRemoteMethodCallAction:
 		return walkInvocation(cx, expr)
+	case *ast.BLangClientResourceAccessAction:
+		return walkClientResourceAccessAction(cx, expr)
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard binding pattern can appear in variable references (e.g., _ = expr)
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
@@ -446,6 +448,38 @@ func walkTemplateExpr(cx *functionContext, expr *ast.BLangTemplateExpr) desugare
 		expr.Insertions[i] = r.replacementNode.(ast.BLangExpression)
 	}
 	return desugaredNode[ast.BLangActionOrExpression]{initStmts: initStmts, replacementNode: expr}
+}
+
+func walkClientResourceAccessAction(cx *functionContext, expr *ast.BLangClientResourceAccessAction) desugaredNode[ast.BLangActionOrExpression] {
+	var initStmts []ast.StatementNode
+	if expr.Expr != nil {
+		result := walkExpression(cx, expr.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+	for i := range expr.Path {
+		seg := &expr.Path[i]
+		if seg.Kind != ast.ResourceAccessSegmentComputed {
+			continue
+		}
+		result := walkExpression(cx, seg.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		seg.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+	for i := range expr.ArgExprs {
+		result := walkExpression(cx, expr.ArgExprs[i])
+		initStmts = append(initStmts, result.initStmts...)
+		expr.ArgExprs[i] = result.replacementNode.(ast.BLangExpression)
+	}
+	// Synthesize omitted defaultable arguments, mirroring walkInvocation's
+	// direct-call handling for the resolved resource method.
+	if fnSym, ok := cx.getSymbol(expr.MethodSymbol()).(model.FunctionSymbol); ok {
+		initStmts = append(initStmts, walkDirectCallArgs(cx, expr, fnSym)...)
+	}
+	return desugaredNode[ast.BLangActionOrExpression]{
+		initStmts:       initStmts,
+		replacementNode: expr,
+	}
 }
 
 func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLangActionOrExpression] {
@@ -894,7 +928,7 @@ func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desuga
 }
 
 func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []ast.StatementNode {
-	classSym, ok := cx.getSymbol(expr.ClassSymbol).(*model.ClassSymbol)
+	classSym, ok := cx.getSymbol(expr.ClassSymbol).(model.ClassSymbol)
 	if !ok {
 		return nil
 	}

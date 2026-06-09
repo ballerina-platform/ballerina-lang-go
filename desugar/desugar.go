@@ -685,6 +685,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			for name, method := range class.Methods {
 				class.Methods[name] = desugarFunction(pkgCtx, method)
 			}
+			for _, rm := range class.ResourceMethods {
+				desugarResourceMethod(pkgCtx, rm)
+			}
 			*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
 		})
 	}
@@ -769,6 +772,26 @@ func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinit
 	if len(initStmts) > 0 {
 		body := class.InitFunction.Body.(*ast.BLangBlockFunctionBody)
 		body.Stmts = append(initStmts, body.Stmts...)
+	}
+}
+
+func desugarResourceMethod(pkgCtx *packageContext, rm *ast.BLangResourceMethod) {
+	if rm.Body == nil {
+		return
+	}
+	cx := &functionContext{pkgCtx: pkgCtx}
+	cx.pushScope(rm.Scope())
+	defer cx.popScope()
+	switch body := rm.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		walkBlockFunctionBody(cx, body)
+	case *ast.BLangExprFunctionBody:
+		result := walkExpression(cx, body.Expr.(ast.BLangActionOrExpression))
+		if len(result.initStmts) > 0 {
+			rm.Body = convertExprBodyToBlockBody(body, result)
+		} else {
+			body.Expr = result.replacementNode.(ast.BLangExpression)
+		}
 	}
 }
 
