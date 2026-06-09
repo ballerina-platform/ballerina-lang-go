@@ -17,12 +17,13 @@
 package semantics
 
 import (
+	"slices"
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"slices"
-	"sync"
 )
 
 type basicBlock struct {
@@ -132,27 +133,23 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 		mu.Lock()
 		cfg.methodCfgs[classRef] = make(map[model.SymbolRef]functionCFG)
 		mu.Unlock()
-		if classDef.InitFunction != nil {
-			wg.Add(1)
-			initFn := classDef.InitFunction
-			go func() {
-				defer wg.Done()
-				fnCfg := analyzeFunction(ctx, initFn)
+		analyzeFunctionInner := func(sym model.SymbolRef, body ast.FunctionBodyNode) {
+			wg.Go(func() {
+				fnCfg := analyzeFunctionBody(ctx, body)
 				mu.Lock()
-				cfg.methodCfgs[classRef][initFn.Symbol()] = fnCfg
+				cfg.methodCfgs[classRef][sym] = fnCfg
 				mu.Unlock()
-			}()
+			})
+		}
+		if classDef.InitFunction != nil {
+			initFn := classDef.InitFunction
+			analyzeFunctionInner(initFn.Symbol(), initFn.Body)
 		}
 		for _, method := range classDef.Methods {
-			wg.Add(1)
-			method := method
-			go func() {
-				defer wg.Done()
-				fnCfg := analyzeFunction(ctx, method)
-				mu.Lock()
-				cfg.methodCfgs[classRef][method.Symbol()] = fnCfg
-				mu.Unlock()
-			}()
+			analyzeFunctionInner(method.Symbol(), method.Body)
+		}
+		for _, rm := range classDef.ResourceMethods {
+			analyzeFunctionInner(rm.Symbol(), rm.Body)
 		}
 	}
 	wg.Wait()
@@ -160,12 +157,16 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 }
 
 func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) functionCFG {
+	return analyzeFunctionBody(ctx, fn.Body)
+}
+
+func analyzeFunctionBody(ctx *context.CompilerContext, body ast.FunctionBodyNode) functionCFG {
 	tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
 	analyzer := functionControlFlowAnalyzer{
 		ctx:   ctx,
 		tyCtx: tyCtx,
 	}
-	return analyzer.analyzeFn(fn)
+	return analyzer.analyzeBody(body)
 }
 
 type functionControlFlowAnalyzer struct {
@@ -206,8 +207,8 @@ func continueEffect(bb bbRef) stmtEffect {
 	return stmtEffect{nextBB: bb}
 }
 
-func (analyzer *functionControlFlowAnalyzer) analyzeFn(fn *ast.BLangFunction) functionCFG {
-	switch fnBody := fn.Body.(type) {
+func (analyzer *functionControlFlowAnalyzer) analyzeBody(body ast.FunctionBodyNode) functionCFG {
+	switch fnBody := body.(type) {
 	case *ast.BLangBlockFunctionBody:
 		analyzer.analyzeBlockFunctionBody(fnBody)
 	case *ast.BLangExprFunctionBody:

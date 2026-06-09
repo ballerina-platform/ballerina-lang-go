@@ -173,6 +173,9 @@ func Walk(v Visitor, node BLangNode) {
 		for _, method := range node.Methods {
 			Walk(v, method)
 		}
+		for _, method := range node.ResourceMethods {
+			Walk(v, method)
+		}
 		for _, field := range node.Fields {
 			Walk(v, field.(BLangNode))
 		}
@@ -237,6 +240,26 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 3: Function & Body
 	case *BLangFunction:
 		Walk(v, &node.Name)
+		for i := range node.RequiredParams {
+			Walk(v, &node.RequiredParams[i])
+		}
+		if node.RestParam != nil {
+			Walk(v, node.RestParam.(BLangNode))
+		}
+		if node.returnTypeDescriptor != nil {
+			walkTypeDescriptor(v, node.returnTypeDescriptor)
+		}
+		if node.Body != nil {
+			Walk(v, node.Body.(BLangNode))
+		}
+
+	case *BLangResourceMethod:
+		Walk(v, &node.Name)
+		for i := range node.ResourcePath {
+			if tn := node.ResourcePath[i].ParamType; tn != nil {
+				walkTypeDescriptor(v, tn)
+			}
+		}
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}
@@ -916,6 +939,19 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		for _, arg := range node.ArgExprs {
 			Walk(v, arg.(BLangNode))
+		}
+
+	case *BLangClientResourceAccessAction:
+		if node.Expr != nil {
+			Walk(v, node.Expr)
+		}
+		for i := range node.Path {
+			if e := node.Path[i].Expr; e != nil {
+				Walk(v, e)
+			}
+		}
+		for _, arg := range node.ArgExprs {
+			Walk(v, arg)
 		}
 
 	default:

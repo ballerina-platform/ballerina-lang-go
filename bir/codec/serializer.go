@@ -143,6 +143,26 @@ func (bw *birWriter) writeClassDef(buf *bytes.Buffer, classDef *bir.BIRClassDef)
 		bw.writeStringCPEntry(buf, name)
 		bw.writeFunction(buf, classDef.VTable[name])
 	}
+	var rmNames []string
+	for name := range classDef.RTable {
+		rmNames = append(rmNames, name)
+	}
+	sort.Strings(rmNames)
+	bw.writeLength(buf, len(rmNames))
+	for _, name := range rmNames {
+		entries := classDef.RTable[name]
+		bw.writeStringCPEntry(buf, name)
+		bw.writeLength(buf, len(entries))
+		for i := range entries {
+			entry := &entries[i]
+			bw.writeLength(buf, len(entry.PathSegments))
+			for _, seg := range entry.PathSegments {
+				bw.writeType(buf, seg.Ty)
+			}
+			bw.writeType(buf, entry.RestSegmentTy)
+			bw.writeFunction(buf, entry.Fn)
+		}
+	}
 }
 
 func (bw *birWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) {
@@ -431,6 +451,24 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
 	case *bir.LockEnd:
 		bw.writeStringCPEntry(buf, term.LockKey)
+		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
+	case *bir.ResourceFunctionCall:
+		bw.writeOperand(buf, &term.Receiver)
+		bw.writeStringCPEntry(buf, term.MethodName)
+		bw.writeLength(buf, len(term.PathSegments))
+		for i := range term.PathSegments {
+			bw.writeOperand(buf, &term.PathSegments[i])
+		}
+		bw.writeLength(buf, len(term.Args))
+		for i := range term.Args {
+			bw.writeOperand(buf, &term.Args[i])
+		}
+		if term.LhsOp != nil {
+			write(buf, uint8(1))
+			bw.writeOperand(buf, term.LhsOp)
+		} else {
+			write(buf, uint8(0))
+		}
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
 	default:
 		panic(fmt.Sprintf("unsupported terminator type: %T", term))
