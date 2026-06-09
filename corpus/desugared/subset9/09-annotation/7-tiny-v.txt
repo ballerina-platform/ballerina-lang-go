@@ -10,8 +10,22 @@
       (field value
         (value-type int))))
   (type-definition First
+    (annotation-attachment tiny
+      (mapping-constructor-expr
+        (key-value
+          (literal value)
+          (binary-expr +
+            (simple-var-ref BASE)
+            (literal 1)))))
     (value-type int))
   (type-definition Second
+    (annotation-attachment tiny
+      (mapping-constructor-expr
+        (key-value
+          (literal value)
+          (binary-expr +
+            (simple-var-ref BASE)
+            (literal 2)))))
     (value-type int))
   (function init () ()
     (block-function-body

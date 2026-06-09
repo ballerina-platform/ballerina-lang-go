@@ -15,6 +15,24 @@
       (user-defined-type Meta) dimensions: 1 ([]))
     (attach-point type))
   (type-definition Target
+    (annotation-attachment meta
+      (literal true))
+    (annotation-attachment tag
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal first))
+        (key-value
+          (literal code)
+          (literal 1))))
+    (annotation-attachment tag
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal second))
+        (key-value
+          (literal code)
+          (literal 2))))
     (record-type
       (field id
         (value-type string))))

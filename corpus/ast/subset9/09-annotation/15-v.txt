@@ -1,0 +1,87 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Meta
+    (intersection-type
+      (value-type readonly)
+      (record-type
+        (field name optional
+          (value-type string)))))
+  (annotation annotationMeta public const
+    (user-defined-type Meta)
+    (attach-point source annotation))
+  (annotation classMeta
+    (user-defined-type Meta)
+    (attach-point class))
+  (annotation fieldMeta
+    (user-defined-type Meta)
+    (attach-point objectfield))
+  (annotation methodMeta
+    (user-defined-type Meta)
+    (attach-point objectfunction))
+  (annotation parameterMeta
+    (attach-point parameter))
+  (annotation typeMeta
+    (annotation-attachment annotationMeta
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal type annotation))))
+    (user-defined-type Meta)
+    (attach-point type))
+  (class-definition Counter
+    (annotation-attachment classMeta
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal counter))))
+    (variable value (type
+      (value-type int)) (expr
+      (literal 0)))
+    (function add (
+      (variable amount (type
+        (value-type int)))) (
+      (value-type int))
+      (block-function-body
+        (compound-assignment +
+          (field-based-access value
+            (simple-var-ref self))
+          (simple-var-ref amount))
+        (foreach
+          (var-def
+            (variable extra (type
+              (value-type int))))
+          (simple-var-ref extras)
+          (block-stmt
+            (compound-assignment +
+              (field-based-access value
+                (simple-var-ref self))
+              (simple-var-ref extra))))
+        (return
+          (field-based-access value
+            (simple-var-ref self))))))
+  (type-definition Result
+    (annotation-attachment typeMeta
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal result))))
+    (value-type int))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable counter (type
+          (user-defined-type Counter)) (expr
+          (new ()))))
+      (var-def
+        (variable result (type
+          (user-defined-type Result)) (expr
+          (invocation add expr:
+            (simple-var-ref counter) (
+            (literal 1)
+            (literal 2)
+            (literal 3))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result)))))))

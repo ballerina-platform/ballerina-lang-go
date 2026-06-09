@@ -14,6 +14,14 @@
       (field code
         (value-type int))))
   (type-definition Target
+    (annotation-attachment meta
+      (mapping-constructor-expr
+        (key-value
+          (literal label)
+          (simple-var-ref LABEL))
+        (key-value
+          (literal code)
+          (simple-var-ref CODE))))
     (record-type
       (field id
         (value-type string))))

@@ -40,7 +40,15 @@
       (return
         (binary-expr +
           (simple-var-ref left)
-          (simple-var-ref right)))))
+          (simple-var-ref right))))
+    (annotation-attachment fnInfo
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal add))
+        (key-value
+          (literal code)
+          (literal 3)))))
   (function main () (
     (value-type null))
     (block-function-body

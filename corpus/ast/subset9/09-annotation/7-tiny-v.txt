@@ -12,8 +12,22 @@
     (user-defined-type TinyInfo)
     (attach-point type))
   (type-definition First
+    (annotation-attachment tiny
+      (mapping-constructor-expr
+        (key-value
+          (literal value)
+          (binary-expr +
+            (simple-var-ref BASE)
+            (literal 1)))))
     (value-type int))
   (type-definition Second
+    (annotation-attachment tiny
+      (mapping-constructor-expr
+        (key-value
+          (literal value)
+          (binary-expr +
+            (simple-var-ref BASE)
+            (literal 2)))))
     (value-type int))
   (function main () (
     (value-type null))

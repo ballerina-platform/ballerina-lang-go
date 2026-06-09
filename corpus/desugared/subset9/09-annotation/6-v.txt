@@ -23,6 +23,72 @@
       (field fraction
         (value-type decimal))))
   (type-definition Target
+    (annotation-attachment details
+      (mapping-constructor-expr
+        (key-value
+          (literal arithmetic)
+          (binary-expr -
+            (binary-expr *
+              (group-expr
+                (binary-expr +
+                  (simple-var-ref BASE)
+                  (literal 2)))
+              (literal 3))
+            (literal 1)))
+        (key-value
+          (literal bitwise)
+          (binary-expr <<
+            (group-expr
+              (binary-expr &
+                (group-expr
+                  (unary-expr ~
+                    (simple-var-ref BASE)))
+                (literal 15)))
+            (literal 1)))
+        (key-value
+          (literal logic)
+          (binary-expr &&
+            (unary-expr !
+              (group-expr
+                (binary-expr <
+                  (simple-var-ref BASE)
+                  (literal 5))))
+            (binary-expr ==
+              (simple-var-ref BASE)
+              (literal 10))))
+        (key-value
+          (literal label)
+          (string-template-literal
+            (template-string "value-")
+            (binary-expr +
+              (simple-var-ref BASE)
+              (literal 2))
+            (template-string "")))
+        (key-value
+          (literal numbers)
+          (list-constructor-expr
+            (simple-var-ref BASE)
+            (list-constructor-expr
+              (binary-expr +
+                (simple-var-ref BASE)
+                (literal 1))
+              (unary-expr -
+                (literal 3)))))
+        (key-value
+          (literal converted)
+          (type-conversion-expr
+            (group-expr
+              (binary-expr +
+                (simple-var-ref BASE)
+                (literal 2)))
+            (value-type float)))
+        (key-value
+          (literal fraction)
+          (binary-expr /
+            (type-conversion-expr
+              (simple-var-ref BASE)
+              (value-type decimal))
+            (literal 4)))))
     (record-type
       (field id
         (value-type string))))

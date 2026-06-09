@@ -1,0 +1,61 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: decimal value cannot be converted to int
+  --> 14-e.bal:55:10
+   |
+55 | @intInfo {value: <int>1E100d} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: division by zero
+  --> 14-e.bal:40:10
+   |
+40 | @intInfo {value: 10 / 0} // @error
+   |          ^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: division by zero
+  --> 14-e.bal:46:10
+   |
+46 | @intInfo {value: 10 % 0} // @error
+   |          ^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: float value cannot be converted to int
+  --> 14-e.bal:52:10
+   |
+52 | @intInfo {value: <int>(1.0 / 0.0)} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer overflow
+  --> 14-e.bal:28:10
+   |
+28 | @intInfo {value: -(-9223372036854775807 - 1)} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer overflow
+  --> 14-e.bal:31:10
+   |
+31 | @intInfo {value: 9223372036854775807 + 1} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer overflow
+  --> 14-e.bal:34:10
+   |
+34 | @intInfo {value: -9223372036854775807 - 2} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer overflow
+  --> 14-e.bal:37:10
+   |
+37 | @intInfo {value: 9223372036854775807 * 2} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer overflow
+  --> 14-e.bal:43:10
+   |
+43 | @intInfo {value: (-9223372036854775807 - 1) / -1} // @error
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: not a valid decimal
+  --> 14-e.bal:49:14
+   |
+49 | @decimalInfo {value: 9.999999999999999999999999999999999E6144d * 2d} // @error
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

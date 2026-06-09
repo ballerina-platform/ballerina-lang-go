@@ -16,36 +16,45 @@
 
 import ballerina/io;
 
+const int BASE = 100;
+
 type HeavyInfo record {|
     int id;
     int[1024] values;
+    string label?;
+    int[] prefix?;
 |};
 
 annotation HeavyInfo heavy on type;
 
-@heavy {id: 1, values: []}
+@heavy {
+    id: <int>(+(BASE + 1)),
+    values: [],
+    label: string `heavy-${BASE + 1}`,
+    prefix: [BASE, ...[BASE + 1]]
+}
 type T1 int;
-@heavy {id: 2, values: []}
+@heavy {id: BASE + 2, values: []}
 type T2 int;
-@heavy {id: 3, values: []}
+@heavy {id: BASE + 3, values: []}
 type T3 int;
-@heavy {id: 4, values: []}
+@heavy {id: BASE + 4, values: []}
 type T4 int;
-@heavy {id: 5, values: []}
+@heavy {id: BASE + 5, values: []}
 type T5 int;
-@heavy {id: 6, values: []}
+@heavy {id: BASE + 6, values: []}
 type T6 int;
-@heavy {id: 7, values: []}
+@heavy {id: BASE + 7, values: []}
 type T7 int;
-@heavy {id: 8, values: []}
+@heavy {id: BASE + 8, values: []}
 type T8 int;
 
 public function main() {
     HeavyInfo? first = T1.@heavy;
     HeavyInfo? last = T8.@heavy;
     if first is HeavyInfo && last is HeavyInfo {
-        io:println(first.id); // @output 1
-        io:println(last.id); // @output 8
+        io:println(first.id); // @output 101
+        io:println(last.id); // @output 108
         io:println(last.values[1023]); // @output 0
     }
 }

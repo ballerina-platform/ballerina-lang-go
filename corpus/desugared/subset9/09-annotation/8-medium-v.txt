@@ -12,20 +12,84 @@
           (value-type int) dimensions: 1 ([
           (literal 64)])))))
   (type-definition T1
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 1))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T2
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 2))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T3
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 3))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T4
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 4))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T5
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 5))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T6
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 6))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T7
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 7))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (type-definition T8
+    (annotation-attachment medium
+      (mapping-constructor-expr
+        (key-value
+          (literal id)
+          (literal 8))
+        (key-value
+          (literal values)
+          (list-constructor-expr))))
     (value-type int))
   (function main () (
     (value-type null))

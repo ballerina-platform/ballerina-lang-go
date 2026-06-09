@@ -1276,6 +1276,9 @@ func classMethodsInResolutionOrder(classDef *ast.BLangClassDefinition) []namedCl
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
+	for i := range classDef.AnnAttachments {
+		ast.Walk(classResolver, &classDef.AnnAttachments[i])
+	}
 
 	var includedFields []inclusionMemberForSymbolResolution
 	classDef.Inclusions, classDef.InclusionPositions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())

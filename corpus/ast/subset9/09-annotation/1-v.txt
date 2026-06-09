@@ -13,6 +13,16 @@
   (annotation marker
     (attach-point type))
   (type-definition Person
+    (annotation-attachment info
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal person))
+        (key-value
+          (literal code)
+          (literal 7))))
+    (annotation-attachment marker
+      (literal true))
     (record-type
       (field name
         (value-type string))))

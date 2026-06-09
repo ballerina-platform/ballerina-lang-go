@@ -14,6 +14,16 @@
     (user-defined-type Info)
     (attach-point source type))
   (type-definition Person
+    (annotation-attachment runtimeInfo
+      (mapping-constructor-expr
+        (key-value
+          (literal label)
+          (literal runtime))))
+    (annotation-attachment sourceInfo
+      (mapping-constructor-expr
+        (key-value
+          (literal label)
+          (literal source))))
     (record-type
       (field name
         (value-type string))))

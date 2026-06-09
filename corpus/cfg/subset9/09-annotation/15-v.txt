@@ -1,0 +1,46 @@
+(Counter
+  (add
+    (bb0 () (bb1)
+      (compound-assignment +
+        (field-based-access value
+          (simple-var-ref self))
+        (simple-var-ref amount))
+    )
+    (bb1 (bb0 bb2) (bb2 bb3)
+      (simple-var-ref extras)
+      (var-def
+        (variable extra (type
+          (value-type int))))
+    )
+    (bb2 (bb1) (bb1)
+      (compound-assignment +
+        (field-based-access value
+          (simple-var-ref self))
+        (simple-var-ref extra))
+    )
+    (bb3 (bb1) ()
+      (return
+        (field-based-access value
+          (simple-var-ref self)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable counter (type
+        (user-defined-type Counter)) (expr
+        (new ()))))
+    (var-def
+      (variable result (type
+        (user-defined-type Result)) (expr
+        (invocation add expr:
+          (simple-var-ref counter) (
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref result))))
+  )
+)

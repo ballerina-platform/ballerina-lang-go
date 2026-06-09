@@ -138,6 +138,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printAnnotationAttachment(t)
 	case *BLangAnnotAccessExpr:
 		p.printAnnotAccessExpr(t)
+	case *BLangTypedescExpr:
+		p.printTypedescExpr(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
 	case *BLangTypeTestExpr:
@@ -405,6 +407,12 @@ func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
 	p.printString(string(typeKind))
 }
 
+func (p *PrettyPrinter) printAnnotationAttachments(node AnnotatableNode) {
+	for _, attachment := range node.GetAnnotationAttachments() {
+		p.PrintInner(attachment.(BLangNode))
+	}
+}
+
 func (p *PrettyPrinter) printTemplateExpr(node *BLangTemplateExpr) {
 	p.startNode()
 	switch node.Kind {
@@ -526,6 +534,17 @@ func (p *PrettyPrinter) printAnnotAccessExpr(node *BLangAnnotAccessExpr) {
 	p.indentLevel++
 	if node.Expr != nil {
 		p.PrintInner(node.Expr.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printTypedescExpr(node *BLangTypedescExpr) {
+	p.startNode()
+	p.printString("typedesc-expr")
+	p.indentLevel++
+	if node.typeDescriptor != nil {
+		p.PrintInner(node.typeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()
@@ -821,6 +840,9 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 		p.PrintInner(node.Body.(BLangNode))
 		p.indentLevel--
 	}
+	p.indentLevel++
+	p.printAnnotationAttachments(node)
+	p.indentLevel--
 
 	p.endNode()
 }
@@ -1226,6 +1248,7 @@ func (p *PrettyPrinter) printAnnotation(node *BLangAnnotation) {
 		p.printString("const")
 	}
 	p.indentLevel++
+	p.printAnnotationAttachments(node)
 	if node.typeDescriptor != nil {
 		p.PrintInner(node.typeDescriptor.(BLangNode))
 	}
@@ -1679,11 +1702,12 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 	if node.Name != nil {
 		p.printString(node.Name.Value)
 	}
+	p.indentLevel++
+	p.printAnnotationAttachments(node)
 	if node.GetTypeData().TypeDescriptor != nil {
-		p.indentLevel++
 		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
-		p.indentLevel--
 	}
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -1894,6 +1918,7 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	}
 	p.printString(node.Name.Value)
 	p.indentLevel++
+	p.printAnnotationAttachments(node)
 	// Print fields
 	for _, field := range node.Fields {
 		p.PrintInner(field.(BLangNode))
