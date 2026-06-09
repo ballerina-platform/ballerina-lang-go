@@ -14,24 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
-public type ConfigService isolated service object {
-    function getX() returns int;
-};
-
 class SimpleListener {
-    private ConfigService? s = ();
-
-    public function attach(ConfigService svc, () attachPoint = ()) returns () {
+    public function attach(service object {} svc, string[]|string? attachPoint = ()) returns () {
         var _ = svc;
         var _ = attachPoint;
-        self.s = svc;
     }
 
-    public function detach(ConfigService svc) returns error? {
+    public function detach(service object {} svc) returns error? {
         var _ = svc;
-        self.s = ();
     }
 
     public function 'start() returns error? {
@@ -42,26 +32,24 @@ class SimpleListener {
 
     public function immediateStop() returns error? {
     }
-
-    function getX() returns int {
-        var svc = self.s;
-        if svc == () {
-            panic error("no service");
-        }
-        return svc.getX();
-    }
 }
 
-listener SimpleListener l = new ();
+isolated service / on new SimpleListener() {
+    private string foo = "foo";
 
-isolated service on l {
-    public final int x = 10;
+    isolated resource function get hello(string name) returns string {
+        var _ = name;
+        lock {
+            return "Hello, " + self.foo;
+        }
+    }
 
-    function getX() returns int {
-        return self.x;
+    isolated remote function greet() returns string {
+        lock {
+            return self.foo;
+        }
     }
 }
 
 public function main() {
-    io:println(l.getX()); // @output 10
 }
