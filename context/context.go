@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// Package context represents the front end state
 package context
 
 import (

@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+// CompilerEnvironment maintain the shared state of the frontend.
 type CompilerEnvironment struct {
 	anonTypeCount     map[*model.PackageID]int
 	anonFuncCount     map[*model.PackageID]int
