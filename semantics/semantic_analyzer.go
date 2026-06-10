@@ -1922,17 +1922,15 @@ func analyzeClassBodyMembers[A analyzer](a A, fields []ast.SimpleVariableNode, i
 		fa := initializeMethodAnalyzer(a, initFn, enclosing)
 		walkMethodBody(fa, initFn)
 	}
-	for name := range methods {
-		method := methods[name]
+	for _, named := range methodsInResolutionOrder(methods) {
+		method := named.method
 		fa := initializeMethodAnalyzer(a, method, enclosing)
 		walkMethodBody(fa, method)
 	}
 	for _, rm := range resourceMethods {
 		fa := initializeResourceMethodAnalyzer(a, rm, enclosing)
 		validateResourceMethodReturnType(a, fa.retTy, rm)
-		if rm.Body != nil {
-			ast.Walk(fa, rm.GetBody().(ast.BLangNode))
-		}
+		walkMethodBody(fa, rm)
 	}
 }
 

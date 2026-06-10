@@ -1566,9 +1566,6 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 
 func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree.ListenerDeclarationNode) BLangNode {
 	metadata := listenerDeclarationNode.Metadata()
-	if metadata != nil && !metadata.IsMissing() {
-		panic("TransformListenerDeclaration: metadata not yet supported")
-	}
 
 	pos := getPositionWithoutMetadata(n.de(), listenerDeclarationNode)
 	nameToken := listenerDeclarationNode.VariableName()
@@ -1592,6 +1589,13 @@ func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree
 
 	if visQual := listenerDeclarationNode.VisibilityQualifier(); visQual != nil && visQual.Kind() == common.PUBLIC_KEYWORD {
 		bLSimpleVar.SetPublic()
+	}
+
+	if metadata != nil && !metadata.IsMissing() {
+		if annotations := metadata.Annotations(); annotations.Size() > 0 {
+			panic("TransformListenerDeclaration: annotations not yet supported")
+		}
+		bLSimpleVar.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(getDocumentationString(metadata))
 	}
 
 	// Listeners are final (the binding cannot be reassigned).
@@ -1634,12 +1638,16 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 func (n *NodeBuilder) TransformServiceDeclaration(serviceDeclarationNode *tree.ServiceDeclarationNode) BLangNode {
 	metadata := serviceDeclarationNode.Metadata()
-	if metadata != nil && !metadata.IsMissing() {
-		panic("TransformServiceDeclaration: metadata not yet supported")
-	}
 
 	service := NewBLangService()
 	service.pos = getPositionWithoutMetadata(n.de(), serviceDeclarationNode)
+
+	if metadata != nil && !metadata.IsMissing() {
+		if annotations := metadata.Annotations(); annotations.Size() > 0 {
+			panic("TransformServiceDeclaration: annotations not yet supported")
+		}
+		service.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(getDocumentationString(metadata))
+	}
 
 	n.populateServiceQualifiers(&service, serviceDeclarationNode)
 	n.populateServiceAttachPoint(&service, serviceDeclarationNode)
@@ -1754,6 +1762,10 @@ func (n *NodeBuilder) addCollectedMethod(members *classDefnMembers, funcDef *tre
 
 	funcName := bLFunction.Name.Value
 	if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
+		if members.InitFunction != nil {
+			n.cx.SyntaxError("redeclared symbol 'init'", bLFunction.pos)
+			return
+		}
 		members.InitFunction = bLFunction
 		return
 	}

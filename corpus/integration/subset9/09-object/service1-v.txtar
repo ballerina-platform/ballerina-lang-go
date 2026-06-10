@@ -1,4 +1,4 @@
 -- stdout --
-listner-> attached
+listener-> attached
 trigger-> foo
 -- stderr --

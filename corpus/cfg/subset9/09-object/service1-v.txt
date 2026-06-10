@@ -1,4 +1,4 @@
-(MyListner
+(MyListener
   (attach
     (bb0 () ()
       (var-def
@@ -50,7 +50,7 @@
     (bb0 () ()
       (expression-stmt
         (invocation io println (
-          (literal listner start))))
+          (literal listener start))))
     )
   )
   (trigger
@@ -88,7 +88,7 @@
   (bb0 () ()
     (expression-stmt
       (invocation io println (
-        (literal listner-> )
+        (literal listener-> )
         (simple-var-ref message))))
   )
 )
@@ -96,7 +96,7 @@
   (bb0 () ()
     (expression-stmt
       (invocation io println (
-        (literal listner-> )
+        (literal listener-> )
         (simple-var-ref message))))
   )
 )

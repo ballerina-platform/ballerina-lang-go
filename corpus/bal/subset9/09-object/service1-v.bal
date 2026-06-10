@@ -22,7 +22,7 @@ public type serviceLifeCycle service object {
     function trigger(string message);
 };
 
-class MyListner {
+class MyListener {
     private serviceLifeCycle? s = ();
     public function attach(serviceLifeCycle svc, () attachPoint = ()) returns () {
         var _ = svc;
@@ -38,7 +38,7 @@ class MyListner {
     }
 
     public function 'start() returns error? {
-        io:println("listner start");
+        io:println("listener start");
     }
     public function gracefulStop() returns error? {
         io:println("graceful stop");
@@ -57,15 +57,15 @@ class MyListner {
 
 };
 
-listener MyListner l = new ();
+listener MyListener l = new ();
 
 service on l {
     public function onAttach(string message) {
-        io:println("listner-> ", message); // @output listner-> attached
+        io:println("listener-> ", message); // @output listener-> attached
     }
 
     public function onDetach(string message) {
-        io:println("listner-> ", message);
+        io:println("listener-> ", message);
     }
 
     function trigger(string message) {

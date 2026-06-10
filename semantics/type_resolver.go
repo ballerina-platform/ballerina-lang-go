@@ -1863,7 +1863,11 @@ func buildObjectDirectMembers(t typeResolver, fields []ast.SimpleVariableNode, m
 		})
 	}
 
-	directMembers = append(directMembers, initDirectMember(t, initFn))
+	if initMember, ok := initDirectMember(t, initFn); ok {
+		directMembers = append(directMembers, initMember)
+	} else {
+		return nil, false
+	}
 
 	for name := range methods {
 		method := methods[name]
@@ -1895,13 +1899,14 @@ func buildObjectDirectMembers(t typeResolver, fields []ast.SimpleVariableNode, m
 }
 
 // initDirectMember returns the init function member (explicit or implicit).
-func initDirectMember(t typeResolver, initFn *ast.BLangFunction) directMember {
+func initDirectMember(t typeResolver, initFn *ast.BLangFunction) (directMember, bool) {
 	if initFn != nil {
 		initFnSymbol := t.getSymbol(initFn.Symbol()).(model.FunctionSymbol)
 		sig := initFnSymbol.Signature()
 		tyCtx := t.typeContext()
 		if !semtypes.IsSubtype(tyCtx, sig.ReturnType, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
 			t.semanticError("invalid return type for init function", initFn.GetPosition())
+			return directMember{}, false
 		}
 		return directMember{
 			name:       "init",
@@ -1910,7 +1915,7 @@ func initDirectMember(t typeResolver, initFn *ast.BLangFunction) directMember {
 			visibility: semtypes.VisibilityPublic,
 			immutable:  true,
 			pos:        initFn.GetPosition(),
-		}
+		}, true
 	}
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
@@ -1923,7 +1928,7 @@ func initDirectMember(t typeResolver, initFn *ast.BLangFunction) directMember {
 		kind:       semtypes.MemberKindMethod,
 		visibility: semtypes.VisibilityPublic,
 		immutable:  true,
-	}
+	}, true
 }
 
 // defineObjectSemType finalises the object semtype using the class/service
@@ -2400,15 +2405,20 @@ func validateListenerVars(t typeResolver, pkg *ast.BLangPackage, attachPointBoun
 func validateServiceDeclaration(t typeResolver, svc *ast.BLangService, attachPointBound semtypes.SemType) {
 	tyCtx := t.typeContext()
 
-	var expectedT semtypes.SemType = semtypes.NEVER
-	var expectedA semtypes.SemType = semtypes.NEVER
-	for _, expr := range svc.AttachedExprs {
+	var expectedT semtypes.SemType
+	var expectedA semtypes.SemType
+	for i, expr := range svc.AttachedExprs {
 		targetTy, attachTy, ok := validateListenerOnExpression(t, expr, attachPointBound)
 		if !ok {
 			return
 		}
-		expectedT = semtypes.Union(expectedT, targetTy)
-		expectedA = semtypes.Union(expectedA, attachTy)
+		if i == 0 {
+			expectedT = targetTy
+			expectedA = attachTy
+			continue
+		}
+		expectedT = semtypes.Intersect(expectedT, targetTy)
+		expectedA = semtypes.Intersect(expectedA, attachTy)
 	}
 
 	attachPointTy := serviceAttachPointType(t, svc)

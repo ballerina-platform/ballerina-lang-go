@@ -701,6 +701,9 @@ func (b *classDefnBase) AddMethod(name string, function *BLangFunction) {
 }
 
 func (b *classDefnBase) GetInitFunction() FunctionNode {
+	if b.InitFunction == nil {
+		return nil
+	}
 	return b.InitFunction
 }
 
@@ -729,6 +732,9 @@ func (b *classDefnBase) AddAnnotationAttachment(annAttachment AnnotationAttachme
 }
 
 func (b *classDefnBase) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+	if b.MarkdownDocumentationAttachment == nil {
+		return nil
+	}
 	return b.MarkdownDocumentationAttachment
 }
 
@@ -955,6 +961,9 @@ func (b *BLangService) GetAbsolutePath() []*BLangIdentifier {
 }
 
 func (b *BLangService) GetAttachPointLiteral() LiteralNode {
+	if b.AttachPointLiteral == nil {
+		return nil
+	}
 	return b.AttachPointLiteral
 }
 

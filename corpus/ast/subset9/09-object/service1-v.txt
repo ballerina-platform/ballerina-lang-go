@@ -15,7 +15,7 @@
         (param message
           (value-type string))) (
         (value-type null)))))
-  (class-definition MyListner
+  (class-definition MyListener
     (variable s (type
       (union-type
         (user-defined-type serviceLifeCycle)
@@ -84,7 +84,7 @@
       (block-function-body
         (expression-stmt
           (invocation io println (
-            (literal listner start))))))
+            (literal listener start))))))
     (function trigger (
       (variable message (type
         (value-type string)))) (
@@ -108,7 +108,7 @@
               (simple-var-ref svc) (
               (simple-var-ref message))))))))
   (variable l (type
-    (user-defined-type MyListner)) (expr
+    (user-defined-type MyListener)) (expr
     (new ())))
   (service
     (on
@@ -120,7 +120,7 @@
       (block-function-body
         (expression-stmt
           (invocation io println (
-            (literal listner-> )
+            (literal listener-> )
             (simple-var-ref message))))))
     (function onDetach (
       (variable message (type
@@ -129,7 +129,7 @@
       (block-function-body
         (expression-stmt
           (invocation io println (
-            (literal listner-> )
+            (literal listener-> )
             (simple-var-ref message))))))
     (function trigger (
       (variable message (type
