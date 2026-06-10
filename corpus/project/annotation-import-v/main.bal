@@ -32,6 +32,11 @@ type Person record {|
     string name;
 |};
 
+@meta:info {name: "const-ref", code: meta:DEFAULT_CODE, values: [meta:DEFAULT_CODE, 100]}
+type ConstTagged record {|
+    string value;
+|};
+
 public function main() {
     LocalInfo? localInfo = Person.@info;
     if localInfo is LocalInfo {
@@ -73,5 +78,20 @@ public function main() {
         io:println(runtimeDependencyInfo.name); // @output runtime-dependency
         io:println(runtimeDependencyInfo.code); // @output 23
         io:println(runtimeDependencyInfo.values[1]); // @output 24
+    }
+
+    meta:NumericInfo? numericInfo = meta:NumericTagged.@meta:numericInfo;
+    if numericInfo is meta:NumericInfo {
+        io:println(numericInfo.ratio); // @output 3.14
+        io:println(numericInfo.amount); // @output 2.5
+        io:println(numericInfo.optional); // @output
+    }
+
+    meta:Info? constInfo = ConstTagged.@meta:info;
+    if constInfo is meta:Info {
+        io:println(constInfo.name); // @output const-ref
+        io:println(constInfo.code); // @output 99
+        io:println(constInfo.values[0]); // @output 99
+        io:println(constInfo.values[1]); // @output 100
     }
 }

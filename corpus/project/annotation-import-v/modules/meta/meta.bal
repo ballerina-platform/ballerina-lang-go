@@ -25,9 +25,18 @@ public type SourceInfo readonly & record {|
     int code;
 |};
 
+public type NumericInfo record {|
+    float ratio;
+    decimal amount;
+    int? optional;
+|};
+
+public const int DEFAULT_CODE = 99;
+
 public annotation Info info on type;
 public annotation marker on type;
 public const annotation SourceInfo sourceInfo on source type;
+public annotation NumericInfo numericInfo on type;
 
 @info {name: "dependency", code: 17, values: [17, 18]}
 @marker
@@ -42,5 +51,10 @@ function runtimeCode() returns int {
 
 @info {name: "runtime-dependency", code: runtimeCode(), values: [23, 24]}
 public type RuntimeTagged record {|
+    string value;
+|};
+
+@numericInfo {ratio: 3.14, amount: 2.5d, optional: ()}
+public type NumericTagged record {|
     string value;
 |};
