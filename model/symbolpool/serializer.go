@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	symMagic = "\x53\x59\x4d\x42"
-	// This will perpetually remain 1 unless we create a spec for this
+	symMagic   = "\x53\x59\x4d\x42"
 	symVersion = 1
 )
 
@@ -285,19 +284,7 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 }
 
 func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
-	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
-		return err
-	}
-	if err := write(buf, int32(ref.Index)); err != nil {
-		return err
-	}
-	return write(buf, int32(ref.SpaceIndex))
+	return write(buf, int32(ref.Index))
 }
 
 func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {

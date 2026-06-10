@@ -404,7 +404,7 @@ func queryRowBindingFromVarDef(
 	clauseName string,
 ) (queryRowBinding, bool) {
 	varDef, ok := variableDefinitionNode.(*ast.BLangSimpleVariableDef)
-	if !ok || varDef.Var == nil || varDef.Var.Symbol() == (model.SymbolRef{}) {
+	if !ok || varDef.Var == nil || varDef.Var.Symbol().IsEmpty() {
 		cx.internalError(fmt.Sprintf(
 			"query %s clause binding should have been validated during type resolution",
 			clauseName,

@@ -5072,9 +5072,10 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		inv.SetResolvedSymbol(monoRef)
 		return argTys, monoRef, chain, true
 	case *model.OpaqueFunctionSymbol:
+		pkg := t.compilerContext().SymbolPackage(fnSymbol)
 		mono, ok := opaqueFunctionMonomorphizerFor(
-			fnSymbol.Package.Organization,
-			fnSymbol.Package.Package,
+			pkg.Organization,
+			pkg.Package,
 			sym.OpaqueID(),
 		)
 		if !ok {

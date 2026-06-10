@@ -61,14 +61,14 @@ func findRestrictedVariable(a analyzer, body *ast.BLangBlockStmt) (key string, s
 			switch s := a.ctx().GetSymbol(unnarrowed).(type) {
 			case *model.ValueSymbol:
 				if s.IsIsolated() {
-					if sym != (model.SymbolRef{}) {
+					if !sym.IsEmpty() {
 						if unnarrowed != sym {
 							a.semanticErr("more than one restricted variable referenced in lock statement", n.GetPosition())
 							ok = false
 						}
 					} else {
 						sym = unnarrowed
-						key = moduleVarLockKey(unnarrowed.Package, s.Name())
+						key = moduleVarLockKey(a.ctx().SymbolPackage(unnarrowed), s.Name())
 					}
 				}
 			case model.FunctionSymbol:
@@ -78,7 +78,7 @@ func findRestrictedVariable(a analyzer, body *ast.BLangBlockStmt) (key string, s
 			}
 		case *ast.BLangFieldBaseAccess:
 			if k, ref, isIsolatedFieldAccess := selfFieldLockEntry(a, n); isIsolatedFieldAccess {
-				if sym != (model.SymbolRef{}) {
+				if !sym.IsEmpty() {
 					if ref != sym {
 						a.semanticErr("more than one restricted variable referenced in lock statement", n.GetPosition())
 						ok = false
@@ -117,7 +117,7 @@ func selfFieldLockEntry(a analyzer, access *ast.BLangFieldBaseAccess) (string, m
 		if isImmutableField(a.tyCtx(), field) {
 			return "", model.SymbolRef{}, false
 		}
-		pkg := cls.Symbol().Package
+		pkg := a.ctx().SymbolPackage(cls.Symbol())
 		return classFieldLockKey(pkg, cls.Name.Value, fieldName), field.Symbol(), true
 	}
 	return "", model.SymbolRef{}, false
@@ -146,7 +146,7 @@ func validateLockStmt(a analyzer, lock *ast.BLangLock) bool {
 // the result on the AST node. A non-zero RestrictedSymbol is the sentinel
 // for "already resolved"; subsequent calls reuse it without recomputing.
 func resolveRestricted(a analyzer, lock *ast.BLangLock) bool {
-	if lock.RestrictedSymbol != (model.SymbolRef{}) {
+	if !lock.RestrictedSymbol.IsEmpty() {
 		return true
 	}
 	key, sym, ok := findRestrictedVariable(a, &lock.Body)
@@ -703,7 +703,7 @@ func (v *captureVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
 // happens at most once per lock regardless of which pass reaches it first.
 func (visitor *isolatedFnVisitor) walkLock(node *ast.BLangLock) {
 	inner := newLocalScope(visitor.scope, false)
-	if resolveRestricted(visitor.a, node) && node.RestrictedSymbol != (model.SymbolRef{}) {
+	if resolveRestricted(visitor.a, node) && !node.RestrictedSymbol.IsEmpty() {
 		inner.define(node.RestrictedSymbol, varDeclMetadata{})
 	}
 	prev := visitor.scope

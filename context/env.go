@@ -70,16 +70,25 @@ func (c *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Packag
 }
 
 func (c *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
+	return c.symbolSpace(symbol.SpaceIndex).SymbolAt(symbol.Index)
+}
+
+func (c *CompilerEnvironment) symbolSpace(index int) *model.SymbolSpace {
 	c.symbolSpacesMu.RLock()
-	symbolSpace := c.symbolSpaces[symbol.SpaceIndex]
-	c.symbolSpacesMu.RUnlock()
-	return symbolSpace.SymbolAt(symbol.Index)
+	defer c.symbolSpacesMu.RUnlock()
+	// We treat 0,0 as empty space
+	return c.symbolSpaces[index-1]
+}
+
+func (c *CompilerEnvironment) SymbolPackage(symbol model.SymbolRef) model.PackageIdentifier {
+	if symbol.IsEmpty() {
+		panic("cannot get package for empty symbol ref")
+	}
+	return c.symbolSpace(symbol.SpaceIndex).Pkg
 }
 
 func (c *CompilerEnvironment) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
-	c.symbolSpacesMu.RLock()
-	space := c.symbolSpaces[ref.SpaceIndex]
-	c.symbolSpacesMu.RUnlock()
+	space := c.symbolSpace(ref.SpaceIndex)
 	space.AddSymbol(name, symbol)
 	newRef, _ := space.GetSymbol(name)
 	return newRef
@@ -88,13 +97,10 @@ func (c *CompilerEnvironment) AddSymbolToSameSpace(ref model.SymbolRef, name str
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
 // not a narrowed symbol.
 func (c *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
-	c.symbolSpacesMu.RLock()
-	symbolSpace := c.symbolSpaces[baseRef.SpaceIndex]
-	c.symbolSpacesMu.RUnlock()
+	symbolSpace := c.symbolSpace(baseRef.SpaceIndex)
 	underlyingSymbolCopy := c.GetSymbol(baseRef).Copy()
 	symbolIndex := symbolSpace.AppendSymbol(underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
-		Package:    baseRef.Package,
 		SpaceIndex: baseRef.SpaceIndex,
 		Index:      symbolIndex,
 	}
@@ -161,22 +167,22 @@ func (c *CompilerEnvironment) GetTypeEnv() semtypes.Env {
 }
 
 const (
-	ANON_PREFIX       = "$anon"
-	BUILTIN_ANON_TYPE = ANON_PREFIX + "Type$builtin$"
-	ANON_TYPE         = ANON_PREFIX + "Type$"
+	anonPrefix      = "$anon"
+	builtinAnonType = anonPrefix + "Type$builtin$"
+	anonType        = anonPrefix + "Type$"
 )
 
 func (c *CompilerEnvironment) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
 	nextValue := c.anonFuncCount[packageID]
 	c.anonFuncCount[packageID] = nextValue + 1
-	return ANON_PREFIX + "Func$_" + strconv.Itoa(nextValue)
+	return anonPrefix + "Func$_" + strconv.Itoa(nextValue)
 }
 
 func (c *CompilerEnvironment) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	nextValue := c.anonTypeCount[packageID]
 	c.anonTypeCount[packageID] = nextValue + 1
 	if packageID != nil && model.ANNOTATIONS_PKG != packageID {
-		return BUILTIN_ANON_TYPE + "_" + strconv.Itoa(nextValue)
+		return builtinAnonType + "_" + strconv.Itoa(nextValue)
 	}
-	return ANON_TYPE + "_" + strconv.Itoa(nextValue)
+	return anonType + "_" + strconv.Itoa(nextValue)
 }

@@ -248,19 +248,9 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 }
 
 func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
-	org := sr.readStringCP()
-	pkg := sr.readStringCP()
-	version := sr.readStringCP()
-	var index, spaceIndex int32
+	var index int32
 	read(sr.r, &index)
-	read(sr.r, &spaceIndex)
-	_ = spaceIndex // use the current space's index instead of the serialized one
 	return model.SymbolRef{
-		Package: model.PackageIdentifier{
-			Organization: org,
-			Package:      pkg,
-			Version:      version,
-		},
 		Index:      int(index),
 		SpaceIndex: space.SpaceIndex(),
 	}

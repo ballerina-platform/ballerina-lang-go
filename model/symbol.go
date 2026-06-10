@@ -18,6 +18,7 @@ package model
 
 import (
 	"iter"
+	"slices"
 	"sync"
 
 	"ballerina-lang-go/semtypes"
@@ -175,7 +176,6 @@ type (
 
 	// We are using indeces here with the same rational as RefAtoms, instead of pointers
 	SymbolRef struct {
-		Package    PackageIdentifier
 		Index      int
 		SpaceIndex int
 	}
@@ -336,6 +336,10 @@ type (
 	}
 )
 
+func (ref SymbolRef) IsEmpty() bool {
+	return ref == SymbolRef{}
+}
+
 const (
 	DefaultableParamKindExpr DefaultableParamKind = iota
 	DefaultableParamKindInferredTypedesc
@@ -466,7 +470,7 @@ func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	if !ok {
 		return SymbolRef{}, false
 	}
-	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}, true
+	return SymbolRef{Index: index, SpaceIndex: space.SpaceIndex()}, true
 }
 
 // AppendSymbol appends a symbol to the space and returns its index. Thread-safe.
@@ -481,12 +485,12 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 
 // RefAt returns a SymbolRef for the symbol at the given index.
 func (space *SymbolSpace) RefAt(index int) SymbolRef {
-	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}
+	return SymbolRef{Index: index, SpaceIndex: space.SpaceIndex()}
 }
 
-// SymbolAt returns the symbol at the given index. Thread-safe.
+// SpaceIndex returns the non-zero symbol-space index used in SymbolRef.
 func (space *SymbolSpace) SpaceIndex() int {
-	return space.index
+	return space.index + 1
 }
 
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
@@ -726,7 +730,7 @@ func (m *memberHolderBase) AddMember(im InclusionMember) {
 func (m *memberHolderBase) FieldDefaults() []FieldDefault {
 	var defaults []FieldDefault
 	for _, im := range m.members {
-		if fd, ok := im.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
+		if fd, ok := im.(*FieldDescriptor); ok && !fd.DefaultFnRef.IsEmpty() {
 			defaults = append(defaults, FieldDefault{FieldName: fd.name, FnRef: fd.DefaultFnRef})
 		}
 	}
@@ -890,10 +894,8 @@ func (i *IncludedRecordParamInfo) Fields(index int) []string {
 
 func (i *IncludedRecordParamInfo) LookupField(name string) (int, bool) {
 	for idx, names := range i.fieldNames {
-		for _, n := range names {
-			if n == name {
-				return idx, true
-			}
+		if slices.Contains(names, name) {
+			return idx, true
 		}
 	}
 	return -1, false

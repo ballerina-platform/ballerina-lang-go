@@ -56,6 +56,7 @@ type activeStage struct {
 	start time.Time
 }
 
+// CompilerContext maintains frontend stage state for a package.
 type CompilerContext struct {
 	env         *CompilerEnvironment
 	mu          sync.Mutex
@@ -86,6 +87,10 @@ func (c *CompilerContext) AddSymbolToSameSpace(ref model.SymbolRef, name string,
 
 func (c *CompilerContext) GetSymbol(symbol model.SymbolRef) model.Symbol {
 	return c.env.GetSymbol(symbol)
+}
+
+func (c *CompilerContext) SymbolPackage(symbol model.SymbolRef) model.PackageIdentifier {
+	return c.env.SymbolPackage(symbol)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
