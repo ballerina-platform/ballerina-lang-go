@@ -19,8 +19,9 @@ main() -> nil{
 }
 foo(1|2) -> 4{
   bb0 {
-    %2 = ConstantLoad 4
-    %0 = %2;
+    _ = a;
+    %3 = ConstantLoad 4
+    %0 = %3;
     return;
   }
 }

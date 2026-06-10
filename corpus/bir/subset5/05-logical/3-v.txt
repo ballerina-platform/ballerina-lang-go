@@ -30,7 +30,7 @@ f(int|string) -> nil{
   }
   bb3 {
     PushScopeFrame 4
-    unused1 = (1, x);
+    _ = (1, x);
     %1 = ConstantLoad s
     %2 = println(%1) -> bb4;
   }
@@ -42,7 +42,7 @@ f(int|string) -> nil{
   }
   bb5 {
     PushScopeFrame 3
-    unused2 = (1, x);
+    _ = (1, x);
     %1 = ConstantLoad i
     %2 = println(%1) -> bb6;
   }

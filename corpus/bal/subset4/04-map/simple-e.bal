@@ -16,5 +16,5 @@
 
 public function main() {
     map<int> foo = {"a": 1};
-    int a = foo["a"]; // @error
+    int _ = foo["a"]; // @error
 }

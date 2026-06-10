@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: no applicable inherent type for mapping constructor
   --> mapping4-e.bal:26:15
    |
-26 |     R1&R2 r = { l1: 1, "l2": "a" }; // @error
+26 |     R1&R2 _ = { l1: 1, "l2": "a" }; // @error
    |               ^^^^^^^^^^^^^^^^^^^^

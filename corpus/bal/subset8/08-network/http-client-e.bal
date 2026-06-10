@@ -17,6 +17,6 @@
 import ballerina/http;
 
 public function main() returns error? {
-    http:Client c = check new (42, {}); // @error incompatible argument: url must be string
+    http:Client _ = check new (42, {}); // @error incompatible argument: url must be string
     return;
 }

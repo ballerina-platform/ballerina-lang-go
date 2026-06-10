@@ -26,8 +26,8 @@ main() -> nil{
   }
   bb4 {
     PushScopeFrame 2
-    unused1 = (1, x);
-    unused2 = (1, y);
+    _ = (1, x);
+    _ = (1, y);
     PopScopeFrame
     return;
   }

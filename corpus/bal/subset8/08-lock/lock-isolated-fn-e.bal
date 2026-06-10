@@ -15,7 +15,6 @@
 // under the License.
 
 int a = 0;
-int b = 0;
 
 isolated function bump() {
     lock {

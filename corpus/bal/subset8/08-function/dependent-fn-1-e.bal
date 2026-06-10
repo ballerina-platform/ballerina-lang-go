@@ -24,5 +24,7 @@ function foo(int val, typedesc retTy = <>) returns int = external;
 function baz(int val, typedesc retTy = <>) returns retTy = external;
 
 function bar(int val, typedesc retTy = <>) returns int {
+        int _ = val;
+        typedesc _ = retTy;
     return 0;
-}
+    }

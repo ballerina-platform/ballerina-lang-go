@@ -1,19 +1,19 @@
 -- stdout --
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> resource-method11-e.bal:27:5
+  --> resource-method11-e.bal:30:5
    |
-27 |     f->/test/["a"]("two"); // @error arg must be int, got string
+30 |     f->/test/["a"]("two"); // @error arg must be int, got string
    |     ^^^^^^^^^^^^^^^^^^^^^
 
 error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> resource-method11-e.bal:28:5
+  --> resource-method11-e.bal:31:5
    |
-28 |     f->/items.post(42, 3); // @error first arg must be string, got int
+31 |     f->/items.post(42, 3); // @error first arg must be string, got int
    |     ^^^^^^^^^^^^^^^^^^^^^
 
 error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> resource-method11-e.bal:29:5
+  --> resource-method11-e.bal:32:5
    |
-29 |     f->/items.post("body", "three"); // @error second arg must be int, got string
+32 |     f->/items.post("body", "three"); // @error second arg must be int, got string
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

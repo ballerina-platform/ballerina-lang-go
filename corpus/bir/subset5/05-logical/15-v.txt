@@ -19,7 +19,7 @@ main() -> nil{
   }
   bb3 {
     PushScopeFrame 2
-    unused1 = (1, x);
+    _ = (1, x);
     %1 = ConstantLoad <nil>
     (1, %0) = %1;
     PopScopeFrame
@@ -27,7 +27,7 @@ main() -> nil{
   }
   bb4 {
     PushScopeFrame 1
-    unused2 = (1, x);
+    _ = (1, x);
     PopScopeFrame
     return;
   }

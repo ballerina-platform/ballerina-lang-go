@@ -204,7 +204,7 @@ main() -> nil{
   bb21 {
     PushScopeFrame 14
     %0 = (1, $desugar$14)[(1, $desugar$17)];
-    (1, x) = %0;
+    (1, _) = %0;
     %1 = ConstantLoad k
     %2 = ConstantLoad 1
     %3 = ConstantLoad 2

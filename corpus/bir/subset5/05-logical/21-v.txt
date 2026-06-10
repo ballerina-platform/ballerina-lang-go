@@ -36,7 +36,7 @@ f(int|string) -> int|string{
   }
   bb3 {
     PushScopeFrame 4
-    unused1 = (1, x);
+    _ = (1, x);
     %2 = ConstantLoad 1
     %3 = %2;
     %1 = + (1, x) %3;
@@ -46,7 +46,7 @@ f(int|string) -> int|string{
   }
   bb4 {
     PushScopeFrame 3
-    unused2 = (1, x);
+    _ = (1, x);
     %2 = ConstantLoad  world
     %1 = + (1, x) %2;
     (1, %0) = %1;

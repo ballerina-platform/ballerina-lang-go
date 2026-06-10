@@ -385,7 +385,7 @@ main() -> nil{
   bb45 {
     PushScopeFrame 8
     %0 = (1, $desugar$36)[(1, $desugar$39)];
-    (1, x) = %0;
+    (1, _) = %0;
     %1 = ConstantLoad 1
     %2 = %1;
     %3 = push((1, $desugar$38),%2) -> bb47;
@@ -422,9 +422,9 @@ main() -> nil{
   bb50 {
     PushScopeFrame 8
     %0 = (1, $desugar$42)[(1, $desugar$44)];
-    (1, x) = %0;
+    (1, _) = %0;
     %1 = ConstantLoad 1
-    %2 = newArray list[%1]{(1, x)}
+    %2 = newArray list[%1]{(1, _)}
     %3 = push((1, $desugar$41),%2) -> bb52;
   }
   bb51 {
@@ -448,7 +448,7 @@ main() -> nil{
     $desugar$45 = %178;
     %181 = ConstantLoad 0
     %180 = $desugar$45[%181];
-    x = %180;
+    _ = %180;
     %182 = ConstantLoad 1
     $desugar$40 = %182;
     contextualCollect = $desugar$40;

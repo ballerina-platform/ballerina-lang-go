@@ -61,12 +61,12 @@ getFloat(int,int) -> float{
     %16 = % %20 %21;
     currentIndex = %16;
     %23 = ConstantLoad 0
-    i = %23;
+    _ = %23;
     $desugar$0 = iterations;
     GOTO bb2;
   }
   bb2 {
-    %27 = i;
+    %27 = _;
     %28 = $desugar$0;
     %26 = < %27 %28;
     %26 ? bb3 : bb4;
@@ -85,11 +85,11 @@ getFloat(int,int) -> float{
     %9 = (1, bufferSize);
     %4 = % %8 %9;
     (1, currentIndex) = %4;
-    %11 = (1, i);
+    %11 = (1, _);
     %12 = ConstantLoad 1
     %13 = %12;
     %10 = + %11 %13;
-    (1, i) = %10;
+    (1, _) = %10;
     PopScopeFrame
     GOTO bb2;
   }

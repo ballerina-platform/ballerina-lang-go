@@ -19,7 +19,7 @@ import ballerina/io;
 public function main() {
     int[] xs = [1, 2, 3, 4, 5];
     var nested = from var x in xs
-        group by var even = x % 2 == 0
+        group by var _ = x % 2 == 0
         select from var y in x
             group by var big = y > 2
             select [big, y];

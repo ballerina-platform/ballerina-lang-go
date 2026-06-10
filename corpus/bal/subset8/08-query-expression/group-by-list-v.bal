@@ -31,7 +31,7 @@ public function main() {
         group by var even = x % 2 == 0, var value = x
         select [even, value, x];
 
-    var groupedWithContextualDecimalKey = from var x in xs
+    var groupedWithContextualDecimalKey = from var _ in xs
         group by decimal one = 1
         select one is decimal;
 

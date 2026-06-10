@@ -84,6 +84,7 @@ bar() -> nil{
 }
 baz([int...]...) -> nil{
   bb0 {
+    _ = i;
     return;
   }
 }
