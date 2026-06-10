@@ -749,8 +749,10 @@ var sharedBooleanBType = &BTypeBasic{tag: TypeTags_BOOLEAN, flags: model.FlagRea
 func NewBooleanLiteral(value bool, pos diagnostics.Location) *BLangLiteral {
 	lit := &BLangLiteral{}
 	lit.SetValueType(sharedBooleanBType)
+	lit.SetDeterminedType(semtypes.BooleanConst(value))
 	lit.SetValue(value)
 	lit.SetOriginalValue(strconv.FormatBool(value))
+	lit.SetIsConstant(true)
 	lit.SetPosition(pos)
 	return lit
 }
