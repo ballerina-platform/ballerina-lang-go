@@ -43,7 +43,7 @@ f(int|string) -> boolean{
   }
   bb4 {
     PushScopeFrame 2
-    unused1 = (1, x);
+    _ = (1, x);
     %1 = ConstantLoad true
     (1, %0) = %1;
     PopScopeFrame

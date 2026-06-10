@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: foreach iterator does not have a next method
   --> foreach-var-no-next-e.bal:25:22
    |
-25 |     foreach var a in b { // @error
+25 |     foreach var _ in b { // @error
    |                      ^

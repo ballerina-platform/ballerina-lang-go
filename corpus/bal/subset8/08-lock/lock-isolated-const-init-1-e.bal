@@ -21,7 +21,7 @@ isolated int seed = 7;
 public function main() {
     int result = 0;
     lock {
-        var f = function(int n = seed) returns int { // @error
+        var _ = function(int n = seed) returns int { // @error
             return n;
         };
     }

@@ -16,5 +16,5 @@
 
 
 public function main() {
-    xml:Element text = xml `bar`; // @error
+    xml:Element _ = xml `bar`; // @error
 }

@@ -15,8 +15,8 @@
 // under the License.
 
 isolated int a = 0;
-int b = a; // @error
-int c = a + 1; // @error
+public int b = a; // @error
+public int c = a + 1; // @error
 
 public function main() {
 }

@@ -15,5 +15,5 @@
 // under the License.
 
 public function main() {
-    int x = new (5); // @error expected type is not an object or stream type
+    int _ = new (5); // @error expected type is not an object or stream type
 }

@@ -35,8 +35,9 @@ foo(int) -> int{
 }
 bar(int) -> string{
   bb0 {
-    %2 = ConstantLoad hello
-    %0 = %2;
+    _ = x;
+    %3 = ConstantLoad hello
+    %0 = %3;
     return;
   }
 }

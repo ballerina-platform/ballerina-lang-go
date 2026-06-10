@@ -17,6 +17,7 @@
 isolated int seed = 0;
 
 function take(int n = seed) { // @error
+    _ = n;
 }
 
 public function main() {

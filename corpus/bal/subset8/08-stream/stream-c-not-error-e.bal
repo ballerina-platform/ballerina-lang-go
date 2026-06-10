@@ -17,5 +17,5 @@
 type IntStringStream stream<int, string>; // @error
 
 public function main() {
-    IntStringStream? s = ();
+    IntStringStream? _ = ();
 }

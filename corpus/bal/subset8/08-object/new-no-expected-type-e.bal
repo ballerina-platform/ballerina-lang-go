@@ -15,5 +15,5 @@
 // under the License.
 
 public function main() {
-    var x = new (5); // @error cannot infer type for implicit new expression
+    var _ = new (5); // @error cannot infer type for implicit new expression
 }

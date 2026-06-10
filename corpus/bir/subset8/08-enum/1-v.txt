@@ -15,8 +15,8 @@ main() -> nil{
     %4 = println(BLUE) -> bb3;
   }
   bb3 {
-    x = c;
-    y = c;
+    _ = c;
+    _ = c;
     return;
   }
 }

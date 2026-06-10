@@ -213,7 +213,7 @@
         (variable $desugar$16 (expr
           (mapping-constructor-expr))))
       (var-def
-        (variable x))
+        (variable _))
       (var-def
         (variable $desugar$17 (expr
           (numeric-literal 0))))
@@ -223,7 +223,7 @@
           (simple-var-ref $desugar$15))
         (block-stmt
           (assignment
-            (simple-var-ref x)
+            (simple-var-ref _)
             (index-based-access
               (simple-var-ref $desugar$14)
               (simple-var-ref $desugar$17)))

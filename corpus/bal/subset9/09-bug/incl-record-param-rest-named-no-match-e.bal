@@ -23,6 +23,8 @@ type BlockingConfig record {|
 |};
 
 function foo(*ClosedConfig closedConfig, *BlockingConfig blockingConfig) {
+    _ = closedConfig;
+    _ = blockingConfig;
 }
 
 public function main() {

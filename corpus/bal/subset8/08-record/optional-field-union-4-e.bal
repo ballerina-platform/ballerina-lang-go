@@ -27,5 +27,5 @@ type R1 record {
 
 public function main() {
     R|R1 r = {foo: 10, bar: 10};
-    int f = r.foo; // @error
+    int _ = r.foo; // @error
 }

@@ -16,5 +16,5 @@
 
 
 public function main() {
-    () n = 1; // @error
+    () _ = 1; // @error
 }

@@ -14,9 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 public function main() {
     int[] a = [1, 2];
     () n = ();
     string s1 = string `${a}`; // @error invalid type for template interpolation
     string s2 = string `${n}`; // @error invalid type for template interpolation
+    io:println(s1);
+    io:println(s2);
 }

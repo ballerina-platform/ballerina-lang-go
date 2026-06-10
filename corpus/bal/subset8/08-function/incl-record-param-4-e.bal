@@ -20,6 +20,8 @@ type Values record {
 };
 
 function foo(int bar, *Values values) returns int { // @error
+    int _ = bar;
+    Values _ = values;
     return 0;
 }
 

@@ -24,7 +24,7 @@
             (group-by-clause
               (grouping-key
                 (var-def
-                  (variable even (expr
+                  (variable _ (expr
                     (binary-expr ==
                       (binary-expr %
                         (simple-var-ref x)

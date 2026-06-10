@@ -12,10 +12,11 @@ runner(function(int) returns int,int) -> int{
 }
 $anonFunc$_0(int) -> int{
   bb0 {
-    %2 = ConstantLoad true
-    (2, v1) = %2;
-    %3 = ConstantLoad 5
-    %0 = %3;
+    _ = a;
+    %3 = ConstantLoad true
+    (2, v1) = %3;
+    %4 = ConstantLoad 5
+    %0 = %4;
     return;
   }
 }

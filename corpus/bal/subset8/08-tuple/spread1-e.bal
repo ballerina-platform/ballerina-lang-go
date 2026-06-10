@@ -16,5 +16,5 @@
 
 public function main() {
     int[] nums = [1, 2];
-    [int, string, int...] values = [5, ...nums, "foo"]; // @error
+    [int, string, int...] _ = [5, ...nums, "foo"]; // @error
 }

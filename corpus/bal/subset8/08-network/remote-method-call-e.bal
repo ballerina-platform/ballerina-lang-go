@@ -27,6 +27,6 @@ client class Client {
 
 public function main() {
     Client c = new ();
-    string res = c.get("foo"); // @error
+    string _ = c.get("foo"); // @error
 }
 

@@ -16,7 +16,7 @@
 
 
 public function main() {
-    string b = bar(1, 1); // @error
+    string _ = bar(1, 1); // @error
 }
 
 function bar(string a, string b) returns string = external;

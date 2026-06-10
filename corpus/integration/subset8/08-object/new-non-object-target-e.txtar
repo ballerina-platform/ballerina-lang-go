@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: new expression target must be either an object or stream type
   --> new-non-object-target-e.bal:20:13
    |
-20 |     Foo f = new Foo(5); // @error new expression target must be either an object or stream type
+20 |     Foo _ = new Foo(5); // @error new expression target must be either an object or stream type
    |             ^^^^^^^^^^
