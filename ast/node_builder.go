@@ -934,10 +934,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 		}
 	}
 
-	// Remove all whitespace (equivalent to Java's replaceAll("\\s+", ""))
-	whitespaceRegex := regexp.MustCompile(`\s+`)
-	typeTextNoWhitespace := whitespaceRegex.ReplaceAllString(typeText, "")
-	typeKind := stringToTypeKind(typeTextNoWhitespace)
+	typeKind := stringToTypeKind(typeText)
 
 	kind := typeNode.Kind()
 	switch kind {
