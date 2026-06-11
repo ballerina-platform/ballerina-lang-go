@@ -44,7 +44,7 @@ func executeFunction(ctx *extern.Context, birFunc bir.BIRFunction, args []values
 
 func popFrame(ctx *extern.Context) {
 	cs := getCallStack(ctx)
-	frame := cs.elements[len(cs.elements)-1].frame
+	frame := cs.top()
 	cs.Pop()
 	frame.Free()
 }
@@ -54,7 +54,7 @@ func pushFrame(ctx *extern.Context, frame *Frame) {
 }
 
 func callStackDepth(ctx *extern.Context) int {
-	return len(getCallStack(ctx).elements)
+	return getCallStack(ctx).len()
 }
 
 func getCallStack(ctx *extern.Context) *callStack {
@@ -118,11 +118,8 @@ func executeFunctionWithTrap(ctx *extern.Context, birFunc *bir.BIRFunction, bb *
 				panic(recovered)
 			}
 			unwindCallStackToFrame(ctx, frame)
-			unwindScopeFramesToFrame(nextFrame, frame)
 			errVal := panicValueToErrorValue(recovered)
-			// After unwinding, the active frame is the function frame.
-			currentFrame = frame
-			setOperandValue(ctx, handler.ErrorOp, currentFrame, errVal)
+			currentFrame = setRecoveredError(ctx, handler.ErrorOp, nextFrame, errVal)
 			bb = &birFunc.BasicBlocks[handler.Target]
 			continue
 		}
@@ -372,6 +369,18 @@ func panicValueToErrorValue(r any) values.BalValue {
 	panic(r)
 }
 
+func setRecoveredError(ctx *extern.Context, op *bir.BIROperand, currentFrame *Frame, errVal values.BalValue) *Frame {
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		module := getModule(ctx, gv.PkgId)
+		module.Globals[gv.GlobalVarLookupKey] = errVal
+		return currentFrame
+	}
+	targetFrame := resolveFrame(currentFrame, op.Address)
+	unwindScopeFramesToFrame(currentFrame, targetFrame)
+	targetFrame.SetLocal(op.Address.FrameIndex, errVal)
+	return targetFrame
+}
+
 func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEntry {
 	var best *bir.BIRErrorEntry
 	var bestSpan int
@@ -395,7 +404,7 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 }
 
 func unwindCallStackToFrame(ctx *extern.Context, frame *Frame) {
-	for callStackDepth(ctx) > 0 && getCallStack(ctx).elements[callStackDepth(ctx)-1].frame != frame {
+	for callStackDepth(ctx) > 0 && getCallStack(ctx).top() != frame {
 		popFrame(ctx)
 	}
 }

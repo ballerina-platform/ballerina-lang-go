@@ -35,6 +35,14 @@ func (cs *callStack) Pop() {
 	cs.elements = cs.elements[:len(cs.elements)-1]
 }
 
+func (cs *callStack) top() *Frame {
+	return cs.elements[len(cs.elements)-1].frame
+}
+
+func (cs *callStack) len() int {
+	return len(cs.elements)
+}
+
 func (cs *callStack) SetCurrentLocation(location bir.Location) {
 	if len(cs.elements) == 0 {
 		return

@@ -65,7 +65,7 @@ func newLocals(numLocals int) []values.BalValue {
 
 func (f *Frame) Free() {
 	if f.escaped {
-		// Calling free here is deseptive given that this frame has been captured
+		// Calling free here is deceptive given that this frame has been captured
 		// and can't be freed.
 		return
 	}

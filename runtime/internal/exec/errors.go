@@ -54,7 +54,7 @@ func formatCallStack(cs *callStack) []string {
 		entry := entries[i]
 		loc := entry.location
 		if bir.IsLocationEmpty(loc) {
-			out = append(out, fmt.Sprintf("%s(unknown)", entry.frame.FunctionKey()))
+			out = append(out, fmt.Sprintf("%s(unknown)", prettyFunctionName(entry.frame.FunctionKey())))
 			continue
 		}
 		file := filepath.Base(loc.FilePath())
