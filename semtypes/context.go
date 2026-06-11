@@ -22,24 +22,24 @@ package semtypes
 type Context = *context
 
 type context struct {
-	_env          Env
 	_memoStack    []*bddMemo
-	_listMemo     map[bddKey]*bddMemo
-	_mappingMemo  map[bddKey]*bddMemo
-	_functionMemo map[bddKey]*bddMemo
-
 	_conjunctions []conjunction
 
-	_jsonMemo              SemType
-	_anydataMemo           SemType
-	_cloneableMemo         SemType
-	_orderedMemo           SemType
-	_isolatedObjectMemo    SemType
-	_serviceObjectMemo     SemType
-	_clientObjectMemo      SemType
-	_isolatedFnMemo        SemType
-	_isolatedMemo          SemType
-	_iterableMemo          SemType
+	_jsonMemo           SemType
+	_anydataMemo        SemType
+	_cloneableMemo      SemType
+	_orderedMemo        SemType
+	_isolatedObjectMemo SemType
+	_serviceObjectMemo  SemType
+	_clientObjectMemo   SemType
+	_isolatedFnMemo     SemType
+	_isolatedMemo       SemType
+	_iterableMemo       SemType
+
+	_env                   Env
+	_listMemo              map[bddKey]*bddMemo
+	_mappingMemo           map[bddKey]*bddMemo
+	_functionMemo          map[bddKey]*bddMemo
 	_comparableMemo        map[comparableMemoKey]*comparableMemo
 	_fillerMemo            map[atomicType]Filler
 	_streamImplementorMemo map[streamImplementorMemoKey]SemType

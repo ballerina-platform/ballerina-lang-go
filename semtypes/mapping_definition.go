@@ -115,11 +115,11 @@ func (m *MappingDefinition) splitFields(fields []CellField) splitField {
 	sort.Slice(sortedFields, func(i, j int) bool {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
-	var names []string
-	var types []ComplexSemType
-	for _, field := range sortedFields {
-		names = append(names, field.Name)
-		types = append(types, field.Type)
+	names := make([]string, len(sortedFields))
+	types := make([]ComplexSemType, len(sortedFields))
+	for i, field := range sortedFields {
+		names[i] = field.Name
+		types[i] = field.Type
 	}
 	return splitFieldFrom(names, types)
 }

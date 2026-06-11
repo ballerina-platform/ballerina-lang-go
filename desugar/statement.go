@@ -243,7 +243,7 @@ func walkSimpleVariableDef(cx *functionContext, stmt *ast.BLangSimpleVariableDef
 
 	if stmt.Var != nil {
 		if typeNode := stmt.Var.TypeNode(); typeNode != nil {
-			result := desugarTypeDesc(cx, typeNode, stmt.Var.Symbol(), cx.currentScope())
+			result := desugarTypeDesc(cx, typeNode, cx.currentScope())
 			for _, rf := range result.recordFields {
 				rf.fn = desugarFunction(cx.pkgCtx, rf.fn)
 				fnType := cx.symbolType(rf.symRef)
