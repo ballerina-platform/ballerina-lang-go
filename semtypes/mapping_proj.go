@@ -35,7 +35,7 @@ func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 		if isNothingSubtype(keyData) {
 			return UNDEF
 		}
-		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(*ComplexSemType), BTMapping).(Bdd), keyData, INNER)
+		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), keyData, INNER)
 	}
 }
 
@@ -75,7 +75,7 @@ func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData
 func mappingAtomicApplicableMemberTypesInnerProj(atomic *MappingAtomicType, key SubtypeData) []SemType {
 	types := make([]SemType, len(atomic.Types))
 	for i := range atomic.Types {
-		types[i] = cellInner(&atomic.Types[i])
+		types[i] = cellInner(atomic.Types[i])
 	}
 
 	var memberTypes []SemType

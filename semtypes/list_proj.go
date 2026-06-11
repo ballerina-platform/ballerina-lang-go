@@ -32,7 +32,7 @@ func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
 		if isNothingSubtype(keyData) {
 			return NEVER
 		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(*ComplexSemType), BTList).(Bdd), conjunctionNil, conjunctionNil)
+		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), conjunctionNil, conjunctionNil)
 	}
 }
 
@@ -56,7 +56,7 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle
 
 func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg conjunctionHandle) SemType {
 	var members fixedLengthArray
-	var rest *ComplexSemType
+	var rest ComplexSemType
 	if pos == conjunctionNil {
 		members = fixedLengthArrayEmpty()
 		rest = cellContaining(cx.Env(), Union(VAL, UNDEF))
@@ -82,8 +82,8 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg 
 				if !ok {
 					return NEVER
 				}
-				members = *intersectedMembers
-				rest = *intersectedRest
+				members = intersectedMembers
+				rest = intersectedRest
 			}
 		}
 		if fixedArrayAnyEmpty(cx, members) {
@@ -143,7 +143,7 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 	return indices1, keyIndices
 }
 
-func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg conjunctionHandle) SemType {
+func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []ComplexSemType, nRequired int, neg conjunctionHandle) SemType {
 	var p SemType = NEVER
 	if neg == conjunctionNil {
 		length := len(memberTypes)
@@ -168,14 +168,14 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 				if indices[i] >= negLen {
 					break
 				}
-				t := append([]*ComplexSemType(nil), memberTypes[0:i]...)
+				t := append([]ComplexSemType(nil), memberTypes[0:i]...)
 				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, negNext))
 			}
 		}
 		for i := range memberTypes {
 			d := Diff(cellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.rest, indices[i]))
 			if !IsEmpty(cx, d) {
-				t := append([]*ComplexSemType(nil), memberTypes...)
+				t := append([]ComplexSemType(nil), memberTypes...)
 				t[i] = cellContaining(cx.Env(), d)
 				var maxVal int
 				if nRequired > (i + 1) {

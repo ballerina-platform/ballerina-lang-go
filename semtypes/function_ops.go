@@ -127,7 +127,7 @@ func FunctionParamListType(cx Context, fnTy SemType) SemType {
 	switch ty := fnTy.(type) {
 	case BasicTypeBitSet:
 		return NEVER
-	case *ComplexSemType:
+	case ComplexSemType:
 		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionParamListTypeInner(cx, NEVER, bdd)
 	default:
@@ -158,7 +158,7 @@ func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 	switch ty := fnTy.(type) {
 	case BasicTypeBitSet:
 		return VAL
-	case *ComplexSemType:
+	case ComplexSemType:
 		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionReturnTypeInner(cx, argList, VAL, bdd)
 	default:

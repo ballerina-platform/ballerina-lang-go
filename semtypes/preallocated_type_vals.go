@@ -23,32 +23,32 @@ type preallocatedTypeVals struct {
 }
 
 type basicCellTypeVals struct {
-	never          *ComplexSemType
-	nil            *ComplexSemType
-	boolean        *ComplexSemType
-	int            *ComplexSemType
-	float          *ComplexSemType
-	decimal        *ComplexSemType
-	string         *ComplexSemType
-	error          *ComplexSemType
-	list           *ComplexSemType
-	mapping        *ComplexSemType
-	table          *ComplexSemType
-	undef          *ComplexSemType
-	regexp         *ComplexSemType
-	function       *ComplexSemType
-	typedesc       *ComplexSemType
-	handle         *ComplexSemType
-	xml            *ComplexSemType
-	object         *ComplexSemType
-	stream         *ComplexSemType
-	future         *ComplexSemType
-	val            *ComplexSemType
-	inner          *ComplexSemType
-	any            *ComplexSemType
-	simpleOrString *ComplexSemType
-	number         *ComplexSemType
-	simpleBasic    *ComplexSemType
+	never          ComplexSemType
+	nil            ComplexSemType
+	boolean        ComplexSemType
+	int            ComplexSemType
+	float          ComplexSemType
+	decimal        ComplexSemType
+	string         ComplexSemType
+	error          ComplexSemType
+	list           ComplexSemType
+	mapping        ComplexSemType
+	table          ComplexSemType
+	undef          ComplexSemType
+	regexp         ComplexSemType
+	function       ComplexSemType
+	typedesc       ComplexSemType
+	handle         ComplexSemType
+	xml            ComplexSemType
+	object         ComplexSemType
+	stream         ComplexSemType
+	future         ComplexSemType
+	val            ComplexSemType
+	inner          ComplexSemType
+	any            ComplexSemType
+	simpleOrString ComplexSemType
+	number         ComplexSemType
+	simpleBasic    ComplexSemType
 }
 
 func newPreallocatedTypeVals(env Env) preallocatedTypeVals {
@@ -90,14 +90,14 @@ func newBasicCellTypeVals(env Env, mut CellMutability) basicCellTypeVals {
 	}
 }
 
-func createCellTypeVal(env Env, ty BasicTypeBitSet, mut CellMutability) *ComplexSemType {
+func createCellTypeVal(env Env, ty BasicTypeBitSet, mut CellMutability) ComplexSemType {
 	atomicCell := cellAtomicTypeFrom(ty, mut)
 	atom := env.cellAtom(&atomicCell)
 	bdd := bddAtom(&atom)
 	return getBasicSubtype(BTCell, bdd)
 }
 
-func (p preallocatedTypeVals) basicTypeCell(ty BasicTypeBitSet, mut CellMutability) (*ComplexSemType, bool) {
+func (p preallocatedTypeVals) basicTypeCell(ty BasicTypeBitSet, mut CellMutability) (ComplexSemType, bool) {
 	switch mut {
 	case CellMutability_CELL_MUT_NONE:
 		return p.none.basicTypeCell(ty)
@@ -106,11 +106,11 @@ func (p preallocatedTypeVals) basicTypeCell(ty BasicTypeBitSet, mut CellMutabili
 	case CellMutability_CELL_MUT_UNLIMITED:
 		return p.unlimited.basicTypeCell(ty)
 	default:
-		return nil, false
+		return ComplexSemType{}, false
 	}
 }
 
-func (b basicCellTypeVals) basicTypeCell(ty BasicTypeBitSet) (*ComplexSemType, bool) {
+func (b basicCellTypeVals) basicTypeCell(ty BasicTypeBitSet) (ComplexSemType, bool) {
 	switch ty {
 	case NEVER:
 		return b.never, true
@@ -165,6 +165,6 @@ func (b basicCellTypeVals) basicTypeCell(ty BasicTypeBitSet) (*ComplexSemType, b
 	case SIMPLE_BASIC:
 		return b.simpleBasic, true
 	default:
-		return nil, false
+		return ComplexSemType{}, false
 	}
 }

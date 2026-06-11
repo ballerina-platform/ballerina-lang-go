@@ -20,15 +20,15 @@ func createComplexSemType(allBitset BasicTypeBitSet, subtypeList ...basicSubtype
 	return createComplexSemTypeWithAllBitSetSubtypeList(allBitset, subtypeList)
 }
 
-func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someBitset BasicTypeBitSet, subtypeDataList []ProperSubtypeData) *ComplexSemType {
-	return &ComplexSemType{
+func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someBitset BasicTypeBitSet, subtypeDataList []ProperSubtypeData) ComplexSemType {
+	return ComplexSemType{
 		allBitSet:  allBitset,
 		someBitSet: someBitset,
 		dataList:   subtypeDataList,
 	}
 }
 
-func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, subtypeList []basicSubtype) SemType {
+func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, subtypeList []basicSubtype) ComplexSemType {
 	var some BasicTypeBitSet = 0
 	dataList := make([]ProperSubtypeData, len(subtypeList))
 	for i, basicSubtype := range subtypeList {
@@ -36,5 +36,5 @@ func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, sub
 		c := basicSubtype.BasicTypeCode.Code()
 		some = (some | (1 << c))
 	}
-	return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, some, dataList)
+	return ComplexSemType{allBitSet: allBitset, someBitSet: some, dataList: dataList}
 }

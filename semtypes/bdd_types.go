@@ -196,7 +196,7 @@ func (sc *bddSerializationContext) serializeListAtom(atom atom) int32 {
 	initial := make([]TypePoolIndex, len(at.Members.initial))
 	var mut uint8
 	for i := range at.Members.initial {
-		cell := &at.Members.initial[i]
+		cell := at.Members.initial[i]
 		initial[i] = sc.pool.Put(cellInner(cell))
 		mut = uint8(cellMut(cell))
 	}
@@ -227,7 +227,7 @@ func (sc *bddSerializationContext) serializeMappingAtom(atom atom) int32 {
 	for i, name := range at.Names {
 		b := []byte(name)
 		names[i] = enumerableStringDataEntry{len: int32(len(b)), values: b}
-		atomTy := &at.Types[i]
+		atomTy := at.Types[i]
 		types[i] = sc.pool.Put(cellInner(atomTy))
 		muts[i] = uint8(cellMut(atomTy))
 	}
@@ -271,7 +271,7 @@ func (sc *bddSerializationContext) serializeXMLAtom(atom atom) int32 {
 	return idx
 }
 
-func cellMut(cell *ComplexSemType) CellMutability {
+func cellMut(cell ComplexSemType) CellMutability {
 	bdd := cell.subtypeDataList()[0].(bddNode)
 	cat := bdd.atom().(*typeAtom).AtomicType.(*cellAtomicType)
 	return cat.Mut
@@ -434,7 +434,7 @@ func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) ato
 		inner := dc.resolvePoolType(entry.types[j])
 		mut := CellMutability(entry.muts[j])
 		cellFields[j] = cellFieldFrom(string(entry.names[j].values),
-			*cellContainingWithEnvSemTypeCellMutability(dc.env, inner, mut))
+			cellContainingWithEnvSemTypeCellMutability(dc.env, inner, mut))
 	}
 	restInner := dc.resolvePoolType(entry.rest)
 	restCell := cellContainingWithEnvSemTypeCellMutability(dc.env, restInner, CellMutability(entry.restMut))
@@ -493,7 +493,7 @@ func (dc *bddDeserializationContext) resolvePoolType(idx TypePoolIndex) SemType 
 }
 
 func extractAtom(ty SemType) atom {
-	cst := ty.(*ComplexSemType)
+	cst := ty
 	return cst.subtypeDataList()[0].(bddNode).atom()
 }
 

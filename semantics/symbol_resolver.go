@@ -614,12 +614,13 @@ func fillinOpaqueSymbol(sym model.Symbol, space *model.SymbolSpace) {
 // implement this
 func newMonomorphizationCache() (func(...semtypes.SemType) (model.SymbolRef, bool), func(model.SymbolRef, ...semtypes.SemType)) {
 	var mu sync.Mutex
-	cache := make(map[semtypes.SemType]model.SymbolRef)
-	keyOf := func(keys []semtypes.SemType) semtypes.SemType {
+	interner := semtypes.NewSemtypeInterner()
+	cache := make(map[semtypes.InternHandle]model.SymbolRef)
+	keyOf := func(keys []semtypes.SemType) semtypes.InternHandle {
 		if len(keys) != 1 {
 			panic("monomorphization cache supports a single key type")
 		}
-		return keys[0]
+		return interner.Intern(keys[0])
 	}
 	lookup := func(keys ...semtypes.SemType) (model.SymbolRef, bool) {
 		mu.Lock()

@@ -129,7 +129,8 @@ type packageTypeResolver struct {
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
-	classSymbolByType    map[semtypes.SemType]model.SymbolRef
+	classSymbolByType    map[semtypes.InternHandle]model.SymbolRef
+	semtypeInterner      *semtypes.SemtypeInterner
 
 	deferredEmptinessChecks []deferredEmptinessCheck
 }
@@ -259,7 +260,7 @@ func (t *packageTypeResolver) nextMonoFnName(origName string) string {
 }
 
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	classRef, ok := t.classSymbolByType[receiverTy]
+	classRef, ok := t.classSymbolByType[t.semtypeInterner.Intern(receiverTy)]
 	if !ok {
 		return model.SymbolRef{}, false
 	}
@@ -463,7 +464,8 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		typeDefnNodes:          make(map[model.SymbolRef]ast.TypeDefinition),
 		mappingAtomToSymRef:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:       make(map[*semtypes.MappingAtomicType]model.SymbolRef),
-		classSymbolByType:      make(map[semtypes.SemType]model.SymbolRef),
+		classSymbolByType:      make(map[semtypes.InternHandle]model.SymbolRef),
+		semtypeInterner:        semtypes.NewSemtypeInterner(),
 		monoCounters:           make(map[string]int),
 		scope:                  moduleScope,
 	}
@@ -473,7 +475,7 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		if ty := t.symbolType(classDef.Symbol()); ty != nil {
-			t.classSymbolByType[ty] = classDef.Symbol()
+			t.classSymbolByType[t.semtypeInterner.Intern(ty)] = classDef.Symbol()
 		}
 	}
 	for _, importedSpace := range t.importedSymbols {
@@ -481,7 +483,7 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 			if _, ok := sym.(model.ClassSymbol); ok {
 				ref := importedSpace.Main.RefAt(i)
 				if ty := sym.Type(); ty != nil {
-					t.classSymbolByType[ty] = ref
+					t.classSymbolByType[t.semtypeInterner.Intern(ty)] = ref
 				}
 			}
 		}

@@ -52,15 +52,13 @@ func builtinUnion(cx Context, ty SemType) (string, bool) {
 }
 
 func (s *toStringState) semTypeToString(ty SemType) string {
-	if cst, ok := ty.(*ComplexSemType); ok {
-		if name, ok := xmlPredefinedName(s.cx, cst); ok {
-			return name
-		}
-	}
 	switch ty := ty.(type) {
 	case BasicTypeBitSet:
 		return basicTypeToString(ty)
-	case *ComplexSemType:
+	case ComplexSemType:
+		if name, ok := xmlPredefinedName(s.cx, ty); ok {
+			return name
+		}
 		return s.complexSemtypeToString(ty)
 	default:
 		panic("Unexpect semtype kind")
@@ -102,7 +100,7 @@ func basicTypeBitSetToString(bits BasicTypeBitSet) string {
 	return strings.Join(parts, "|")
 }
 
-func (s *toStringState) complexSemtypeToString(ty *ComplexSemType) string {
+func (s *toStringState) complexSemtypeToString(ty ComplexSemType) string {
 	var parts []string
 	allStr := basicTypeBitSetToString(ty.all())
 	if allStr != "" {
@@ -252,7 +250,7 @@ func (s *toStringState) functionAtomicTypeToString(atom atom) string {
 func (s *toStringState) functionParamsToString(paramType SemType) string {
 	// ParamType is a list SemType representing the parameter tuple.
 	// Try to extract individual parameter types from the list atom.
-	cst, ok := paramType.(*ComplexSemType)
+	cst, ok := paramType.(ComplexSemType)
 	if !ok {
 		return s.semTypeToString(paramType)
 	}
@@ -333,7 +331,7 @@ func (s *toStringState) mappingAtomicTypeToString(atom atom) string {
 	atomic := s.cx.MappingAtomType(atom)
 	var parts []string
 	for i, name := range atomic.Names {
-		parts = append(parts, name+": "+s.semTypeToString(cellInnerVal(&atomic.Types[i])))
+		parts = append(parts, name+": "+s.semTypeToString(cellInnerVal(atomic.Types[i])))
 	}
 	restStr := s.semTypeToString(cellInnerVal(atomic.Rest))
 	parts = append(parts, restStr+"...")
@@ -383,7 +381,7 @@ func (s *toStringState) objectAtomicTypeToString(atom atom) string {
 	var members []string
 	for i, name := range atomic.Names {
 		if name == "$qualifiers" {
-			qualTy := cellInnerVal(&atomic.Types[i])
+			qualTy := cellInnerVal(atomic.Types[i])
 			qualAtomic := ToMappingAtomicType(s.cx, qualTy)
 			if qualAtomic != nil {
 				isolatedTy := qualAtomic.FieldInnerVal("isolated")
@@ -399,7 +397,7 @@ func (s *toStringState) objectAtomicTypeToString(atom atom) string {
 			}
 			continue
 		}
-		memberTy := cellInnerVal(&atomic.Types[i])
+		memberTy := cellInnerVal(atomic.Types[i])
 		memberAtomic := ToMappingAtomicType(s.cx, memberTy)
 		if memberAtomic == nil {
 			members = append(members, name+": "+s.semTypeToString(memberTy))
@@ -442,7 +440,7 @@ func (s *toStringState) objectMethodToString(name string, kindTy SemType, fnTy S
 	} else {
 		methodPrefix = "function "
 	}
-	cst, ok := fnTy.(*ComplexSemType)
+	cst, ok := fnTy.(ComplexSemType)
 	if !ok {
 		return methodPrefix + name + "()"
 	}

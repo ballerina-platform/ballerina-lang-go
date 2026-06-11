@@ -55,7 +55,7 @@ func (m *MappingDefinition) SetSemTypeToNever() {
 	m.semType = NEVER
 }
 
-func (m *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
+func (m *MappingDefinition) Define(env Env, fields []CellField, rest ComplexSemType) SemType {
 	sfh := m.splitFields(fields)
 	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
 	var a atom
@@ -89,7 +89,7 @@ func (m *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMuta
 		} else {
 			ro = mut
 		}
-		cellFields = append(cellFields, cellFieldFrom(field.Name, *cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
+		cellFields = append(cellFields, cellFieldFrom(field.Name, cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
