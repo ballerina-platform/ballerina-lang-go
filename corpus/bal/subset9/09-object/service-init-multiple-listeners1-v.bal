@@ -24,10 +24,13 @@ class Listener {
     }
 
     public function attach(service object {} svc, () attachPoint = ()) returns error? {
+        var _ = svc;
+        var _ = attachPoint;
         io:println("attach ", self.name);
     }
 
     public function detach(service object {} svc) returns error? {
+        var _ = svc;
     }
 
     public function 'start() returns error? {

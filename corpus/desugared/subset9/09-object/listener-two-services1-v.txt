@@ -2,19 +2,15 @@
   (import-package ballerina io (as io))
   (import-package ballerina lang array (as lang.array))
   (variable l (type
-    (user-defined-type SimpleListener)))
+    (user-defined-type CountingListener)))
   (variable $moduleListeners)
-  (class-definition SimpleListener
+  (class-definition CountingListener
     (function init () (
-      (union-type
-        (error-type)
-        (value-type null)))
+      (value-type null))
       (block-function-body
         (expression-stmt
           (invocation io println (
-            (literal listener initialized))))
-        (return
-          (literal <nil>))))
+            (literal listener init))))))
     (function attach (
       (variable svc (type
         (object-type service)))
@@ -28,7 +24,10 @@
             (simple-var-ref svc))))
         (var-def
           (variable _ (expr
-            (simple-var-ref attachPoint))))))
+            (simple-var-ref attachPoint))))
+        (expression-stmt
+          (invocation io println (
+            (literal attach))))))
     (function detach (
       (variable svc (type
         (object-type service)))) (
@@ -53,6 +52,14 @@
       (union-type
         (error-type)
         (value-type null)))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal start)))))))
+  (service
+    (on
+    (simple-var-ref l))
+    (function init () ()
       (block-function-body)))
   (service
     (on
@@ -64,18 +71,9 @@
       (assignment
         (simple-var-ref $moduleListeners)
         (list-constructor-expr))
-      (var-def
-        (variable $desugar$0 (expr
-          (new ()))))
-      (if
-        (type-test-expr is
-          (simple-var-ref $desugar$0))
-        (block-stmt
-          (return
-            (simple-var-ref $desugar$0))) ())
       (assignment
         (simple-var-ref l)
-        (simple-var-ref $desugar$0))
+        (new ()))
       (expression-stmt
         (invocation lang.array push (
           (simple-var-ref $moduleListeners)
@@ -90,16 +88,24 @@
           (literal <nil>))))
       (var-def
         (variable $desugar$1 (expr
+          (service-init))))
+      (expression-stmt
+        (invocation attach expr:
+          (simple-var-ref l) (
+          (simple-var-ref $desugar$1)
+          (literal <nil>))))
+      (var-def
+        (variable $desugar$0 (expr
           (invocation start expr:
             (simple-var-ref l) ()))))
       (if
         (type-test-expr is
-          (simple-var-ref $desugar$1))
+          (simple-var-ref $desugar$0))
         (block-stmt
           (return
-            (simple-var-ref $desugar$1))) ())
+            (simple-var-ref $desugar$0))) ())
       (expression-stmt
-        (simple-var-ref $desugar$1))))
+        (simple-var-ref $desugar$0))))
   (function main () (
     (value-type null))
     (block-function-body))

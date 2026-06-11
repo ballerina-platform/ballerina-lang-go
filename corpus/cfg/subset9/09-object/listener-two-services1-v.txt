@@ -1,4 +1,11 @@
-(SimpleListener
+(CountingListener
+  (init
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal listener init))))
+    )
+  )
   (attach
     (bb0 () ()
       (var-def
@@ -7,6 +14,9 @@
       (var-def
         (variable _ (expr
           (simple-var-ref attachPoint))))
+      (expression-stmt
+        (invocation io println (
+          (literal attach))))
     )
   )
   (detach
@@ -23,7 +33,11 @@
     (bb0 () ())
   )
   (start
-    (bb0 () ())
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal start))))
+    )
   )
 )
 (main

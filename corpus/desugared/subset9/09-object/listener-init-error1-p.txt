@@ -78,7 +78,19 @@
         (invocation attach expr:
           (simple-var-ref l) (
           (simple-var-ref $desugar$0)
-          (literal <nil>))))))
+          (literal <nil>))))
+      (var-def
+        (variable $desugar$1 (expr
+          (invocation start expr:
+            (simple-var-ref l) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$1))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$1))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$1))))
   (function makeListener () (
     (union-type
       (user-defined-type SimpleListener)

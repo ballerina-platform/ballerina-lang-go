@@ -49,7 +49,10 @@
       (union-type
         (error-type)
         (value-type null)))
-      (block-function-body)))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal listener started)))))))
   (function init () ()
     (block-function-body
       (assignment
@@ -61,7 +64,19 @@
       (expression-stmt
         (invocation lang.array push (
           (simple-var-ref $moduleListeners)
-          (simple-var-ref l))))))
+          (simple-var-ref l))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation start expr:
+            (simple-var-ref l) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$0))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$0))))
   (function main () (
     (value-type null))
     (block-function-body))

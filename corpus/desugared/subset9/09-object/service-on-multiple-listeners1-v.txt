@@ -118,7 +118,43 @@
         (invocation attach expr:
           (simple-var-ref $desugar$1) (
           (simple-var-ref $desugar$2)
-          (literal <nil>))))))
+          (literal <nil>))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation start expr:
+            (simple-var-ref l) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$0))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$0))
+      (var-def
+        (variable $desugar$1 (expr
+          (invocation start expr:
+            (simple-var-ref $desugar$0) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$1))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$1))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$1))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation start expr:
+            (simple-var-ref $desugar$1) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$2))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$2))))
   (function makeListener (
     (variable tag (type
       (value-type string)))) (

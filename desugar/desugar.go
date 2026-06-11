@@ -514,15 +514,13 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 		createInitFunction(compilerCtx, pkg, initPos)
 	}
 
-	// We unconditionally treat init to be fallable of there is any service, irrespective of whether the service init
-	// of listener registration can actually fail
-	if len(pkg.Services) > 0 {
+	// We unconditionally treat init to be fallable if listeners need lifecycle handling, irrespective of whether
+	// service init or listener registration can actually fail.
+	hasListeners := len(pkg.Services) > 0 || hasModuleListenerVar(compilerCtx, nodes)
+
+	if hasListeners {
 		widenInitReturnTypeToErrorOptional(compilerCtx, pkg.InitFunction)
 	}
-
-	// by definition any service must have at least one listner
-	// hasModuleListenerVar(compilerCtx, nodes) part maybe removed after https://github.com/ballerina-platform/ballerina-lang-go/issues/439
-	hasListeners := len(pkg.Services) > 0 || hasModuleListenerVar(compilerCtx, nodes)
 
 	var initStmts []ast.StatementNode
 	var moduleListenersRef *ast.BLangSimpleVarRef
@@ -548,6 +546,7 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	for i := range pkg.Services {
 		initStmts = append(initStmts, buildServiceInitStmts(pkgCtx, pkg, &pkg.Services[i])...)
 	}
+	initStmts = append(initStmts, buildModuleListenerStartStmts(pkgCtx, nodes)...)
 
 	body := pkg.InitFunction.Body.(*ast.BLangBlockFunctionBody)
 	if initFnCreated {
@@ -569,13 +568,40 @@ func hasModuleListenerVar(compilerCtx *context.CompilerContext, nodes []moduleIn
 	return false
 }
 
-func buildListnerInit(pkgCtx *packageContext, node moduleInitNode, moduleListenersRef *ast.BLangSimpleVarRef) []ast.StatementNode {
+func buildModuleListenerStartStmts(pkgCtx *packageContext, nodes []moduleInitNode) []ast.StatementNode {
 	compilerCtx := pkgCtx.compilerCtx
-	pos := node.expr.GetPosition()
+	var stmts []ast.StatementNode
+	for _, node := range nodes {
+		vs, ok := compilerCtx.GetSymbol(node.sym).(*model.ValueSymbol)
+		if !ok || !vs.IsListener() {
+			continue
+		}
+		listenerVarRef := buildModuleInitVarRef(compilerCtx, node)
+		startInv := buildListenerStartInvocation(pkgCtx, listenerVarRef)
+		if startInv == nil {
+			continue
+		}
+		stmts = append(stmts, createExpressionStmt(wrapInCheck(startInv), listenerVarRef.GetPosition()))
+	}
+	return stmts
+}
+
+func buildModuleInitVarRef(compilerCtx *context.CompilerContext, node moduleInitNode) *ast.BLangSimpleVarRef {
+	pos := diagnostics.Location{}
+	if node.expr != nil {
+		pos = node.expr.GetPosition()
+	}
 	listenerVarRef := &ast.BLangSimpleVarRef{VariableName: node.name}
 	listenerVarRef.SetSymbol(node.sym)
 	listenerVarRef.SetDeterminedType(compilerCtx.SymbolType(node.sym))
 	listenerVarRef.SetPosition(pos)
+	return listenerVarRef
+}
+
+func buildListnerInit(pkgCtx *packageContext, node moduleInitNode, moduleListenersRef *ast.BLangSimpleVarRef) []ast.StatementNode {
+	compilerCtx := pkgCtx.compilerCtx
+	pos := node.expr.GetPosition()
+	listenerVarRef := buildModuleInitVarRef(compilerCtx, node)
 
 	assign := &ast.BLangAssignment{VarRef: listenerVarRef, Expr: wrapInCheck(node.expr)}
 	assign.SetDeterminedType(semtypes.NEVER)
@@ -824,6 +850,33 @@ func createArrayPushInvocation(pkgCtx *packageContext, listExpr, valueExpr ast.B
 	inv.SetSymbol(pushRef)
 	inv.SetDeterminedType(semtypes.NIL)
 	inv.SetPosition(valueExpr.GetPosition())
+	return inv
+}
+
+func buildListenerStartInvocation(pkgCtx *packageContext, listenerExpr ast.BLangExpression) *ast.BLangInvocation {
+	listenerTy := listenerExpr.GetDeterminedType()
+	if listenerTy == nil {
+		pkgCtx.internalError("listener expression has no determined type at desugar")
+		return nil
+	}
+	startFnTy := semtypes.ObjectMemberType(pkgCtx.typeCtx(), semtypes.StringConst("start"), listenerTy)
+	if startFnTy == nil {
+		pkgCtx.internalError("listener type has no start method type at desugar")
+		return nil
+	}
+	startSym, ok := findClassMethodSymbol(pkgCtx, listenerTy, "start")
+	if !ok {
+		pkgCtx.internalError("listener start method symbol not found at desugar")
+		return nil
+	}
+	inv := &ast.BLangInvocation{}
+	inv.Name = &ast.BLangIdentifier{Value: "start"}
+	inv.Expr = listenerExpr
+	inv.SetSymbol(startSym)
+	argListDefn := semtypes.NewListDefinition()
+	argListTy := argListDefn.DefineListTypeWrapped(pkgCtx.typeEnv(), []semtypes.SemType{}, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	inv.SetDeterminedType(semtypes.FunctionReturnType(pkgCtx.typeCtx(), startFnTy, argListTy))
+	inv.SetPosition(listenerExpr.GetPosition())
 	return inv
 }
 

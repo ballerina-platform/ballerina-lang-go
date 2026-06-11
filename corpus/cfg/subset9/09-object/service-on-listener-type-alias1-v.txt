@@ -1,9 +1,20 @@
 (Listener
   (attach
-    (bb0 () ())
+    (bb0 () ()
+      (var-def
+        (variable _ (expr
+          (simple-var-ref svc))))
+      (var-def
+        (variable _ (expr
+          (simple-var-ref attachPoint))))
+    )
   )
   (detach
-    (bb0 () ())
+    (bb0 () ()
+      (var-def
+        (variable _ (expr
+          (simple-var-ref svc))))
+    )
   )
   (gracefulStop
     (bb0 () ())

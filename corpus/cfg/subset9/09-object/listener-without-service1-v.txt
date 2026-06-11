@@ -30,7 +30,11 @@
     (bb0 () ())
   )
   (start
-    (bb0 () ())
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal listener started))))
+    )
   )
 )
 (main

@@ -29,6 +29,12 @@
         (error-type)
         (value-type null)))
       (block-function-body
+        (var-def
+          (variable _ (expr
+            (simple-var-ref svc))))
+        (var-def
+          (variable _ (expr
+            (simple-var-ref attachPoint))))
         (expression-stmt
           (invocation io println (
             (literal attach )
@@ -41,7 +47,10 @@
       (union-type
         (error-type)
         (value-type null)))
-      (block-function-body))
+      (block-function-body
+        (var-def
+          (variable _ (expr
+            (simple-var-ref svc))))))
     (function gracefulStop () (
       (union-type
         (error-type)
@@ -118,7 +127,31 @@
           (return
             (simple-var-ref $desugar$1))) ())
       (expression-stmt
-        (simple-var-ref $desugar$1))))
+        (simple-var-ref $desugar$1))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation start expr:
+            (simple-var-ref l1) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$2))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$2))
+      (var-def
+        (variable $desugar$3 (expr
+          (invocation start expr:
+            (simple-var-ref l2) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$3))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$3))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$3))))
   (function main () (
     (value-type null))
     (block-function-body))

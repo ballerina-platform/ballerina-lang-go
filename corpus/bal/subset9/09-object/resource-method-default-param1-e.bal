@@ -18,6 +18,7 @@ int counter = 0;
 
 client class Foo {
     isolated resource function get test(int x = counter) { // @error resource method default parameter expressions must be semantically analyzed
+        var _ = x;
     }
 }
 

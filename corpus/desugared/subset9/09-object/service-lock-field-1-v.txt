@@ -165,7 +165,19 @@
         (invocation attach expr:
           (simple-var-ref l) (
           (simple-var-ref $desugar$0)
-          (literal <nil>))))))
+          (literal <nil>))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation start expr:
+            (simple-var-ref l) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$0))) ())
+      (expression-stmt
+        (simple-var-ref $desugar$0))))
   (function main () (
     (value-type null))
     (block-function-body

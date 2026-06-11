@@ -24,9 +24,12 @@ type BarService service object {
 
 class FooListener {
     public function attach(FooService svc, () attachPoint = ()) returns () {
+        var _ = svc;
+        var _ = attachPoint;
     }
 
     public function detach(FooService svc) returns error? {
+        var _ = svc;
     }
 
     public function 'start() returns error? {
@@ -41,9 +44,12 @@ class FooListener {
 
 class BarListener {
     public function attach(BarService svc, () attachPoint = ()) returns () {
+        var _ = svc;
+        var _ = attachPoint;
     }
 
     public function detach(BarService svc) returns error? {
+        var _ = svc;
     }
 
     public function 'start() returns error? {

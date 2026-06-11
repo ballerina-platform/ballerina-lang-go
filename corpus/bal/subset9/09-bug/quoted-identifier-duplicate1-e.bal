@@ -16,5 +16,6 @@
 
 public function main() {
     int foo = 5;
+    var _ = foo;
     int 'foo = 10; // @error
 }

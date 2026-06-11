@@ -9,6 +9,12 @@
   )
   (attach
     (bb0 () ()
+      (var-def
+        (variable _ (expr
+          (simple-var-ref svc))))
+      (var-def
+        (variable _ (expr
+          (simple-var-ref attachPoint))))
       (expression-stmt
         (invocation io println (
           (literal attach )
@@ -17,7 +23,11 @@
     )
   )
   (detach
-    (bb0 () ())
+    (bb0 () ()
+      (var-def
+        (variable _ (expr
+          (simple-var-ref svc))))
+    )
   )
   (gracefulStop
     (bb0 () ())

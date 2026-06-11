@@ -46,7 +46,10 @@
       (union-type
         (error-type)
         (value-type null)))
-      (block-function-body)))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal listener started)))))))
   (variable l (type
     (user-defined-type SimpleListener)) (expr
     (new ())))

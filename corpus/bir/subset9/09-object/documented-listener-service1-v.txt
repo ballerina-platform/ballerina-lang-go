@@ -6,12 +6,15 @@ class SimpleListener {
 
   attach(service object,nil) -> nil{
     bb0 {
+      _ = svc;
+      _ = attachPoint;
       return;
     }
   }
 
   detach(service object) -> nil|error{
     bb0 {
+      _ = svc;
       return;
     }
   }

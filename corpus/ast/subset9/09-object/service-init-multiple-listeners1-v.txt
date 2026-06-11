@@ -23,6 +23,12 @@
         (error-type)
         (value-type null)))
       (block-function-body
+        (var-def
+          (variable _ (expr
+            (simple-var-ref svc))))
+        (var-def
+          (variable _ (expr
+            (simple-var-ref attachPoint))))
         (expression-stmt
           (invocation io println (
             (literal attach )
@@ -34,7 +40,10 @@
       (union-type
         (error-type)
         (value-type null)))
-      (block-function-body))
+      (block-function-body
+        (var-def
+          (variable _ (expr
+            (simple-var-ref svc))))))
     (function gracefulStop () (
       (union-type
         (error-type)

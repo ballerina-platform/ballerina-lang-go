@@ -22,4 +22,5 @@ class Foo {
 
 public function main() {
     Foo f = new ();
+    var _ = f;
 }

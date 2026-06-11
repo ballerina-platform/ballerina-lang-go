@@ -14,19 +14,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public class Listener {
-    private service object {}? svc = ();
+import ballerina/io;
 
-    public function attach(service object {} s, () attachPoint = ()) returns error? {
-        var _ = attachPoint;
-        self.svc = s;
+class CountingListener {
+    function init() {
+        io:println("listener init"); // @output listener init
     }
 
-    public function detach(service object {} s) returns error? {
-        var _ = s;
+    public function attach(service object {} svc, () attachPoint = ()) returns () {
+        var _ = svc;
+        var _ = attachPoint;
+        io:println("attach");
+    }
+
+    public function detach(service object {} svc) returns error? {
+        var _ = svc;
     }
 
     public function 'start() returns error? {
+        io:println("start");
     }
 
     public function gracefulStop() returns error? {
@@ -34,6 +40,15 @@ public class Listener {
 
     public function immediateStop() returns error? {
     }
+}
 
-    public function trigger() returns error? = external;
+public listener CountingListener l = new ();
+
+service on l { // @output attach
+}
+
+service on l { // @output attach
+}
+
+public function main() { // @output start
 }

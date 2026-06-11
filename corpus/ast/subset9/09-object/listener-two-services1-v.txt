@@ -1,50 +1,30 @@
 (compilation-unit  regular-source
 (package-id $anon . 0.0.0)
-  (type-definition ListenerType
-    (object-type
-      (method-decl attach public (
-        (param svc
-          (object-type service))
-        (param attachPoint
-          (value-type null))) (
-        (union-type
-          (error-type)
-          (value-type null))))
-      (method-decl detach public (
-        (param svc
-          (object-type service))) (
-        (union-type
-          (error-type)
-          (value-type null))))
-      (method-decl gracefulStop public () (
-        (union-type
-          (error-type)
-          (value-type null))))
-      (method-decl immediateStop public () (
-        (union-type
-          (error-type)
-          (value-type null))))
-      (method-decl start public () (
-        (union-type
-          (error-type)
-          (value-type null))))))
-  (class-definition Listener
+  (import-package ballerina io (as io))
+  (class-definition CountingListener
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal listener init))))))
     (function attach (
       (variable svc (type
         (object-type service)))
       (variable attachPoint (type
         (value-type null)) (expr
         (literal <nil>)))) (
-      (union-type
-        (error-type)
-        (value-type null)))
+      (value-type null))
       (block-function-body
         (var-def
           (variable _ (expr
             (simple-var-ref svc))))
         (var-def
           (variable _ (expr
-            (simple-var-ref attachPoint))))))
+            (simple-var-ref attachPoint))))
+        (expression-stmt
+          (invocation io println (
+            (literal attach))))))
     (function detach (
       (variable svc (type
         (object-type service)))) (
@@ -69,11 +49,16 @@
       (union-type
         (error-type)
         (value-type null)))
-      (block-function-body)))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal start)))))))
   (variable l (type
-    (user-defined-type ListenerType)) (expr
-    (new
-      (user-defined-type Listener) ())))
+    (user-defined-type CountingListener)) (expr
+    (new ())))
+  (service
+    (on
+    (simple-var-ref l)))
   (service
     (on
     (simple-var-ref l)))

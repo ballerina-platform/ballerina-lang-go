@@ -9,10 +9,12 @@ class Listener {
 
   attach(service object,nil) -> nil|error{
     bb0 {
-      %4 = ConstantLoad attach 
-      %6 = ConstantLoad name
-      %5 = self[%6];
-      %7 = println(%4,%5) -> bb1;
+      _ = svc;
+      _ = attachPoint;
+      %6 = ConstantLoad attach 
+      %8 = ConstantLoad name
+      %7 = self[%8];
+      %9 = println(%6,%7) -> bb1;
     }
     bb1 {
       return;
@@ -21,6 +23,7 @@ class Listener {
 
   detach(service object) -> nil|error{
     bb0 {
+      _ = svc;
       return;
     }
   }

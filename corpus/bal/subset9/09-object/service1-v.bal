@@ -68,11 +68,12 @@ service on l {
         io:println("listener-> ", message);
     }
 
+    // @output listener start
     function trigger(string message) {
-        io:println("trigger-> ", message); // @output trigger-> foo
+        io:println("trigger-> ", message);
     }
 }
 
 public function main() {
-    l.trigger("foo");
+    l.trigger("foo"); // @output trigger-> foo
 }

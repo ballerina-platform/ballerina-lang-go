@@ -31,6 +31,7 @@ class SimpleListener {
     }
 
     public function 'start() returns error? {
+        io:println("listener started"); // @output listener started
     }
 
     public function gracefulStop() returns error? {
