@@ -593,7 +593,14 @@ func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLang
 			replacementNode: expr,
 		}
 	}
-	fnSym, isDirectCall := cx.getSymbol(expr.ResolvedSymbol()).(model.FunctionSymbol)
+	symbolRef, hasSymbol := invocationSymbol(expr)
+	if !hasSymbol {
+		return desugaredNode[ast.BLangActionOrExpression]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+	fnSym, isDirectCall := cx.getSymbol(symbolRef).(model.FunctionSymbol)
 	if !isDirectCall {
 		return desugaredNode[ast.BLangActionOrExpression]{
 			initStmts:       initStmts,
@@ -607,6 +614,23 @@ func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLang
 	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: expr,
+	}
+}
+
+func invocationSymbol(expr invocable) (model.SymbolRef, bool) {
+	switch e := expr.(type) {
+	case *ast.BLangInvocation:
+		if e.RawSymbol == nil {
+			return model.SymbolRef{}, false
+		}
+		return e.ResolvedSymbol(), true
+	case *ast.BLangRemoteMethodCallAction:
+		if e.RawSymbol == nil {
+			return model.SymbolRef{}, false
+		}
+		return e.ResolvedSymbol(), true
+	default:
+		panic("unexpected")
 	}
 }
 

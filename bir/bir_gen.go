@@ -1556,21 +1556,23 @@ func generateCall(ctx context, bb *BIRBasicBlock, callable callable) expressionE
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(callName), thenBB, resultOperand, ctx.function().loc(callable.GetPosition()))
 	call.IsMethodCall = isMethodCall
 
-	symRef := callable.ResolvedSymbol()
-	sym := ctx.getSymbol(symRef)
-	if sym.Kind() == model.SymbolKindFunction {
-		call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.function().birCx, symRef)
-		if inv, ok := callable.(*ast.BLangInvocation); ok && inv.PkgAlias != nil && inv.PkgAlias.Value != "" {
-			call.CalleePkg = ctx.function().birCx.importAliasMap[inv.PkgAlias.Value]
-		} else if ctx.function().birCx.packageID != nil {
-			call.CalleePkg = ctx.function().birCx.packageID
-		}
-	} else {
-		call.Kind = INSTRUCTION_KIND_FP_CALL
-		unnarrowedRef := ctx.unnarrowedSymbol(symRef)
-		if op, crossedFunction, ok := lookupVar(ctx, unnarrowedRef); ok {
-			call.FpOperand = op
-			ctx.function().isClosure = ctx.function().isClosure || crossedFunction
+	if !isMethodCall {
+		symRef := callable.ResolvedSymbol()
+		sym := ctx.getSymbol(symRef)
+		if sym.Kind() == model.SymbolKindFunction {
+			call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.function().birCx, symRef)
+			if inv, ok := callable.(*ast.BLangInvocation); ok && inv.PkgAlias != nil && inv.PkgAlias.Value != "" {
+				call.CalleePkg = ctx.function().birCx.importAliasMap[inv.PkgAlias.Value]
+			} else if ctx.function().birCx.packageID != nil {
+				call.CalleePkg = ctx.function().birCx.packageID
+			}
+		} else {
+			call.Kind = INSTRUCTION_KIND_FP_CALL
+			unnarrowedRef := ctx.unnarrowedSymbol(symRef)
+			if op, crossedFunction, ok := lookupVar(ctx, unnarrowedRef); ok {
+				call.FpOperand = op
+				ctx.function().isClosure = ctx.function().isClosure || crossedFunction
+			}
 		}
 	}
 	curBB.Terminator = call

@@ -855,24 +855,18 @@ func createArrayPushInvocation(pkgCtx *packageContext, listExpr, valueExpr ast.B
 
 func buildListenerStartInvocation(pkgCtx *packageContext, listenerExpr ast.BLangExpression) *ast.BLangInvocation {
 	listenerTy := listenerExpr.GetDeterminedType()
-	if listenerTy == nil {
+	if semtypes.IsZero(listenerTy) {
 		pkgCtx.internalError("listener expression has no determined type at desugar")
 		return nil
 	}
 	startFnTy := semtypes.ObjectMemberType(pkgCtx.typeCtx(), semtypes.StringConst("start"), listenerTy)
-	if startFnTy == nil {
+	if semtypes.IsZero(startFnTy) {
 		pkgCtx.internalError("listener type has no start method type at desugar")
-		return nil
-	}
-	startSym, ok := findClassMethodSymbol(pkgCtx, listenerTy, "start")
-	if !ok {
-		pkgCtx.internalError("listener start method symbol not found at desugar")
 		return nil
 	}
 	inv := &ast.BLangInvocation{}
 	inv.Name = &ast.BLangIdentifier{Value: "start"}
 	inv.Expr = listenerExpr
-	inv.SetSymbol(startSym)
 	argListDefn := semtypes.NewListDefinition()
 	argListTy := argListDefn.DefineListTypeWrapped(pkgCtx.typeEnv(), []semtypes.SemType{}, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	inv.SetDeterminedType(semtypes.FunctionReturnType(pkgCtx.typeCtx(), startFnTy, argListTy))
@@ -895,75 +889,16 @@ func buildListenerAttachInvocation(pkgCtx *packageContext, svc *ast.BLangService
 		pkgCtx.internalError("listener type has no attach method type at desugar")
 		return nil
 	}
-	attachSym, ok := findClassMethodSymbol(pkgCtx, listenerTy, "attach")
-	if !ok {
-		pkgCtx.internalError("listener attach method symbol not found at desugar")
-		return nil
-	}
 	attachPointExpr := buildAttachPointExpression(pkgCtx, svc)
 	inv := &ast.BLangInvocation{}
 	inv.Name = &ast.BLangIdentifier{Value: "attach"}
 	inv.Expr = listenerExpr
 	inv.ArgExprs = []ast.BLangExpression{svcRef, attachPointExpr}
-	inv.SetSymbol(attachSym)
 	argListDefn := semtypes.NewListDefinition()
 	argListTy := argListDefn.DefineListTypeWrapped(pkgCtx.typeEnv(), []semtypes.SemType{svcRef.GetDeterminedType(), attachPointExpr.GetDeterminedType()}, 2, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	inv.SetDeterminedType(semtypes.FunctionReturnType(tyCtx, attachFnTy, argListTy))
 	inv.SetPosition(svc.GetPosition())
 	return inv
-}
-
-// findClassMethodSymbol scans the package's class definitions and the
-// symbol spaces of every imported module for one whose symbol's type
-// matches receiverTy, then returns its `methodName` symbol.
-func findClassMethodSymbol(pkgCtx *packageContext, receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	tyCtx := pkgCtx.typeCtx()
-	for i := range pkgCtx.pkg.ClassDefinitions {
-		classDef := &pkgCtx.pkg.ClassDefinitions[i]
-		classSymRef := classDef.Symbol()
-		classTy := pkgCtx.getSymbolType(classSymRef)
-		if !listenerReceiverCompatible(tyCtx, classTy, receiverTy) {
-			continue
-		}
-		classSym, ok := pkgCtx.getSymbol(classSymRef).(model.ClassSymbol)
-		if !ok {
-			pkgCtx.internalError("class definition symbol is not a ClassSymbol")
-			return model.SymbolRef{}, false
-		}
-		return classSym.MethodSymbol(methodName)
-	}
-	for _, space := range pkgCtx.importedSymbols {
-		for _, sym := range space.Main.Symbols() {
-			classSym, ok := sym.(model.ClassSymbol)
-			if !ok {
-				continue
-			}
-			classTy := sym.Type()
-			if !listenerReceiverCompatible(tyCtx, classTy, receiverTy) {
-				continue
-			}
-			return classSym.MethodSymbol(methodName)
-		}
-	}
-	return model.SymbolRef{}, false
-}
-
-// FIXME:
-func listenerReceiverCompatible(tyCtx semtypes.Context, classTy semtypes.SemType, receiverTy semtypes.SemType) bool {
-	if semtypes.IsSameType(tyCtx, classTy, receiverTy) || semtypes.IsSubtype(tyCtx, classTy, receiverTy) {
-		return true
-	}
-	attachFnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("attach"), receiverTy)
-	if attachFnTy == nil {
-		return false
-	}
-	paramList := semtypes.FunctionParamListType(tyCtx, attachFnTy)
-	if paramList == nil {
-		return false
-	}
-	targetTy := semtypes.ListMemberTypeInnerVal(tyCtx, paramList, semtypes.IntConst(0))
-	attachTy := semtypes.ListMemberTypeInnerVal(tyCtx, paramList, semtypes.IntConst(1))
-	return semtypes.IsSubtype(tyCtx, classTy, semtypes.ListenerTy(tyCtx, targetTy, attachTy))
 }
 
 // buildAttachPointExpression returns an AST expression representing the
