@@ -868,7 +868,8 @@ func findClassMethodSymbol(pkgCtx *packageContext, receiverTy semtypes.SemType, 
 	for i := range pkgCtx.pkg.ClassDefinitions {
 		classDef := &pkgCtx.pkg.ClassDefinitions[i]
 		classSymRef := classDef.Symbol()
-		if !semtypes.IsSameType(tyCtx, pkgCtx.getSymbolType(classSymRef), receiverTy) {
+		classTy := pkgCtx.getSymbolType(classSymRef)
+		if !listenerReceiverCompatible(tyCtx, classTy, receiverTy) {
 			continue
 		}
 		classSym, ok := pkgCtx.getSymbol(classSymRef).(model.ClassSymbol)
@@ -884,13 +885,32 @@ func findClassMethodSymbol(pkgCtx *packageContext, receiverTy semtypes.SemType, 
 			if !ok {
 				continue
 			}
-			if !semtypes.IsSameType(tyCtx, sym.Type(), receiverTy) {
+			classTy := sym.Type()
+			if !listenerReceiverCompatible(tyCtx, classTy, receiverTy) {
 				continue
 			}
 			return classSym.MethodSymbol(methodName)
 		}
 	}
 	return model.SymbolRef{}, false
+}
+
+// FIXME:
+func listenerReceiverCompatible(tyCtx semtypes.Context, classTy semtypes.SemType, receiverTy semtypes.SemType) bool {
+	if semtypes.IsSameType(tyCtx, classTy, receiverTy) || semtypes.IsSubtype(tyCtx, classTy, receiverTy) {
+		return true
+	}
+	attachFnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("attach"), receiverTy)
+	if attachFnTy == nil {
+		return false
+	}
+	paramList := semtypes.FunctionParamListType(tyCtx, attachFnTy)
+	if paramList == nil {
+		return false
+	}
+	targetTy := semtypes.ListMemberTypeInnerVal(tyCtx, paramList, semtypes.IntConst(0))
+	attachTy := semtypes.ListMemberTypeInnerVal(tyCtx, paramList, semtypes.IntConst(1))
+	return semtypes.IsSubtype(tyCtx, classTy, semtypes.ListenerTy(tyCtx, targetTy, attachTy))
 }
 
 // buildAttachPointExpression returns an AST expression representing the

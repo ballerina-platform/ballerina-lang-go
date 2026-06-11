@@ -1758,6 +1758,11 @@ func resolveServiceType(t typeResolver, svc *ast.BLangService, depth int) bool {
 
 	svc.SetDeterminedType(semType)
 	typeData := svc.GetTypeData()
+	if typeData.TypeDescriptor != nil {
+		if _, ok := resolveBType(t, typeData.TypeDescriptor.(ast.BType), depth+1); !ok {
+			return false
+		}
+	}
 	typeData.Type = semType
 	svc.SetTypeData(typeData)
 	if selfRef, ok := svc.Scope().GetSymbol("self"); ok {

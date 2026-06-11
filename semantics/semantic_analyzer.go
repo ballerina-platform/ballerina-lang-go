@@ -1890,11 +1890,28 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		for _, expr := range n.AttachedExprs {
 			ast.Walk(a, expr.(ast.BLangNode))
 		}
+		validateServiceDeclaredType(a, n)
 		analyzeClassLikeDefn(a, n.Fields, n.InitFunction, n.Methods, n.ResourceMethods, n.Inclusions,
 			n.InclusionPositions, n.IsIsolated(), n.GetPosition(), enclosingFromService(n))
 		return nil
 	default:
 		return a
+	}
+}
+
+func validateServiceDeclaredType[A analyzer](a A, svc *ast.BLangService) {
+	typeData := svc.GetTypeData()
+	if typeData.TypeDescriptor == nil {
+		return
+	}
+	bodyTy := typeData.Type
+	declaredTy := typeData.TypeDescriptor.(ast.BType).GetTypeData().Type
+	if semtypes.IsZero(bodyTy) || semtypes.IsZero(declaredTy) {
+		a.internalErr("service type not resolved", svc.GetPosition())
+		return
+	}
+	if !semtypes.IsSubtype(a.tyCtx(), bodyTy, declaredTy) {
+		a.semanticErr("service body is not a subtype of the declared service type", svc.GetPosition())
 	}
 }
 

@@ -1,0 +1,77 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+$moduleListeners  [object { public function attach(never, [string...]) returns nil|error; public function detach(never) returns nil|error; public function gracefulStop() returns nil|error; public function immediateStop() returns nil|error; public function start() returns nil|error }|object { public function attach(never, string) returns nil|error; public function detach(never) returns nil|error; public function gracefulStop() returns nil|error; public function immediateStop() returns nil|error; public function start() returns nil|error }|object { public function attach(never, nil) returns nil|error; public function detach(never) returns nil|error; public function gracefulStop() returns nil|error; public function immediateStop() returns nil|error; public function start() returns nil|error }...];
+l1  object { public function attach(service object, nil) returns nil|error; public function detach(service object) returns nil|error; public function gracefulStop() returns nil|error; public function immediateStop() returns nil|error; public function init(string) returns nil; private string name; public function start() returns nil|error };
+l2  object { public function attach(service object, nil) returns nil|error; public function detach(service object) returns nil|error; public function gracefulStop() returns nil|error; public function immediateStop() returns nil|error; public function init(string) returns nil; private string name; public function start() returns nil|error };
+class Listener {
+  name string
+
+  attach(service object,nil) -> nil|error{
+    bb0 {
+      %4 = ConstantLoad attach 
+      %6 = ConstantLoad name
+      %5 = self[%6];
+      %7 = println(%4,%5) -> bb1;
+    }
+    bb1 {
+      return;
+    }
+  }
+
+  detach(service object) -> nil|error{
+    bb0 {
+      return;
+    }
+  }
+
+  gracefulStop() -> nil|error{
+    bb0 {
+      return;
+    }
+  }
+
+  immediateStop() -> nil|error{
+    bb0 {
+      return;
+    }
+  }
+
+  init(string) -> nil{
+    bb0 {
+      %3 = ConstantLoad name
+      self[%3] = name;
+      return;
+    }
+  }
+
+  start() -> nil|error{
+    bb0 {
+      return;
+    }
+  }
+}
+class $service$0 {
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad service init
+      %3 = println(%2) -> bb1;
+    }
+    bb1 {
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    return;
+  }
+}
+$default$0(service object) -> nil{
+  bb0 {
+    %2 = ConstantLoad <nil>
+    %0 = %2;
+    return;
+  }
+}

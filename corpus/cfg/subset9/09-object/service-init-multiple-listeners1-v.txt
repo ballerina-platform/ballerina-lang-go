@@ -1,0 +1,41 @@
+(Listener
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access name
+          (simple-var-ref self))
+        (simple-var-ref name))
+    )
+  )
+  (attach
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal attach )
+          (field-based-access name
+            (simple-var-ref self)))))
+    )
+  )
+  (detach
+    (bb0 () ())
+  )
+  (gracefulStop
+    (bb0 () ())
+  )
+  (immediateStop
+    (bb0 () ())
+  )
+  (start
+    (bb0 () ())
+  )
+)
+(init
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal service init))))
+  )
+)
+(main
+  (bb0 () ())
+)

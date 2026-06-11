@@ -1896,6 +1896,11 @@ func (p *PrettyPrinter) printService(node *BLangService) {
 	if node.IsIsolated() {
 		p.PrintString("isolated")
 	}
+	if node.GetTypeData().TypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
 	if node.AttachPointLiteral != nil {
 		p.indentLevel++
 		p.PrintInner(node.AttachPointLiteral)

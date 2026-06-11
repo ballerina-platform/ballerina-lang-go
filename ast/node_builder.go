@@ -782,22 +782,19 @@ func createIdentifier(pos diagnostics.Location, value, originalValue *string) BL
 	if value == nil {
 		return bLIdentifer
 	}
-	strValue := *value
-	// Handle identifier literal prefix
-	const IDENTIFIER_LITERAL_PREFIX = "'"
-
-	// TODO: properly handle unicode
-	if len(strValue) > 0 && strValue[0:1] == IDENTIFIER_LITERAL_PREFIX {
-		// Remove the prefix and mark as literal
-		bLIdentifer.SetValue(strValue[1:])
-		bLIdentifer.SetLiteral(true)
-	} else {
-		bLIdentifer.SetValue(strValue)
-		bLIdentifer.SetLiteral(false)
-	}
-
+	identifierValue, isLiteral := normalizedIdentifierValue(*value)
+	bLIdentifer.SetValue(identifierValue)
+	bLIdentifer.SetLiteral(isLiteral)
 	bLIdentifer.SetOriginalValue(*originalValue)
 	return bLIdentifer
+}
+
+func normalizedIdentifierValue(value string) (string, bool) {
+	const IDENTIFIER_LITERAL_PREFIX = "'"
+	if len(value) > 0 && value[0:1] == IDENTIFIER_LITERAL_PREFIX {
+		return value[1:], true
+	}
+	return value, false
 }
 
 // createIdentifierFromToken creates an identifier from a token, handling missing tokens and validation
@@ -1647,6 +1644,10 @@ func (n *NodeBuilder) TransformServiceDeclaration(serviceDeclarationNode *tree.S
 			panic("TransformServiceDeclaration: annotations not yet supported")
 		}
 		service.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(getDocumentationString(metadata))
+	}
+
+	if typeDesc := serviceDeclarationNode.TypeDescriptor(); typeDesc != nil && !typeDesc.IsMissing() {
+		service.SetTypeData(TypeData{TypeDescriptor: n.createTypeNode(typeDesc)})
 	}
 
 	n.populateServiceQualifiers(&service, serviceDeclarationNode)
@@ -2553,7 +2554,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 		switch member.Kind() {
 		case common.OBJECT_FIELD:
 			objectField := member.(*tree.ObjectFieldNode)
-			fieldName := objectField.FieldName().Text()
+			fieldName, _ := normalizedIdentifierValue(objectField.FieldName().Text())
 			bField := &BObjectField{
 				Ty: n.createTypeNode(objectField.TypeName()).(BType),
 			}
@@ -2567,7 +2568,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			}
 		case common.METHOD_DECLARATION:
 			methodDecl := member.(*tree.MethodDeclarationNode)
-			methodName := methodDecl.MethodName().Text()
+			methodName, _ := normalizedIdentifierValue(methodDecl.MethodName().Text())
 			bMethod := &BMethodDecl{}
 			bMethod.name = methodName
 			bMethod.pos = getPosition(n.de(), methodDecl)

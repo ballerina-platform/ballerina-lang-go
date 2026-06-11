@@ -1388,6 +1388,10 @@ func methodsInResolutionOrder(methods map[string]*ast.BLangFunction) []namedClas
 }
 
 func resolveServiceDefinition(ms *moduleSymbolResolver, svc *ast.BLangService) {
+	if typeDescriptor := svc.GetTypeData().TypeDescriptor; typeDescriptor != nil {
+		ast.Walk(ms, typeDescriptor.(ast.BLangNode))
+	}
+
 	for _, expr := range svc.AttachedExprs {
 		ast.Walk(ms, expr.(ast.BLangNode))
 	}
