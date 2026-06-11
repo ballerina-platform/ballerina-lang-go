@@ -23,11 +23,11 @@ import (
 
 type toStringState struct {
 	cx      Context
-	visited map[string]bool
+	visited map[atomKey]bool
 }
 
 func newToStringState(cx Context) *toStringState {
-	return &toStringState{cx: cx, visited: make(map[string]bool)}
+	return &toStringState{cx: cx, visited: make(map[atomKey]bool)}
 }
 
 func ToString(cx Context, ty SemType) string {

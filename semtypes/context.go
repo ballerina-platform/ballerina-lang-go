@@ -24,9 +24,9 @@ type Context = *context
 type context struct {
 	_env          Env
 	_memoStack    []*bddMemo
-	_listMemo     map[string]*bddMemo
-	_mappingMemo  map[string]*bddMemo
-	_functionMemo map[string]*bddMemo
+	_listMemo     map[bddKey]*bddMemo
+	_mappingMemo  map[bddKey]*bddMemo
+	_functionMemo map[bddKey]*bddMemo
 
 	_conjunctions []conjunction
 
@@ -55,8 +55,8 @@ type comparableMemo struct {
 }
 
 type comparableMemoKey struct {
-	key1 string
-	key2 string
+	key1 bddKey
+	key2 bddKey
 }
 
 func (c *context) pushToMemoStack(m *bddMemo) {
@@ -146,15 +146,15 @@ func (c *context) setIterableMemo(t SemType) {
 	c._iterableMemo = t
 }
 
-func (c *context) mappingMemo() map[string]*bddMemo {
+func (c *context) mappingMemo() map[bddKey]*bddMemo {
 	return c._mappingMemo
 }
 
-func (c *context) functionMemo() map[string]*bddMemo {
+func (c *context) functionMemo() map[bddKey]*bddMemo {
 	return c._functionMemo
 }
 
-func (c *context) listMemo() map[string]*bddMemo {
+func (c *context) listMemo() map[bddKey]*bddMemo {
 	return c._listMemo
 }
 
@@ -195,9 +195,9 @@ func (c *context) resetConjunctionStack(depth int32) {
 func ContextFrom(env Env) Context {
 	return &context{
 		_env:                   env,
-		_listMemo:              make(map[string]*bddMemo),
-		_mappingMemo:           make(map[string]*bddMemo),
-		_functionMemo:          make(map[string]*bddMemo),
+		_listMemo:              make(map[bddKey]*bddMemo),
+		_mappingMemo:           make(map[bddKey]*bddMemo),
+		_functionMemo:          make(map[bddKey]*bddMemo),
 		_comparableMemo:        make(map[comparableMemoKey]*comparableMemo),
 		_fillerMemo:            make(map[atomicType]Filler),
 		_streamImplementorMemo: make(map[streamImplementorMemoKey]SemType),
