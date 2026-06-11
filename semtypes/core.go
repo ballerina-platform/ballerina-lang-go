@@ -33,11 +33,11 @@ func bitCount(b BasicTypeBitSet) int {
 	return bits.OnesCount(uint(b.all()))
 }
 
-func cellAtomType(atom atom) cellAtomicType {
+func cellAtomType(atom atom) *cellAtomicType {
 	ta := atom.(*typeAtom)
 	atomicType := ta.AtomicType
 	if cellAtomicType, ok := atomicType.(*cellAtomicType); ok {
-		return *cellAtomicType
+		return cellAtomicType
 	}
 	panic("expected cell atomic type")
 }
@@ -666,14 +666,14 @@ func getCellAtomicType(t SemType) *cellAtomicType {
 		if !IsSubtypeSimple(t, CELL) {
 			return nil
 		}
-		return bddCellAtomicType(getComplexSubtypeData(t.(*ComplexSemType), BTCell).(Bdd), *CELL_ATOMIC_VAL)
+		return bddCellAtomicType(getComplexSubtypeData(t.(*ComplexSemType), BTCell).(Bdd), CELL_ATOMIC_VAL)
 	}
 }
 
-func bddCellAtomicType(bdd Bdd, top cellAtomicType) *cellAtomicType {
+func bddCellAtomicType(bdd Bdd, top *cellAtomicType) *cellAtomicType {
 	if allOrNothing, ok := bdd.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
-			return &top
+			return top
 		}
 		return nil
 	}
@@ -685,8 +685,7 @@ func bddCellAtomicType(bdd Bdd, top cellAtomicType) *cellAtomicType {
 	if leftAll, ok := leftBdd.(*bddAllOrNothing); ok && leftAll.IsAll() {
 		if middleNothing, ok := middleBdd.(*bddAllOrNothing); ok && middleNothing.IsNothing() {
 			if rightNothing, ok := rightBdd.(*bddAllOrNothing); ok && rightNothing.IsNothing() {
-				result := cellAtomType(bn.atom())
-				return &result
+				return cellAtomType(bn.atom())
 			}
 		}
 	}
