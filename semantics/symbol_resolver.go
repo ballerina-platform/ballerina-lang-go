@@ -1009,7 +1009,7 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 	if n.GetPackageAlias() != nil {
 		prefix = n.GetPackageAlias().GetValue()
 	}
-	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n)
+	resolveTypeRef(resolver, name, prefix, n.GetPosition(), n)
 	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
@@ -1039,6 +1039,22 @@ func resolveSymbolRef[T symbolResolver](resolver T, name, prefix string, pos dia
 		symRef, _, ok := resolver.GetSymbol(name)
 		if !ok {
 			semanticError(resolver, "Unknown symbol: "+name, pos)
+		}
+		target.SetSymbol(symRef)
+	}
+}
+
+func resolveTypeRef[T symbolResolver](resolver T, name, prefix string, pos diagnostics.Location, target symbolRefNode) {
+	if prefix != "" {
+		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
+		if !ok {
+			semanticError(resolver, "Unknown symbol: "+name, pos)
+		}
+		target.SetSymbol(symRef)
+	} else {
+		symRef, _, ok := resolver.GetSymbol(name)
+		if !ok {
+			semanticError(resolver, "Unknown type: "+name, pos)
 		}
 		target.SetSymbol(symRef)
 	}

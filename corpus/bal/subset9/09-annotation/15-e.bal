@@ -22,5 +22,5 @@ annotation Info info on type;
 
 public function main() {
     int value = 1;
-    Info? metadata = value.@info; // @error
+    Info? _ = value.@info; // @error
 }
