@@ -62,7 +62,12 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	result, err := testphases.RunPipeline(env, cx, testphases.PhaseTypeNarrowing, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	result, err := testphases.RunPipeline(env, cx, langlibs, testphases.PhaseTypeNarrowing, testCase.InputPath)
 	if err != nil {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return

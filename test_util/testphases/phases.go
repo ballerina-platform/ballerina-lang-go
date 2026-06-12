@@ -138,7 +138,16 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 
 // RunPipeline runs the frontend compilation pipeline up to the specified phase.
 // It returns a PipelineResult containing the outputs relevant to that phase.
-func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
+func LoadLanglibs(env *context.CompilerEnvironment, cx *context.CompilerContext) (*langlib.Symbols, error) {
+	stdlibSymbols := loadBuiltinPublicSymbols(env)
+	symbols, err := langlib.Build(cx, stdlibSymbols)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	return symbols, nil
+}
+
+func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, langlibs *langlib.Symbols, phase Phase, inputPath string) (*PipelineResult, error) {
 	result := &PipelineResult{}
 
 	// Register source file with DiagnosticEnv
@@ -167,20 +176,15 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 		return result, nil
 	}
 
-	// Pre-compile embedded standard-library packages still needed by hand-rolled
-	// corpus drivers.
-	stdlibSymbols := loadBuiltinPublicSymbols(env)
-
 	// Phase 3: Symbol Resolution
-	implicitImports, err := langlib.ImplicitImports(cx)
-	if err != nil {
-		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	if langlibs == nil {
+		var err error
+		langlibs, err = LoadLanglibs(env, cx)
+		if err != nil {
+			return nil, err
+		}
 	}
-	publicSymbols, err := langlib.SeedPublicSymbols(cx, stdlibSymbols)
-	if err != nil {
-		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
-	}
-	importedSymbols := semantics.ResolveImports(cx, result.Package, implicitImports, publicSymbols, "")
+	importedSymbols := semantics.ResolveImports(cx, result.Package, langlibs.ImplicitImports, langlibs.PublicSymbols, "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil

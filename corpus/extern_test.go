@@ -758,15 +758,11 @@ func compileSingleFileModule(
 	pkg := ast.ToPackage(cu)
 	pkg.PackageID = cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
 
-	implicitImports, err := langlib.ImplicitImports(cx)
+	langlibs, err := langlib.Build(cx, publicSymbols)
 	if err != nil {
 		t.Fatalf("loading lang libraries failed: %v", err)
 	}
-	publicSymbols, err = langlib.SeedPublicSymbols(cx, publicSymbols)
-	if err != nil {
-		t.Fatalf("loading lang libraries failed: %v", err)
-	}
-	importedSymbols := semantics.ResolveImports(cx, pkg, implicitImports, publicSymbols, defaultOrg)
+	importedSymbols := semantics.ResolveImports(cx, pkg, langlibs.ImplicitImports, langlibs.PublicSymbols, defaultOrg)
 	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveSymbols")
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
