@@ -2866,6 +2866,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveXMLSequenceLiteral(t, chain, e, expectedType)
 	case *ast.BLangTemplateExpr:
 		return resolveTemplateExpr(t, chain, e)
+	case *ast.BLangXMLTemplateExpr:
+		return resolveXMLTemplateExpr(t, chain, e)
 	case *ast.BLangXMLElementLiteral:
 		return resolveXMLElementLiteral(t, chain, e)
 	case *ast.BLangXMLPILiteral:
@@ -3033,6 +3035,21 @@ func resolveStringTemplateType(t typeResolver, chain *binding, e *ast.BLangTempl
 		return semtypes.StringConst(sb.String()), true
 	}
 	return semtypes.STRING, true
+}
+
+func resolveXMLTemplateExpr(t typeResolver, chain *binding, e *ast.BLangXMLTemplateExpr) (semtypes.SemType, expressionEffect, bool) {
+	if len(e.InsertionKinds) != len(e.Insertions) {
+		t.internalError(fmt.Sprintf("xml template insertion kind count mismatch: got %d kinds for %d insertions", len(e.InsertionKinds), len(e.Insertions)), e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	for i, ins := range e.Insertions {
+		allowed := xmlTemplateInsertionAllowedTypes(e.InsertionKinds[i])
+		if _, _, ok := resolveActionOrExpression(t, chain, ins, allowed); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+	setExpectedType(e, semtypes.XML)
+	return semtypes.XML, defaultExpressionEffect(chain), true
 }
 
 func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSequenceLiteral, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {

@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"iter"
 	"math"
 	"regexp"
 	"strconv"
@@ -2976,20 +2977,47 @@ func (n *NodeBuilder) TransformTemplateExpression(templateBLangExpression *tree.
 	case "string":
 		return n.buildStringTemplateExpr(templateBLangExpression, pos)
 	case "xml":
-		return n.buildXmlTemplateExpr(templateBLangExpression, pos)
+		return n.buildXMLTemplateExpr(templateBLangExpression, pos)
 	default:
 		n.cx.Unimplemented("unsupported template expression kind", pos)
 		return nil
 	}
 }
 
-func (n *NodeBuilder) buildXmlTemplateExpr(templateBLangExpression *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {
+func (n *NodeBuilder) buildXMLTemplateExpr(templateBLangExpression *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {
+	if !xmlTemplateHasInterpolation(templateBLangExpression.Content()) {
+		// If we don't have interpolations we build a literal as an optimization
+		return n.buildXMLSequenceLiteral(templateBLangExpression, pos)
+	}
+
+	tpl := &BLangXMLTemplateExpr{}
+	tpl.SetPosition(pos)
+	tpl.Kind = TemplateExprKindXML
+	for tok, diag := range n.flattenXMLTemplateContent(templateBLangExpression.Content(), XMLTemplateInsertionKindContent) {
+		if diag != nil {
+			n.reportXMLTemplateDiagnostic(diag)
+			continue
+		}
+		switch tok.Kind {
+		case xmlTemplateTokenKindText:
+			tpl.Strings = append(tpl.Strings, tok.Text)
+			tpl.NamespaceInsertions = append(tpl.NamespaceInsertions, tok.NamespaceInsertions)
+		case xmlTemplateTokenKindInsertion:
+			tpl.Insertions = append(tpl.Insertions, tok.Insertion)
+			tpl.InsertionKinds = append(tpl.InsertionKinds, tok.InsertionKind)
+		}
+	}
+	return tpl
+}
+
+func (n *NodeBuilder) buildXMLSequenceLiteral(templateBLangExpression *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {
 	var children []BLangExpression
 	content := templateBLangExpression.Content()
 	for child := range content.Iterator() {
 		bl := n.TransformSyntaxNode(child)
 		if bl == nil {
-			continue
+			n.cx.InternalError("xml template child did not produce BLangNode", getPosition(n.de(), child))
+			return nil
 		}
 		expr, ok := bl.(BLangExpression)
 		if !ok {
@@ -3005,6 +3033,497 @@ func (n *NodeBuilder) buildXmlTemplateExpr(templateBLangExpression *tree.Templat
 	seq.pos = pos
 	seq.Children = children
 	return seq
+}
+
+func xmlTemplateHasInterpolation(content tree.NodeList[tree.Node]) bool {
+	for child := range content.Iterator() {
+		if xmlNodeHasInterpolation(child) {
+			return true
+		}
+	}
+	return false
+}
+
+func xmlNodeHasInterpolation(node tree.Node) bool {
+	return firstXMLInterpolation(node) != nil
+}
+
+func firstXMLInterpolation(node tree.Node) *tree.InterpolationNode {
+	switch x := node.(type) {
+	case *tree.InterpolationNode:
+		return x
+	case *tree.XMLElementNode:
+		content := x.Content()
+		for child := range content.Iterator() {
+			if ins := firstXMLInterpolation(child); ins != nil {
+				return ins
+			}
+		}
+		if start := x.StartTag(); start != nil {
+			attrs := start.Attributes()
+			for attr := range attrs.Iterator() {
+				if value := attr.Value(); value != nil {
+					if ins := firstXMLInterpolation(value); ins != nil {
+						return ins
+					}
+				}
+			}
+		}
+	case *tree.XMLEmptyElementNode:
+		attrs := x.Attributes()
+		for attr := range attrs.Iterator() {
+			if value := attr.Value(); value != nil {
+				if ins := firstXMLInterpolation(value); ins != nil {
+					return ins
+				}
+			}
+		}
+	case *tree.XMLAttributeValue:
+		value := x.Value()
+		for child := range value.Iterator() {
+			if ins := firstXMLInterpolation(child); ins != nil {
+				return ins
+			}
+		}
+	case *tree.XMLComment:
+		content := x.Content()
+		for child := range content.Iterator() {
+			if ins, ok := child.(*tree.InterpolationNode); ok {
+				return ins
+			}
+		}
+	case *tree.XMLProcessingInstruction:
+		data := x.Data()
+		for child := range data.Iterator() {
+			if ins, ok := child.(*tree.InterpolationNode); ok {
+				return ins
+			}
+		}
+	case *tree.XMLCDATANode:
+		content := x.Content()
+		for child := range content.Iterator() {
+			if ins, ok := child.(*tree.InterpolationNode); ok {
+				return ins
+			}
+		}
+	}
+	return nil
+}
+
+type xmlTemplateTokenKind uint8
+
+const (
+	xmlTemplateTokenKindText xmlTemplateTokenKind = iota
+	xmlTemplateTokenKindInsertion
+)
+
+type xmlTemplateToken struct {
+	Kind                xmlTemplateTokenKind
+	Text                string
+	NamespaceInsertions []XMLTemplateNamespaceInsertion
+	Insertion           BLangExpression
+	InsertionKind       XMLTemplateInsertionKind
+}
+
+func newXMLTemplateTextToken(value string, insertions ...XMLTemplateNamespaceInsertion) xmlTemplateToken {
+	return xmlTemplateToken{Kind: xmlTemplateTokenKindText, Text: value, NamespaceInsertions: insertions}
+}
+
+func newXMLTemplateInsertionToken(expr BLangExpression, kind XMLTemplateInsertionKind) xmlTemplateToken {
+	return xmlTemplateToken{Kind: xmlTemplateTokenKindInsertion, Insertion: expr, InsertionKind: kind}
+}
+
+type xmlTemplateTextAccumulator struct {
+	text                strings.Builder
+	namespaceInsertions []XMLTemplateNamespaceInsertion
+}
+
+func appendXMLTemplateText(current *xmlTemplateTextAccumulator, tok xmlTemplateToken) *xmlTemplateTextAccumulator {
+	if current == nil {
+		current = &xmlTemplateTextAccumulator{}
+	}
+	baseOffset := current.text.Len()
+	current.text.WriteString(tok.Text)
+	for _, insn := range tok.NamespaceInsertions {
+		insn.Offset += baseOffset
+		current.namespaceInsertions = append(current.namespaceInsertions, insn)
+	}
+	return current
+}
+
+func isTemplateAccumEmtpy(t *xmlTemplateTextAccumulator) bool {
+	return t == nil || t.text.Len() == 0
+}
+
+func xmlTemplateAccumToken(t *xmlTemplateTextAccumulator) xmlTemplateToken {
+	if t == nil {
+		return newXMLTemplateTextToken("")
+	}
+	return newXMLTemplateTextToken(t.text.String(), t.namespaceInsertions...)
+}
+
+type xmlTemplateDiagnostic struct {
+	Message  string
+	Position diagnostics.Location
+	Internal bool
+}
+
+func (n *NodeBuilder) flattenXMLTemplateContent(content tree.NodeList[tree.Node], kind XMLTemplateInsertionKind) iter.Seq2[xmlTemplateToken, *xmlTemplateDiagnostic] {
+	return func(yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool) {
+		var current *xmlTemplateTextAccumulator
+		rawYield := func(tok xmlTemplateToken, diag *xmlTemplateDiagnostic) bool {
+			if diag != nil {
+				if !isTemplateAccumEmtpy(current) && !yield(xmlTemplateAccumToken(current), nil) {
+					return false
+				}
+				current = nil
+				return yield(tok, diag)
+			}
+			switch tok.Kind {
+			case xmlTemplateTokenKindText:
+				current = appendXMLTemplateText(current, tok)
+				return true
+			case xmlTemplateTokenKindInsertion:
+				if !yield(xmlTemplateAccumToken(current), nil) {
+					return false
+				}
+				current = nil
+				return yield(tok, nil)
+			default:
+				return true
+			}
+		}
+		for child := range content.Iterator() {
+			if !n.flattenXMLTemplateNodeWithNamespace(child, kind, nil, rawYield) {
+				return
+			}
+		}
+		yield(xmlTemplateAccumToken(current), nil)
+	}
+}
+
+func (n *NodeBuilder) flattenXMLTemplateNodeWithNamespace(
+	node tree.Node,
+	kind XMLTemplateInsertionKind,
+	namespaceInsertion *XMLTemplateNamespaceInsertion,
+	yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool,
+) bool {
+	switch x := node.(type) {
+	case tree.Token:
+		return yield(newXMLTemplateTextToken(x.Text()), nil)
+	case *tree.InterpolationNode:
+		expr := n.createActionOrExpression(x.Expression())
+		be, ok := expr.(BLangExpression)
+		if !ok {
+			return yield(xmlTemplateToken{}, &xmlTemplateDiagnostic{
+				Message:  "interpolation did not produce BLangExpression",
+				Position: getPosition(n.de(), x),
+				Internal: true,
+			})
+		}
+		return yield(newXMLTemplateInsertionToken(be, kind), nil)
+	case *tree.XMLTextNode:
+		if c := x.Content(); c != nil {
+			return yield(newXMLTemplateTextToken(c.Text()), nil)
+		}
+		return true
+	case *tree.XMLElementNode:
+		return n.flattenXMLTemplateElement(x, namespaceInsertion, yield)
+	case *tree.XMLEmptyElementNode:
+		return n.flattenXMLTemplateEmptyElement(x, namespaceInsertion, yield)
+	case *tree.XMLComment:
+		if ins := firstXMLInterpolation(x); ins != nil {
+			return yield(xmlTemplateToken{}, &xmlTemplateDiagnostic{
+				Message:  "interpolation is not allowed in xml comment",
+				Position: getPosition(n.de(), ins),
+			})
+		}
+		return yield(newXMLTemplateTextToken(tree.ToSourceCode(x.InternalNode())), nil)
+	case *tree.XMLProcessingInstruction:
+		if ins := firstXMLInterpolation(x); ins != nil {
+			return yield(xmlTemplateToken{}, &xmlTemplateDiagnostic{
+				Message:  "interpolation is not allowed in xml processing instruction",
+				Position: getPosition(n.de(), ins),
+			})
+		}
+		return n.flattenXMLTemplatePI(x, yield)
+	case *tree.XMLCDATANode:
+		if ins := firstXMLInterpolation(x); ins != nil {
+			return yield(xmlTemplateToken{}, &xmlTemplateDiagnostic{
+				Message:  "interpolation is not allowed in xml CDATA section",
+				Position: getPosition(n.de(), ins),
+			})
+		}
+		return yield(newXMLTemplateTextToken(tree.ToSourceCode(x.InternalNode())), nil)
+	default:
+		return yield(newXMLTemplateTextToken(tree.ToSourceCode(node.InternalNode())), nil)
+	}
+}
+
+func (n *NodeBuilder) flattenXMLTemplateElement(
+	x *tree.XMLElementNode,
+	parentNamespaceInsertion *XMLTemplateNamespaceInsertion,
+	yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool,
+) bool {
+	start := x.StartTag()
+	if start == nil {
+		return true
+	}
+	attrs := start.Attributes()
+	name := n.xmlNameToString(start.Name())
+	namespaceInsertion := parentNamespaceInsertion
+	if namespaceInsertion == nil {
+		insn := n.collectXMLTemplateNamespaceInsertion(x)
+		namespaceInsertion = &insn
+	}
+	startText := "<" + name
+	if parentNamespaceInsertion == nil {
+		namespaceInsertion.Offset = len(startText)
+		if !yield(newXMLTemplateTextToken(startText, *namespaceInsertion), nil) {
+			return false
+		}
+	} else if !yield(newXMLTemplateTextToken(startText), nil) {
+		return false
+	}
+	if !n.flattenXMLTemplateAttributes(attrs, yield) {
+		return false
+	}
+	if !yield(newXMLTemplateTextToken(">"), nil) {
+		return false
+	}
+	content := x.Content()
+	for child := range content.Iterator() {
+		if !n.flattenXMLTemplateNodeWithNamespace(child, XMLTemplateInsertionKindContent, namespaceInsertion, yield) {
+			return false
+		}
+	}
+	return yield(newXMLTemplateTextToken("</"+name+">"), nil)
+}
+
+func (n *NodeBuilder) flattenXMLTemplateEmptyElement(
+	x *tree.XMLEmptyElementNode,
+	parentNamespaceInsertion *XMLTemplateNamespaceInsertion,
+	yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool,
+) bool {
+	name := n.xmlNameToString(x.Name())
+	namespaceInsertion := parentNamespaceInsertion
+	if namespaceInsertion == nil {
+		insn := n.collectXMLTemplateNamespaceInsertion(x)
+		namespaceInsertion = &insn
+	}
+	startText := "<" + name
+	if parentNamespaceInsertion == nil {
+		namespaceInsertion.Offset = len(startText)
+		if !yield(newXMLTemplateTextToken(startText, *namespaceInsertion), nil) {
+			return false
+		}
+	} else if !yield(newXMLTemplateTextToken(startText), nil) {
+		return false
+	}
+	if !n.flattenXMLTemplateAttributes(x.Attributes(), yield) {
+		return false
+	}
+	return yield(newXMLTemplateTextToken("/>"), nil)
+}
+
+func (n *NodeBuilder) flattenXMLTemplatePI(x *tree.XMLProcessingInstruction, yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool) bool {
+	if !yield(newXMLTemplateTextToken("<?"), nil) {
+		return false
+	}
+	if !yield(newXMLTemplateTextToken(n.xmlNameToString(x.Target())), nil) {
+		return false
+	}
+	var dataText strings.Builder
+	data := x.Data()
+	for child := range data.Iterator() {
+		if tok, ok := child.(tree.Token); ok {
+			dataText.WriteString(tok.Text())
+		}
+	}
+	if data := strings.TrimSpace(dataText.String()); data != "" {
+		if !yield(newXMLTemplateTextToken(" "), nil) {
+			return false
+		}
+		if !yield(newXMLTemplateTextToken(data), nil) {
+			return false
+		}
+	}
+	return yield(newXMLTemplateTextToken("?>"), nil)
+}
+
+func (n *NodeBuilder) flattenXMLTemplateAttributes(attrs tree.NodeList[*tree.XMLAttributeNode], yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool) bool {
+	for attr := range attrs.Iterator() {
+		name := n.xmlNameToString(attr.AttributeName())
+		if !yield(newXMLTemplateTextToken(" "+name+"="), nil) {
+			return false
+		}
+		if value := attr.Value(); value != nil {
+			if !n.flattenXMLTemplateAttributeValue(name, value, yield) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (n *NodeBuilder) flattenXMLTemplateAttributeValue(
+	name string,
+	value *tree.XMLAttributeValue,
+	yield func(xmlTemplateToken, *xmlTemplateDiagnostic) bool,
+) bool {
+	startQuote := "\""
+	if q := value.StartQuote(); q != nil && q.Text() != "" {
+		startQuote = q.Text()
+	}
+	endQuote := startQuote
+	if q := value.EndQuote(); q != nil && q.Text() != "" {
+		endQuote = q.Text()
+	}
+	if !yield(newXMLTemplateTextToken(startQuote), nil) {
+		return false
+	}
+	isXMLNS := isXMLTemplateXMLNSName(name)
+	items := value.Value()
+	for child := range items.Iterator() {
+		if ins, ok := child.(*tree.InterpolationNode); ok {
+			if isXMLNS {
+				if !yield(xmlTemplateToken{}, &xmlTemplateDiagnostic{
+					Message:  "interpolation is not allowed in xml xmlns attribute value",
+					Position: getPosition(n.de(), child),
+				}) {
+					return false
+				}
+				continue
+			}
+			if !n.flattenXMLTemplateNodeWithNamespace(ins, XMLTemplateInsertionKindAttribute, nil, yield) {
+				return false
+			}
+			continue
+		}
+		if tok, ok := child.(tree.Token); ok {
+			if !yield(newXMLTemplateTextToken(tok.Text()), nil) {
+				return false
+			}
+		}
+	}
+	return yield(newXMLTemplateTextToken(endQuote), nil)
+}
+
+func (n *NodeBuilder) reportXMLTemplateDiagnostic(diag *xmlTemplateDiagnostic) {
+	if diag.Internal {
+		n.cx.InternalError(diag.Message, diag.Position)
+		return
+	}
+	n.cx.SemanticError(diag.Message, diag.Position)
+}
+
+func (n *NodeBuilder) collectXMLTemplateNamespaceInsertion(node tree.Node) XMLTemplateNamespaceInsertion {
+	insn := XMLTemplateNamespaceInsertion{
+		UsedPrefixes: map[string]struct{}{},
+		Namespaces:   map[string]string{},
+	}
+	n.collectXMLTemplateNamespaceRefs(node, nil, &insn)
+	return insn
+}
+
+func (n *NodeBuilder) collectXMLTemplateNamespaceRefs(node tree.Node, scopes []map[string]struct{}, insn *XMLTemplateNamespaceInsertion) {
+	switch x := node.(type) {
+	case *tree.XMLElementNode:
+		start := x.StartTag()
+		if start == nil {
+			return
+		}
+		childScopes := appendXMLTemplateNamespaceScope(scopes, n.collectInlineXMLTemplatePrefixes(start.Attributes()))
+		n.recordXMLTemplateNameRef(n.xmlNameToString(start.Name()), true, childScopes, insn)
+		n.collectXMLTemplateAttributeNamespaceRefs(start.Attributes(), childScopes, insn)
+		content := x.Content()
+		for child := range content.Iterator() {
+			n.collectXMLTemplateNamespaceRefs(child, childScopes, insn)
+		}
+	case *tree.XMLEmptyElementNode:
+		childScopes := appendXMLTemplateNamespaceScope(scopes, n.collectInlineXMLTemplatePrefixes(x.Attributes()))
+		n.recordXMLTemplateNameRef(n.xmlNameToString(x.Name()), true, childScopes, insn)
+		n.collectXMLTemplateAttributeNamespaceRefs(x.Attributes(), childScopes, insn)
+	}
+}
+
+func (n *NodeBuilder) collectXMLTemplateAttributeNamespaceRefs(
+	attrs tree.NodeList[*tree.XMLAttributeNode],
+	scopes []map[string]struct{},
+	insn *XMLTemplateNamespaceInsertion,
+) {
+	for attr := range attrs.Iterator() {
+		name := n.xmlNameToString(attr.AttributeName())
+		if isXMLTemplateXMLNSName(name) {
+			continue
+		}
+		n.recordXMLTemplateNameRef(name, false, scopes, insn)
+	}
+}
+
+func (n *NodeBuilder) recordXMLTemplateNameRef(name string, isElement bool, scopes []map[string]struct{}, insn *XMLTemplateNamespaceInsertion) {
+	prefix, _ := splitXMLTemplateName(name)
+	if prefix == "xmlns" {
+		return
+	}
+	if prefix != "" {
+		if isXMLTemplatePrefixInScope(prefix, scopes) {
+			return
+		}
+		insn.UsedPrefixes[prefix] = struct{}{}
+		return
+	}
+	if isElement && !isXMLTemplatePrefixInScope("", scopes) {
+		insn.NeedsDefaultNS = true
+	}
+}
+
+func (n *NodeBuilder) collectInlineXMLTemplatePrefixes(attrs tree.NodeList[*tree.XMLAttributeNode]) map[string]struct{} {
+	prefixes := map[string]struct{}{}
+	for attr := range attrs.Iterator() {
+		name := n.xmlNameToString(attr.AttributeName())
+		if !isXMLTemplateXMLNSName(name) {
+			continue
+		}
+		_, local := splitXMLTemplateName(name)
+		if name == "xmlns" {
+			prefixes[""] = struct{}{}
+		} else {
+			prefixes[local] = struct{}{}
+		}
+	}
+	return prefixes
+}
+
+func appendXMLTemplateNamespaceScope(scopes []map[string]struct{}, scope map[string]struct{}) []map[string]struct{} {
+	if len(scope) == 0 {
+		return scopes
+	}
+	out := make([]map[string]struct{}, 0, len(scopes)+1)
+	out = append(out, scopes...)
+	out = append(out, scope)
+	return out
+}
+
+func isXMLTemplatePrefixInScope(prefix string, scopes []map[string]struct{}) bool {
+	for i := len(scopes) - 1; i >= 0; i-- {
+		if _, ok := scopes[i][prefix]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func splitXMLTemplateName(name string) (string, string) {
+	if idx := strings.IndexByte(name, ':'); idx >= 0 {
+		return name[:idx], name[idx+1:]
+	}
+	return "", name
+}
+
+func isXMLTemplateXMLNSName(name string) bool {
+	prefix, local := splitXMLTemplateName(name)
+	return name == "xmlns" || prefix == "xmlns" && local != ""
 }
 
 func (n *NodeBuilder) buildStringTemplateExpr(node *tree.TemplateExpressionNode, pos diagnostics.Location) BLangNode {

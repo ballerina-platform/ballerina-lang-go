@@ -912,6 +912,12 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		resolveXMLElementLiteralNamespaces(resolver, resolver.GetScope(), n, rootNeeds)
 		mergeNamespaces(n, rootNeeds)
 		return nil
+	case *ast.BLangXMLTemplateExpr:
+		resolveXMLTemplateNamespaces(resolver, resolver.GetScope(), n)
+		for _, ins := range n.Insertions {
+			ast.Walk(resolver, ins)
+		}
+		return nil
 	case *ast.BLangXMLSequenceLiteral:
 		for _, child := range n.Children {
 			ast.Walk(resolver, child)

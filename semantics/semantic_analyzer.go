@@ -874,6 +874,10 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		}
 	case *ast.BLangAnnotAccessExpr:
 		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangXMLTemplateExpr:
+		for _, ins := range e.Insertions {
+			validateConstantExpr(ctx, ins, onNonConst)
+		}
 	default:
 		onNonConst(expr)
 	}
@@ -999,6 +1003,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTemplateExpr:
 		return analyzeTemplateExpr(a, expr, expectedType)
+	case *ast.BLangXMLTemplateExpr:
+		return analyzeXMLTemplateExpr(a, expr, expectedType)
 	case *ast.BLangXMLAttribute:
 		// XML attributes are metadata on elements and should not be analyzed as standalone expressions
 		// Their values are already analyzed as part of XMLElement processing
@@ -1028,7 +1034,7 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 	return validateResolvedType(a, expr, expectedType)
 }
 
-var templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
+const templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
 
 func analyzeTemplateExpr[A analyzer](a A, expr *ast.BLangTemplateExpr, expectedType semtypes.SemType) bool {
 	for _, ins := range expr.Insertions {
@@ -1037,6 +1043,27 @@ func analyzeTemplateExpr[A analyzer](a A, expr *ast.BLangTemplateExpr, expectedT
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeXMLTemplateExpr[A analyzer](a A, expr *ast.BLangXMLTemplateExpr, expectedType semtypes.SemType) bool {
+	if len(expr.InsertionKinds) != len(expr.Insertions) {
+		a.internalError(fmt.Sprintf("xml template insertion kind count mismatch: got %d kinds for %d insertions", len(expr.InsertionKinds), len(expr.Insertions)), expr.GetPosition())
+		return false
+	}
+	for i, ins := range expr.Insertions {
+		allowed := xmlTemplateInsertionAllowedTypes(expr.InsertionKinds[i])
+		if !analyzeActionOrExpression(a, ins, allowed) {
+			return false
+		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func xmlTemplateInsertionAllowedTypes(kind ast.XMLTemplateInsertionKind) semtypes.SemType {
+	if kind == ast.XMLTemplateInsertionKindContent {
+		return semtypes.Union(templateInsertionAllowedTypes, semtypes.XML)
+	}
+	return templateInsertionAllowedTypes
 }
 
 func analyzeTrapExpr[A analyzer](a A, expr *ast.BLangTrapExpr, expectedType semtypes.SemType) bool {

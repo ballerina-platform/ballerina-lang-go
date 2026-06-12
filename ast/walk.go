@@ -589,6 +589,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, ins)
 		}
 
+	case *BLangXMLTemplateExpr:
+		for _, ins := range node.Insertions {
+			Walk(v, ins)
+		}
+
 	case *BLangXMLElementLiteral:
 		for i := range node.Attrs {
 			Walk(v, &node.Attrs[i])

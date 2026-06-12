@@ -1173,6 +1173,8 @@ func templateExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTempla
 	switch expr.Kind {
 	case ast.TemplateExprKindString:
 		kind = TemplateKindString
+	case ast.TemplateExprKindXML:
+		kind = TemplateKindXML
 	default:
 		panic(fmt.Sprintf("unsupported template expr kind: %d", expr.Kind))
 	}

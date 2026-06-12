@@ -591,6 +591,9 @@ func (p *PrettyPrinter) PrintNewXMLText(n *NewXMLText) string {
 
 func (p *PrettyPrinter) PrintEvalTemplateExpr(n *EvalTemplateExpr) string {
 	kindStr := "string"
+	if n.Kind == TemplateKindXML {
+		kindStr = "xml"
+	}
 	parts := strings.Builder{}
 	for i, s := range n.Strings {
 		if i > 0 {

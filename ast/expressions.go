@@ -115,10 +115,17 @@ const (
 
 type TemplateExprKind uint8
 
+type XMLTemplateInsertionKind uint8
+
 const (
 	TemplateExprKindString TemplateExprKind = iota
 	TemplateExprKindXML
 	TemplateExprKindRaw
+)
+
+const (
+	XMLTemplateInsertionKindContent XMLTemplateInsertionKind = iota
+	XMLTemplateInsertionKindAttribute
 )
 
 type (
@@ -401,6 +408,19 @@ type (
 		Kind       TemplateExprKind
 		Strings    []string
 		Insertions []BLangExpression
+	}
+
+	XMLTemplateNamespaceInsertion struct {
+		Offset         int // this is the offest in the string where we need to insert the namespace declarations when we desugar to BLangTemplateExpr
+		UsedPrefixes   map[string]struct{}
+		NeedsDefaultNS bool
+		Namespaces     map[string]string
+	}
+
+	BLangXMLTemplateExpr struct {
+		BLangTemplateExpr
+		InsertionKinds      []XMLTemplateInsertionKind        // This tracks where do we do the insertion for each expression
+		NamespaceInsertions [][]XMLTemplateNamespaceInsertion // namespace insertion points for each template string
 	}
 
 	BLangXMLElementLiteral struct {
@@ -1062,6 +1082,7 @@ func createBLangUnaryExpr(location diagnostics.Location, operator model.Operator
 var (
 	_ BLangExpression = &BLangXMLSequenceLiteral{}
 	_ BLangExpression = &BLangTemplateExpr{}
+	_ BLangExpression = &BLangXMLTemplateExpr{}
 	_ BLangExpression = &BLangXMLElementLiteral{}
 	_ BLangExpression = &BLangXMLAttribute{}
 	_ BLangExpression = &BLangXMLPILiteral{}
@@ -1069,6 +1090,7 @@ var (
 	_ BLangExpression = &BLangXMLTextLiteral{}
 	_ BLangNode       = &BLangXMLSequenceLiteral{}
 	_ BLangNode       = &BLangTemplateExpr{}
+	_ BLangNode       = &BLangXMLTemplateExpr{}
 	_ BLangNode       = &BLangXMLElementLiteral{}
 	_ BLangNode       = &BLangXMLAttribute{}
 	_ BLangNode       = &BLangXMLPILiteral{}

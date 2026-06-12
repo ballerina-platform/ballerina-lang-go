@@ -1,7 +1,0 @@
--- stdout --
--- stderr --
-fatal[UNIMPLEMENTED_ERROR]: xml interpolation not yet supported
-  --> xml-fv.bal:19:21
-   |
-19 |     xml x = xml `<a>${name}</a>`; // @error xml interpolation not yet supported
-   |                     ^^^^^^^

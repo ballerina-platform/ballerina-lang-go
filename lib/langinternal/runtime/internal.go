@@ -102,6 +102,12 @@ func initInternalModule(rt *runtime.Runtime) {
 		flattenFlags := args[2].(*values.List)
 		return queryCollect(ctx, rows, int(slotCount), flattenFlags)
 	})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "escapeXMLContent", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		return values.EscapeXMLContent(values.String(args[0], nil)), nil
+	})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "escapeXMLAttribute", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		return values.EscapeXMLAttribute(values.String(args[0], nil)), nil
+	})
 }
 
 type queryGroupState struct {

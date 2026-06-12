@@ -288,3 +288,30 @@ func mergeNamespaces(root *ast.BLangXMLElementLiteral, extras map[string]string)
 		root.Namespaces[k] = v
 	}
 }
+
+func resolveXMLTemplateNamespaces[T symbolResolver](resolver T, scope model.Scope, e *ast.BLangXMLTemplateExpr) {
+	for stringIndex := range e.NamespaceInsertions {
+		for i := range e.NamespaceInsertions[stringIndex] {
+			insn := &e.NamespaceInsertions[stringIndex][i]
+			if insn.Namespaces == nil {
+				insn.Namespaces = map[string]string{}
+			}
+			if insn.NeedsDefaultNS {
+				if uri, _, ok := scope.LookupXMLNS(""); ok {
+					insn.Namespaces["xmlns"] = uri
+				}
+			}
+			for prefix := range insn.UsedPrefixes {
+				uri, _, ok := scope.LookupXMLNS(prefix)
+				if !ok {
+					semanticError(resolver, "undefined XML namespace prefix '"+prefix+"'", e.GetPosition())
+					continue
+				}
+				if prefix == "" || prefix == model.XMLNSReservedPrefix {
+					continue
+				}
+				insn.Namespaces["xmlns:"+prefix] = uri
+			}
+		}
+	}
+}
