@@ -14,7 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 public function main() {
-    string name = "x";
-    xml x = xml `<a>${name}</a>`; // @error xml interpolation not yet supported
+    string x = "mid";
+    xml v = xml `<a/>${x}<b/>`;
+    io:println(v); // @output <a/>mid<b/>
 }

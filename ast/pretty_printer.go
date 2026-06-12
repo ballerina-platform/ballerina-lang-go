@@ -222,6 +222,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printXMLSequenceLiteral(t)
 	case *BLangTemplateExpr:
 		p.printTemplateExpr(t)
+	case *BLangXMLTemplateExpr:
+		p.printXMLTemplateExpr(t)
 	case *BLangXMLElementLiteral:
 		p.printXMLElementLiteral(t)
 	case *BLangXMLAttribute:
@@ -401,6 +403,8 @@ func (p *PrettyPrinter) printTemplateExpr(node *BLangTemplateExpr) {
 	switch node.Kind {
 	case TemplateExprKindString:
 		p.printString("string-template-literal")
+	case TemplateExprKindXML:
+		p.printString("xml-template-literal")
 	default:
 		panic("unsupported template expr kind")
 	}
@@ -412,6 +416,33 @@ func (p *PrettyPrinter) printTemplateExpr(node *BLangTemplateExpr) {
 		p.endNode()
 		if i < len(node.Insertions) {
 			p.PrintInner(node.Insertions[i].(BLangNode))
+		}
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLTemplateExpr(node *BLangXMLTemplateExpr) {
+	p.startNode()
+	p.printString("xml-template-literal")
+	p.indentLevel++
+	for i, s := range node.Strings {
+		p.startNode()
+		p.printString("template-string")
+		p.printString(fmt.Sprintf("%q", s))
+		p.endNode()
+		if i < len(node.Insertions) {
+			p.startNode()
+			switch node.InsertionKinds[i] {
+			case XMLTemplateInsertionKindAttribute:
+				p.printString("xml-template-attribute-insertion")
+			default:
+				p.printString("xml-template-content-insertion")
+			}
+			p.indentLevel++
+			p.PrintInner(node.Insertions[i].(BLangNode))
+			p.indentLevel--
+			p.endNode()
 		}
 	}
 	p.indentLevel--
