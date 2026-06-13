@@ -24,19 +24,17 @@ func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
 func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
-	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.all() & MAPPING.all()) != 0 {
+	if t.some() == 0 {
+		if (t.all() & MAPPING.all()) != 0 {
 			return VAL
-		} else {
-			return UNDEF
 		}
-	} else {
-		keyData := getStringSubtype(k)
-		if isNothingSubtype(keyData) {
-			return UNDEF
-		}
-		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t, BTMapping).(Bdd), keyData, INNER)
+		return UNDEF
 	}
+	keyData := getStringSubtype(k)
+	if isNothingSubtype(keyData) {
+		return UNDEF
+	}
+	return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t, BTMapping).(Bdd), keyData, INNER)
 }
 
 func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
@@ -57,7 +55,7 @@ func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 }
 
 func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData) SemType {
-	var memberType SemType = nil
+	var memberType SemType
 	for _, ty := range mappingAtomicApplicableMemberTypesInnerProj(atomic, key) {
 		if IsZero(memberType) {
 			memberType = ty

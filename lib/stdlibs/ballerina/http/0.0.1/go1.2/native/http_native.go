@@ -111,7 +111,7 @@ func initHttpModule(rt *runtime.Runtime) {
 		case string:
 			return []byte(v), "text/plain"
 		case *values.List:
-			if v.Type != nil && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
+			if !semtypes.IsZero(v.Type) && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
 					return b, "application/octet-stream"
 				}

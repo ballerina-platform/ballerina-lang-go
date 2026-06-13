@@ -827,7 +827,7 @@ func (b *BLangConstant) GetAssociatedType() semtypes.SemType {
 	if b.TypeNode() != nil {
 		return b.TypeNode().GetTypeData().Type
 	}
-	return nil
+	return semtypes.SemType{}
 }
 
 func (b *BLangConstant) GetPrecedence() int {

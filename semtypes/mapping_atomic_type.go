@@ -88,7 +88,7 @@ func mappingAtomsMatch(cx Context, ty SemType, quantifier matchQuantifier, predi
 	if !IsSubtypeSimple(ty, MAPPING) {
 		return false
 	}
-	if _, ok := ty.(BasicTypeBitSet); ok {
+	if ty.some() == 0 {
 		return false
 	}
 	bdd := getComplexSubtypeData(ty, BTMapping).(Bdd)

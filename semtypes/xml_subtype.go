@@ -63,18 +63,16 @@ func XMLSequence(constituentType SemType) SemType {
 	if IsNever(constituentType) {
 		return XMLSequence(XMLSingleton(XML_PRIMITIVE_NEVER))
 	}
-	if _, ok := constituentType.(BasicTypeBitSet); ok {
+	if constituentType.some() == 0 {
 		return constituentType
-	} else {
-		cct := constituentType
-		xmlSt := getComplexSubtypeData(cct, BTXML)
-		if _, ok := xmlSt.(allOrNothingSubtype); ok {
-			// xmlSt stays as is
-		} else {
-			xmlSt = makeXmlSequence(xmlSt.(*xmlSubtype))
-		}
-		return createXmlSemtype(xmlSt)
 	}
+	xmlSt := getComplexSubtypeData(constituentType, BTXML)
+	if _, ok := xmlSt.(allOrNothingSubtype); ok {
+		// xmlSt stays as is
+	} else {
+		xmlSt = makeXmlSequence(xmlSt.(*xmlSubtype))
+	}
+	return createXmlSemtype(xmlSt)
 }
 
 func makeXmlSequence(d *xmlSubtype) SubtypeData {

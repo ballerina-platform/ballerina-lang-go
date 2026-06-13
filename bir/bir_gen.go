@@ -129,7 +129,7 @@ func newBlockContext(parent context) blockContext {
 }
 
 func (c *Context) stringMapType() semtypes.SemType {
-	if c.stringMapTy == nil {
+	if semtypes.IsZero(c.stringMapTy) {
 		md := semtypes.NewMappingDefinition()
 		c.stringMapTy = md.DefineMappingTypeWrapped(c.CompilerContext.GetTypeEnv(), nil, semtypes.STRING)
 	}
@@ -349,13 +349,13 @@ func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) stri
 		// For monomorphic functions (ex: dependently typed functions), in runtime we dispatch to a single
 		// polymorphic function
 		origRef := mono.PolymorphicSymbol()
-		return buildLookupKey(ctx.CompilerContext.SymbolPackage(origRef), ctx.CompilerContext.GetSymbol(origRef).Name())
+		return buildLookupKey(ctx.CompilerContext.SymbolPackage(origRef), ctx.CompilerContext.SymbolName(origRef))
 	}
-	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), sym.Name())
+	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), ctx.CompilerContext.SymbolName(symRef))
 }
 
 func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {
-	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), className+"."+ctx.CompilerContext.GetSymbol(symRef).Name())
+	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), className+"."+ctx.CompilerContext.SymbolName(symRef))
 }
 
 func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
@@ -1440,7 +1440,7 @@ func groupExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangGroupExpr
 
 func wildcardBindingPattern(ctx context, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
 	return expressionEffect{
-		result: ctx.addTempVar(nil),
+		result: ctx.addTempVar(semtypes.NEVER),
 		block:  curBB,
 	}
 }
@@ -1847,7 +1847,7 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 
 func buildResourceMethodEntry(ctx *Context, rm *ast.BLangResourceMethod, fn *BIRFunction) BIRResourceMethod {
 	var pathSegments []ResourcePathSegmentDef
-	var restTy semtypes.SemType = semtypes.NEVER
+	var restTy = semtypes.NEVER
 	for i := range rm.ResourcePath {
 		seg := &rm.ResourcePath[i]
 		segTy := seg.GetDeterminedType()

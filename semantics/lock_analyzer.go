@@ -721,7 +721,7 @@ func checkIsolatedNew(a analyzer, expr *ast.BLangNewExpression) bool {
 	tyCtx := a.tyCtx()
 	classTy := a.ctx().SymbolType(expr.ClassSymbol)
 	initTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("init"), classTy)
-	if initTy == nil || !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedFn(tyCtx)) {
+	if semtypes.IsZero(initTy) || !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedFn(tyCtx)) {
 		return false
 	}
 	return true

@@ -59,7 +59,7 @@ func IsIsolatedObject(ctx Context, ty SemType) bool {
 		return false
 	}
 	qualifiersMap := mappingMemberTypeInner(ctx, objectTy, StringConst("$qualifiers"))
-	if qualifiersMap == nil {
+	if IsZero(qualifiersMap) {
 		return false
 	}
 	isolatedTy := mappingMemberTypeInner(ctx, qualifiersMap, StringConst("isolated"))
@@ -87,7 +87,7 @@ func objectHasNetworkQualifier(ctx Context, ty SemType, qualifierTag SemType) bo
 		return false
 	}
 	qualifiersMap := mappingMemberTypeInner(ctx, objectTy, StringConst("$qualifiers"))
-	if qualifiersMap == nil {
+	if IsZero(qualifiersMap) {
 		return false
 	}
 	networkTy := mappingMemberTypeInner(ctx, qualifiersMap, StringConst("network"))

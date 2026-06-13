@@ -365,10 +365,10 @@ func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}
-	if err := write(buf, sig.RestParamType != nil); err != nil {
+	if err := write(buf, !semtypes.IsZero(sig.RestParamType)); err != nil {
 		return err
 	}
-	if sig.RestParamType != nil {
+	if !semtypes.IsZero(sig.RestParamType) {
 		if err := sw.writeType(buf, sig.RestParamType); err != nil {
 			return err
 		}
@@ -534,7 +534,7 @@ func (sw *symbolWriter) writeStringCP(buf *bytes.Buffer, s string) error {
 }
 
 func (sw *symbolWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) error {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return write(buf, int32(-1))
 	}
 	return write(buf, int32(sw.tp.Put(ty)))

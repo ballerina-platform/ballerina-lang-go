@@ -28,8 +28,8 @@ type MappingAlternative struct {
 }
 
 func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
-	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.all() & MAPPING.all()) == 0 {
+	if t.some() == 0 {
+		if (t.all() & MAPPING.all()) == 0 {
 			return nil
 		}
 		return []MappingAlternative{{SemType: MAPPING, Pos: nil, neg: nil}}
@@ -57,13 +57,13 @@ func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 
 func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *MappingAtomicType, bool) {
 	if len(atoms) == 0 {
-		return nil, nil, false
+		return SemType{}, nil, false
 	}
 	atom := atoms[0]
 	for i := 1; i < len(atoms); i++ {
 		result := intersectMapping(env, atom, atoms[i])
 		if result == nil {
-			return nil, nil, false
+			return SemType{}, nil, false
 		}
 		atom = result
 	}

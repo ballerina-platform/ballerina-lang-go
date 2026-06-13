@@ -312,7 +312,7 @@ func newBddDeserializationContext(pool *TypePool, env Env, bp *binaryPool) *bddD
 }
 
 func (dc *bddDeserializationContext) deserializeType(poolIndex int) SemType {
-	if dc.pool.tys[poolIndex] != nil {
+	if !IsZero(dc.pool.tys[poolIndex]) {
 		return dc.pool.tys[poolIndex]
 	}
 	te := dc.bp.types[poolIndex]
@@ -352,7 +352,7 @@ func (dc *bddDeserializationContext) deserializeType(poolIndex int) SemType {
 		subtypeDataList = append(subtypeDataList, data)
 	}
 	ty := createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(
-		BasicTypeBitSet(te.all), BasicTypeBitSet(te.some), subtypeDataList,
+		basicTypeBitSet(te.all), basicTypeBitSet(te.some), subtypeDataList,
 	)
 	dc.pool.tys[poolIndex] = ty
 	return ty
@@ -487,7 +487,7 @@ func (dc *bddDeserializationContext) deserializeXmlAtom(atomIndex int32) atom {
 func (dc *bddDeserializationContext) resolvePoolType(idx TypePoolIndex) SemType {
 	if idx <= 0 {
 		bits := idx & indexMask
-		return basicTypeBitSetFrom(int(bits))
+		return basicTypeBitSet(bits).semType()
 	}
 	return dc.deserializeType(int(idx - 1))
 }

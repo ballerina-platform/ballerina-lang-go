@@ -841,7 +841,7 @@ func (fs *functionSymbol) ParamNames() []string {
 
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return &functionSymbol{
-		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
 		signature:  signature,
 	}
 }
@@ -922,7 +922,7 @@ func (fs *FunctionSignature) IsTransactional() bool {
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
 	return ValueSymbol{
-		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:  symbolBase{name: name, isPublic: isPublic},
 		isConst:     isConst,
 		isParameter: isParameter,
 	}
@@ -930,7 +930,7 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
-		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
 	}
 }
 
@@ -951,7 +951,7 @@ func NewNetworkClassSymbol(name string, isPublic bool) ClassSymbol {
 func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
 	return classSymbolBase{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 		methods: map[string]SymbolRef{},
 	}
@@ -968,7 +968,7 @@ func (c *classSymbolBase) AddResourceMethod(ref SymbolRef) {
 func NewResourceMethodSymbol(name, methodName string, isPublic bool) *ResourceMethodSymbol {
 	return &ResourceMethodSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 		methodName: methodName,
 	}
@@ -1002,7 +1002,7 @@ func (r *ResourceMethodSymbol) Copy() Symbol {
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 	return RecordSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 	}
 }
@@ -1010,7 +1010,7 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 	}
 }
@@ -1026,7 +1026,7 @@ func (c *classSymbolBase) MethodSymbol(name string) (SymbolRef, bool) {
 
 func NewDependentlyTypedFunctionSymbol(name string, paramNames []string, nRequiredArgs int, flags FuncSymbolFlags, isPublic bool) DependentlyTypedFunctionSymbol {
 	return &dependentlyTypedFunctionSymbol{
-		symbolBase:    symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:    symbolBase{name: name, isPublic: isPublic},
 		paramNames:    paramNames,
 		nRequiredArgs: nRequiredArgs,
 		Flags:         flags,
@@ -1089,7 +1089,7 @@ func (s *dependentlyTypedFunctionSymbol) SetReturnType(op TypeOp) {
 
 func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name string, origRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol {
 	fixed := argTys
-	var rest semtypes.SemType = semtypes.NEVER
+	var rest = semtypes.NEVER
 	if len(argTys) > s.nRequiredArgs {
 		fixed = argTys[:s.nRequiredArgs]
 		for _, each := range argTys[s.nRequiredArgs:] {
@@ -1106,7 +1106,7 @@ func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name
 	}
 	return &monomorphicFunctionSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase:           symbolBase{name: name, ty: nil, isPublic: s.isPublic},
+			symbolBase:           symbolBase{name: name, isPublic: s.isPublic},
 			signature:            sig,
 			defaultableParams:    s.defaultable,
 			includedRecordParams: s.includedRecordParams,

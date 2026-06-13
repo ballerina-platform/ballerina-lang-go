@@ -26,7 +26,7 @@ var _ Definition = &ListDefinition{}
 func NewListDefinition() ListDefinition {
 	this := ListDefinition{}
 	this.rec = nil
-	this.semType = nil
+	this.semType = SemType{}
 	// Default field initializations
 
 	return this
@@ -119,7 +119,7 @@ func (l *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengt
 
 func (l *ListDefinition) createSemType(env Env, atom atom) SemType {
 	bdd := bddAtom(atom)
-	complexSemType := getBasicSubtype(BTList, bdd)
-	l.semType = complexSemType
-	return complexSemType
+	SemType := getBasicSubtype(BTList, bdd)
+	l.semType = SemType
+	return SemType
 }

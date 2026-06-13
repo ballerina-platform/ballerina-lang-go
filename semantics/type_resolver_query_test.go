@@ -118,7 +118,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			resolver, cx := newTestQueryResolver()
-			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query, nil)
+			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query, semtypes.SemType{})
 			if ok {
 				t.Fatalf("expected resolveQueryExpr to fail")
 			}
@@ -336,7 +336,7 @@ func TestResolveQueryExprMapCollection(t *testing.T) {
 		newFromClause(mapRef, nil, true),
 		newSelectClause(newIntLiteral(1)),
 	)
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map collection")
 	}
@@ -354,7 +354,7 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 	)
 	query.QueryConstructType = ast.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map construct type")
 	}
@@ -374,7 +374,7 @@ func TestResolveQueryExprCollectClause(t *testing.T) {
 		newCollectClauseExpr(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for collect clause")
 	}
@@ -395,7 +395,7 @@ func TestResolveQueryExprCollectClauseRejectsConstructType(t *testing.T) {
 	)
 	query.QueryConstructType = ast.TypeKind_MAP
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for collect clause with query construct type")
 	}
@@ -405,7 +405,7 @@ func TestResolveQueryExprCollectClauseRejectsConstructType(t *testing.T) {
 func TestResolveQueryExprCollectAggregatesVariables(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
-	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
+	xSymbolRef := addTestValueSymbol(cx, space, "x", semtypes.SemType{})
 	xDef := newSimpleVarDef("x", nil, nil)
 	xDef.Var.SetSymbol(xSymbolRef)
 	collectXRef := newSimpleVarRef("x", xSymbolRef)
@@ -415,7 +415,7 @@ func TestResolveQueryExprCollectAggregatesVariables(t *testing.T) {
 		newCollectClauseExpr(collectXRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for collect clause with query variable")
 	}
@@ -433,8 +433,8 @@ func TestResolveQueryExprCollectAggregatesVariables(t *testing.T) {
 func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
-	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
-	ySymbolRef := addTestValueSymbol(cx, space, "y", nil)
+	xSymbolRef := addTestValueSymbol(cx, space, "x", semtypes.SemType{})
+	ySymbolRef := addTestValueSymbol(cx, space, "y", semtypes.SemType{})
 
 	xDef := newSimpleVarDef("x", nil, nil)
 	xDef.Var.SetSymbol(xSymbolRef)
@@ -450,7 +450,7 @@ func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
 		newSelectClause(selectYRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for group by clause")
 	}
@@ -471,8 +471,8 @@ func TestResolveQueryExprGroupByClauseAggregatesNonGroupingVars(t *testing.T) {
 func TestResolveQueryExprCollectDoesNotReaggregateGroupByVars(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
-	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
-	ySymbolRef := addTestValueSymbol(cx, space, "y", nil)
+	xSymbolRef := addTestValueSymbol(cx, space, "x", semtypes.SemType{})
+	ySymbolRef := addTestValueSymbol(cx, space, "y", semtypes.SemType{})
 
 	xDef := newSimpleVarDef("x", nil, nil)
 	xDef.Var.SetSymbol(xSymbolRef)
@@ -488,7 +488,7 @@ func TestResolveQueryExprCollectDoesNotReaggregateGroupByVars(t *testing.T) {
 		newCollectClauseExpr(collectYRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for group by + collect")
 	}
@@ -515,8 +515,8 @@ func TestResolveQueryExprCollectDoesNotReaggregateGroupByVars(t *testing.T) {
 func TestResolveQueryExprGroupByVarDeclaration(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
-	xSymbolRef := addTestValueSymbol(cx, space, "x", nil)
-	nSymbolRef := addTestValueSymbol(cx, space, "n", nil)
+	xSymbolRef := addTestValueSymbol(cx, space, "x", semtypes.SemType{})
+	nSymbolRef := addTestValueSymbol(cx, space, "n", semtypes.SemType{})
 
 	xDef := newSimpleVarDef("x", nil, nil)
 	xDef.Var.SetSymbol(xSymbolRef)
@@ -530,7 +530,7 @@ func TestResolveQueryExprGroupByVarDeclaration(t *testing.T) {
 		newSelectClause(selectNRef),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for group by variable declaration")
 	}
@@ -554,7 +554,7 @@ func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
 	)
 	query.QueryConstructType = ast.TypeKind_MAP
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for invalid map select expression")
 	}
@@ -570,7 +570,7 @@ func TestResolveQueryExprOrderByClause(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for order by clause")
 	}
@@ -597,7 +597,7 @@ func TestResolveQueryExprJoinClause(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for join clause")
 	}
@@ -619,7 +619,7 @@ func TestResolveQueryExprMultipleOrderByConsecutive(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for consecutive order by clauses")
 	}
@@ -642,7 +642,7 @@ func TestResolveQueryExprMultipleOrderByNonConsecutive(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for non-consecutive order by clauses")
 	}
@@ -677,7 +677,7 @@ func TestResolveQueryExprOrderByRejectsMixedSimpleUnion(t *testing.T) {
 		newSelectClause(newIntLiteral(1)),
 	)
 
-	_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	_, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for non-ordered mixed simple union")
 	}
@@ -692,7 +692,7 @@ func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
 			newSelectClause(newIntLiteral(1)),
 			newOnConflictClause(newErrorConstructorExpr()),
 		)
-		_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+		_, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 		if ok {
 			t.Fatalf("expected resolveQueryExpr to fail for non-map on conflict")
 		}
@@ -707,7 +707,7 @@ func TestResolveQueryExprOnConflictClauseErrors(t *testing.T) {
 			newOnConflictClause(newIntLiteral(1)),
 		)
 		query.QueryConstructType = ast.TypeKind_MAP
-		_, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+		_, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 		if ok {
 			t.Fatalf("expected resolveQueryExpr to fail for invalid on conflict expression")
 		}
@@ -724,7 +724,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictNil(t *testing.T) {
 	)
 	query.QueryConstructType = ast.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict nil")
 	}
@@ -746,7 +746,7 @@ func TestResolveQueryExprMapConstructTypeOnConflictError(t *testing.T) {
 	)
 	query.QueryConstructType = ast.TypeKind_MAP
 
-	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, nil)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query, semtypes.SemType{})
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map on conflict error")
 	}
@@ -960,7 +960,7 @@ func addTestValueSymbol(cx *context.CompilerContext, space *model.SymbolSpace, n
 	valueSymbol := model.NewValueSymbol(name, false, false, false)
 	space.AddSymbol(name, &valueSymbol)
 	symbolRef, _ := space.GetSymbol(name)
-	if ty != nil {
+	if !semtypes.IsZero(ty) {
 		cx.SetSymbolType(symbolRef, ty)
 	}
 	return symbolRef

@@ -459,7 +459,7 @@ func (sr *symbolReader) readType() semtypes.SemType {
 	var idx int32
 	read(sr.r, &idx)
 	if idx == -1 {
-		return nil
+		return semtypes.SemType{}
 	}
 	return sr.tp.Get(semtypes.TypePoolIndex(idx))
 }

@@ -23,32 +23,32 @@ type preallocatedTypeVals struct {
 }
 
 type basicCellTypeVals struct {
-	never          complexSemType
-	nil            complexSemType
-	boolean        complexSemType
-	int            complexSemType
-	float          complexSemType
-	decimal        complexSemType
-	string         complexSemType
-	error          complexSemType
-	list           complexSemType
-	mapping        complexSemType
-	table          complexSemType
-	undef          complexSemType
-	regexp         complexSemType
-	function       complexSemType
-	typedesc       complexSemType
-	handle         complexSemType
-	xml            complexSemType
-	object         complexSemType
-	stream         complexSemType
-	future         complexSemType
-	val            complexSemType
-	inner          complexSemType
-	any            complexSemType
-	simpleOrString complexSemType
-	number         complexSemType
-	simpleBasic    complexSemType
+	never          SemType
+	nil            SemType
+	boolean        SemType
+	int            SemType
+	float          SemType
+	decimal        SemType
+	string         SemType
+	error          SemType
+	list           SemType
+	mapping        SemType
+	table          SemType
+	undef          SemType
+	regexp         SemType
+	function       SemType
+	typedesc       SemType
+	handle         SemType
+	xml            SemType
+	object         SemType
+	stream         SemType
+	future         SemType
+	val            SemType
+	inner          SemType
+	any            SemType
+	simpleOrString SemType
+	number         SemType
+	simpleBasic    SemType
 }
 
 func newPreallocatedTypeVals(env Env) preallocatedTypeVals {
@@ -61,43 +61,43 @@ func newPreallocatedTypeVals(env Env) preallocatedTypeVals {
 
 func newBasicCellTypeVals(env Env, mut CellMutability) basicCellTypeVals {
 	return basicCellTypeVals{
-		never:          createCellTypeVal(env, NEVER, mut),
-		nil:            createCellTypeVal(env, NIL, mut),
-		boolean:        createCellTypeVal(env, BOOLEAN, mut),
-		int:            createCellTypeVal(env, INT, mut),
-		float:          createCellTypeVal(env, FLOAT, mut),
-		decimal:        createCellTypeVal(env, DECIMAL, mut),
-		string:         createCellTypeVal(env, STRING, mut),
-		error:          createCellTypeVal(env, ERROR, mut),
-		list:           createCellTypeVal(env, LIST, mut),
-		mapping:        createCellTypeVal(env, MAPPING, mut),
-		table:          createCellTypeVal(env, TABLE, mut),
-		undef:          createCellTypeVal(env, UNDEF, mut),
-		regexp:         createCellTypeVal(env, REGEXP, mut),
-		function:       createCellTypeVal(env, FUNCTION, mut),
-		typedesc:       createCellTypeVal(env, TYPEDESC, mut),
-		handle:         createCellTypeVal(env, HANDLE, mut),
-		xml:            createCellTypeVal(env, XML, mut),
-		object:         createCellTypeVal(env, OBJECT, mut),
-		stream:         createCellTypeVal(env, STREAM, mut),
-		future:         createCellTypeVal(env, FUTURE, mut),
-		val:            createCellTypeVal(env, VAL, mut),
-		inner:          createCellTypeVal(env, INNER, mut),
-		any:            createCellTypeVal(env, ANY, mut),
-		simpleOrString: createCellTypeVal(env, SIMPLE_OR_STRING, mut),
-		number:         createCellTypeVal(env, NUMBER, mut),
-		simpleBasic:    createCellTypeVal(env, SIMPLE_BASIC, mut),
+		never:          createCellTypeVal(env, neverBits, mut),
+		nil:            createCellTypeVal(env, nilBits, mut),
+		boolean:        createCellTypeVal(env, booleanBits, mut),
+		int:            createCellTypeVal(env, intBits, mut),
+		float:          createCellTypeVal(env, floatBits, mut),
+		decimal:        createCellTypeVal(env, decimalBits, mut),
+		string:         createCellTypeVal(env, stringBits, mut),
+		error:          createCellTypeVal(env, errorBits, mut),
+		list:           createCellTypeVal(env, listBits, mut),
+		mapping:        createCellTypeVal(env, mappingBits, mut),
+		table:          createCellTypeVal(env, tableBits, mut),
+		undef:          createCellTypeVal(env, undefBits, mut),
+		regexp:         createCellTypeVal(env, regexpBits, mut),
+		function:       createCellTypeVal(env, functionBits, mut),
+		typedesc:       createCellTypeVal(env, typedescBits, mut),
+		handle:         createCellTypeVal(env, handleBits, mut),
+		xml:            createCellTypeVal(env, xmlBits, mut),
+		object:         createCellTypeVal(env, objectBits, mut),
+		stream:         createCellTypeVal(env, streamBits, mut),
+		future:         createCellTypeVal(env, futureBits, mut),
+		val:            createCellTypeVal(env, valBits, mut),
+		inner:          createCellTypeVal(env, innerBits, mut),
+		any:            createCellTypeVal(env, anyBits, mut),
+		simpleOrString: createCellTypeVal(env, simpleOrStringBits, mut),
+		number:         createCellTypeVal(env, numberBits, mut),
+		simpleBasic:    createCellTypeVal(env, simpleBasicBits, mut),
 	}
 }
 
-func createCellTypeVal(env Env, ty BasicTypeBitSet, mut CellMutability) complexSemType {
-	atomicCell := cellAtomicTypeFrom(ty, mut)
+func createCellTypeVal(env Env, ty basicTypeBitSet, mut CellMutability) SemType {
+	atomicCell := cellAtomicTypeFrom(ty.semType(), mut)
 	atom := env.cellAtom(&atomicCell)
 	bdd := bddAtom(&atom)
 	return getBasicSubtype(BTCell, bdd)
 }
 
-func (p preallocatedTypeVals) basicTypeCell(ty BasicTypeBitSet, mut CellMutability) (complexSemType, bool) {
+func (p *preallocatedTypeVals) basicTypeCell(ty basicTypeBitSet, mut CellMutability) (SemType, bool) {
 	switch mut {
 	case CellMutability_CELL_MUT_NONE:
 		return p.none.basicTypeCell(ty)
@@ -106,65 +106,65 @@ func (p preallocatedTypeVals) basicTypeCell(ty BasicTypeBitSet, mut CellMutabili
 	case CellMutability_CELL_MUT_UNLIMITED:
 		return p.unlimited.basicTypeCell(ty)
 	default:
-		return complexSemType{}, false
+		return SemType{}, false
 	}
 }
 
-func (b basicCellTypeVals) basicTypeCell(ty BasicTypeBitSet) (complexSemType, bool) {
+func (b *basicCellTypeVals) basicTypeCell(ty basicTypeBitSet) (SemType, bool) {
 	switch ty {
-	case NEVER:
+	case neverBits:
 		return b.never, true
-	case NIL:
+	case nilBits:
 		return b.nil, true
-	case BOOLEAN:
+	case booleanBits:
 		return b.boolean, true
-	case INT:
+	case intBits:
 		return b.int, true
-	case FLOAT:
+	case floatBits:
 		return b.float, true
-	case DECIMAL:
+	case decimalBits:
 		return b.decimal, true
-	case STRING:
+	case stringBits:
 		return b.string, true
-	case ERROR:
+	case errorBits:
 		return b.error, true
-	case LIST:
+	case listBits:
 		return b.list, true
-	case MAPPING:
+	case mappingBits:
 		return b.mapping, true
-	case TABLE:
+	case tableBits:
 		return b.table, true
-	case UNDEF:
+	case undefBits:
 		return b.undef, true
-	case REGEXP:
+	case regexpBits:
 		return b.regexp, true
-	case FUNCTION:
+	case functionBits:
 		return b.function, true
-	case TYPEDESC:
+	case typedescBits:
 		return b.typedesc, true
-	case HANDLE:
+	case handleBits:
 		return b.handle, true
-	case XML:
+	case xmlBits:
 		return b.xml, true
-	case OBJECT:
+	case objectBits:
 		return b.object, true
-	case STREAM:
+	case streamBits:
 		return b.stream, true
-	case FUTURE:
+	case futureBits:
 		return b.future, true
-	case VAL:
+	case valBits:
 		return b.val, true
-	case INNER:
+	case innerBits:
 		return b.inner, true
-	case ANY:
+	case anyBits:
 		return b.any, true
-	case SIMPLE_OR_STRING:
+	case simpleOrStringBits:
 		return b.simpleOrString, true
-	case NUMBER:
+	case numberBits:
 		return b.number, true
-	case SIMPLE_BASIC:
+	case simpleBasicBits:
 		return b.simpleBasic, true
 	default:
-		return complexSemType{}, false
+		return SemType{}, false
 	}
 }

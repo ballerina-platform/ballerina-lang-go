@@ -210,7 +210,7 @@ func createQueryCollectionSource(
 	case semtypes.IsSubtype(tyCtx, collTy, semtypes.MAPPING):
 		keysInvocation := createKeysInvocation(cx, collRef)
 		if keysInvocation == nil {
-			return nil, nil, nil, nil, false
+			return nil, nil, nil, semtypes.SemType{}, false
 		}
 		keysVarDef, keysLocalRef := assignToLocal(cx, keysInvocation, pos)
 		*initStmts = append(*initStmts, keysVarDef)
@@ -218,12 +218,12 @@ func createQueryCollectionSource(
 		lengthSource = keysRef
 	default:
 		cx.internalError("query collection type should have been validated during type resolution")
-		return nil, nil, nil, nil, false
+		return nil, nil, nil, semtypes.SemType{}, false
 	}
 
 	lenRef, ok := createQueryLengthRef(cx, initStmts, lengthSource, pos)
 	if !ok {
-		return nil, nil, nil, nil, false
+		return nil, nil, nil, semtypes.SemType{}, false
 	}
 	return collRef, keysRef, lenRef, collTy, true
 }
@@ -412,10 +412,10 @@ func queryRowBindingFromVarDef(
 		return queryRowBinding{}, false
 	}
 	valueTy := cx.symbolType(varDef.Var.Symbol())
-	if valueTy == nil {
+	if semtypes.IsZero(valueTy) {
 		valueTy = varDef.Var.GetDeterminedType()
 	}
-	if valueTy == nil {
+	if semtypes.IsZero(valueTy) {
 		valueTy = semtypes.ANY
 	}
 	return queryRowBinding{
@@ -780,7 +780,7 @@ func buildQueryGroupScalarFlags(
 }
 
 func queryListValueType(env semtypes.Env, elemTy semtypes.SemType, nonEmpty bool) semtypes.SemType {
-	if elemTy == nil {
+	if semtypes.IsZero(elemTy) {
 		elemTy = semtypes.ANY
 	}
 	ld := semtypes.NewListDefinition()

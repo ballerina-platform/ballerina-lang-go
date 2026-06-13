@@ -96,7 +96,7 @@ func (o *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	return createBasicSemType(BTObject, bdd)
 }
 
-func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) complexSemType {
+func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) SemType {
 	fieldDefn := NewMappingDefinition()
 	var fieldValueTy SemType
 	if immutable {

@@ -32,14 +32,14 @@ type subtypePairIterator struct {
 	cache subtypePair
 	list1 []ProperSubtypeData
 	list2 []ProperSubtypeData
-	some1 BasicTypeBitSet
-	some2 BasicTypeBitSet
-	bits  BasicTypeBitSet
+	some1 basicTypeBitSet
+	some2 basicTypeBitSet
+	bits  basicTypeBitSet
 	state iterState
 }
 
 func (i *subtypePairIterator) include(code BasicTypeCode) bool {
-	return (i.bits.all() & (1 << code.Code())) != 0
+	return (i.bits & (1 << code.Code())) != 0
 }
 
 func (i *subtypePairIterator) hasNext() bool {
@@ -120,17 +120,15 @@ func (i *subtypePairIterator) internalNext() (subtypePair, bool) {
 	}
 }
 
-func newSubtypePairs(s1, s2 SemType, b BasicTypeBitSet) subtypePairIterator {
+func newSubtypePairs(s1, s2 SemType, b basicTypeBitSet) subtypePairIterator {
 	it := subtypePairIterator{bits: b, state: iterNeedsCalc}
-	switch ct1 := s1.(type) {
-	case complexSemType:
-		it.list1 = ct1.subtypeDataList()
-		it.some1 = ct1.some()
+	if s1.some() != 0 {
+		it.list1 = s1.subtypeDataList()
+		it.some1 = s1.some()
 	}
-	switch ct2 := s2.(type) {
-	case complexSemType:
-		it.list2 = ct2.subtypeDataList()
-		it.some2 = ct2.some()
+	if s2.some() != 0 {
+		it.list2 = s2.subtypeDataList()
+		it.some2 = s2.some()
 	}
 	return it
 }

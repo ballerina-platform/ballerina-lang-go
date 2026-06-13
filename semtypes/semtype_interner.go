@@ -17,15 +17,15 @@
 package semtypes
 
 type SemtypeInterner struct {
-	basicTypeHandles      map[BasicTypeBitSet]InternHandle
+	basicTypeHandles      map[basicTypeBitSet]InternHandle
 	complexSemtypeHandles map[complexSemtypeInternKey]complexSemtypeInternValues
 }
 
 type InternHandle int64
 
 type complexSemtypeInternKey struct {
-	all  BasicTypeBitSet
-	some BasicTypeBitSet
+	all  basicTypeBitSet
+	some basicTypeBitSet
 }
 
 type complexSemtypeInternValues struct {
@@ -35,39 +35,36 @@ type complexSemtypeInternValues struct {
 
 func NewSemtypeInterner() *SemtypeInterner {
 	return &SemtypeInterner{
-		basicTypeHandles:      make(map[BasicTypeBitSet]InternHandle),
+		basicTypeHandles:      make(map[basicTypeBitSet]InternHandle),
 		complexSemtypeHandles: make(map[complexSemtypeInternKey]complexSemtypeInternValues),
 	}
 }
 
 func (i *SemtypeInterner) Intern(ty SemType) InternHandle {
-	switch ty := ty.(type) {
-	case BasicTypeBitSet:
-		if handle, ok := i.basicTypeHandles[ty]; ok {
+	if ty.some() == 0 {
+		bits := ty.all()
+		if handle, ok := i.basicTypeHandles[bits]; ok {
 			return handle
 		}
-		handle := InternHandle(-int(ty) - 1)
-		i.basicTypeHandles[ty] = handle
+		handle := InternHandle(-int(bits) - 1)
+		i.basicTypeHandles[bits] = handle
 		return handle
-	case complexSemType:
-		key := complexSemtypeInternKey{all: ty.all(), some: ty.some()}
-		values := i.complexSemtypeHandles[key]
-		dataList := ty.subtypeDataList()
-		for idx, existing := range values.dataLists {
-			if sameSubtypeDataList(existing, dataList) {
-				return complexInternHandle(values.base, idx)
-			}
-		}
-		if values.base == 0 {
-			values.base = int32(len(i.complexSemtypeHandles) + 1)
-		}
-		idx := len(values.dataLists)
-		values.dataLists = append(values.dataLists, dataList)
-		i.complexSemtypeHandles[key] = values
-		return complexInternHandle(values.base, idx)
-	default:
-		panic("unexpected semtype kind")
 	}
+	key := complexSemtypeInternKey{all: ty.all(), some: ty.some()}
+	values := i.complexSemtypeHandles[key]
+	dataList := ty.subtypeDataList()
+	for idx, existing := range values.dataLists {
+		if sameSubtypeDataList(existing, dataList) {
+			return complexInternHandle(values.base, idx)
+		}
+	}
+	if values.base == 0 {
+		values.base = int32(len(i.complexSemtypeHandles) + 1)
+	}
+	idx := len(values.dataLists)
+	values.dataLists = append(values.dataLists, dataList)
+	i.complexSemtypeHandles[key] = values
+	return complexInternHandle(values.base, idx)
 }
 
 func complexInternHandle(base int32, index int) InternHandle {
@@ -75,11 +72,8 @@ func complexInternHandle(base int32, index int) InternHandle {
 }
 
 func sameComplexSemType(a, b SemType) bool {
-	// FIXME: remove these casts once SemType is a value type.
-	ca := a.(complexSemType)
-	cb := b.(complexSemType)
-	return ca.all() == cb.all() && ca.some() == cb.some() &&
-		sameSubtypeDataList(ca.subtypeDataList(), cb.subtypeDataList())
+	return a.all() == b.all() && a.some() == b.some() &&
+		sameSubtypeDataList(a.subtypeDataList(), b.subtypeDataList())
 }
 
 func sameSubtypeDataList(a, b []ProperSubtypeData) bool {

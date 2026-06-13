@@ -34,7 +34,6 @@ func fieldName(f CellField) string {
 func NewMappingDefinition() MappingDefinition {
 	this := MappingDefinition{}
 	this.rec = nil
-	this.semType = nil
 	// Default field initializations
 
 	return this

@@ -164,7 +164,7 @@ func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNod
 
 	lhsTy := expr.LhsExpr.GetDeterminedType()
 	rhsTy := expr.RhsExpr.GetDeterminedType()
-	if lhsTy == nil || rhsTy == nil {
+	if semtypes.IsZero(lhsTy) || semtypes.IsZero(rhsTy) {
 		return desugaredNode[ast.BLangActionOrExpression]{
 			initStmts:       initStmts,
 			replacementNode: expr,

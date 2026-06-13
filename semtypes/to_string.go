@@ -52,17 +52,13 @@ func builtinUnion(cx Context, ty SemType) (string, bool) {
 }
 
 func (s *toStringState) semTypeToString(ty SemType) string {
-	switch ty := ty.(type) {
-	case BasicTypeBitSet:
-		return basicTypeToString(ty)
-	case complexSemType:
-		if name, ok := xmlPredefinedName(s.cx, ty); ok {
-			return name
-		}
-		return s.complexSemtypeToString(ty)
-	default:
-		panic("Unexpect semtype kind")
+	if ty.some() == 0 {
+		return basicTypeToString(ty.all())
 	}
+	if name, ok := xmlPredefinedName(s.cx, ty); ok {
+		return name
+	}
+	return s.complexSemtypeToString(ty)
 }
 
 func xmlPredefinedName(cx Context, ty SemType) (string, bool) {
@@ -81,14 +77,15 @@ func xmlPredefinedName(cx Context, ty SemType) (string, bool) {
 	return "", false
 }
 
-func basicTypeToString(ty BasicTypeBitSet) string {
-	if ty.all() == 0 {
+func basicTypeToString(ty basicTypeBitSet) string {
+	bits := ty & basicTypeMask
+	if bits == 0 {
 		return "never"
 	}
-	return basicTypeBitSetToString(ty.all())
+	return basicTypeBitSetToString(bits)
 }
 
-func basicTypeBitSetToString(bits BasicTypeBitSet) string {
+func basicTypeBitSetToString(bits basicTypeBitSet) string {
 	var parts []string
 	for i := 0; i < int(ValueTypeCount); i++ {
 		if bits&(1<<i) != 0 {
@@ -100,7 +97,7 @@ func basicTypeBitSetToString(bits BasicTypeBitSet) string {
 	return strings.Join(parts, "|")
 }
 
-func (s *toStringState) complexSemtypeToString(ty complexSemType) string {
+func (s *toStringState) complexSemtypeToString(ty SemType) string {
 	var parts []string
 	allStr := basicTypeBitSetToString(ty.all())
 	if allStr != "" {
@@ -250,11 +247,10 @@ func (s *toStringState) functionAtomicTypeToString(atom atom) string {
 func (s *toStringState) functionParamsToString(paramType SemType) string {
 	// ParamType is a list SemType representing the parameter tuple.
 	// Try to extract individual parameter types from the list atom.
-	cst, ok := paramType.(complexSemType)
-	if !ok {
+	if paramType.some() == 0 {
 		return s.semTypeToString(paramType)
 	}
-	for _, sub := range unpack(cst) {
+	for _, sub := range unpack(paramType) {
 		if sub.BasicTypeCode != BTList {
 			continue
 		}
@@ -440,11 +436,10 @@ func (s *toStringState) objectMethodToString(name string, kindTy SemType, fnTy S
 	} else {
 		methodPrefix = "function "
 	}
-	cst, ok := fnTy.(complexSemType)
-	if !ok {
+	if fnTy.some() == 0 {
 		return methodPrefix + name + "()"
 	}
-	for _, sub := range unpack(cst) {
+	for _, sub := range unpack(fnTy) {
 		if sub.BasicTypeCode == BTFunction {
 			bdd, ok := sub.SubtypeData.(Bdd)
 			if !ok {

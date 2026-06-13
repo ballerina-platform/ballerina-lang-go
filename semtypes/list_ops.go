@@ -72,9 +72,7 @@ func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle
 	indices := listSamples(cx, members, rest, neg)
 	memberTypes, nRequired := listSampleTypes(cx, members, rest, indices)
 	memberTypesArray := make([]SemType, len(memberTypes))
-	for i, t := range memberTypes {
-		memberTypesArray[i] = t
-	}
+	copy(memberTypesArray, memberTypes)
 	if !listInhabitedFast(cx, indices, memberTypesArray, nRequired, neg) {
 		// assert !listInhabited(cx, indices, memberTypes, nRequired, neg)
 		return true
@@ -203,7 +201,7 @@ func listIntersectWith(env Env, members1 fixedLengthArray, rest1 SemType,
 	members2 fixedLengthArray, rest2 SemType,
 ) (fixedLengthArray, SemType, bool) {
 	if listLengthsDisjoint(members1, rest1, members2, rest2) {
-		return fixedLengthArray{}, complexSemType{}, false
+		return fixedLengthArray{}, SemType{}, false
 	}
 	// This is different from nBallerina, but I think assuming we have normalized the FixedLengthArrays we must
 	// consider fixedLengths not the size of initial members. For example consider any[4] and

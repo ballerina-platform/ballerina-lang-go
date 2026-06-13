@@ -21,19 +21,17 @@ import (
 )
 
 func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
-	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.all() & LIST.all()) != 0 {
+	if t.some() == 0 {
+		if (t.all() & LIST.all()) != 0 {
 			return VAL
-		} else {
-			return NEVER
 		}
-	} else {
-		keyData := getIntSubtype(k)
-		if isNothingSubtype(keyData) {
-			return NEVER
-		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t, BTList).(Bdd), conjunctionNil, conjunctionNil)
+		return NEVER
 	}
+	keyData := getIntSubtype(k)
+	if isNothingSubtype(keyData) {
+		return NEVER
+	}
+	return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t, BTList).(Bdd), conjunctionNil, conjunctionNil)
 }
 
 func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle, neg conjunctionHandle) SemType {

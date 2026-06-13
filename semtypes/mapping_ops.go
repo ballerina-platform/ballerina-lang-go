@@ -120,7 +120,7 @@ func insertField(m MappingAtomicType, name string, t SemType) MappingAtomicType 
 	names := append([]string(nil), m.Names...)
 	names = append(names, "")
 	types := append([]SemType(nil), m.Types...)
-	types = append(types, nil)
+	types = append(types, SemType{})
 	i := len(names) - 1
 	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
@@ -165,7 +165,6 @@ func bddMappingMemberTypeInnerCore(cx Context, b Bdd, key SubtypeData, accum Sem
 
 func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) SemType {
 	var memberType SemType
-	memberType = nil
 	for _, ty := range mappingAtomicApplicableMemberTypesInner(atomic, key) {
 		if IsZero(memberType) {
 			memberType = ty
