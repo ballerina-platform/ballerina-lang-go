@@ -271,7 +271,7 @@ func (sc *bddSerializationContext) serializeXMLAtom(atom atom) int32 {
 	return idx
 }
 
-func cellMut(cell ComplexSemType) CellMutability {
+func cellMut(cell SemType) CellMutability {
 	bdd := cell.subtypeDataList()[0].(bddNode)
 	cat := bdd.atom().(*typeAtom).AtomicType.(*cellAtomicType)
 	return cat.Mut

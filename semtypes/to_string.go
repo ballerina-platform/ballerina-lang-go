@@ -55,7 +55,7 @@ func (s *toStringState) semTypeToString(ty SemType) string {
 	switch ty := ty.(type) {
 	case BasicTypeBitSet:
 		return basicTypeToString(ty)
-	case ComplexSemType:
+	case complexSemType:
 		if name, ok := xmlPredefinedName(s.cx, ty); ok {
 			return name
 		}
@@ -100,7 +100,7 @@ func basicTypeBitSetToString(bits BasicTypeBitSet) string {
 	return strings.Join(parts, "|")
 }
 
-func (s *toStringState) complexSemtypeToString(ty ComplexSemType) string {
+func (s *toStringState) complexSemtypeToString(ty complexSemType) string {
 	var parts []string
 	allStr := basicTypeBitSetToString(ty.all())
 	if allStr != "" {
@@ -250,7 +250,7 @@ func (s *toStringState) functionAtomicTypeToString(atom atom) string {
 func (s *toStringState) functionParamsToString(paramType SemType) string {
 	// ParamType is a list SemType representing the parameter tuple.
 	// Try to extract individual parameter types from the list atom.
-	cst, ok := paramType.(ComplexSemType)
+	cst, ok := paramType.(complexSemType)
 	if !ok {
 		return s.semTypeToString(paramType)
 	}
@@ -440,7 +440,7 @@ func (s *toStringState) objectMethodToString(name string, kindTy SemType, fnTy S
 	} else {
 		methodPrefix = "function "
 	}
-	cst, ok := fnTy.(ComplexSemType)
+	cst, ok := fnTy.(complexSemType)
 	if !ok {
 		return methodPrefix + name + "()"
 	}

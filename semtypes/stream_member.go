@@ -35,7 +35,7 @@ func streamMemberAt(cx Context, streamTy SemType, index int64) SemType {
 	switch streamTy.(type) {
 	case BasicTypeBitSet:
 		return bareStreamMember(index)
-	case ComplexSemType:
+	case complexSemType:
 		return ListMemberTypeInnerVal(cx, convertStreamToListTy(cx, streamTy), IntConst(index))
 	default:
 		panic("unexpected")

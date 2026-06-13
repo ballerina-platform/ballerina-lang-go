@@ -97,7 +97,7 @@ func (v *Visibility) field() Field {
 // ObjectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
 func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
-	if objectTy == nil {
+	if IsZero(objectTy) {
 		return nil
 	}
 	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
@@ -107,7 +107,7 @@ func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 // ObjectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
 func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
-	if objectTy == nil {
+	if IsZero(objectTy) {
 		return nil
 	}
 	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
@@ -117,7 +117,7 @@ func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
 // ObjectMemberType returns the type of the member
 func ObjectMemberType(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
-	if objectTy == nil {
+	if IsZero(objectTy) {
 		return nil
 	}
 	memberMap := mappingMemberTypeInner(ctx, objectTy, name)

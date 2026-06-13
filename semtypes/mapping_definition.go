@@ -42,7 +42,7 @@ func NewMappingDefinition() MappingDefinition {
 
 func (m *MappingDefinition) GetSemType(env Env) SemType {
 	s := m.semType
-	if s == nil {
+	if IsZero(s) {
 		rec := env.recMappingAtom()
 		m.rec = &rec
 		return m.createSemType(env, &rec)
@@ -55,7 +55,7 @@ func (m *MappingDefinition) SetSemTypeToNever() {
 	m.semType = NEVER
 }
 
-func (m *MappingDefinition) Define(env Env, fields []CellField, rest ComplexSemType) SemType {
+func (m *MappingDefinition) Define(env Env, fields []CellField, rest SemType) SemType {
 	sfh := m.splitFields(fields)
 	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
 	var a atom
@@ -116,7 +116,7 @@ func (m *MappingDefinition) splitFields(fields []CellField) splitField {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
 	names := make([]string, len(sortedFields))
-	types := make([]ComplexSemType, len(sortedFields))
+	types := make([]SemType, len(sortedFields))
 	for i, field := range sortedFields {
 		names[i] = field.Name
 		types[i] = field.Type

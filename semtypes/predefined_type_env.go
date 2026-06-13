@@ -355,7 +355,7 @@ func (p *predefinedTypeEnv) atomCellUndef() *typeAtom {
 // listAtomicTwoElement returns the ListAtomicType for two-element list with CELL_SEMTYPE_VAL and CELL_SEMTYPE_UNDEF
 func (p *predefinedTypeEnv) listAtomicTwoElement() *ListAtomicType {
 	if p._listAtomicTwoElement == nil {
-		val := listAtomicTypeFrom(fixedLengthArrayFrom([]ComplexSemType{CELL_SEMTYPE_VAL}, 2), CELL_SEMTYPE_UNDEF)
+		val := listAtomicTypeFrom(fixedLengthArrayFrom([]SemType{CELL_SEMTYPE_VAL}, 2), CELL_SEMTYPE_UNDEF)
 		p._listAtomicTwoElement = &val
 		p.addInitializedListAtom(&val)
 	}
@@ -397,7 +397,7 @@ func (p *predefinedTypeEnv) mappingAtomicObjectMemberRO() *MappingAtomicType {
 	if p._mappingAtomicObjectMemberRO == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
-			[]ComplexSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL_RO, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
+			[]SemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL_RO, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
 		p._mappingAtomicObjectMemberRO = &val
 		p.addInitializedMapAtom(&val)
@@ -480,7 +480,7 @@ func (p *predefinedTypeEnv) mappingAtomicObjectMember() *MappingAtomicType {
 	if p._mappingAtomicObjectMember == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
-			[]ComplexSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
+			[]SemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
 		p._mappingAtomicObjectMember = &val
 		p.addInitializedMapAtom(&val)
@@ -523,7 +523,7 @@ func (p *predefinedTypeEnv) mappingAtomicObject() *MappingAtomicType {
 	if p._mappingAtomicObject == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
-			[]ComplexSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
+			[]SemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER)
 		p._mappingAtomicObject = &val
 		p.addInitializedMapAtom(&val)
@@ -554,7 +554,7 @@ func (p *predefinedTypeEnv) listAtomicRO() *ListAtomicType {
 // mappingAtomicRO returns the MappingAtomicType for read-only mapping
 func (p *predefinedTypeEnv) mappingAtomicRO() *MappingAtomicType {
 	if p._mappingAtomicRO == nil {
-		val := mappingAtomicTypeFrom([]string{}, []ComplexSemType{}, CELL_SEMTYPE_INNER_RO)
+		val := mappingAtomicTypeFrom([]string{}, []SemType{}, CELL_SEMTYPE_INNER_RO)
 		p._mappingAtomicRO = &val
 		p.initializedRecMappingAtoms = append(p.initializedRecMappingAtoms, &val)
 	}
@@ -566,7 +566,7 @@ func (p *predefinedTypeEnv) getMappingAtomicObjectRO() *MappingAtomicType {
 	if p._mappingAtomicObjectRO == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
-			[]ComplexSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
+			[]SemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER_RO)
 		p._mappingAtomicObjectRO = &val
 		p.initializedRecMappingAtoms = append(p.initializedRecMappingAtoms, &val)
@@ -618,7 +618,7 @@ func (p *predefinedTypeEnv) atomCellMappingArrayRO() *typeAtom {
 func (p *predefinedTypeEnv) listAtomicThreeElement() *ListAtomicType {
 	if p._listAtomicThreeElement == nil {
 		val := listAtomicTypeFrom(
-			fixedLengthArrayFrom([]ComplexSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING, CELL_SEMTYPE_VAL}, 3),
+			fixedLengthArrayFrom([]SemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING, CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
 		p._listAtomicThreeElement = &val
 		p.addInitializedListAtom(&val)
@@ -640,7 +640,7 @@ func (p *predefinedTypeEnv) atomListThreeElement() *typeAtom {
 func (p *predefinedTypeEnv) listAtomicThreeElementRO() *ListAtomicType {
 	if p._listAtomicThreeElementRO == nil {
 		val := listAtomicTypeFrom(
-			fixedLengthArrayFrom([]ComplexSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING_RO, CELL_SEMTYPE_VAL}, 3),
+			fixedLengthArrayFrom([]SemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING_RO, CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
 		p._listAtomicThreeElementRO = &val
 		p.addInitializedListAtom(&val)

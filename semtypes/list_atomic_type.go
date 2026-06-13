@@ -18,19 +18,19 @@ package semtypes
 
 type ListAtomicType struct {
 	Members fixedLengthArray
-	rest    ComplexSemType
+	rest    SemType
 }
 
 var _ atomicType = &ListAtomicType{}
 
-func newListAtomicTypeFromMembersRest(members fixedLengthArray, rest ComplexSemType) ListAtomicType {
+func newListAtomicTypeFromMembersRest(members fixedLengthArray, rest SemType) ListAtomicType {
 	this := ListAtomicType{}
 	this.Members = members
 	this.rest = rest
 	return this
 }
 
-func listAtomicTypeFrom(members fixedLengthArray, rest ComplexSemType) ListAtomicType {
+func listAtomicTypeFrom(members fixedLengthArray, rest SemType) ListAtomicType {
 	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
@@ -42,7 +42,7 @@ func (atomic *ListAtomicType) MemberAtInnerVal(index int) SemType {
 	return cellInnerVal(atomic.MemberAt(index))
 }
 
-func (atomic *ListAtomicType) MemberAt(index int) ComplexSemType {
+func (atomic *ListAtomicType) MemberAt(index int) SemType {
 	return listMemberAt(atomic.Members, atomic.rest, index)
 }
 

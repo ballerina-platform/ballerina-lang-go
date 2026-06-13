@@ -127,7 +127,7 @@ func FunctionParamListType(cx Context, fnTy SemType) SemType {
 	switch ty := fnTy.(type) {
 	case BasicTypeBitSet:
 		return NEVER
-	case ComplexSemType:
+	case complexSemType:
 		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionParamListTypeInner(cx, NEVER, bdd)
 	default:
@@ -152,13 +152,13 @@ func functionParamListTypeInner(cx Context, accumTy SemType, bdd Bdd) SemType {
 // Corresponds to apply^? in AMK tutorial.
 func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 	domain := FunctionParamListType(cx, fnTy)
-	if domain == nil || !IsSubtype(cx, argList, domain) {
+	if IsZero(domain) || !IsSubtype(cx, argList, domain) {
 		return nil
 	}
 	switch ty := fnTy.(type) {
 	case BasicTypeBitSet:
 		return VAL
-	case ComplexSemType:
+	case complexSemType:
 		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionReturnTypeInner(cx, argList, VAL, bdd)
 	default:

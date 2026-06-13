@@ -123,12 +123,12 @@ func (i *subtypePairIterator) internalNext() (subtypePair, bool) {
 func newSubtypePairs(s1, s2 SemType, b BasicTypeBitSet) subtypePairIterator {
 	it := subtypePairIterator{bits: b, state: iterNeedsCalc}
 	switch ct1 := s1.(type) {
-	case ComplexSemType:
+	case complexSemType:
 		it.list1 = ct1.subtypeDataList()
 		it.some1 = ct1.some()
 	}
 	switch ct2 := s2.(type) {
-	case ComplexSemType:
+	case complexSemType:
 		it.list2 = ct2.subtypeDataList()
 		it.some2 = ct2.some()
 	}

@@ -22,13 +22,13 @@ import (
 
 type MappingAtomicType struct {
 	Names []string
-	Types []ComplexSemType
-	Rest  ComplexSemType
+	Types []SemType
+	Rest  SemType
 }
 
 var _ atomicType = &MappingAtomicType{}
 
-func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest ComplexSemType) MappingAtomicType {
+func mappingAtomicTypeFrom(names []string, types []SemType, rest SemType) MappingAtomicType {
 	return MappingAtomicType{
 		Names: names,
 		Types: types,
@@ -91,7 +91,7 @@ func mappingAtomsMatch(cx Context, ty SemType, quantifier matchQuantifier, predi
 	if _, ok := ty.(BasicTypeBitSet); ok {
 		return false
 	}
-	bdd := getComplexSubtypeData(ty.(ComplexSemType), BTMapping).(Bdd)
+	bdd := getComplexSubtypeData(ty, BTMapping).(Bdd)
 	if simple, ok := bdd.(*bddNodeSimple); ok {
 		return predicate(cx, cx.MappingAtomType(simple.atom()))
 	}

@@ -486,8 +486,8 @@ func TestRec3(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringCharSubtype()
 func TestStringCharSubtype(t *testing.T) {
 	st := StringConst("a")
-	complexSt, ok := st.(ComplexSemType)
-	assertTrue(t, ok, "expected ComplexSemType")
+	complexSt, ok := st.(complexSemType)
+	assertTrue(t, ok, "expected complexSemType")
 	assertEqual(t, len(complexSt.subtypeDataList()), 1)
 
 	subType, ok2 := complexSt.subtypeDataList()[0].(stringSubtype)
@@ -503,8 +503,8 @@ func TestStringCharSubtype(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringNonCharSubtype()
 func TestStringNonCharSubtype(t *testing.T) {
 	st := StringConst("abc")
-	complexSt, ok := st.(ComplexSemType)
-	assertTrue(t, ok, "expected ComplexSemType")
+	complexSt, ok := st.(complexSemType)
+	assertTrue(t, ok, "expected complexSemType")
 	assertEqual(t, len(complexSt.subtypeDataList()), 1)
 
 	subType, ok2 := complexSt.subtypeDataList()[0].(stringSubtype)
@@ -520,24 +520,24 @@ func TestStringNonCharSubtype(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringSubtypeSingleValue()
 func TestStringSubtypeSingleValue(t *testing.T) {
 	abc := StringConst("abc")
-	abcComplex, ok := abc.(ComplexSemType)
-	assertTrue(t, ok, "expected ComplexSemType")
+	abcComplex, ok := abc.(complexSemType)
+	assertTrue(t, ok, "expected complexSemType")
 	abcSD := abcComplex.subtypeDataList()[0]
 	assertEqual(t, stringSubtypeSingleValue(abcSD).Get(), "abc")
 
 	a := StringConst("a")
-	aComplex, ok2 := a.(ComplexSemType)
-	assertTrue(t, ok2, "expected ComplexSemType")
+	aComplex, ok2 := a.(complexSemType)
+	assertTrue(t, ok2, "expected complexSemType")
 	aSD := aComplex.subtypeDataList()[0]
 	assertEqual(t, stringSubtypeSingleValue(aSD).Get(), "a")
 
 	aAndAbc := Union(a, abc)
-	aAndAbcComplex, ok3 := aAndAbc.(ComplexSemType)
-	assertTrue(t, ok3, "expected ComplexSemType")
+	aAndAbcComplex, ok3 := aAndAbc.(complexSemType)
+	assertTrue(t, ok3, "expected complexSemType")
 	assertFalse(t, stringSubtypeSingleValue(aAndAbcComplex.subtypeDataList()[0]).IsPresent())
 
 	intersect1 := Intersect(aAndAbc, a)
-	if intersect1Complex, ok4 := intersect1.(ComplexSemType); ok4 {
+	if intersect1Complex, ok4 := intersect1.(complexSemType); ok4 {
 		assertEqual(t, stringSubtypeSingleValue(intersect1Complex.subtypeDataList()[0]).Get(), "a")
 	} else {
 		// If intersection results in a basic type, check if it equals "a"
@@ -546,7 +546,7 @@ func TestStringSubtypeSingleValue(t *testing.T) {
 	}
 
 	intersect2 := Intersect(aAndAbc, abc)
-	if intersect2Complex, ok5 := intersect2.(ComplexSemType); ok5 {
+	if intersect2Complex, ok5 := intersect2.(complexSemType); ok5 {
 		assertEqual(t, stringSubtypeSingleValue(intersect2Complex.subtypeDataList()[0]).Get(), "abc")
 	} else {
 		// If intersection results in a basic type, check if it equals "abc"

@@ -18,15 +18,15 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-func cellContaining(env Env, ty SemType) ComplexSemType {
+func cellContaining(env Env, ty SemType) complexSemType {
 	return cellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_LIMITED)
 }
 
-func roCellContaining(env Env, ty SemType) ComplexSemType {
+func roCellContaining(env Env, ty SemType) complexSemType {
 	return cellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_NONE)
 }
 
-func cellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMutability) ComplexSemType {
+func cellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMutability) complexSemType {
 	common.Assert(IsNever(ty) || !IsSubtypeSimple(ty, CELL))
 	if basicTy, ok := ty.(BasicTypeBitSet); ok {
 		if cellTy, ok := env.preallocatedTypeVals.basicTypeCell(basicTy, mut); ok {

@@ -16,22 +16,20 @@
 
 package semtypes
 
-type ComplexSemType struct {
-	allBitSet  BasicTypeBitSet
-	someBitSet BasicTypeBitSet
-	dataList   []ProperSubtypeData
+type complexSemType struct {
+	_allBitSet  BasicTypeBitSet
+	_someBitSet BasicTypeBitSet
+	_dataList   []ProperSubtypeData
 }
 
-var _ SemType = ComplexSemType{}
-
-func (c ComplexSemType) all() BasicTypeBitSet {
-	return c.allBitSet
+func (c complexSemType) all() BasicTypeBitSet {
+	return c._allBitSet
 }
 
-func (c ComplexSemType) some() BasicTypeBitSet {
-	return c.someBitSet
+func (c complexSemType) some() BasicTypeBitSet {
+	return c._someBitSet
 }
 
-func (c ComplexSemType) subtypeDataList() []ProperSubtypeData {
-	return c.dataList
+func (c complexSemType) subtypeDataList() []ProperSubtypeData {
+	return c._dataList
 }

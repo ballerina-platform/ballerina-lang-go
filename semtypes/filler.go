@@ -150,11 +150,11 @@ func initFnFillerCompatible(cx Context, initFnTy SemType) bool {
 	ld := NewListDefinition()
 	emptyArgList := ld.TupleTypeWrapped(cx.Env())
 	paramListTy := FunctionParamListType(cx, initFnTy)
-	if paramListTy == nil || !IsSubtype(cx, emptyArgList, paramListTy) {
+	if IsZero(paramListTy) || !IsSubtype(cx, emptyArgList, paramListTy) {
 		return false
 	}
 	retTy := FunctionReturnType(cx, initFnTy, emptyArgList)
-	if retTy == nil {
+	if IsZero(retTy) {
 		return false
 	}
 	return !ContainsBasicType(retTy, ERROR)

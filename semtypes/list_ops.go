@@ -33,7 +33,7 @@ func listSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 
 func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
 	var members fixedLengthArray
-	var rest ComplexSemType
+	var rest SemType
 	if pos == conjunctionNil {
 		atom := LIST_ATOMIC_INNER
 		members = atom.Members
@@ -128,8 +128,8 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	return false
 }
 
-func listSampleTypes(cx Context, members fixedLengthArray, rest ComplexSemType, indices []int) ([]ComplexSemType, int) {
-	var memberTypes []ComplexSemType
+func listSampleTypes(cx Context, members fixedLengthArray, rest SemType, indices []int) ([]SemType, int) {
+	var memberTypes []SemType
 	nRequired := 0
 	for i := range indices {
 		index := indices[i]
@@ -199,11 +199,11 @@ func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunc
 	return indices
 }
 
-func listIntersectWith(env Env, members1 fixedLengthArray, rest1 ComplexSemType,
-	members2 fixedLengthArray, rest2 ComplexSemType,
-) (fixedLengthArray, ComplexSemType, bool) {
+func listIntersectWith(env Env, members1 fixedLengthArray, rest1 SemType,
+	members2 fixedLengthArray, rest2 SemType,
+) (fixedLengthArray, SemType, bool) {
 	if listLengthsDisjoint(members1, rest1, members2, rest2) {
-		return fixedLengthArray{}, ComplexSemType{}, false
+		return fixedLengthArray{}, complexSemType{}, false
 	}
 	// This is different from nBallerina, but I think assuming we have normalized the FixedLengthArrays we must
 	// consider fixedLengths not the size of initial members. For example consider any[4] and
@@ -212,7 +212,7 @@ func listIntersectWith(env Env, members1 fixedLengthArray, rest1 ComplexSemType,
 	max1 := members1.FixedLength
 	max2 := members2.FixedLength
 	maxLen := max(max2, max1)
-	var initial []ComplexSemType
+	var initial []SemType
 	for i := range maxLen {
 		intersected := intersectMemberSemTypes(env, listMemberAt(members1, rest1, i),
 			listMemberAt(members2, rest2, i))
@@ -279,11 +279,11 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 	}
 }
 
-func listMemberAtInnerVal(fixedArray fixedLengthArray, rest ComplexSemType, index int) SemType {
+func listMemberAtInnerVal(fixedArray fixedLengthArray, rest SemType, index int) SemType {
 	return cellInnerVal(listMemberAt(fixedArray, rest, index))
 }
 
-func listLengthsDisjoint(members1 fixedLengthArray, rest1 ComplexSemType, members2 fixedLengthArray, rest2 ComplexSemType) bool {
+func listLengthsDisjoint(members1 fixedLengthArray, rest1 SemType, members2 fixedLengthArray, rest2 SemType) bool {
 	len1 := members1.FixedLength
 	len2 := members2.FixedLength
 	if len1 < len2 {
@@ -295,7 +295,7 @@ func listLengthsDisjoint(members1 fixedLengthArray, rest1 ComplexSemType, member
 	return false
 }
 
-func listMemberAt(fixedArray fixedLengthArray, rest ComplexSemType, index int) ComplexSemType {
+func listMemberAt(fixedArray fixedLengthArray, rest SemType, index int) SemType {
 	if index < fixedArray.FixedLength {
 		return fixedArrayGet(fixedArray, index)
 	}
@@ -311,7 +311,7 @@ func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
 	return false
 }
 
-func fixedArrayGet(members fixedLengthArray, index int) ComplexSemType {
+func fixedArrayGet(members fixedLengthArray, index int) SemType {
 	memberLen := len(members.initial)
 	i := min(memberLen-1, index)
 	return members.initial[i]
@@ -325,7 +325,7 @@ func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
 	return listAtomicMemberTypeAtInner(atomic.Members, atomic.rest, key)
 }
 
-func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest ComplexSemType, key SubtypeData) SemType {
+func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest SemType, key SubtypeData) SemType {
 	if intSubtype, ok := key.(intSubtype); ok {
 		var m SemType
 		m = NEVER

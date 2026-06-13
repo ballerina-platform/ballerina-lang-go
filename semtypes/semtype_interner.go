@@ -49,8 +49,8 @@ func (i *SemtypeInterner) Intern(ty SemType) InternHandle {
 		handle := InternHandle(-int(ty) - 1)
 		i.basicTypeHandles[ty] = handle
 		return handle
-	case ComplexSemType:
-		key := complexSemtypeInternKey{all: ty.allBitSet, some: ty.someBitSet}
+	case complexSemType:
+		key := complexSemtypeInternKey{all: ty.all(), some: ty.some()}
 		values := i.complexSemtypeHandles[key]
 		dataList := ty.subtypeDataList()
 		for idx, existing := range values.dataLists {
@@ -74,9 +74,12 @@ func complexInternHandle(base int32, index int) InternHandle {
 	return InternHandle(index)<<32 | InternHandle(uint32(base))
 }
 
-func sameComplexSemType(a, b ComplexSemType) bool {
-	return a.allBitSet == b.allBitSet && a.someBitSet == b.someBitSet &&
-		sameSubtypeDataList(a.subtypeDataList(), b.subtypeDataList())
+func sameComplexSemType(a, b SemType) bool {
+	// FIXME: remove these casts once SemType is a value type.
+	ca := a.(complexSemType)
+	cb := b.(complexSemType)
+	return ca.all() == cb.all() && ca.some() == cb.some() &&
+		sameSubtypeDataList(ca.subtypeDataList(), cb.subtypeDataList())
 }
 
 func sameSubtypeDataList(a, b []ProperSubtypeData) bool {

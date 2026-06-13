@@ -133,7 +133,7 @@ func basicType(code BasicTypeCode) BasicTypeBitSet {
 	return basicTypeBitSetFrom((1 << code.Code()))
 }
 
-func getBasicSubtype(code BasicTypeCode, data ProperSubtypeData) ComplexSemType {
+func getBasicSubtype(code BasicTypeCode, data ProperSubtypeData) complexSemType {
 	if code == BTCell {
 		return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(0, CELL.all(), []ProperSubtypeData{data})
 	}

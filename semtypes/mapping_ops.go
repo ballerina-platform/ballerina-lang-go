@@ -47,7 +47,7 @@ func mappingFormulaIsEmpty(cx Context, posList conjunctionHandle, negList conjun
 			}
 		}
 		for i := range combined.Types {
-			if IsEmpty(cx, &combined.Types[i]) {
+			if IsEmpty(cx, combined.Types[i]) {
 				return true
 			}
 		}
@@ -97,13 +97,13 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHan
 			if IsEmpty(cx, intersect) {
 				return mappingInhabited(cx, pos, negNext)
 			}
-			d := Diff(fieldPair.Type1, fieldPair.Type2).(ComplexSemType)
+			d := Diff(fieldPair.Type1, fieldPair.Type2)
 			if !IsEmpty(cx, d) {
 				var mt MappingAtomicType
 				if fieldPair.Index1 < 0 {
 					mt = insertField(*pos, fieldPair.Name, d)
 				} else {
-					posTypes := append([]ComplexSemType(nil), pos.Types...)
+					posTypes := append([]SemType(nil), pos.Types...)
 					posTypes[fieldPair.Index1] = d
 					mt = mappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}
@@ -116,11 +116,11 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHan
 	}
 }
 
-func insertField(m MappingAtomicType, name string, t ComplexSemType) MappingAtomicType {
+func insertField(m MappingAtomicType, name string, t SemType) MappingAtomicType {
 	names := append([]string(nil), m.Names...)
 	names = append(names, "")
-	types := append([]ComplexSemType(nil), m.Types...)
-	types = append(types, ComplexSemType{})
+	types := append([]SemType(nil), m.Types...)
+	types = append(types, nil)
 	i := len(names) - 1
 	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
@@ -137,7 +137,7 @@ func insertField(m MappingAtomicType, name string, t ComplexSemType) MappingAtom
 
 func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *MappingAtomicType {
 	var names []string
-	var types []ComplexSemType
+	var types []SemType
 	pairing := newFieldPairs(m1, m2)
 	for fieldPair := range pairing {
 		names = append(names, fieldPair.Name)
@@ -167,13 +167,13 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 	var memberType SemType
 	memberType = nil
 	for _, ty := range mappingAtomicApplicableMemberTypesInner(atomic, key) {
-		if memberType == nil {
+		if IsZero(memberType) {
 			memberType = ty
 		} else {
 			memberType = Union(memberType, ty)
 		}
 	}
-	if memberType == nil {
+	if IsZero(memberType) {
 		return UNDEF
 	}
 	return memberType
