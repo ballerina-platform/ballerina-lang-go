@@ -90,7 +90,7 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 	result := make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace)
 
 	for _, entry := range builtinStdlibs {
-		balPath := fmt.Sprintf("ballerina/%s/%s/go1.2/%s.bal", entry.name, entry.version, entry.name)
+		balPath := fmt.Sprintf("ballerina/%s/%s/go1.26/%s.bal", entry.name, entry.version, entry.name)
 		contentBytes, err := fs.ReadFile(stdlibs.FS, balPath)
 		if err != nil {
 			continue

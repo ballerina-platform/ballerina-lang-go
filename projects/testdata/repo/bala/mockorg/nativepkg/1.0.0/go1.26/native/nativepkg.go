@@ -14,17 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+package nativepkg
 
 import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-	_ "ballerina-lang-go/lib/string/runtime"
-
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.26/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.26/native"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/values"
 )
+
+func initNativepkgModule(rt *runtime.Runtime) {
+	runtime.RegisterExternFunction(rt, "mockorg", "nativepkg", "hello", func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+		return "hello from native Go", nil
+	})
+}
+
+func init() {
+	runtime.RegisterModuleInitializer(initNativepkgModule)
+}

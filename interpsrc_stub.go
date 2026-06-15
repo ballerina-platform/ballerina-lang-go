@@ -14,17 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+//go:build native_interp
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-	_ "ballerina-lang-go/lib/string/runtime"
+// Package interpsrc — stub used when building the native interpreter binary.
+// The native interpreter is always built from an already-extracted source tree,
+// so there is no need to embed the source again.
+package interpsrc
 
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.26/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.26/native"
-)
+import "errors"
+
+// ExtractTo is a no-op in native interpreter builds.
+func ExtractTo(_, _ string) (string, error) {
+	return "", errors.New("interpreter source is not embedded in native interpreter builds")
+}
