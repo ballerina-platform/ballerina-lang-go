@@ -21,6 +21,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -28,14 +29,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
-	array "ballerina-lang-go/lib/array/compile"
-	bError "ballerina-lang-go/lib/error/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
-	bString "ballerina-lang-go/lib/string/compile"
-	bValue "ballerina-lang-go/lib/value/compile"
-	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
 type scopeKind int
@@ -473,6 +467,7 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
+	injectOpaqueSymbols(*pkg.PackageID, moduleResolver)
 	// Type definitions are registered first so that function-symbol allocation can walk alias
 	// chains when classifying typedesc parameters (needed for dependently-typed detection).
 	for i := range pkg.TypeDefinitions {
@@ -588,6 +583,58 @@ func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol
 	return model.NewClassSymbol(name, isPublic)
 }
 
+// injectOpaqueSymbols adds the Go-defined symbols of a builtin lang library to
+// the package's symbol table before its AST symbols are resolved. It is a no-op
+// for non-builtin packages, where model.OpaqueSymbols returns nil.
+func injectOpaqueSymbols(pkgID model.PackageID, r *moduleSymbolResolver) {
+	pkg := model.PackageIdentifier{
+		Organization: pkgID.OrgName.Value(),
+		Package:      pkgID.PkgName.Value(),
+		Version:      pkgID.Version.Value(),
+	}
+	space := r.scope.MainSpace()
+	for _, sym := range model.OpaqueSymbols(pkg) {
+		fillinOpaqueSymbol(sym, space)
+		r.AddSymbol(sym.Name(), sym)
+	}
+}
+
+// fillinOpaqueSymbol fills in any information that needs to be stored in the opaque symbol
+// that is used within semantic package.
+func fillinOpaqueSymbol(sym model.Symbol, space *model.SymbolSpace) {
+	fn, ok := sym.(*model.OpaqueFunctionSymbol)
+	if !ok {
+		return
+	}
+	fn.SymbolSpace = space
+	fn.Lookup, fn.Store = newMonomorphizationCache()
+}
+
+// TODO: when we have cases where we have more than one type param types we need to properly
+// implement this
+func newMonomorphizationCache() (func(...semtypes.SemType) (model.SymbolRef, bool), func(model.SymbolRef, ...semtypes.SemType)) {
+	var mu sync.Mutex
+	cache := make(map[semtypes.SemType]model.SymbolRef)
+	keyOf := func(keys []semtypes.SemType) semtypes.SemType {
+		if len(keys) != 1 {
+			panic("monomorphization cache supports a single key type")
+		}
+		return keys[0]
+	}
+	lookup := func(keys ...semtypes.SemType) (model.SymbolRef, bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		ref, ok := cache[keyOf(keys)]
+		return ref, ok
+	}
+	store := func(ref model.SymbolRef, keys ...semtypes.SemType) {
+		mu.Lock()
+		defer mu.Unlock()
+		cache[keyOf(keys)] = ref
+	}
+	return lookup, store
+}
+
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
 	resolveFunctionInner(functionResolver, function.RequiredParams, function.RestParam, function, function.Body)
 }
@@ -700,32 +747,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// ballerina/lang.* bind to compiler-intrinsic symbols. io and http are
-		// also handled as intrinsics below until their bala bundles are introduced
-		// in dedicated PRs; at that point they will resolve through publicSymbols
-		// like all other ballerina/* packages.
-		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if isLangImport(&imp, "array") {
-				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "map") {
-				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "error") {
-				bindIntrinsicImport(&imp, "error", bError.GetErrorSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "string") {
-				bindIntrinsicImport(&imp, "string", bString.GetStringSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "value") {
-				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
-				continue
-			}
-		}
 		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
 
@@ -799,14 +820,7 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
-	result[bError.PackageName] = bError.GetErrorSymbols(ctx)
-	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
-	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
-	result[bString.PackageName] = bString.GetStringSymbols(ctx)
-	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
-	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }
 

@@ -39,6 +39,7 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/langlib"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
 
@@ -894,7 +895,11 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	pkg.PackageID = cx.NewPackageID(orgName, nameComps, version)
 
 	// Run compilation pipeline
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx), publicSymbols, defaultOrg)
+	implicitImports, err := langlib.ImplicitImports(cx)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	importedSymbols := semantics.ResolveImports(cx, pkg, implicitImports, publicSymbols, defaultOrg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	if cx.HasDiagnostics() {
 		return nil, fmt.Errorf("symbol resolution failed")

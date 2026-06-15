@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"ballerina-lang-go/ast"
-	array "ballerina-lang-go/lib/array/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -2042,7 +2041,7 @@ func createLangInternalInvocation(
 }
 
 func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := array.PackageName
+	pkgName := "lang.array"
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")

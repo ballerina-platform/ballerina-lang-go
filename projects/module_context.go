@@ -262,7 +262,10 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	// Resolve symbols (imports) before type resolution
 	compilerCtx.StartStage(context.StageImportResolution)
 	publicSymbols := moduleCtx.getProject().Environment().publicSymbols
-	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx), publicSymbols, moduleCtx.moduleDescriptor.Org().value)
+	// PR-TODO: remove this after migration all lang libraries
+	implicitImports := semantics.GetImplicitImports(compilerCtx)
+	seedMigratedLangLibs(implicitImports, publicSymbols)
+	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, implicitImports, publicSymbols, moduleCtx.moduleDescriptor.Org().value)
 	moduleCtx.importedSymbols = importedSymbols
 	compilerCtx.EndStage()
 
@@ -475,6 +478,18 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 		}
 	}
 	return pkg
+}
+
+// seedMigratedLangLibs adds the migrated lang libraries (compiled as real
+// packages and published to publicSymbols) to the implicit-imports map under
+// their langlib key, so they are usable without an import statement. No-op
+// until the lib has been compiled (e.g. while compiling the lib itself).
+func seedMigratedLangLibs(implicitImports map[string]model.ExportedSymbolSpace, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) {
+	for _, name := range []string{"lang.int", "lang.error", "lang.string", "lang.value", "lang.xml", "lang.array", "lang.map"} {
+		if space, ok := publicSymbols[semantics.PackageIdentifier{OrgName: "ballerina", ModuleName: name}]; ok {
+			implicitImports[name] = space
+		}
+	}
 }
 
 // createModelPackageID builds a model.PackageID from the module descriptor so BIR gen
