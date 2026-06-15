@@ -210,6 +210,7 @@ func execFPLoad(ctx *extern.Context, fpLoad *bir.FPLoad, frame *Frame) {
 		LookupKey: fpLoad.FunctionLookupKey,
 	}
 	if fpLoad.IsClosure {
+		frame.MarkEscaped()
 		fn.ParentFrame = frame
 	}
 	setOperandValue(ctx, fpLoad.LhsOp, frame, fn)
