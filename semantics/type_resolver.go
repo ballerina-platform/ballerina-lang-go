@@ -123,7 +123,8 @@ type packageTypeResolver struct {
 	lazyResolutionStatus map[model.SymbolRef]resolutionStatus
 	functionNodes        map[model.SymbolRef]*ast.BLangFunction
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
-	typeDefnNodes        map[model.SymbolRef]ast.TypeDefinition
+	typeDefnNodes        map[model.SymbolRef]*ast.BLangTypeDefinition
+	classDefnNodes       map[model.SymbolRef]*ast.BLangClassDefinition
 	defaultFnSymbolCount int
 	monoCounters         map[string]int
 	scope                model.Scope
@@ -465,7 +466,8 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		lazyResolutionStatus:   make(map[model.SymbolRef]resolutionStatus),
 		functionNodes:          make(map[model.SymbolRef]*ast.BLangFunction),
 		mappingAtomToBType:     make(map[*semtypes.MappingAtomicType]ast.BType),
-		typeDefnNodes:          make(map[model.SymbolRef]ast.TypeDefinition),
+		typeDefnNodes:          make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+		classDefnNodes:         make(map[model.SymbolRef]*ast.BLangClassDefinition),
 		mappingAtomToSymRef:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:       make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classSymbolByType:      make(map[semtypes.InternHandle]model.SymbolRef),
@@ -500,6 +502,10 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 	}
 	if defn, ok := t.typeDefnNodes[ref]; ok {
 		_, ok := resolveTypeDefinition(t, defn, depth)
+		return ok
+	}
+	if classDef, ok := t.classDefnNodes[ref]; ok {
+		_, ok := resolveClassTypeDefinition(t, classDef, depth)
 		return ok
 	}
 	if c, inMap := t.packageConstants[ref]; inMap {
@@ -794,7 +800,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		t.typeDefnNodes[classDef.Symbol()] = classDef
+		t.classDefnNodes[classDef.Symbol()] = classDef
 	}
 
 	for i := range pkg.Constants {
@@ -812,7 +818,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		if _, ok := resolveTypeDefinition(t, classDef, 0); !ok {
+		if _, ok := resolveClassTypeDefinition(t, classDef, 0); !ok {
 			return
 		}
 	}
@@ -1456,7 +1462,7 @@ func allocateDefaultFnSymbol(t typeResolver, fieldTy semtypes.SemType) model.Sym
 	return ref
 }
 
-func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (semtypes.SemType, bool) {
+func resolveTypeDefinition(t typeResolver, defn *ast.BLangTypeDefinition, depth int) (semtypes.SemType, bool) {
 	if ty := t.symbolType(defn.Symbol()); !semtypes.IsZero(ty) {
 		return ty, true
 	}
@@ -1468,15 +1474,9 @@ func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (
 		return semtypes.SemType{}, false
 	}
 	defn.SetCycleDepth(depth)
-	var semType semtypes.SemType
-	var ok bool
-	if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
-		semType, ok = resolveClassDefinitionType(t, classDef, depth)
-	} else {
-		semType, ok = resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
-		if ok {
-			semType, ok = resolveDistinctTypeDefinition(t, defn, semType)
-		}
+	semType, ok := resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	if ok {
+		semType, ok = resolveDistinctTypeDefinition(t, defn, semType)
 	}
 	if !ok {
 		return semtypes.SemType{}, false
@@ -1489,31 +1489,54 @@ func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
 		addInclusionsToTypeSymbol(t, defn)
-		kind := "type definition"
-		if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
-			if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
-				t.setSymbolType(selfRef, semType)
-			}
-			kind = "class definition"
-		}
 		name := defn.GetName().GetValue()
 		pos := defn.GetPosition()
 		t.ensureNotEmpty(semType, func() {
-			t.semanticError(fmt.Sprintf("%s %s is empty", kind, name), pos)
+			t.semanticError(fmt.Sprintf("type definition %s is empty", name), pos)
 		})
 		return semType, true
 	}
-	// This can happen with recursion
-	// We use the first definition we produced
-	// and throw away the others
 	return defn.GetDeterminedType(), true
 }
 
-func resolveDistinctTypeDefinition(t typeResolver, defn ast.TypeDefinition, semType semtypes.SemType) (semtypes.SemType, bool) {
-	typeDef, ok := defn.(*ast.BLangTypeDefinition)
+func resolveClassTypeDefinition(t typeResolver, classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
+	if ty := t.symbolType(classDef.Symbol()); !semtypes.IsZero(ty) {
+		return ty, true
+	}
+	if classDef.GetName() != nil {
+		setOtherNodesAsNever(classDef.GetName())
+	}
+	if depth == classDef.GetCycleDepth() {
+		t.semanticError(fmt.Sprintf("invalid cycle detected for type definition %s", classDef.GetName().GetValue()), classDef.GetPosition())
+		return semtypes.SemType{}, false
+	}
+	classDef.SetCycleDepth(depth)
+	semType, ok := resolveClassDefinitionType(t, classDef, depth)
 	if !ok {
+		return semtypes.SemType{}, false
+	}
+	if semtypes.IsZero(classDef.GetDeterminedType()) {
+		classDef.SetDeterminedType(semType)
+		t.setSymbolType(classDef.Symbol(), semType)
+		classDef.SetCycleDepth(-1)
+		typeData := classDef.GetTypeData()
+		typeData.Type = semType
+		classDef.SetTypeData(typeData)
+		addInclusionsToClassSymbol(t, classDef)
+		if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
+			t.setSymbolType(selfRef, semType)
+		}
+		name := classDef.GetName().GetValue()
+		pos := classDef.GetPosition()
+		t.ensureNotEmpty(semType, func() {
+			t.semanticError(fmt.Sprintf("class definition %s is empty", name), pos)
+		})
 		return semType, true
 	}
+	return classDef.GetDeterminedType(), true
+}
+
+func resolveDistinctTypeDefinition(t typeResolver, typeDef *ast.BLangTypeDefinition, semType semtypes.SemType) (semtypes.SemType, bool) {
 	objectType, ok := typeDef.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
 	if !ok {
 		if typeDef.IsDistinct() {
@@ -1561,23 +1584,18 @@ func appendDistinctAtoms(t typeResolver, semType semtypes.SemType, symbol model.
 
 // addInclusionsToTypeSymbol addes all the inclusions (both transitive and direct) to the type symbol
 // This should be called only after resolving the underlying type
-func addInclusionsToTypeSymbol(t typeResolver, defn ast.TypeDefinition) {
+func addInclusionsToTypeSymbol(t typeResolver, defn *ast.BLangTypeDefinition) {
 	var members []model.InclusionMember
-	switch d := defn.(type) {
-	case *ast.BLangTypeDefinition:
-		typeDesc := d.GetTypeData().TypeDescriptor
-		switch td := typeDesc.(type) {
-		case *ast.BLangRecordType:
-			members = recordTypeMembers(t, td)
-		case *ast.BLangObjectType:
-			members = objectTypeMembers(t, td)
-		default:
-			return
-		}
-	case *ast.BLangClassDefinition:
-		members = classMembers(t, d)
+	typeDesc := defn.GetTypeData().TypeDescriptor
+	switch td := typeDesc.(type) {
+	case *ast.BLangRecordType:
+		members = recordTypeMembers(t, td)
+	case *ast.BLangObjectType:
+		members = objectTypeMembers(t, td)
+	default:
+		return
 	}
-	carrier := getMemberCarrierFromDefn(t, defn)
+	carrier := getMemberCarrierFromDefn(t, defn.Symbol(), defn.GetPosition())
 	if carrier == nil {
 		return
 	}
@@ -1586,8 +1604,18 @@ func addInclusionsToTypeSymbol(t typeResolver, defn ast.TypeDefinition) {
 	}
 }
 
-func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.MemberCarrier {
-	sym := t.getSymbol(defn.Symbol())
+func addInclusionsToClassSymbol(t typeResolver, classDef *ast.BLangClassDefinition) {
+	carrier := getMemberCarrierFromDefn(t, classDef.Symbol(), classDef.GetPosition())
+	if carrier == nil {
+		return
+	}
+	for _, m := range classMembers(t, classDef) {
+		carrier.AddMember(m)
+	}
+}
+
+func getMemberCarrierFromDefn(t typeResolver, ref model.SymbolRef, pos diagnostics.Location) model.MemberCarrier {
+	sym := t.getSymbol(ref)
 	switch s := sym.(type) {
 	case *model.RecordSymbol:
 		return s
@@ -1596,7 +1624,7 @@ func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.Mem
 	case model.ClassSymbol:
 		return s
 	default:
-		t.internalError("unexpected type definition", defn.GetPosition())
+		t.internalError("unexpected type definition", pos)
 		return nil
 	}
 }
