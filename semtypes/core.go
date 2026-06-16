@@ -512,6 +512,15 @@ func bddMappingAtomicType(env Env, bdd Bdd, top MappingAtomicType) *MappingAtomi
 		return nil
 	}
 	bn := bdd.(bddNode)
+	if rec, ok := bn.atom().(*recAtom); ok && rec.index() < 0 {
+		if result := bddMappingAtomicType(env, bn.left(), top); result != nil {
+			return result
+		}
+		if result := bddMappingAtomicType(env, bn.middle(), top); result != nil {
+			return result
+		}
+		return bddMappingAtomicType(env, bn.right(), top)
+	}
 	if bddNodeSimple, ok := bn.(*bddNodeSimple); ok {
 		result := env.mappingAtomType(bddNodeSimple.atom())
 		return result

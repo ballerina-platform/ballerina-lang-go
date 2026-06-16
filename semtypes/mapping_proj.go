@@ -46,6 +46,12 @@ func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		}
 	} else {
 		bn := b.(bddNode)
+		if rec, ok := bn.atom().(*recAtom); ok && rec.index() < 0 {
+			return Union(
+				bddMappingMemberTypeInner(cx, bn.left(), key, accum),
+				Union(bddMappingMemberTypeInner(cx, bn.middle(), key, accum),
+					bddMappingMemberTypeInner(cx, bn.right(), key, accum)))
+		}
 		return Union(
 			bddMappingMemberTypeInner(cx, bn.left(), key,
 				Intersect(mappingAtomicMemberTypeInnerProj(cx.MappingAtomType(bn.atom()), key), accum)),

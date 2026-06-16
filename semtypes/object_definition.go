@@ -31,7 +31,7 @@ func NewObjectDefinition() ObjectDefinition {
 	return this
 }
 
-func objectDefinitionDistinct(distinctId int) SemType {
+func ObjectDefinitionDistinct(distinctId int) SemType {
 	common.Assert(distinctId >= 0)
 	bdd := bddAtom(new(createDistinctRecAtom(-distinctId - 1)))
 	return getBasicSubtype(BTObject, bdd)

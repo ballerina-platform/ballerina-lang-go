@@ -352,8 +352,10 @@ func (b *classDefnBase) Flags() model.Flag { return b.flags }
 // BLangTypeDefinition flag methods
 func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.Has(model.FlagPublic) }
 func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.Has(model.FlagAnonymous) }
+func (b *BLangTypeDefinition) IsDistinct() bool  { return b.flags.Has(model.FlagDistinct) }
 func (b *BLangTypeDefinition) SetPublic()        { b.flags |= model.FlagPublic }
 func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymous }
+func (b *BLangTypeDefinition) SetDistinct()      { b.flags |= model.FlagDistinct }
 
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }

@@ -561,6 +561,14 @@ func (ms *moduleSymbolResolver) allocateTypeSymbol(typeDef *ast.BLangTypeDefinit
 		return
 	}
 	symRef, _, _ := ms.GetSymbol(name)
+	if typeDef.IsDistinct() {
+		carrier, ok := ms.ctx.GetSymbol(symRef).(model.ObjectType)
+		if !ok {
+			ms.ctx.Unimplemented("distinct types are only supported for object types", typeDef.GetPosition())
+		} else {
+			carrier.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+		}
+	}
 	ms.typeDefns[symRef] = typeDef
 }
 
@@ -611,10 +619,14 @@ func (ms *moduleSymbolResolver) allocateGlobalVarSymbol(globalVar *ast.BLangSimp
 
 func (ms *moduleSymbolResolver) allocateClassSymbol(classDef *ast.BLangClassDefinition) {
 	name := classDef.Name.Value
-	if !addTopLevelSymbol(ms, name, newClassSymbolForDefn(classDef), classDef.Name.GetPosition()) {
+	symbol := newClassSymbolForDefn(classDef)
+	if !addTopLevelSymbol(ms, name, symbol, classDef.Name.GetPosition()) {
 		return
 	}
 	symRef, _, _ := ms.GetSymbol(name)
+	if classDef.IsDistinct() {
+		symbol.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+	}
 	ms.typeDefns[symRef] = classDef
 }
 

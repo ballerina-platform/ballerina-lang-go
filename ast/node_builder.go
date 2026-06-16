@@ -1614,8 +1614,16 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, typeDef.Name.GetValue())
 
+	typeDescriptorNode := typeDefinitionNode.TypeDescriptor()
+	if distinctTypeDescriptorNode, ok := typeDescriptorNode.(*tree.DistinctTypeDescriptorNode); ok {
+		typeDescriptorNode = distinctTypeDescriptorNode.TypeDescriptor()
+		if typeDescriptorNode == nil || typeDescriptorNode.Kind() != common.OBJECT_TYPE_DESC {
+			n.cx.Unimplemented("distinct types are only supported for object types", getPosition(n.de(), distinctTypeDescriptorNode))
+		}
+		typeDef.SetDistinct()
+	}
 	typeData := TypeData{
-		TypeDescriptor: n.createTypeNode(typeDefinitionNode.TypeDescriptor()),
+		TypeDescriptor: n.createTypeNode(typeDescriptorNode),
 	}
 	typeDef.SetTypeData(typeData)
 
@@ -2544,6 +2552,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			objectType.NetworkQuals = ObjectNetworkQualsService
 		case common.ISOLATED_KEYWORD:
 			objectType.Isolated = true
+		case common.READONLY_KEYWORD:
+			// https://github.com/ballerina-platform/ballerina-lang-go/issues/537",
+			n.cx.Unimplemented("readonly object type descriptors are not implemented", getPosition(n.de(), q))
 		}
 	}
 
@@ -4592,7 +4603,14 @@ func (n *NodeBuilder) TransformMatchGuard(matchGuardNode *tree.MatchGuardNode) B
 }
 
 func (n *NodeBuilder) TransformDistinctTypeDescriptor(distinctTypeDescriptorNode *tree.DistinctTypeDescriptorNode) BLangNode {
-	panic("TransformDistinctTypeDescriptor unimplemented")
+	n.cx.Unimplemented("inline distinct object type definitions are not supported", getPosition(n.de(), distinctTypeDescriptorNode))
+	return nil
+	// typeDescriptor := distinctTypeDescriptorNode.TypeDescriptor()
+	// if typeDescriptor == nil {
+	// 	n.cx.SyntaxError("missing type descriptor for distinct type", getPosition(n.de(), distinctTypeDescriptorNode))
+	// 	return &BLangObjectType{members: make(map[string]ObjectMember)}
+	// }
+	// return n.createTypeNode(typeDescriptor).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformListMatchPattern(listMatchPatternNode *tree.ListMatchPatternNode) BLangNode {

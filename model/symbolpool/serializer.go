@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -56,17 +57,17 @@ const (
 )
 
 type symbolWriter struct {
-	cp     *constantPool
-	tp     *semtypes.TypePool
-	env    semtypes.Env
-	refMap map[model.SymbolRef]int
+	cp          *constantPool
+	tp          *semtypes.TypePool
+	compilerEnv *context.CompilerEnvironment
+	refMap      map[model.SymbolRef]int
 }
 
-func Marshal(exported model.ExportedSymbolSpace, env semtypes.Env) ([]byte, error) {
+func Marshal(exported model.ExportedSymbolSpace, env *context.CompilerEnvironment) ([]byte, error) {
 	sw := &symbolWriter{
-		cp:  newConstantPool(),
-		tp:  semtypes.NewTypePool(),
-		env: env,
+		cp:          newConstantPool(),
+		tp:          semtypes.NewTypePool(),
+		compilerEnv: env,
 	}
 	return sw.serialize(exported)
 }
@@ -88,7 +89,7 @@ func (sw *symbolWriter) serialize(exported model.ExportedSymbolSpace) ([]byte, e
 		return nil, err
 	}
 
-	tpBytes := semtypes.MarshalTypePool(sw.tp, sw.env)
+	tpBytes := semtypes.MarshalTypePool(sw.tp, sw.compilerEnv.GetTypeEnv())
 	if err := write(buf, int64(len(tpBytes))); err != nil {
 		return nil, err
 	}
@@ -241,7 +242,26 @@ func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.Obje
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.Members())
+	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	return sw.writeDistinctTypeIDs(buf, sym.DistinctTypeIDs())
+}
+
+func (sw *symbolWriter) writeDistinctTypeIDs(buf *bytes.Buffer, ids []int) error {
+	if err := write(buf, int64(len(ids))); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		ref, ok := sw.compilerEnv.DistinctTypeSymbolRef(id)
+		if !ok {
+			return fmt.Errorf("missing symbol ref for distinct type id %d", id)
+		}
+		if err := sw.writeSymbolRef(buf, ref); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model.InclusionMember) error {
@@ -330,6 +350,9 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model
 		return err
 	}
 	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	if err := sw.writeDistinctTypeIDs(buf, sym.DistinctTypeIDs()); err != nil {
 		return err
 	}
 	if tag == symTagNetworkClass {

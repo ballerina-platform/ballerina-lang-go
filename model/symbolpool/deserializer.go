@@ -204,7 +204,20 @@ func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
+	ids := sr.readDistinctTypes(space)
+	sym.SetDistinctTypeIDs(ids)
 	addDeserializedSymbol(space, name, &sym)
+}
+
+func (sr *symbolReader) readDistinctTypes(space *model.SymbolSpace) []int {
+	var count int64
+	read(sr.r, &count)
+	ids := make([]int, 0, count)
+	for i := int64(0); i < count; i++ {
+		ref := sr.readSymbolRef(space)
+		ids = append(ids, sr.env.DistinctTypeID(ref))
+	}
+	return ids
 }
 
 func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.InclusionMember {
@@ -282,6 +295,8 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool
 			methods[md.MemberName()] = md.MethodRef
 		}
 	}
+	ids := sr.readDistinctTypes(space)
+	sym.SetDistinctTypeIDs(ids)
 	sym.SetMethods(methods)
 	if isNetwork {
 		var rmCount int64
