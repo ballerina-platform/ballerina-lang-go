@@ -16,6 +16,6 @@
 
 
 public function main() {
-    xml elem = xml `<bar:f foo="ff"><bar:x></bar:x></bar:f>`; // @error
+    xml _ = xml `<bar:f foo="ff"><bar:x></bar:x></bar:f>`; // @error
 }
 

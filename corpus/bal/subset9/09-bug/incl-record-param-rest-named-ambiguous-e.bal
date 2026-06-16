@@ -23,6 +23,8 @@ type ConfigB record {|
 |};
 
 function foo(*ConfigA a, *ConfigB b) {
+    _ = a;
+    _ = b;
 }
 
 public function main() {

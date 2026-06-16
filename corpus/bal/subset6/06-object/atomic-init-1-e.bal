@@ -43,5 +43,5 @@ class Foo {
 type FooBar Foo|Bar;
 
 public function main() {
-    FooBar f = new FooBar(5); // @error
+    FooBar _ = new FooBar(5); // @error
 }

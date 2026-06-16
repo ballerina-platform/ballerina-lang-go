@@ -109,24 +109,36 @@ func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 func (sr *symbolReader) readSymbolSpace() *model.SymbolSpace {
 	var count int64
 	read(sr.r, &count)
-	if count == 0 {
+	if count == symbolSpaceNilSentinel {
 		return nil
 	}
 
 	pkgID := sr.readPackageIdentifier()
 	space := sr.env.NewSymbolSpace(*pkgID)
+	opaque := model.OpaqueSymbols(space.Pkg)
 	for i := int64(0); i < count; i++ {
-		sr.readSymbol(space)
+		sr.readSymbol(space, opaque)
 	}
 
 	return space
 }
 
-func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readSymbol(space *model.SymbolSpace, opaque []model.Symbol) {
 	var tag uint8
 	read(sr.r, &tag)
 
 	switch tag {
+	case symTagOpaque:
+		var idx int32
+		read(sr.r, &idx)
+		sym := opaque[idx]
+		// Set the space the (monomorphized) function is added to. No
+		// monomorphization cache is installed here; nil closures mean no
+		// caching (the symbol resolver installs one when compiling from source).
+		if fn, ok := sym.(*model.OpaqueFunctionSymbol); ok {
+			fn.SymbolSpace = space
+		}
+		space.AddSymbol(sym.Name(), sym)
 	case symTagType:
 		sr.readTypeSymbol(space)
 	case symTagClass:

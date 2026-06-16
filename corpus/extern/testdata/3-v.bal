@@ -16,7 +16,7 @@
 
 
 public function main() {
-    int b = foo(); // @error
+    int _ = foo(); // @error
 }
 
 function foo() returns string = external;

@@ -35,7 +35,7 @@ public function main() {
     map<int>|error out2 = map from var x in xs
         select ["k", x]
         on conflict onConflictError();
-    map<decimal> contextualMap = map from var x in [1]
+    map<decimal> contextualMap = map from var _ in [1]
         select ["k", 1];
     io:println(out1); // @output {"k":3}
     io:println(conflictHitCount); // @output 2

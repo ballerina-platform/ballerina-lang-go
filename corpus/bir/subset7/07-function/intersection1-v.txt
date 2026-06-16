@@ -52,8 +52,9 @@ foo(int) -> int{
 }
 bar(int) -> int:Unsigned8{
   bb0 {
-    %2 = ConstantLoad 5
-    %0 = %2;
+    _ = a;
+    %3 = ConstantLoad 5
+    %0 = %3;
     return;
   }
 }

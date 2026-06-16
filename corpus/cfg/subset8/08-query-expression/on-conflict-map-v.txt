@@ -52,7 +52,7 @@
         (query-expr
           (from-clause
             (var-def
-              (variable x))
+              (variable _))
             (list-constructor-expr
               (literal 1)))
           (select-clause

@@ -39,6 +39,7 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/langlib"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
 
@@ -83,6 +84,8 @@ var (
 		"subset8/08-future/fieldlvalue1-fp.bal",
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
 		"subset8/08-xml/namespace12-v.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/533
+		"subset9/09-template-expr/template-query-xml-sequence-fv.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.
@@ -892,7 +895,11 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	pkg.PackageID = cx.NewPackageID(orgName, nameComps, version)
 
 	// Run compilation pipeline
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx), publicSymbols, defaultOrg)
+	implicitImports, err := langlib.ImplicitImports(cx)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	importedSymbols := semantics.ResolveImports(cx, pkg, implicitImports, publicSymbols, defaultOrg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	if cx.HasDiagnostics() {
 		return nil, fmt.Errorf("symbol resolution failed")

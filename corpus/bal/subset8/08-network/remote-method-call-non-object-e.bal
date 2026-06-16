@@ -17,6 +17,6 @@
 
 public function main() {
     int c = 5;
-    string res2 = c->notExist1("foo"); // @error
+    string _ = c->notExist1("foo"); // @error
 }
 

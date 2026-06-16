@@ -210,6 +210,7 @@ func execFPLoad(ctx *extern.Context, fpLoad *bir.FPLoad, frame *Frame) {
 		LookupKey: fpLoad.FunctionLookupKey,
 	}
 	if fpLoad.IsClosure {
+		frame.MarkEscaped()
 		fn.ParentFrame = frame
 	}
 	setOperandValue(ctx, fpLoad.LhsOp, frame, fn)
@@ -359,9 +360,6 @@ func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Fra
 }
 
 func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, frame *Frame) {
-	if instr.Kind != bir.TemplateKindString {
-		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
-	}
 	n := len(instr.Insertions)
 	buf := make([]byte, 0, instr.LiteralsTotalLen+8*n)
 	for i := 0; i < n; i++ {
@@ -373,7 +371,18 @@ func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, fram
 	if len(buf) > 0 {
 		result = unsafe.String(&buf[0], len(buf))
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, result)
+	switch instr.Kind {
+	case bir.TemplateKindString:
+		setOperandValue(ctx, instr.LhsOp, frame, result)
+	case bir.TemplateKindXML:
+		xmlValue, err := values.ParseAsXMLValue(result)
+		if err != nil {
+			panic(err)
+		}
+		setOperandValue(ctx, instr.LhsOp, frame, xmlValue)
+	default:
+		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
+	}
 }
 
 func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *Frame) {

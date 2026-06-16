@@ -15,6 +15,6 @@
 // under the License.
 
 public function main() {
-    var summary = map from var x in [1, 2, 3]
+    var _ = map from var x in [1, 2, 3]
         collect x; // @error
 }

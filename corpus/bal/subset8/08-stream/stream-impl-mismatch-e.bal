@@ -21,5 +21,5 @@ class StringEmitter {
 }
 
 public function main() {
-    stream<int, ()> s = new (new StringEmitter()); // @error
+    stream<int, ()> _ = new (new StringEmitter()); // @error
 }

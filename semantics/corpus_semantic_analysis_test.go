@@ -61,7 +61,12 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	result, err := testphases.RunPipeline(env, cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	result, err := testphases.RunPipeline(env, cx, langlibs, testphases.PhaseCFGAnalysis, testCase.InputPath)
 	if err != nil {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
@@ -172,7 +177,12 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 		t.Logf("Compile-time diagnostic correctly detected for %s", testCase.InputPath)
 	}()
 
-	_, _ = testphases.RunPipeline(env, cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	_, _ = testphases.RunPipeline(env, cx, langlibs, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
 }

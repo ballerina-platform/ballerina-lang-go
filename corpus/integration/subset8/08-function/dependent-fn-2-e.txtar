@@ -5,9 +5,11 @@ error[SEMANTIC_ERROR]: dependently-typed function must be external
    |
 22 | function inferred(int val, typedesc retTy = <>) returns retTy|int { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-23 |     return 1;
+23 |     int _ = val;
+   |     ^^^^^^^^^^^^
+24 |     return 1;
    |     ^^^^^^^^^
-24 | }
+25 | }
    | ^
 
 error[SEMANTIC_ERROR]: dependently-typed function return type dependent and defined parts must be disjoint
@@ -15,7 +17,9 @@ error[SEMANTIC_ERROR]: dependently-typed function return type dependent and defi
    |
 22 | function inferred(int val, typedesc retTy = <>) returns retTy|int { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-23 |     return 1;
+23 |     int _ = val;
+   |     ^^^^^^^^^^^^
+24 |     return 1;
    |     ^^^^^^^^^
-24 | }
+25 | }
    | ^
