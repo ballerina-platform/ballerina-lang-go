@@ -272,7 +272,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			b := []byte(v)
 			return bytes.NewReader(b), int64(len(b)), "text/plain"
 		case *values.List:
-			if v.Type != nil && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
+			if !semtypes.IsZero(v.Type) && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
 					return bytes.NewReader(b), int64(len(b)), "application/octet-stream"
 				}

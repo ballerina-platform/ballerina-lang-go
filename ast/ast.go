@@ -36,7 +36,7 @@ type BNodeWithSymbol interface {
 
 // SymbolIsSet returns true if the AST node has its symbol set.
 func SymbolIsSet(node NodeWithSymbol) bool {
-	return node.Symbol() != (model.SymbolRef{})
+	return !node.Symbol().IsEmpty()
 }
 
 type NodeWithScope interface {
@@ -827,7 +827,7 @@ func (b *BLangConstant) GetAssociatedType() semtypes.SemType {
 	if b.TypeNode() != nil {
 		return b.TypeNode().GetTypeData().Type
 	}
-	return nil
+	return semtypes.SemType{}
 }
 
 func (b *BLangConstant) GetPrecedence() int {

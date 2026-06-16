@@ -107,7 +107,7 @@ func expectedReturnType(a analyzer) semtypes.SemType {
 		}
 		current = current.parentAnalyzer()
 	}
-	return nil
+	return semtypes.SemType{}
 }
 
 // enclosingFunctionAnalyzer walks up the analyzer chain and returns the
@@ -132,7 +132,7 @@ func enclosingFunctionLocals(a analyzer) *localScope {
 
 func returnFound(a analyzer, returnStmt *ast.BLangReturn) bool {
 	retTy := expectedReturnType(a)
-	if retTy == nil {
+	if semtypes.IsZero(retTy) {
 		a.ctx().SemanticError("return statement not allowed in this context", a.loc())
 		return false
 	}
@@ -426,7 +426,7 @@ func validateInitFunction(a analyzer, function *ast.BLangFunction, fnSymbol mode
 	}
 
 	actualReturnType := fnSymbol.Signature().ReturnType
-	if actualReturnType != nil {
+	if !semtypes.IsZero(actualReturnType) {
 		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
 			a.semanticErr("'init' function must have return type '()' or  'error?'", pos)
 		}
@@ -444,7 +444,7 @@ func validateMainFunction(a analyzer, fnSymbol model.FunctionSymbol, pos diagnos
 
 	actualReturnType := fnSymbol.Signature().ReturnType
 
-	if actualReturnType != nil {
+	if !semtypes.IsZero(actualReturnType) {
 		if !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.NIL) && !semtypes.IsSameType(a.tyCtx(), actualReturnType, semtypes.Union(semtypes.NIL, semtypes.ERROR)) {
 			a.semanticErr("'main' function must have return type '()' or  'error?'", pos)
 		}
@@ -663,7 +663,7 @@ func validateDefaultParamTypes(a analyzer, function invokableSignatureNode) {
 		}
 		paramTy := param.GetDeterminedType()
 		exprTy := param.Expr.(ast.BLangExpression).GetDeterminedType()
-		if exprTy == nil {
+		if semtypes.IsZero(exprTy) {
 			a.internalErr("default expression has no determined type", param.Expr.(ast.BLangNode).GetPosition())
 			continue
 		}
@@ -884,12 +884,12 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
 func validateResolvedType[A analyzer](a A, expr ast.BLangActionOrExpression, expectedType semtypes.SemType) bool {
 	resolvedTy := expr.GetDeterminedType()
-	if resolvedTy == nil {
+	if semtypes.IsZero(resolvedTy) {
 		a.internalErr(fmt.Sprintf("expression type not resolved for %T", expr), expr.GetPosition())
 		return false
 	}
 
-	if expectedType == nil {
+	if semtypes.IsZero(expectedType) {
 		return true
 	}
 
@@ -1009,11 +1009,11 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 }
 
 func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, expr.Expr, nil) {
+	if !analyzeActionOrExpression(a, expr.Expr, semtypes.SemType{}) {
 		return false
 	}
 	retTy := expectedReturnType(a)
-	if retTy == nil {
+	if semtypes.IsZero(retTy) {
 		a.ctx().SemanticError("check expression not allowed outside a function", expr.GetPosition())
 		return false
 	}
@@ -1027,7 +1027,7 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 	return validateResolvedType(a, expr, expectedType)
 }
 
-const templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
+var templateInsertionAllowedTypes = semtypes.Diff(semtypes.SIMPLE_OR_STRING, semtypes.NIL)
 
 func analyzeTemplateExpr[A analyzer](a A, expr *ast.BLangTemplateExpr, expectedType semtypes.SemType) bool {
 	for _, ins := range expr.Insertions {
@@ -1060,14 +1060,14 @@ func xmlTemplateInsertionAllowedTypes(kind ast.XMLTemplateInsertionKind) semtype
 }
 
 func analyzeTrapExpr[A analyzer](a A, expr *ast.BLangTrapExpr, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, expr.Expr, nil) {
+	if !analyzeActionOrExpression(a, expr.Expr, semtypes.SemType{}) {
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
 }
 
 func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, expr.Expr, nil) {
+	if !analyzeActionOrExpression(a, expr.Expr, semtypes.SemType{}) {
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
@@ -1129,7 +1129,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	if !ok {
 		return false
 	}
-	if !analyzeActionOrExpression(a, clauses.fromClause.Collection, nil) {
+	if !analyzeActionOrExpression(a, clauses.fromClause.Collection, semtypes.SemType{}) {
 		return false
 	}
 	orderedTy := semtypes.CreateOrdered(a.tyCtx())
@@ -1137,17 +1137,17 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	for i := 1; i < clauses.lastClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangJoinClause:
-			if !analyzeActionOrExpression(a, clause.Collection, nil) {
+			if !analyzeActionOrExpression(a, clause.Collection, semtypes.SemType{}) {
 				return false
 			}
 			if clause.OnClause.OnExpr == nil || clause.OnClause.EqualsExpr == nil {
 				a.internalErr("join clause shape should have been validated during type resolution", clause.GetPosition())
 				return false
 			}
-			if !analyzeActionOrExpression(a, clause.OnClause.OnExpr, nil) {
+			if !analyzeActionOrExpression(a, clause.OnClause.OnExpr, semtypes.SemType{}) {
 				return false
 			}
-			if !analyzeActionOrExpression(a, clause.OnClause.EqualsExpr, nil) {
+			if !analyzeActionOrExpression(a, clause.OnClause.EqualsExpr, semtypes.SemType{}) {
 				return false
 			}
 		case *ast.BLangLetClause:
@@ -1189,7 +1189,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 					if !analyzeActionOrExpression(a, varDef.Var.Expr.(ast.BLangExpression), expectedType) {
 						return false
 					}
-					if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), expectedType, anyData) {
+					if !semtypes.IsZero(expectedType) && !semtypes.IsSubtype(a.tyCtx(), expectedType, anyData) {
 						a.semanticErr("grouping key expression must be a subtype of anydata", groupingKey.GetPosition())
 						return false
 					}
@@ -1215,7 +1215,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			queryExpr.QueryConstructType,
 			expectedType,
 		)
-		if selectExpectedTy == nil && queryExpr.QueryConstructType == ast.TypeKind_MAP {
+		if semtypes.IsZero(selectExpectedTy) && queryExpr.QueryConstructType == ast.TypeKind_MAP {
 			selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
 		}
 		if !analyzeActionOrExpression(a, clauses.selectClause.Expression, selectExpectedTy) {
@@ -1226,7 +1226,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			a.semanticErr("query construct types cannot be used with collect clause", clauses.collectClause.GetPosition())
 			return false
 		}
-		if !analyzeActionOrExpression(a, clauses.collectClause.Expression, nil) {
+		if !analyzeActionOrExpression(a, clauses.collectClause.Expression, semtypes.SemType{}) {
 			return false
 		}
 	}
@@ -1256,7 +1256,7 @@ func analyzeStreamNewExpression[A analyzer](a A, expr *ast.BLangNewExpression, e
 	streamTy := expr.GetDeterminedType()
 	valueTy := semtypes.StreamValueType(cx, streamTy)
 	completionTy := semtypes.StreamCompletionType(cx, streamTy)
-	if valueTy == nil || completionTy == nil {
+	if semtypes.IsZero(valueTy) || semtypes.IsZero(completionTy) {
 		a.internalErr("failed to extract stream type parameters", expr.GetPosition())
 		return false
 	}
@@ -1289,7 +1289,7 @@ func validateStreamCloseMethod[A analyzer](a A, impl ast.BLangExpression, comple
 	emptyParamList := paramListDefn.DefineListTypeWrapped(cx.Env(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	returnTy := semtypes.FunctionReturnType(cx, closeFnTy, emptyParamList)
 	expectedReturnTy := semtypes.Union(completionTy, semtypes.NIL)
-	if returnTy == nil || !semtypes.IsSubtype(cx, returnTy, expectedReturnTy) {
+	if semtypes.IsZero(returnTy) || !semtypes.IsSubtype(cx, returnTy, expectedReturnTy) {
 		a.semanticErr("stream implementor close method is incompatible", impl.GetPosition())
 		return false
 	}
@@ -1316,7 +1316,7 @@ func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool 
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, expr.Expression, nil) {
+	if !analyzeActionOrExpression(a, expr.Expression, semtypes.SemType{}) {
 		return false
 	}
 	exprTy := expr.Expression.GetDeterminedType()
@@ -1326,7 +1326,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 		a.semanticErr("impossible type conversion, intersection is empty", expr.GetPosition())
 		return false
 	}
-	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
+	if !semtypes.IsZero(expectedType) && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
 		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, targetType), expr.GetPosition())
 		return false
 	}
@@ -1337,11 +1337,11 @@ func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
 	if !semtypes.SingleNumericType(targetType).IsPresent() {
 		return false
 	}
-	return semtypes.ContainsBasicType(exprTy, semtypes.INT|semtypes.FLOAT|semtypes.DECIMAL)
+	return semtypes.ContainsBasicType(exprTy, semtypes.NUMBER)
 }
 
 func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, expr.Expr, nil) {
+	if !analyzeActionOrExpression(a, expr.Expr, semtypes.SemType{}) {
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
@@ -1350,7 +1350,7 @@ func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, ex
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) bool {
 	// Validate container expression
 	containerExpr := expr.Expr
-	if !analyzeActionOrExpression(a, containerExpr, nil) {
+	if !analyzeActionOrExpression(a, containerExpr, semtypes.SemType{}) {
 		return false
 	}
 	containerExprTy := containerExpr.GetDeterminedType()
@@ -1522,7 +1522,7 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 }
 
 func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedType semtypes.SemType) bool {
-	if !analyzeActionOrExpression(a, unaryExpr.Expr, nil) {
+	if !analyzeActionOrExpression(a, unaryExpr.Expr, semtypes.SemType{}) {
 		return false
 	}
 
@@ -1554,10 +1554,10 @@ func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedTy
 
 func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expectedType semtypes.SemType) bool {
 	// Validate both operand expressions
-	if !analyzeActionOrExpression(a, binaryExpr.LhsExpr, nil) {
+	if !analyzeActionOrExpression(a, binaryExpr.LhsExpr, semtypes.SemType{}) {
 		return false
 	}
-	if !analyzeActionOrExpression(a, binaryExpr.RhsExpr, nil) {
+	if !analyzeActionOrExpression(a, binaryExpr.RhsExpr, semtypes.SemType{}) {
 		return false
 	}
 
@@ -1692,7 +1692,7 @@ func resolvedResourceMethodPathType[A analyzer](a A, expr *ast.BLangClientResour
 	ref := expr.MethodSymbol()
 	rmSym, ok := a.getSymbol(ref).(*model.ResourceMethodSymbol)
 	if !ok {
-		return nil
+		return semtypes.SemType{}
 	}
 	return rmSym.PathListType()
 }
@@ -1707,7 +1707,7 @@ func analyzeStreamOperation[A analyzer](a A, invocation *ast.BLangInvocation, ex
 		return false
 	}
 	if invocation.Expr != nil {
-		if !analyzeActionOrExpression(a, invocation.Expr, nil) {
+		if !analyzeActionOrExpression(a, invocation.Expr, semtypes.SemType{}) {
 			return false
 		}
 	}
@@ -1767,7 +1767,7 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	}
 	if ast.SymbolIsSet(variable) {
 		symbolType := a.ctx().SymbolType(variable.Symbol())
-		if symbolType != nil {
+		if !semtypes.IsZero(symbolType) {
 			expectedType = symbolType
 		}
 	}
@@ -1852,7 +1852,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangExpressionStmt:
-		if !analyzeActionOrExpression(a, n.Expr, nil) {
+		if !analyzeActionOrExpression(a, n.Expr, semtypes.SemType{}) {
 			return nil
 		}
 		exprType := n.Expr.GetDeterminedType()
@@ -1862,7 +1862,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case ast.BLangExpression:
-		if !analyzeActionOrExpression(a, n, nil) {
+		if !analyzeActionOrExpression(a, n, semtypes.SemType{}) {
 			return nil
 		}
 		return a
@@ -1944,7 +1944,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 			return false
 		}
 	}
-	if !analyzeActionOrExpression(a, variable, nil) {
+	if !analyzeActionOrExpression(a, variable, semtypes.SemType{}) {
 		return false
 	}
 	expectedType := variable.GetDeterminedType()
@@ -1975,7 +1975,7 @@ func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) bool {
 
 func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 	collection := foreachStmt.Collection
-	if !analyzeActionOrExpression(a, collection, nil) {
+	if !analyzeActionOrExpression(a, collection, semtypes.SemType{}) {
 		return false
 	}
 	variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
@@ -1991,7 +1991,7 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 		switch {
 		case semtypes.IsSubtype(a.tyCtx(), collectionType, semtypes.LIST):
 			memberTypes := semtypes.ListAllMemberTypesInner(a.tyCtx(), collectionType)
-			var result semtypes.SemType = semtypes.NEVER
+			var result = semtypes.NEVER
 			for _, each := range memberTypes.SemTypes {
 				result = semtypes.Union(result, each)
 			}
@@ -2163,7 +2163,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			}
 			classTy := a.ctx().SymbolType(inner.ClassSymbol)
 			initTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("init"), classTy)
-			if initTy != nil && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedFn(tyCtx)) {
+			if !semtypes.IsZero(initTy) && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedFn(tyCtx)) {
 				a.semanticErr("non isolated initialization", inner.GetPosition())
 			}
 		case *ast.BLangSimpleVarRef:

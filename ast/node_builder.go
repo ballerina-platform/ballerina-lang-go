@@ -934,10 +934,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 		}
 	}
 
-	// Remove all whitespace (equivalent to Java's replaceAll("\\s+", ""))
-	whitespaceRegex := regexp.MustCompile(`\s+`)
-	typeTextNoWhitespace := whitespaceRegex.ReplaceAllString(typeText, "")
-	typeKind := stringToTypeKind(typeTextNoWhitespace)
+	typeKind := stringToTypeKind(typeText)
 
 	kind := typeNode.Kind()
 	switch kind {
@@ -965,7 +962,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 	}
 }
 
-func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier {
+func (n *NodeBuilder) createBLangNameReference(node tree.Node) [2]BLangIdentifier {
 	switch node.Kind() {
 	case common.QUALIFIED_NAME_REFERENCE:
 		iNode := node.(*tree.QualifiedNameReferenceNode)
@@ -974,7 +971,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 		pkgAlias := createIdentifierFromToken(getPosition(n.de(), modulePrefix), modulePrefix)
 		namePos := getPosition(n.de(), identifier)
 		name := createIdentifierFromToken(namePos, identifier)
-		return []BLangIdentifier{pkgAlias, name}
+		return [...]BLangIdentifier{pkgAlias, name}
 	case common.ERROR_TYPE_DESC:
 		builtinNode := node.(*tree.BuiltinSimpleNameReferenceNode)
 		node = builtinNode.Name()
@@ -994,7 +991,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	emptyStr := ""
 	pkgAlias := createIdentifier(diagnostics.NewBuiltinLocation(), &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(n.de(), iToken), iToken)
-	return []BLangIdentifier{pkgAlias, name}
+	return [...]BLangIdentifier{pkgAlias, name}
 }
 
 // isFunctionCallAsync checks if a function call expression is async
