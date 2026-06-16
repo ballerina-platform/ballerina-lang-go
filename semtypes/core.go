@@ -495,37 +495,28 @@ func ToMappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 		}
 		return nil
 	}
-	env := cx.Env()
 	if !IsSubtypeSimple(t, MAPPING) {
 		return nil
 	}
-	return bddMappingAtomicType(env,
-		getComplexSubtypeData(t, BTMapping).(Bdd),
-		mappingAtomicInner)
+	return bddMappingAtomicType(cx, getComplexSubtypeData(t, BTMapping).(Bdd))
 }
 
-func bddMappingAtomicType(env Env, bdd Bdd, top MappingAtomicType) *MappingAtomicType {
-	if allOrNothing, ok := bdd.(*bddAllOrNothing); ok {
-		if allOrNothing.IsAll() {
-			return &top
-		}
+func bddMappingAtomicType(cx Context, bdd Bdd) *MappingAtomicType {
+	var result *MappingAtomicType
+	pathCount := 0
+	valid := bddEveryPositive(cx, bdd, conjunctionNil, conjunctionNil,
+		func(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
+			pathCount++
+			if pathCount > 1 || neg != conjunctionNil || pos == conjunctionNil || cx.conjunctionNext(pos) != conjunctionNil {
+				return false
+			}
+			result = cx.MappingAtomType(cx.conjunctionAtom(pos))
+			return result != nil
+		})
+	if !valid || pathCount != 1 {
 		return nil
 	}
-	bn := bdd.(bddNode)
-	if rec, ok := bn.atom().(*recAtom); ok && rec.index() < 0 {
-		if result := bddMappingAtomicType(env, bn.left(), top); result != nil {
-			return result
-		}
-		if result := bddMappingAtomicType(env, bn.middle(), top); result != nil {
-			return result
-		}
-		return bddMappingAtomicType(env, bn.right(), top)
-	}
-	if bddNodeSimple, ok := bn.(*bddNodeSimple); ok {
-		result := env.mappingAtomType(bddNodeSimple.atom())
-		return result
-	}
-	return nil
+	return result
 }
 
 func MappingMemberTypeInnerVal(cx Context, t, k SemType) SemType {
