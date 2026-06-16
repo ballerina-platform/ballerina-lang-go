@@ -244,25 +244,6 @@ func compressionModeOf(self *values.Object) string {
 }
 
 func initHttpModule(rt *runtime.Runtime) {
-	// Register module-level constants so BIR global-variable loads of http:LEADING
-	// and http:TRAILING resolve correctly.
-	runtime.RegisterModuleGlobals(rt, httpPackageID, map[string]values.BalValue{
-		"ballerina/http:LEADING":            "LEADING",
-		"ballerina/http:TRAILING":           "TRAILING",
-		"ballerina/http:HTTP_1_1":           "1.1",
-		"ballerina/http:HTTP_2_0":           "2.0",
-		"ballerina/http:GET":                "GET",
-		"ballerina/http:POST":               "POST",
-		"ballerina/http:PUT":                "PUT",
-		"ballerina/http:DELETE":             "DELETE",
-		"ballerina/http:PATCH":              "PATCH",
-		"ballerina/http:HEAD":               "HEAD",
-		"ballerina/http:OPTIONS":            "OPTIONS",
-		"ballerina/http:COMPRESSION_AUTO":   "AUTO",
-		"ballerina/http:COMPRESSION_ALWAYS": "ALWAYS",
-		"ballerina/http:COMPRESSION_NEVER":  "NEVER",
-	})
-
 	var (
 		once  sync.Once
 		types httpTypes
