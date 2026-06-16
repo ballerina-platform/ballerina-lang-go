@@ -30,17 +30,25 @@ func execNewStream(ctx *extern.Context, instr *bir.NewStream, frame *Frame) {
 }
 
 func resolveStreamMethods(ctx *extern.Context, impl *values.Object) (next, close func() values.BalValue) {
-	nextHandle := LookupObjectMethod(ctx, impl, "next")
-	if nextHandle == nil {
+	nextHandle, ok := ctx.LookupObjectMethod(impl, "next")
+	if !ok {
 		panic(values.NewErrorWithMessage("stream implementor missing 'next' method"))
 	}
 	args := []values.BalValue{impl}
 	next = func() values.BalValue {
-		return InvokeObjectMethod(ctx, nextHandle, args)
+		result, err := ctx.InvokeMethod(nextHandle, args)
+		if err != nil {
+			panic(err)
+		}
+		return result
 	}
-	if closeHandle := LookupObjectMethod(ctx, impl, "close"); closeHandle != nil {
+	if closeHandle, ok := ctx.LookupObjectMethod(impl, "close"); ok {
 		close = func() values.BalValue {
-			return InvokeObjectMethod(ctx, closeHandle, args)
+			result, err := ctx.InvokeMethod(closeHandle, args)
+			if err != nil {
+				panic(err)
+			}
+			return result
 		}
 	}
 	return next, close

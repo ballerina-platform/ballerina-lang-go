@@ -67,9 +67,9 @@ type (
 		analyzerBase
 		function ast.BLangNode
 		retTy    semtypes.SemType
-		// enclosingClass is set when the function is a method of a class
-		// definition (including the init function). nil for free functions.
-		enclosingClass *ast.BLangClassDefinition
+		// enclosingClass is set when the function is a method of a class or
+		// service body. nil for free functions.
+		enclosingClass *enclosingClassBody
 		// locals tracks variable declarations visible inside this function's
 		// body, populated as normal semantic analysis walks the body. Used to
 		// hand an outer-function scope to the isolation check when validating
@@ -469,8 +469,8 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 	return fa
 }
 
-func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
-	return initializeInvokableAnalyzer(parent, function, classDef, buildFunctionLocals(parent, function))
+func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction, enclosing *enclosingClassBody) *functionAnalyzer {
+	return initializeInvokableAnalyzer(parent, function, enclosing, buildFunctionLocals(parent, function))
 }
 
 // invokableSignatureNode is implemented by AST nodes that share the invokable
@@ -489,11 +489,11 @@ type invokableSignatureNode interface {
 // initializeInvokableAnalyzer builds the functionAnalyzer shared by plain
 // functions/methods and resource methods, running the per-parameter and
 // signature validations on the given invokable using the provided locals scope.
-func initializeInvokableAnalyzer(parent analyzer, function invokableSignatureNode, classDef *ast.BLangClassDefinition, locals *localScope) *functionAnalyzer {
+func initializeInvokableAnalyzer(parent analyzer, function invokableSignatureNode, enclosing *enclosingClassBody, locals *localScope) *functionAnalyzer {
 	fa := &functionAnalyzer{
 		analyzerBase:   analyzerBase{parent: parent},
 		function:       function,
-		enclosingClass: classDef,
+		enclosingClass: enclosing,
 		locals:         locals,
 	}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
@@ -673,12 +673,12 @@ func validateDefaultParamTypes(a analyzer, function invokableSignatureNode) {
 	}
 }
 
-func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction, classDef *ast.BLangClassDefinition) *functionAnalyzer {
-	return initializeFunctionAnalyzerInner(parent, function, classDef)
+func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction, enclosing *enclosingClassBody) *functionAnalyzer {
+	return initializeFunctionAnalyzerInner(parent, function, enclosing)
 }
 
-func initializeResourceMethodAnalyzer(parent analyzer, rm *ast.BLangResourceMethod, classDef *ast.BLangClassDefinition) *functionAnalyzer {
-	return initializeInvokableAnalyzer(parent, rm, classDef, buildResourceMethodLocals(parent, rm))
+func initializeResourceMethodAnalyzer(parent analyzer, rm *ast.BLangResourceMethod, enclosing *enclosingClassBody) *functionAnalyzer {
+	return initializeInvokableAnalyzer(parent, rm, enclosing, buildResourceMethodLocals(parent, rm))
 }
 
 func buildResourceMethodLocals(parent analyzer, method *ast.BLangResourceMethod) *localScope {
@@ -1883,35 +1883,71 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return nil
 	case *ast.BLangClassDefinition:
-		for _, fieldNode := range n.Fields {
-			field := fieldNode.(*ast.BLangSimpleVariable)
-			if field.Expr != nil {
-				expectedType := a.ctx().SymbolType(field.Symbol())
-				analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
-				// Drive the visitor through the initializer so per-node
-				// semantic checks (e.g. isolated-module-var refs) fire
-				// uniformly with every other walked initializer.
-				ast.Walk(a, field.Expr.(ast.BLangNode))
-			}
+		analyzeClassLikeDefn(a, n.Fields, n.InitFunction, n.Methods, n.ResourceMethods, n.Inclusions,
+			n.InclusionPositions, n.IsIsolated(), n.GetPosition(), enclosingFromClass(n))
+		return nil
+	case *ast.BLangService:
+		for _, expr := range n.AttachedExprs {
+			ast.Walk(a, expr.(ast.BLangNode))
 		}
-		if n.InitFunction != nil {
-			fa := initializeMethodAnalyzer(a, n.InitFunction, n)
-			walkMethodBody(fa, n.InitFunction)
-		}
-		for name := range n.Methods {
-			method := n.Methods[name]
-			fa := initializeMethodAnalyzer(a, method, n)
-			walkMethodBody(fa, method)
-		}
-		for _, rm := range n.ResourceMethods {
-			fa := initializeResourceMethodAnalyzer(a, rm, n)
-			validateResourceMethodReturnType(a, fa.retTy, rm)
-			walkMethodBody(fa, rm)
-		}
-		validateClassDefn(a, n)
+		validateServiceDeclaredType(a, n)
+		analyzeClassLikeDefn(a, n.Fields, n.InitFunction, n.Methods, n.ResourceMethods, n.Inclusions,
+			n.InclusionPositions, n.IsIsolated(), n.GetPosition(), enclosingFromService(n))
 		return nil
 	default:
 		return a
+	}
+}
+
+func validateServiceDeclaredType[A analyzer](a A, svc *ast.BLangService) {
+	typeData := svc.GetTypeData()
+	if typeData.TypeDescriptor == nil {
+		return
+	}
+	bodyTy := typeData.Type
+	declaredTy := typeData.TypeDescriptor.(ast.BType).GetTypeData().Type
+	if semtypes.IsZero(bodyTy) || semtypes.IsZero(declaredTy) {
+		a.internalErr("service type not resolved", svc.GetPosition())
+		return
+	}
+	if !semtypes.IsSubtype(a.tyCtx(), bodyTy, declaredTy) {
+		a.semanticErr("service body is not a subtype of the declared service type", svc.GetPosition())
+	}
+}
+
+func analyzeClassLikeDefn[A analyzer](a A, fields []ast.SimpleVariableNode, initFn *ast.BLangFunction, methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod, inclusions []model.SymbolRef, inclusionPositions []diagnostics.Location, isolated bool, pos diagnostics.Location, enclosing *enclosingClassBody) {
+	analyzeClassBodyMembers(a, fields, initFn, methods, resourceMethods, enclosing)
+	validateClassDefn(a, inclusions, inclusionPositions, resourceMethods, isolated, fields, pos)
+}
+
+// analyzeClassBodyMembers performs semantic analysis over the fields,
+// init function, methods, and resource methods of a class-like body
+// (used by both classes and services).
+func analyzeClassBodyMembers[A analyzer](a A, fields []ast.SimpleVariableNode, initFn *ast.BLangFunction, methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod, enclosing *enclosingClassBody) {
+	for _, fieldNode := range fields {
+		field := fieldNode.(*ast.BLangSimpleVariable)
+		if field.Expr != nil {
+			expectedType := a.ctx().SymbolType(field.Symbol())
+			analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
+			// Drive the visitor through the initializer so per-node semantic
+			// checks (e.g. isolated-module-var refs) fire uniformly with
+			// every other walked initializer.
+			ast.Walk(a, field.Expr.(ast.BLangNode))
+		}
+	}
+	if initFn != nil {
+		fa := initializeMethodAnalyzer(a, initFn, enclosing)
+		walkMethodBody(fa, initFn)
+	}
+	for _, named := range methodsInResolutionOrder(methods) {
+		method := named.method
+		fa := initializeMethodAnalyzer(a, method, enclosing)
+		walkMethodBody(fa, method)
+	}
+	for _, rm := range resourceMethods {
+		fa := initializeResourceMethodAnalyzer(a, rm, enclosing)
+		validateResourceMethodReturnType(a, fa.retTy, rm)
+		walkMethodBody(fa, rm)
 	}
 }
 
@@ -2055,13 +2091,13 @@ func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 	}
 }
 
-func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
-	if classDef.IsIsolated() {
-		validateIsolatedClassFields(a, classDef)
+func validateClassDefn[A analyzer](a A, inclusions []model.SymbolRef, inclusionPositions []diagnostics.Location, resourceMethods []*ast.BLangResourceMethod, isolated bool, fields []ast.SimpleVariableNode, pos diagnostics.Location) {
+	if isolated {
+		validateIsolatedClassFields(a, fields)
 	} else {
-		validateObjInclusions(a, classDef.Inclusions, classDef.InclusionPositions)
+		validateObjInclusions(a, inclusions, inclusionPositions)
 	}
-	validateDuplicateResourceMethods(a, classDef)
+	validateDuplicateResourceMethods(a, resourceMethods)
 }
 
 func validateResourceMethodReturnType[A analyzer](a A, retTy semtypes.SemType, rm *ast.BLangResourceMethod) {
@@ -2074,8 +2110,7 @@ func validateResourceMethodReturnType[A analyzer](a A, retTy semtypes.SemType, r
 	}
 }
 
-func validateDuplicateResourceMethods[A analyzer](a A, classDef *ast.BLangClassDefinition) {
-	rms := classDef.ResourceMethods
+func validateDuplicateResourceMethods[A analyzer](a A, rms []*ast.BLangResourceMethod) {
 	if len(rms) < 2 {
 		return
 	}
@@ -2108,9 +2143,9 @@ func isImmutableField(tyCtx semtypes.Context, field *ast.BLangSimpleVariable) bo
 	return field.IsFinal() && semtypes.IsSubtype(tyCtx, field.GetDeterminedType(), semtypes.VAL_READONLY)
 }
 
-func validateIsolatedClassFields[A analyzer](a A, classDef *ast.BLangClassDefinition) {
+func validateIsolatedClassFields[A analyzer](a A, fields []ast.SimpleVariableNode) {
 	tyCtx := a.tyCtx()
-	for _, f := range classDef.Fields {
+	for _, f := range fields {
 		field := f.(*ast.BLangSimpleVariable)
 		if field.IsPublic() && !isImmutableField(tyCtx, field) {
 			a.semanticErr("public field of an isolated object must be \"final\" and have a type that is a subtype of \"readonly\"", field.GetPosition())
