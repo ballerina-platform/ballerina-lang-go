@@ -36,24 +36,18 @@ func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	}
 
 	paths := []bddPath{}
-	bddPaths(getComplexSubtypeData(t, BTMapping).(Bdd), &paths, bddPathFrom())
+	bddPathsPositive(getComplexSubtypeData(t, BTMapping).(Bdd), &paths, bddPathFrom())
 	alts := []MappingAlternative{}
 	for _, bddPath := range paths {
-		var posAtoms []*MappingAtomicType
+		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))
 		for i := 0; i < len(bddPath.pos); i++ {
-			if rec, ok := bddPath.pos[i].(*recAtom); ok && rec.index() < 0 {
-				continue
-			}
-			posAtoms = append(posAtoms, cx.MappingAtomType(bddPath.pos[i]))
+			posAtoms[i] = cx.MappingAtomType(bddPath.pos[i])
 		}
 		intersectionSemType, intersectionAtomType, ok := intersectMappingAtoms(cx.Env(), posAtoms)
 		if ok {
-			var negAtoms []MappingAtomicType
+			negAtoms := make([]MappingAtomicType, len(bddPath.neg))
 			for i := 0; i < len(bddPath.neg); i++ {
-				if rec, ok := bddPath.neg[i].(*recAtom); ok && rec.index() < 0 {
-					continue
-				}
-				negAtoms = append(negAtoms, *cx.MappingAtomType(bddPath.neg[i]))
+				negAtoms[i] = *cx.MappingAtomType(bddPath.neg[i])
 			}
 			alts = append(alts, MappingAlternative{SemType: intersectionSemType, Pos: intersectionAtomType, neg: negAtoms})
 		}

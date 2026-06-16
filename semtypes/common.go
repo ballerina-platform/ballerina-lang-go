@@ -50,7 +50,7 @@ func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionH
 }
 
 func andIfPositive(cx Context, atom atom, next conjunctionHandle) conjunctionHandle {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() < 0 {
+	if !isPositiveAtom(atom) {
 		return next
 	}
 	return cx.pushConjunction(atom, next)
