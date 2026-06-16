@@ -164,7 +164,7 @@ func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNod
 
 	lhsTy := expr.LhsExpr.GetDeterminedType()
 	rhsTy := expr.RhsExpr.GetDeterminedType()
-	if lhsTy == nil || rhsTy == nil {
+	if semtypes.IsZero(lhsTy) || semtypes.IsZero(rhsTy) {
 		return desugaredNode[ast.BLangActionOrExpression]{
 			initStmts:       initStmts,
 			replacementNode: expr,
@@ -1013,6 +1013,9 @@ func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desuga
 }
 
 func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []ast.StatementNode {
+	if expr.ClassSymbol.IsEmpty() {
+		return nil
+	}
 	classSym, ok := cx.getSymbol(expr.ClassSymbol).(model.ClassSymbol)
 	if !ok {
 		return nil

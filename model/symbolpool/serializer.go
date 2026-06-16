@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	symMagic = "\x53\x59\x4d\x42"
-	// This will perpetually remain 1 unless we create a spec for this
+	symMagic   = "\x53\x59\x4d\x42"
 	symVersion = 1
 )
 
@@ -285,19 +284,7 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 }
 
 func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
-	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
-		return err
-	}
-	if err := write(buf, int32(ref.Index)); err != nil {
-		return err
-	}
-	return write(buf, int32(ref.SpaceIndex))
+	return write(buf, int32(ref.Index))
 }
 
 func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
@@ -378,10 +365,10 @@ func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}
-	if err := write(buf, sig.RestParamType != nil); err != nil {
+	if err := write(buf, !semtypes.IsZero(sig.RestParamType)); err != nil {
 		return err
 	}
-	if sig.RestParamType != nil {
+	if !semtypes.IsZero(sig.RestParamType) {
 		if err := sw.writeType(buf, sig.RestParamType); err != nil {
 			return err
 		}
@@ -547,7 +534,7 @@ func (sw *symbolWriter) writeStringCP(buf *bytes.Buffer, s string) error {
 }
 
 func (sw *symbolWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) error {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return write(buf, int32(-1))
 	}
 	return write(buf, int32(sw.tp.Put(ty)))

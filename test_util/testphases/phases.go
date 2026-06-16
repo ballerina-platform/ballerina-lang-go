@@ -136,8 +136,6 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 	return result
 }
 
-// RunPipeline runs the frontend compilation pipeline up to the specified phase.
-// It returns a PipelineResult containing the outputs relevant to that phase.
 func LoadLanglibs(env *context.CompilerEnvironment, cx *context.CompilerContext) (*langlib.Symbols, error) {
 	stdlibSymbols := loadBuiltinPublicSymbols(env)
 	symbols, err := langlib.Build(cx, stdlibSymbols)
@@ -147,18 +145,26 @@ func LoadLanglibs(env *context.CompilerEnvironment, cx *context.CompilerContext)
 	return symbols, nil
 }
 
+// RunPipeline runs the frontend compilation pipeline up to the specified phase.
+// It returns a PipelineResult containing the outputs relevant to that phase.
 func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, langlibs *langlib.Symbols, phase Phase, inputPath string) (*PipelineResult, error) {
-	result := &PipelineResult{}
-
-	// Register source file with DiagnosticEnv
 	content, err := os.ReadFile(inputPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", inputPath, err)
 	}
-	cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
+	return RunPipelineWithContent(env, cx, langlibs, phase, inputPath, string(content))
+}
+
+// RunPipelineWithContent runs the frontend compilation pipeline for preloaded content.
+// It returns a PipelineResult containing the outputs relevant to that phase.
+func RunPipelineWithContent(env *context.CompilerEnvironment, cx *context.CompilerContext, langlibs *langlib.Symbols, phase Phase, inputPath string, content string) (*PipelineResult, error) {
+	result := &PipelineResult{}
+
+	// Register source file with DiagnosticEnv
+	cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(content))
 
 	// Phase 1: Parse
-	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, string(content))
+	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, content)
 	if err != nil {
 		return nil, fmt.Errorf("parsing failed: %w", err)
 	}

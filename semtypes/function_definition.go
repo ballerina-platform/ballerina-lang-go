@@ -29,7 +29,7 @@ func NewFunctionDefinition() FunctionDefinition {
 }
 
 func (f *FunctionDefinition) GetSemType(env Env) SemType {
-	if f.semType != nil {
+	if !IsZero(f.semType) {
 		return f.semType
 	}
 	rec := env.recFunctionAtom()

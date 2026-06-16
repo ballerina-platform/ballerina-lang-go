@@ -355,7 +355,7 @@ func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedTyp
 			return false
 		}
 		ty := ms.ctx.GetSymbol(symRef).Type()
-		return ty != nil && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
+		return !semtypes.IsZero(ty) && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
 	}
 	symRef, _, ok := ms.GetSymbol(typeName)
 	if !ok {
@@ -614,12 +614,13 @@ func fillinOpaqueSymbol(sym model.Symbol, space *model.SymbolSpace) {
 // implement this
 func newMonomorphizationCache() (func(...semtypes.SemType) (model.SymbolRef, bool), func(model.SymbolRef, ...semtypes.SemType)) {
 	var mu sync.Mutex
-	cache := make(map[semtypes.SemType]model.SymbolRef)
-	keyOf := func(keys []semtypes.SemType) semtypes.SemType {
+	interner := semtypes.NewSemtypeInterner()
+	cache := make(map[semtypes.InternHandle]model.SymbolRef)
+	keyOf := func(keys []semtypes.SemType) semtypes.InternHandle {
 		if len(keys) != 1 {
 			panic("monomorphization cache supports a single key type")
 		}
-		return keys[0]
+		return interner.Intern(keys[0])
 	}
 	lookup := func(keys ...semtypes.SemType) (model.SymbolRef, bool) {
 		mu.Lock()
@@ -1237,7 +1238,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 				carrier = s
 			case *model.ObjectTypeSymbol:
 				incTy := ctx.SymbolType(symRef)
-				if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.OBJECT) {
+				if semtypes.IsZero(incTy) || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.OBJECT) {
 					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 					continue
 				}
@@ -1287,7 +1288,7 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 				continue
 			}
 			incTy := ctx.SymbolType(symRef)
-			if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.MAPPING) {
+			if semtypes.IsZero(incTy) || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.MAPPING) {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
 			}

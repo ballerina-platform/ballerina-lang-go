@@ -503,15 +503,15 @@ type desugaredTypeDescResult struct {
 	recordFields []desugaredRecordFieldResult
 }
 
-func desugarTypeDesc(ctx desugarContext, typeDesc ast.BType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+func desugarTypeDesc(ctx desugarContext, typeDesc ast.BType, parentScope model.Scope) desugaredTypeDescResult {
 	switch td := typeDesc.(type) {
 	case *ast.BLangRecordType:
-		return desugarRecordTypeDesc(ctx, td, ownerSymRef, parentScope)
+		return desugarRecordTypeDesc(ctx, td, parentScope)
 	}
 	return desugaredTypeDescResult{}
 }
 
-func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, parentScope model.Scope) desugaredTypeDescResult {
 	var fields []desugaredRecordFieldResult
 	for _, field := range recType.FieldPtrs() {
 		if field.DefaultExpr == nil {
@@ -537,7 +537,7 @@ func desugarTopLevelTypeDescs(cx *packageContext, pkg *ast.BLangPackage) {
 			cx.internalError("type definition has no BType type descriptor")
 			return
 		}
-		result := desugarTypeDesc(cx, typeDesc, defn.Symbol(), nil)
+		result := desugarTypeDesc(cx, typeDesc, nil)
 		for _, rf := range result.recordFields {
 			pkg.Functions = append(pkg.Functions, *rf.fn)
 		}

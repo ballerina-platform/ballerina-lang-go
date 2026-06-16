@@ -96,6 +96,7 @@ type context interface {
 	getSymbol(symRef model.SymbolRef) model.Symbol
 	unnarrowedSymbol(symRef model.SymbolRef) model.SymbolRef
 	symbolName(symRef model.SymbolRef) string
+	symbolPackage(symRef model.SymbolRef) model.PackageIdentifier
 	typeEnv() semtypes.Env
 	internalError(message string, pos diagnostics.Location)
 	unimplemented(message string, pos diagnostics.Location)
@@ -128,7 +129,7 @@ func newBlockContext(parent context) blockContext {
 }
 
 func (c *Context) stringMapType() semtypes.SemType {
-	if c.stringMapTy == nil {
+	if semtypes.IsZero(c.stringMapTy) {
 		md := semtypes.NewMappingDefinition()
 		c.stringMapTy = md.DefineMappingTypeWrapped(c.CompilerContext.GetTypeEnv(), nil, semtypes.STRING)
 	}
@@ -156,6 +157,10 @@ func (b *blockContext) unnarrowedSymbol(symRef model.SymbolRef) model.SymbolRef 
 
 func (b *blockContext) symbolName(symRef model.SymbolRef) string {
 	return b.compilerContext().SymbolName(symRef)
+}
+
+func (b *blockContext) symbolPackage(symRef model.SymbolRef) model.PackageIdentifier {
+	return b.compilerContext().SymbolPackage(symRef)
 }
 
 func (b *blockContext) typeEnv() semtypes.Env {
@@ -344,13 +349,13 @@ func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) stri
 		// For monomorphic functions (ex: dependently typed functions), in runtime we dispatch to a single
 		// polymorphic function
 		origRef := mono.PolymorphicSymbol()
-		return buildLookupKey(origRef.Package, ctx.CompilerContext.GetSymbol(origRef).Name())
+		return buildLookupKey(ctx.CompilerContext.SymbolPackage(origRef), ctx.CompilerContext.SymbolName(origRef))
 	}
-	return buildLookupKey(symRef.Package, sym.Name())
+	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), ctx.CompilerContext.SymbolName(symRef))
 }
 
 func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {
-	return buildLookupKey(symRef.Package, className+"."+ctx.CompilerContext.GetSymbol(symRef).Name())
+	return buildLookupKey(ctx.CompilerContext.SymbolPackage(symRef), className+"."+ctx.CompilerContext.SymbolName(symRef))
 }
 
 func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
@@ -1435,7 +1440,7 @@ func groupExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangGroupExpr
 
 func wildcardBindingPattern(ctx context, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
 	return expressionEffect{
-		result: ctx.addTempVar(nil),
+		result: ctx.addTempVar(semtypes.NEVER),
 		block:  curBB,
 	}
 }
@@ -1780,7 +1785,7 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		ctx.CompilerContext.InternalError("self symbol not found in class scope", class.GetPosition())
 	}
 
-	classLookupKey := buildLookupKey(class.Symbol().Package, ctx.CompilerContext.SymbolName(class.Symbol()))
+	classLookupKey := buildLookupKey(ctx.CompilerContext.SymbolPackage(class.Symbol()), ctx.CompilerContext.SymbolName(class.Symbol()))
 	birClassDef := &BIRClassDef{
 		Name:      className,
 		LookupKey: classLookupKey,
@@ -1842,7 +1847,7 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 
 func buildResourceMethodEntry(ctx *Context, rm *ast.BLangResourceMethod, fn *BIRFunction) BIRResourceMethod {
 	var pathSegments []ResourcePathSegmentDef
-	var restTy semtypes.SemType = semtypes.NEVER
+	var restTy = semtypes.NEVER
 	for i := range rm.ResourcePath {
 		seg := &rm.ResourcePath[i]
 		segTy := seg.GetDeterminedType()
@@ -1929,7 +1934,7 @@ func newExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangNewExpressi
 	}
 	classSymbol := expr.ClassSymbol
 	className := ctx.symbolName(classSymbol)
-	classLookupKey := buildLookupKey(classSymbol.Package, className)
+	classLookupKey := buildLookupKey(ctx.symbolPackage(classSymbol), className)
 
 	object := ctx.addTempVar(expr.GetDeterminedType())
 	newObj := NewObjectConstructor(classLookupKey, object, ctx.function().loc(expr.GetPosition()))

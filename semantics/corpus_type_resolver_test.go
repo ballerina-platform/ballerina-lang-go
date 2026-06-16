@@ -96,7 +96,7 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// `check newError()` or `checkpanic newError()` whose inner type is
 	// exactly `error`, so the non-error remainder is empty).
 	if expr, ok := node.(ast.BLangExpression); ok {
-		if expr.GetDeterminedType() == nil {
+		if semtypes.IsZero(expr.GetDeterminedType()) {
 			v.t.Errorf("expression %T at %v does not have determined type set", expr, expr.GetPosition())
 		}
 	}
@@ -110,7 +110,7 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 		if v.ctx.SymbolKind(symbol) == model.SymbolKindConstant {
 			return v
 		}
-		if v.ctx.SymbolType(symbol) == nil {
+		if semtypes.IsZero(v.ctx.SymbolType(symbol)) {
 			// FIXME: get rid of this
 			if _, ok := node.(*ast.BLangConstant); ok {
 				// constants will get their type set during semantic analysis
@@ -128,7 +128,7 @@ func (v *typeResolutionValidator) VisitTypeData(typeData *ast.TypeData) ast.Visi
 	if typeData.TypeDescriptor == nil {
 		return nil
 	}
-	if typeData.Type == nil {
+	if semtypes.IsZero(typeData.Type) {
 		v.t.Errorf("type not resolved for %+v", typeData)
 	}
 	return v

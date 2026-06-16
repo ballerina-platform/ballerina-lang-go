@@ -96,7 +96,7 @@ func (o *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	return createBasicSemType(BTObject, bdd)
 }
 
-func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
+func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) SemType {
 	fieldDefn := NewMappingDefinition()
 	var fieldValueTy SemType
 	if immutable {
@@ -141,7 +141,7 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 			(&member.Visibility).field(),
 		},
 		NEVER)
-	return cellFieldFrom(member.Name, *cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
+	return cellFieldFrom(member.Name, cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 
 func (o *ObjectDefinition) GetSemType(env Env) SemType {
