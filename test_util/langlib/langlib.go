@@ -119,7 +119,7 @@ var bundledStdlibs = []bundledLib{
 		org:       "ballerina",
 		nameComps: []string{"io"},
 		srcFS:     stdlibs.FS,
-		balPath:   "ballerina/io/0.0.1/any/io.bal",
+		balPath:   "ballerina/io/0.0.1/go1.2/io.bal",
 		version:   "0.0.1",
 	},
 }
