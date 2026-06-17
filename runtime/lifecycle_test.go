@@ -122,7 +122,40 @@ func TestLifecycleImmediateStopSignal(t *testing.T) {
 	}
 }
 
+func TestLifecycleInitFailureStopsRuntime(t *testing.T) {
+	pal := newLifecycleTestPal()
+	rt, err := initLifecycleTestRuntime(t, lifecycleTestSource+`
+
+public function main() returns error? {
+    return error("init failed");
+}
+`, pal)
+	if err == nil {
+		t.Fatal("expected init error")
+	}
+
+	rt.Listen()
+	code := readExitStatus(t, rt)
+
+	if code != 1 {
+		t.Fatalf("expected init failure exit code 1, got %d", code)
+	}
+	if got, want := pal.Stdout(), ""; got != want {
+		t.Fatalf("unexpected stdout: got %q, want %q", got, want)
+	}
+}
+
 func newLifecycleTestRuntime(t *testing.T, source string, platform *lifecycleTestPal) *runtime.Runtime {
+	t.Helper()
+
+	rt, err := initLifecycleTestRuntime(t, source, platform)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rt
+}
+
+func initLifecycleTestRuntime(t *testing.T, source string, platform *lifecycleTestPal) (*runtime.Runtime, error) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -153,10 +186,10 @@ version = "0.1.0"
 	rt := runtime.NewRuntime(platform.Platform(), result.Project().Environment().TypeEnv())
 	for _, pkg := range pkgs {
 		if err := rt.Init(*pkg); err != nil {
-			t.Fatal(err)
+			return rt, err
 		}
 	}
-	return rt
+	return rt, nil
 }
 
 func writeFile(t *testing.T, path string, content string) {

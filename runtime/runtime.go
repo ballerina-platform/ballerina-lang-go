@@ -103,12 +103,22 @@ func (rt *Runtime) Init(pkg bir.BIRPackage) error {
 	rt.transition(StateInitializing)
 	rt.registry().RegisterModule(pkg.PackageID, modules.NewBIRModule(nil, &pkg))
 	if err := rt.recordLifecycleHooks(&pkg); err != nil {
-		return err
+		return rt.abortInitialization(err)
 	}
 	if err := exec.RunEntrypoints(pkg, rt.env); err != nil {
-		return err
+		return rt.abortInitialization(err)
 	}
 	return nil
+}
+
+func (rt *Runtime) abortInitialization(err error) error {
+	rt.mu.Lock()
+	if rt.exitCode == 0 {
+		rt.exitCode = 1
+	}
+	rt.mu.Unlock()
+	rt.transition(StateStopped)
+	return err
 }
 
 // recordLifecycleHooks appends the package's lifecycle dispatch handles onto the
@@ -131,6 +141,12 @@ func (rt *Runtime) recordLifecycleHooks(pkg *bir.BIRPackage) error {
 // Listen transitions the runtime into the Listening state. If no $start
 // hooks have been registered the runtime moves straight to Stopped.
 func (rt *Runtime) Listen() {
+	rt.mu.Lock()
+	stopped := rt.state == StateStopped
+	rt.mu.Unlock()
+	if stopped {
+		return
+	}
 	if len(rt.startFns) == 0 {
 		rt.transition(StateStopped)
 		return
