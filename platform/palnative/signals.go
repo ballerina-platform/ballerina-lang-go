@@ -19,6 +19,7 @@ package palnative
 import (
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"ballerina-lang-go/platform/pal"
@@ -33,19 +34,40 @@ import (
 //
 // SIGKILL is intentionally not handled: it cannot be trapped by user
 // processes.
-func newSignalSource() (pal.SignalSource, chan pal.Signal) {
+func newSignalSource() (pal.SignalSource, func()) {
 	osCh := make(chan os.Signal, 4)
 	signal.Notify(osCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	out := make(chan pal.Signal, 2)
+	done := make(chan struct{})
+	var cleanupOnce sync.Once
 	go func() {
-		for sig := range osCh {
-			switch sig {
-			case syscall.SIGINT, syscall.SIGTERM:
-				out <- pal.GracefulStop
-			case syscall.SIGQUIT:
-				out <- pal.ImmediateStop
+		defer close(out)
+		for {
+			select {
+			case <-done:
+				return
+			case sig := <-osCh:
+				var palSig pal.Signal
+				switch sig {
+				case syscall.SIGINT, syscall.SIGTERM:
+					palSig = pal.GracefulStop
+				case syscall.SIGQUIT:
+					palSig = pal.ImmediateStop
+				default:
+					continue
+				}
+				select {
+				case out <- palSig:
+				case <-done:
+					return
+				}
 			}
 		}
 	}()
-	return pal.SignalSource{Signals: out}, out
+	return pal.SignalSource{Signals: out}, func() {
+		cleanupOnce.Do(func() {
+			signal.Stop(osCh)
+			close(done)
+		})
+	}
 }

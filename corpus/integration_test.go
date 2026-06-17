@@ -439,6 +439,7 @@ func runInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, stdoutBuf,
 	}
 
 	pal := testharness.NewTestPal()
+	defer pal.Close()
 	defer func() {
 		stdoutBuf.WriteString(pal.Stdout())
 		stderrBuf.WriteString(pal.Stderr())
@@ -624,6 +625,7 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, tyEnv semtypes.Env, std
 	}
 
 	pal := testharness.NewTestPal()
+	defer pal.Close()
 	defer func() {
 		stdoutBuf.WriteString(pal.Stdout())
 		stderrBuf.WriteString(pal.Stderr())

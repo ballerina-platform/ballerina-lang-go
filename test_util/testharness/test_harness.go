@@ -172,6 +172,8 @@ type TestPal interface {
 	// SendGracefulStop pushes a graceful stop signal onto the PAL's signal
 	// channel so the runtime can wind down deterministically from tests.
 	SendGracefulStop()
+	// Close releases test PAL resources such as signal watchdog timers.
+	Close()
 }
 
 // stubHTTP returns a fixed canned response. Tests that need a different
@@ -183,14 +185,15 @@ func (c *stubHTTP) Execute(_, _ string, _ []byte, _ string, _ map[string][]strin
 }
 
 type testPal struct {
-	mu         sync.Mutex
-	stdout     bytes.Buffer
-	stderr     bytes.Buffer
-	diags      []ResolvedDiag
-	reporter   test_util.FailReporter
-	signalSrc  pal.SignalSource
-	signalCh   chan pal.Signal
-	signalInit bool
+	mu            sync.Mutex
+	stdout        bytes.Buffer
+	stderr        bytes.Buffer
+	diags         []ResolvedDiag
+	reporter      test_util.FailReporter
+	signalSrc     pal.SignalSource
+	signalCh      chan pal.Signal
+	signalCleanup func()
+	signalInit    bool
 }
 
 // NewTestPal returns a fresh in-memory TestPal. The optional reporter is
@@ -234,7 +237,7 @@ func (p *testPal) ensureSignalSource() {
 	if p.signalInit {
 		return
 	}
-	p.signalSrc, p.signalCh = test_util.NewTestSignalSource(p.reporter, test_util.TestSignalTimeout)
+	p.signalSrc, p.signalCh, p.signalCleanup = test_util.NewTestSignalSource(p.reporter, test_util.TestSignalTimeout)
 	p.signalInit = true
 }
 
@@ -242,6 +245,15 @@ func (p *testPal) SendGracefulStop() {
 	p.ensureSignalSource()
 	defer func() { _ = recover() }() // channel may already be closed
 	p.signalCh <- pal.GracefulStop
+}
+
+func (p *testPal) Close() {
+	p.mu.Lock()
+	cleanup := p.signalCleanup
+	p.mu.Unlock()
+	if cleanup != nil {
+		cleanup()
+	}
 }
 
 func (p *testPal) Stdout() string {
@@ -308,6 +320,7 @@ type ExternRegistration struct {
 func Run(t testing.TB, tc test_util.TestCase, pal TestPal, externs []ExternRegistration) {
 	t.Helper()
 	pal.SetReporter(t)
+	defer pal.Close()
 	defer func() {
 		if r := recover(); r != nil {
 			msg := strings.TrimPrefix(fmt.Sprintf("%v", r), panicPrefix)

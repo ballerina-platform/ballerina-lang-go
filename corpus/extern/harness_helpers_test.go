@@ -83,8 +83,9 @@ func newHTTPPal(newClient func(cfg pal.ClientConfig) pal.HTTPClient) *httpPal {
 
 // withRealFS returns a copy of p whose FS.ReadFile delegates to os.ReadFile.
 func (p *httpPal) withRealFS() *httpPal {
-	p.realFS = true
-	return p
+	cp := *p
+	cp.realFS = true
+	return &cp
 }
 
 func (p *httpPal) Platform() pal.Platform {

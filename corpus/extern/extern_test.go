@@ -507,6 +507,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	// Stage 5: interpret [deserialized dependency BIR, freshly compiled main BIR]
 	// with helper's native registered. Validate stdout.
 	pal := testharness.NewTestPal()
+	defer pal.Close()
 	rt := runtime.NewRuntime(pal.Platform(), freshEnv.GetTypeEnv())
 	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
 	runtime.RegisterExternFunction(rt, org, helperMod, "inferred", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
