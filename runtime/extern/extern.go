@@ -45,15 +45,17 @@ type Env struct {
 	TypeEnv      semtypes.Env
 	Registry     any // opaque pointer to the runtime registry
 	Locks        *locks.LockManager
+	dispatch     DispatchHandles
 	nextStrandID atomic.Uint64
 }
 
-func InitEnv(pal pal.Platform, tyEnv semtypes.Env, registry any) *Env {
+func InitEnv(pal pal.Platform, tyEnv semtypes.Env, registry any, hooks DispatchHandles) *Env {
 	env := Env{
 		Platform: pal,
 		TypeEnv:  tyEnv,
 		Registry: registry,
 		Locks:    locks.NewMutexes(),
+		dispatch: hooks,
 	}
 	return &env
 }

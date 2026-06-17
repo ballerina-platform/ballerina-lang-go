@@ -822,7 +822,7 @@ func isRangeExpr(expr ast.BLangActionOrExpression) bool {
 }
 
 func createMethodInvocation(cx *functionContext, receiver ast.BLangExpression, methodName string, receiverType semtypes.SemType, args []ast.BLangExpression) *ast.BLangInvocation {
-	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	tyCtx := cx.typeCtx()
 	fnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(methodName), receiverType)
 
 	argTys := make([]semtypes.SemType, len(args))
@@ -847,7 +847,7 @@ func createMethodInvocation(cx *functionContext, receiver ast.BLangExpression, m
 func desugarForEachOnIterable(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[ast.StatementNode] {
 	var initStmts []ast.StatementNode
 	basePos := collection.GetPosition()
-	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	tyCtx := cx.typeCtx()
 
 	// Step 1: Evaluate collection into temp var
 	collResult := walkExpression(cx, collection)

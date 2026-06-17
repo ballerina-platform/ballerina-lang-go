@@ -43,12 +43,18 @@ type context struct {
 	_comparableMemo        map[comparableMemoKey]*comparableMemo
 	_fillerMemo            map[atomicType]Filler
 	_streamImplementorMemo map[streamImplementorMemoKey]SemType
+	_listenerMemo          map[listenerMemoKey]SemType
 	_semtypeInterner       *SemtypeInterner
 }
 
 type streamImplementorMemoKey struct {
 	valueTy      InternHandle
 	completionTy InternHandle
+}
+
+type listenerMemoKey struct {
+	t InternHandle
+	a InternHandle
 }
 
 type comparableMemo struct {
@@ -202,6 +208,7 @@ func ContextFrom(env Env) Context {
 		_comparableMemo:        make(map[comparableMemoKey]*comparableMemo),
 		_fillerMemo:            make(map[atomicType]Filler),
 		_streamImplementorMemo: make(map[streamImplementorMemoKey]SemType),
+		_listenerMemo:          make(map[listenerMemoKey]SemType),
 		_semtypeInterner:       NewSemtypeInterner(),
 		_conjunctions:          make([]conjunction, 0, 64),
 	}
@@ -216,6 +223,17 @@ func (c *context) streamImplementorMemo(valueTy, completionTy SemType) (SemType,
 func (c *context) setStreamImplementorMemo(valueTy, completionTy, t SemType) {
 	key := streamImplementorMemoKey{valueTy: c._semtypeInterner.Intern(valueTy), completionTy: c._semtypeInterner.Intern(completionTy)}
 	c._streamImplementorMemo[key] = t
+}
+
+func (c *context) listenerMemo(t, a SemType) (SemType, bool) {
+	key := listenerMemoKey{t: c._semtypeInterner.Intern(t), a: c._semtypeInterner.Intern(a)}
+	ty, ok := c._listenerMemo[key]
+	return ty, ok
+}
+
+func (c *context) setListenerMemo(t, a, listenerTy SemType) {
+	key := listenerMemoKey{t: c._semtypeInterner.Intern(t), a: c._semtypeInterner.Intern(a)}
+	c._listenerMemo[key] = listenerTy
 }
 
 func (c *context) comparableMemo(b1, b2 Bdd) *comparableMemo {

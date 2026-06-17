@@ -127,30 +127,34 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 			mu.Unlock()
 		}()
 	}
-	for i := range pkg.ClassDefinitions {
-		classDef := &pkg.ClassDefinitions[i]
-		classRef := classDef.Symbol()
-		mu.Lock()
-		cfg.methodCfgs[classRef] = make(map[model.SymbolRef]functionCFG)
-		mu.Unlock()
-		analyzeFunctionInner := func(sym model.SymbolRef, body ast.FunctionBodyNode) {
+	analyzeClassBody := func(dest map[model.SymbolRef]functionCFG, initFn *ast.BLangFunction, methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod) {
+		analyzeMethod := func(sym model.SymbolRef, body ast.FunctionBodyNode) {
 			wg.Go(func() {
 				fnCfg := analyzeFunctionBody(ctx, body)
 				mu.Lock()
-				cfg.methodCfgs[classRef][sym] = fnCfg
+				dest[sym] = fnCfg
 				mu.Unlock()
 			})
 		}
-		if classDef.InitFunction != nil {
-			initFn := classDef.InitFunction
-			analyzeFunctionInner(initFn.Symbol(), initFn.Body)
+		if initFn != nil {
+			analyzeMethod(initFn.Symbol(), initFn.Body)
 		}
-		for _, method := range classDef.Methods {
-			analyzeFunctionInner(method.Symbol(), method.Body)
+		for _, method := range methods {
+			analyzeMethod(method.Symbol(), method.Body)
 		}
-		for _, rm := range classDef.ResourceMethods {
-			analyzeFunctionInner(rm.Symbol(), rm.Body)
+		for _, rm := range resourceMethods {
+			analyzeMethod(rm.Symbol(), rm.Body)
 		}
+	}
+	for i := range pkg.ClassDefinitions {
+		c := &pkg.ClassDefinitions[i]
+		methodCfgs := make(map[model.SymbolRef]functionCFG)
+		cfg.methodCfgs[c.Symbol()] = methodCfgs
+		analyzeClassBody(methodCfgs, c.InitFunction, c.Methods, c.ResourceMethods)
+	}
+	for i := range pkg.Services {
+		s := &pkg.Services[i]
+		analyzeClassBody(cfg.funcCfgs, s.InitFunction, s.Methods, s.ResourceMethods)
 	}
 	wg.Wait()
 	return cfg

@@ -367,7 +367,7 @@ func appendInitialQueryRows(
 		[]ast.BLangExpression{createQueryBindingVarRef(loopBinding)},
 		pos,
 	)
-	pushRow := createPushInvocation(cx, rowsRef, rowTuple)
+	pushRow := createArrayPushInvocation(cx.pkgCtx, rowsRef, rowTuple)
 	if pushRow == nil {
 		return nil, false
 	}
@@ -554,7 +554,7 @@ func applyQueryLetClauseToRows(
 			pos,
 		))
 
-		pushLetValue := createPushInvocation(cx, rowRef, createQueryBindingVarRef(binding))
+		pushLetValue := createArrayPushInvocation(cx.pkgCtx, rowRef, createQueryBindingVarRef(binding))
 		if pushLetValue == nil {
 			return nil, false
 		}
@@ -604,7 +604,7 @@ func applyQueryWhereClauseToRows(
 	whereResult := walkExpression(cx, clause.Expression)
 	bodyStmts = appendModelStatements(bodyStmts, whereResult.initStmts)
 
-	pushFiltered := createPushInvocation(cx, filteredRowsRef, rowRef)
+	pushFiltered := createArrayPushInvocation(cx.pkgCtx, filteredRowsRef, rowRef)
 	if pushFiltered == nil {
 		return nil, false
 	}
@@ -825,7 +825,7 @@ func applyQueryLimitClauseToRows(
 		OpKind:  model.OperatorKind_LESS_THAN,
 	}
 	withinLimitCond.SetDeterminedType(semtypes.BOOLEAN)
-	pushLimited := createPushInvocation(cx, limitedRowsRef, rowRef)
+	pushLimited := createArrayPushInvocation(cx.pkgCtx, limitedRowsRef, rowRef)
 	if pushLimited == nil {
 		return nil, false
 	}
@@ -873,7 +873,7 @@ func applyQueryOrderByClauseToRows(
 	keyRowsRef := createQueryListStore(cx, initStmts, pos)
 	indexRowsRef := createQueryListStore(cx, initStmts, pos)
 	payloadRef := createQueryListStore(cx, initStmts, pos)
-	pushRowsPayload := createPushInvocation(cx, payloadRef, rowsRef)
+	pushRowsPayload := createArrayPushInvocation(cx.pkgCtx, payloadRef, rowsRef)
 	if pushRowsPayload == nil {
 		return false
 	}
@@ -895,8 +895,8 @@ func applyQueryOrderByClauseToRows(
 
 	keyTuple, keyInitStmts := buildOrderKeyTupleExpr(cx, clause, pos)
 	bodyStmts = appendModelStatements(bodyStmts, keyInitStmts)
-	pushKeys := createPushInvocation(cx, keyRowsRef, keyTuple)
-	pushIndex := createPushInvocation(cx, indexRowsRef, loopCounterRef)
+	pushKeys := createArrayPushInvocation(cx.pkgCtx, keyRowsRef, keyTuple)
+	pushIndex := createArrayPushInvocation(cx.pkgCtx, indexRowsRef, loopCounterRef)
 	if pushKeys == nil || pushIndex == nil {
 		return false
 	}
@@ -1006,7 +1006,7 @@ func appendQueryJoinClauseRows(
 		matchBodyStmts = append(matchBodyStmts, markMatched)
 	}
 	matchTuple := createQueryRowTupleExpr(bindings, []ast.BLangExpression{createQueryBindingVarRef(joinBinding)}, pos)
-	pushMatch := createPushInvocation(cx, newRowsRef, matchTuple)
+	pushMatch := createArrayPushInvocation(cx.pkgCtx, newRowsRef, matchTuple)
 	if pushMatch == nil {
 		return nil, nil, false
 	}
@@ -1044,7 +1044,7 @@ func appendQueryJoinClauseRows(
 		}
 		notMatched.SetDeterminedType(semtypes.BOOLEAN)
 		unmatchedTuple := createQueryRowTupleExpr(bindings, []ast.BLangExpression{createQueryNilLiteral(pos)}, pos)
-		pushUnmatched := createPushInvocation(cx, newRowsRef, unmatchedTuple)
+		pushUnmatched := createArrayPushInvocation(cx.pkgCtx, newRowsRef, unmatchedTuple)
 		if pushUnmatched == nil {
 			return nil, nil, false
 		}
@@ -1312,14 +1312,14 @@ func appendQueryOrderByStageStmts(
 
 	keyTuple, keyInitStmts := buildOrderKeyTupleExpr(cx, orderByClause, basePos)
 	bodyStmts = append(bodyStmts, keyInitStmts...)
-	if pushKeys := createPushInvocation(cx, orderKeyRowsRef, keyTuple); pushKeys != nil {
+	if pushKeys := createArrayPushInvocation(cx.pkgCtx, orderKeyRowsRef, keyTuple); pushKeys != nil {
 		pushStmt := &ast.BLangExpressionStmt{Expr: pushKeys}
 		setPositionIfMissing(pushStmt, basePos)
 		bodyStmts = append(bodyStmts, pushStmt)
 	} else {
 		return queryOrderStageInput{}, false
 	}
-	if pushIndex := createPushInvocation(cx, sortedIndexRowsRef, baseIndexExpr); pushIndex != nil {
+	if pushIndex := createArrayPushInvocation(cx.pkgCtx, sortedIndexRowsRef, baseIndexExpr); pushIndex != nil {
 		pushStmt := &ast.BLangExpressionStmt{Expr: pushIndex}
 		setPositionIfMissing(pushStmt, basePos)
 		bodyStmts = append(bodyStmts, pushStmt)
@@ -1327,7 +1327,7 @@ func appendQueryOrderByStageStmts(
 		return queryOrderStageInput{}, false
 	}
 	for _, store := range stageStores {
-		pushStore := createPushInvocation(cx, store.storeRef, createQueryBindingVarRef(store.binding))
+		pushStore := createArrayPushInvocation(cx.pkgCtx, store.storeRef, createQueryBindingVarRef(store.binding))
 		if pushStore == nil {
 			return queryOrderStageInput{}, false
 		}
@@ -1538,7 +1538,7 @@ func createQueryPayloadStore(
 ) (*ast.BLangSimpleVarRef, bool) {
 	payloadRef := createQueryListStore(cx, initStmts, pos)
 	for _, store := range letStores {
-		pushPayload := createPushInvocation(cx, payloadRef, store.storeRef)
+		pushPayload := createArrayPushInvocation(cx.pkgCtx, payloadRef, store.storeRef)
 		if pushPayload == nil {
 			return nil, false
 		}
@@ -1774,7 +1774,7 @@ func appendQuerySelectResultStmts(
 		setPositionIfMissing(mapPutStmt, basePos)
 		bodyStmts = append(bodyStmts, mapPutStmt)
 	default:
-		pushInvocation := createPushInvocation(cx, resultRef, selectExpr)
+		pushInvocation := createArrayPushInvocation(cx.pkgCtx, resultRef, selectExpr)
 		if pushInvocation == nil {
 			return nil, false
 		}

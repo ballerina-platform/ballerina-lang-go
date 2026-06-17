@@ -54,7 +54,11 @@ func executeCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue
 		}
 		return result
 	}
-	return lookupAndExecute(ctx, callInfo, args, callInfo.FunctionLookupKey)
+	result, err := lookupAndExecute(ctx, callInfo, args, callInfo.FunctionLookupKey)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }
 
 func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue) values.BalValue {
@@ -82,10 +86,14 @@ func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.B
 	callInfo.CachedBIRFunc = nil
 	callInfo.CachedNativeFunc = nil
 	callInfo.CachedMethodLookupKey = lookupKey
-	return lookupAndExecute(ctx, callInfo, args, lookupKey)
+	result, err := lookupAndExecute(ctx, callInfo, args, lookupKey)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }
 
-func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) values.BalValue {
+func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) (values.BalValue, error) {
 	isResourceFnCall := callInfo == nil
 	reg := ctx.Env.Registry.(*modules.Registry)
 	fn := reg.GetBIRFunction(lookupKey)
@@ -93,18 +101,14 @@ func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.Bal
 		if !isResourceFnCall {
 			callInfo.CachedBIRFunc = fn
 		}
-		return executeFunction(ctx, *fn, args, nil)
+		return executeFunction(ctx, *fn, args, nil), nil
 	}
 	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
 		if !isResourceFnCall {
 			callInfo.CachedNativeFunc = externFn.Impl
 		}
-		result, err := externFn.Impl(ctx, args)
-		if err != nil {
-			panic(err)
-		}
-		return result
+		return externFn.Impl(ctx, args)
 	}
 	// In resource function case we have already validated function exists using RTable
 	panic(values.NewErrorWithMessage("function not found: " + callInfo.Name.Value()))
@@ -113,17 +117,15 @@ func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.Bal
 func execResourceCall(ctx *extern.Context, instr *bir.ResourceFunctionCall, frame *Frame) *bir.BIRBasicBlock {
 	receiver := getOperandValue(ctx, &instr.Receiver, frame).(*values.Object)
 	pathVals := extractArgs(ctx, instr.PathSegments, frame)
-	matches := resourceFnCandidates(ctx, receiver, instr.MethodName, pathVals)
-	if len(matches) == 0 {
+	impl, ok := LookupResourceMethod(ctx, receiver, instr.MethodName, pathVals)
+	if !ok {
 		panic(values.NewErrorWithMessage("no matching resource method"))
 	}
-	if len(matches) > 1 {
-		panic(values.NewErrorWithMessage("ambiguous resource method dispatch"))
-	}
-	match := matches[0]
 	argVals := extractArgs(ctx, instr.Args, frame)
-	fullArgs := buildResourceCallArgs(ctx, receiver, match, pathVals, argVals)
-	result := lookupAndExecute(ctx, nil, fullArgs, match.FunctionLookupKey)
+	result, err := InvokeMethod(ctx, impl, argVals)
+	if err != nil {
+		panic(err)
+	}
 	if instr.LhsOp != nil {
 		setOperandValue(ctx, instr.LhsOp, frame, result)
 	}
