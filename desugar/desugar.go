@@ -561,7 +561,7 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	}
 }
 
-// createLifeCycleHooks generates `$start`, `$gracefulEnd` and `$immediateEnd`
+// createLifeCycleHooks generates `$start`, `$gracefulStop` and `$immediateStop`
 // for the module and appends them to pkg.Functions. Each function iterates
 // the `$moduleListeners` array and invokes the listener method that
 // ListenerMethodFor returns for the function name, propagating errors via
@@ -671,8 +671,8 @@ func createLifeCycleHooks(pkgCtx *packageContext, pkg *ast.BLangPackage, moduleL
 // listener method (see ListenerMethodFor).
 const (
 	StartFunctionName         = "$start"
-	GracefulStopFunctionName  = "$gracefulEnd"
-	ImmediateStopFunctionName = "$immediateEnd"
+	GracefulStopFunctionName  = "$gracefulStop"
+	ImmediateStopFunctionName = "$immediateStop"
 )
 
 // ListenerMethodFor returns the listener method name that the given lifecycle

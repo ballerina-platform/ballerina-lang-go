@@ -126,7 +126,7 @@ $start() -> nil|error{
     GOTO bb2;
   }
 }
-$gracefulEnd() -> nil|error{
+$gracefulStop() -> nil|error{
   bb0 {
     $desugar$0 = $moduleListeners;
     %2 = ConstantLoad 0
@@ -174,7 +174,7 @@ $gracefulEnd() -> nil|error{
     GOTO bb2;
   }
 }
-$immediateEnd() -> nil|error{
+$immediateStop() -> nil|error{
   bb0 {
     $desugar$0 = $moduleListeners;
     %2 = ConstantLoad 0

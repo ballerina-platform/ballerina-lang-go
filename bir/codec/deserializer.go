@@ -108,8 +108,8 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 // rebindLifecycleFunctions restores StartFunction/GracefulStopFunction/
 // ImmediateStopFunction pointers on a deserialized BIR package. These are
-// generated as regular functions named `$start`, `$gracefulEnd` and
-// `$immediateEnd` and not serialized as dedicated slots.
+// generated as regular functions named `$start`, `$gracefulStop` and
+// `$immediateStop` and not serialized as dedicated slots.
 func rebindLifecycleFunctions(pkg *bir.BIRPackage) {
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
