@@ -35,24 +35,43 @@ type FailReporter interface {
 }
 
 // NewTestSignalSource returns a SignalSource paired with the underlying
-// channel for the test harness to close. After `timeout` the source
-// pushes a GracefulStop and reports the timeout via `reporter` (if
-// non-nil). Returning the channel lets the harness close it during
-// teardown to release the runtime's signal goroutine.
-func NewTestSignalSource(reporter FailReporter, timeout time.Duration) (pal.SignalSource, chan pal.Signal) {
+// channel and a cleanup function for the test harness. After `timeout` the
+// source pushes a GracefulStop and reports the timeout via `reporter` (if
+// non-nil). Cleanup stops the watchdog and closes the channel to release the
+// runtime's signal goroutine.
+func NewTestSignalSource(reporter FailReporter, timeout time.Duration) (pal.SignalSource, chan pal.Signal, func()) {
 	ch := make(chan pal.Signal, 2)
-	if timeout <= 0 {
-		return pal.SignalSource{Signals: ch}, ch
-	}
-	var once sync.Once
-	time.AfterFunc(timeout, func() {
-		once.Do(func() {
-			if reporter != nil {
-				reporter.Errorf("test PAL: forcing graceful shutdown after %s", timeout)
+	var mu sync.Mutex
+	var closeOnce sync.Once
+	var closed bool
+	var timer *time.Timer
+	cleanup := func() {
+		closeOnce.Do(func() {
+			mu.Lock()
+			closed = true
+			if timer != nil {
+				timer.Stop()
 			}
-			defer func() { _ = recover() }() // channel may already be closed by harness teardown
-			ch <- pal.GracefulStop
+			close(ch)
+			mu.Unlock()
 		})
+	}
+	if timeout <= 0 {
+		return pal.SignalSource{Signals: ch}, ch, cleanup
+	}
+	timer = time.AfterFunc(timeout, func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if closed {
+			return
+		}
+		if reporter != nil {
+			reporter.Errorf("test PAL: forcing graceful shutdown after %s", timeout)
+		}
+		select {
+		case ch <- pal.GracefulStop:
+		default:
+		}
 	})
-	return pal.SignalSource{Signals: ch}, ch
+	return pal.SignalSource{Signals: ch}, ch, cleanup
 }

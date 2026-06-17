@@ -60,6 +60,7 @@ func bundledEmbedRepo(t *testing.T) *projects.FileSystemRepository {
 func interpretBIRPackagesStdout(t *testing.T, typeEnv semtypes.Env, birPkgs []*bir.BIRPackage) string {
 	t.Helper()
 	pal := testharness.NewTestPal()
+	defer pal.Close()
 	rt := runtime.NewRuntime(pal.Platform(), typeEnv)
 	for _, birPkg := range birPkgs {
 		if err := rt.Init(*birPkg); err != nil {

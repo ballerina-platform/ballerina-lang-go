@@ -27,9 +27,10 @@ import (
 )
 
 // NewPlatform returns the native-CLI pal.Platform, wiring os.Stdout/Stderr for
-// IO and NewHTTPClient for HTTP.
-func NewPlatform() (pal.Platform, chan pal.Signal) {
-	signals, c := newSignalSource()
+// IO and NewHTTPClient for HTTP. The returned cleanup function releases signal
+// resources owned by the platform.
+func NewPlatform() (pal.Platform, func()) {
+	signals, cleanupSignals := newSignalSource()
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: func(p []byte) (n int, err error) { return os.Stdout.Write(p) },
@@ -44,5 +45,5 @@ func NewPlatform() (pal.Platform, chan pal.Signal) {
 			NewClient: NewHTTPClient,
 		},
 		Signals: signals,
-	}, c
+	}, cleanupSignals
 }
