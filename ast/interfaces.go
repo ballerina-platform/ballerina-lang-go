@@ -201,7 +201,6 @@ type ServiceNode interface {
 	GetAttachPointLiteral() LiteralNode
 }
 
-
 type TypeDescriptor interface {
 	Node
 	IsGrouped() bool

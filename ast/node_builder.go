@@ -1616,10 +1616,16 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 	typeDescriptorNode := typeDefinitionNode.TypeDescriptor()
 	if distinctTypeDescriptorNode, ok := typeDescriptorNode.(*tree.DistinctTypeDescriptorNode); ok {
-		typeDescriptorNode = distinctTypeDescriptorNode.TypeDescriptor()
-		if typeDescriptorNode == nil || typeDescriptorNode.Kind() != common.OBJECT_TYPE_DESC {
+		innerTypeDescriptorNode := distinctTypeDescriptorNode.TypeDescriptor()
+		if innerTypeDescriptorNode == nil || innerTypeDescriptorNode.Kind() != common.OBJECT_TYPE_DESC {
 			n.cx.Unimplemented("distinct types are only supported for object types", getPosition(n.de(), distinctTypeDescriptorNode))
+			neverType := &BLangValueType{TypeKind: TypeKind_NEVER}
+			neverType.pos = getPosition(n.de(), distinctTypeDescriptorNode)
+			typeDef.SetTypeData(TypeData{TypeDescriptor: neverType})
+			n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+			return typeDef
 		}
+		typeDescriptorNode = innerTypeDescriptorNode
 		typeDef.SetDistinct()
 	}
 	typeData := TypeData{
@@ -4604,13 +4610,9 @@ func (n *NodeBuilder) TransformMatchGuard(matchGuardNode *tree.MatchGuardNode) B
 
 func (n *NodeBuilder) TransformDistinctTypeDescriptor(distinctTypeDescriptorNode *tree.DistinctTypeDescriptorNode) BLangNode {
 	n.cx.Unimplemented("inline distinct object type definitions are not supported", getPosition(n.de(), distinctTypeDescriptorNode))
-	return nil
-	// typeDescriptor := distinctTypeDescriptorNode.TypeDescriptor()
-	// if typeDescriptor == nil {
-	// 	n.cx.SyntaxError("missing type descriptor for distinct type", getPosition(n.de(), distinctTypeDescriptorNode))
-	// 	return &BLangObjectType{members: make(map[string]ObjectMember)}
-	// }
-	// return n.createTypeNode(typeDescriptor).(BLangNode)
+	neverType := &BLangValueType{TypeKind: TypeKind_NEVER}
+	neverType.pos = getPosition(n.de(), distinctTypeDescriptorNode)
+	return neverType
 }
 
 func (n *NodeBuilder) TransformListMatchPattern(listMatchPatternNode *tree.ListMatchPatternNode) BLangNode {
