@@ -60,17 +60,17 @@ func (s State) String() string {
 }
 
 // lifeCycle bundles the lifecycle state private to a Runtime.
-// Current spec don't fully describe the how the lifecycle management happens. Therefore this implementation makes fallowing assumptions/design decisions
-// 1. Signals are triggered by humans (we are not dealing with repeat signals comming withing micro-seconds)
-// 2. We will not handle signals until until start has been completed (IMPORTANT: we are not dropping the signal we just don't execute them until start is over)
+// Current spec don't fully describe the how the lifecycle management happens. Therefore this implementation makes following assumptions/design decisions
+// 1. Signals are triggered by humans (we are not dealing with repeat signals coming within micro-seconds)
+// 2. We will not handle signals until start has been completed (IMPORTANT: we are not dropping the signal we just don't execute them until start is over)
 //   - this is to simplify the design
 //
 // 3. We listen to signal only after starting initializing phase. Also we don't support concurrent init so calls to init should be sequential
-//   - Sending a stop signal during initialization will cause runtime to panic (we dont' have listners started so nothing to stop there, winding down any user strands started by init/main is ignored)
-//   - In listening phase sending a kill singal will lead to a graceful shutdown from the runtime and will write the exit code to ExitStatus channel
+//   - Sending a stop signal during initialization will cause runtime to panic (we don't have listeners started so nothing to stop there, winding down any user strands started by init/main is ignored)
+//   - In listening phase sending a kill signal will lead to a graceful shutdown from the runtime and will write the exit code to ExitStatus channel
 //
-// 4. We try to do best effort escalation on repeate graceful stop signals
-//   - We'll finish what ever the module we are trying to gracefully stop and then escalate to immeidate stop
+// 4. We try to do best effort escalation on repeated graceful stop signals
+//   - We'll finish whatever the module we are trying to gracefully stop and then escalate to immediate stop
 //
 // 5 . Sending signals to a stopped runtime could trigger a panic (this is treated as undefined behavior)
 // IMPORTANT: "sender" for pal.Signal must close it after we write to ExitStatus channel
