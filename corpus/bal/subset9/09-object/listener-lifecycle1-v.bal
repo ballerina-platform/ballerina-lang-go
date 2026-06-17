@@ -55,10 +55,10 @@ public function main() {
 
 // testMain is invoked by the test harness after Listen() returns, while the
 // runtime is parked in StateListening. This validates that the harness's
-// post-listen hook fires between $start and $gracefulEnd.
+// post-listen hook fires between $start and $gracefulStop.
 public function testMain() {
     io:println("testMain"); // @output testMain
 }
 
-// $gracefulEnd runs once the harness pushes a graceful stop signal.
+// $gracefulStop runs once the harness pushes a graceful stop signal.
 // @output listener graceful stop

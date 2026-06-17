@@ -38,6 +38,6 @@ public function main() {
     l.trigger("foo");
 }
 
-// Lifecycle hooks fire after main: $start then $gracefulEnd.
+// Lifecycle hooks fire after main: $start then $gracefulStop.
 // @output listener start
 // @output graceful stop

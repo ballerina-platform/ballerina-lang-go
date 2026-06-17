@@ -138,7 +138,7 @@
             (binary-expr +
               (simple-var-ref $desugar$1)
               (numeric-literal 1)))))))
-  (function $gracefulEnd () ()
+  (function $gracefulStop () ()
     (block-function-body
       (var-def
         (variable $desugar$0 (expr
@@ -177,7 +177,7 @@
             (binary-expr +
               (simple-var-ref $desugar$1)
               (numeric-literal 1)))))))
-  (function $immediateEnd () ()
+  (function $immediateStop () ()
     (block-function-body
       (var-def
         (variable $desugar$0 (expr
