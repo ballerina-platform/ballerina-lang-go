@@ -607,7 +607,7 @@ func TestListenerDispatch(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			ioruntime.Println(rt, out)
+			ioruntime.Write(rt, 1, true, []values.BalValue{out})
 
 			mh, ok := ctx.LookupRemoteMethod(svc, "shutdown")
 			if !ok {
@@ -617,7 +617,7 @@ func TestListenerDispatch(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			ioruntime.Println(rt, out)
+			ioruntime.Write(rt, 1, true, []values.BalValue{out})
 
 			return nil, nil
 		})
