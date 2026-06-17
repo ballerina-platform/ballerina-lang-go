@@ -140,6 +140,11 @@ func abortAction(_ *Runtime) {
 	panic("ABORT: aborting module initialization due to stop signal")
 }
 
+func (rt *Runtime) stopAfterInitFailure() {
+	rt.exitCode = 1
+	rt.transition(StateStopped)
+}
+
 // listenAction runs $start for every registered module on the caller's
 // goroutine. On the first $start failure it cascades into a graceful
 // stop. Spawns the signal-watcher goroutine exactly once before any

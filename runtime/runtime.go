@@ -103,9 +103,11 @@ func (rt *Runtime) Init(pkg bir.BIRPackage) error {
 	rt.transition(StateInitializing)
 	rt.registry().RegisterModule(pkg.PackageID, modules.NewBIRModule(nil, &pkg))
 	if err := rt.recordLifecycleHooks(&pkg); err != nil {
+		rt.stopAfterInitFailure()
 		return err
 	}
 	if err := exec.RunEntrypoints(pkg, rt.env); err != nil {
+		rt.stopAfterInitFailure()
 		return err
 	}
 	return nil
@@ -131,7 +133,10 @@ func (rt *Runtime) recordLifecycleHooks(pkg *bir.BIRPackage) error {
 // Listen transitions the runtime into the Listening state. If no $start
 // hooks have been registered the runtime moves straight to Stopped.
 func (rt *Runtime) Listen() {
-	if len(rt.startFns) == 0 {
+	rt.mu.Lock()
+	stopped := rt.state == StateStopped
+	rt.mu.Unlock()
+	if stopped || len(rt.startFns) == 0 {
 		rt.transition(StateStopped)
 		return
 	}
