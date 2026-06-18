@@ -831,6 +831,12 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
+	// Annotation attachments are resolved after all top-level annotation
+	// declarations, types, constants, and function signatures are available.
+	// Attachments can refer to annotations and constants declared later in the
+	// module, so resolving them inline while each AST node is resolved would
+	// force many out-of-order lazy resolutions against partially initialized
+	// annotation symbols.
 	resolveTopLevelAnnotationAttachments(t, pkg)
 	for i := range pkg.Imports {
 		setOtherNodesAsNever(&pkg.Imports[i])
