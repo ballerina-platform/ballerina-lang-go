@@ -26,7 +26,6 @@ import (
 	"net"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -148,13 +147,20 @@ func registerListenerExterns(rt *runtime.Runtime) {
 			}
 
 			state.mu.Lock()
+			defer state.mu.Unlock()
+			// Two services cannot share a base path: service-level dispatch could
+			// not pick between them deterministically.
+			for _, e := range state.services {
+				if e.basePath == basePath {
+					return values.NewErrorWithMessage("Listener.attach: a service is already attached to base path " + basePath), nil
+				}
+			}
 			entry := &serviceEntry{basePath: basePath, svcObj: svcObj}
 			state.services = append(state.services, entry)
 			// Longest base path first so the most specific service wins routing.
 			sort.Slice(state.services, func(i, j int) bool {
 				return len(state.services[i].basePath) > len(state.services[j].basePath)
 			})
-			state.mu.Unlock()
 			return nil, nil
 		})
 
@@ -453,77 +459,42 @@ func dispatchRequest(rt *runtime.Runtime, state *listenerState, w http.ResponseW
 
 	segments := splitURLPath(subPath)
 	ctx := rt.NewExternContext()
-
 	httpMethod := strings.ToLower(r.Method)
+
+	// Resource-level dispatch is delegated to the language runtime: it coerces
+	// the raw path segments to each resource's declared parameter types and
+	// selects the unique matching resource (the same dispatch used by
+	// client->/path access). HTTP only owns service-level (base-path) routing.
 	for _, accessorKey := range []string{httpMethod, "default"} {
-		candidates, ok := found.svcObj.ResourceEntries(accessorKey)
+		handle, extraArgs, ok := ctx.LookupResourceMethodByPath(found.svcObj, accessorKey, segments)
 		if !ok {
 			continue
 		}
-		for i := range candidates {
-			coerced, ok := coercePathForCandidate(ctx.TypeCtx, &candidates[i], segments)
-			if !ok {
-				continue
-			}
-			handle, ok := ctx.LookupResourceMethod(found.svcObj, accessorKey, coerced)
-			if !ok {
-				continue
-			}
-			// Count non-literal path params to determine how many user args the method expects.
-			nonLiteralCount := 0
-			for _, seg := range candidates[i].PathSegments {
-				if _, isLit := values.LiteralPathSegment(seg); !isLit {
-					nonLiteralCount++
-				}
-			}
-			totalParams := runtime.GetBIRFunctionParamCount(rt, candidates[i].FunctionLookupKey)
-			extraArgCount := 0
-			if totalParams >= 0 {
-				extraArgCount = totalParams - nonLiteralCount
-			}
-
-			var invocationArgs []values.BalValue
-			if extraArgCount > 0 {
-				var bodyBuf []byte
-				var bodyStream io.ReadCloser
-				cl := r.ContentLength
-				if r.Body == nil || cl == 0 {
-					// no body or explicitly empty
-				} else if cl >= 0 && cl <= eagerBufferThreshold {
-					data, _ := io.ReadAll(r.Body)
-					_ = r.Body.Close()
-					bodyBuf = data
-					cl = int64(len(data))
-				} else {
-					bodyStream = r.Body
-				}
-				reqObj := buildRequest(ctx.TypeCtx, r.Method, r.URL.Path, r.Proto, r.Header, bodyStream, cl, r.URL.RawQuery, bodyBuf)
-				invocationArgs = []values.BalValue{reqObj}
-			} else if r.Body != nil {
-				// Resource method does not take a Request parameter; discard the body.
-				_ = r.Body.Close()
-			}
-			result, err := ctx.InvokeMethod(handle, invocationArgs)
-			if err != nil {
-				writeErrorJSON(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-			writeResult(ctx.TypeCtx, w, r, result)
+		var invocationArgs []values.BalValue
+		if extraArgs > 0 {
+			// The resource declares a parameter beyond its path params; inject the request.
+			invocationArgs = []values.BalValue{buildRequestFromHTTP(ctx.TypeCtx, r)}
+		} else if r.Body != nil {
+			// Resource takes no Request parameter; discard the body.
+			_ = r.Body.Close()
+		}
+		result, err := ctx.InvokeMethod(handle, invocationArgs)
+		if err != nil {
+			writeErrorJSON(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
+		writeResult(ctx.TypeCtx, w, r, result)
+		return
 	}
-	// Path matched a service but no accessor+path combination worked. Check whether the
-	// path would have matched under a different HTTP method and return 405 if so.
+	// The path matched a service but no resource under the requested method. If
+	// the same path resolves under a different method it is a 405; otherwise 404.
 	for _, accessor := range found.svcObj.AllResourceMethodNames() {
 		if accessor == httpMethod || accessor == "default" {
 			continue
 		}
-		candidates, _ := found.svcObj.ResourceEntries(accessor)
-		for i := range candidates {
-			if _, ok := coercePathForCandidate(ctx.TypeCtx, &candidates[i], segments); ok {
-				writeErrorJSON(w, r, http.StatusMethodNotAllowed, "method not allowed for path")
-				return
-			}
+		if _, _, ok := ctx.LookupResourceMethodByPath(found.svcObj, accessor, segments); ok {
+			writeErrorJSON(w, r, http.StatusMethodNotAllowed, "method not allowed for path")
+			return
 		}
 	}
 	writeErrorJSON(w, r, http.StatusNotFound, "no matching resource found for path")
@@ -538,99 +509,24 @@ func splitURLPath(p string) []string {
 	return strings.Split(p, "/")
 }
 
-// coercePathForCandidate tries to coerce URL string segments to the typed values expected
-// by the candidate resource entry. Returns (nil, false) if the segments don't match.
-func coercePathForCandidate(tc semtypes.Context, entry *values.ResourceEntry, segments []string) ([]values.BalValue, bool) {
-	required := len(entry.PathSegments)
-	hasRest := !semtypes.IsNever(entry.RestSegmentTy)
-	if len(segments) < required {
-		return nil, false
+// buildRequestFromHTTP builds an http:Request value from r, buffering small
+// bodies eagerly and streaming large ones lazily for passthrough.
+func buildRequestFromHTTP(tc semtypes.Context, r *http.Request) *values.Object {
+	var bodyBuf []byte
+	var bodyStream io.ReadCloser
+	cl := r.ContentLength
+	switch {
+	case r.Body == nil || cl == 0:
+		// no body or explicitly empty
+	case cl >= 0 && cl <= eagerBufferThreshold:
+		data, _ := io.ReadAll(r.Body)
+		_ = r.Body.Close()
+		bodyBuf = data
+		cl = int64(len(data))
+	default:
+		bodyStream = r.Body
 	}
-	if len(segments) > required && !hasRest {
-		return nil, false
-	}
-
-	result := make([]values.BalValue, len(segments))
-	for i := range required {
-		seg := entry.PathSegments[i]
-		v, ok := coerceSegment(tc, seg.Ty, segments[i])
-		if !ok {
-			return nil, false
-		}
-		result[i] = v
-	}
-	for i := required; i < len(segments); i++ {
-		v, ok := coerceSegment(tc, entry.RestSegmentTy, segments[i])
-		if !ok {
-			return nil, false
-		}
-		result[i] = v
-	}
-	return result, true
-}
-
-// decodeBalIdentifier converts a Ballerina identifier token text to its URL-path form:
-// strips a leading quoted-identifier prefix (') and replaces backslash escapes (\X → X).
-func decodeBalIdentifier(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	if s[0] == '\'' {
-		s = s[1:]
-	}
-	if !strings.ContainsRune(s, '\\') {
-		return s
-	}
-	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' && i+1 < len(s) {
-			i++
-		}
-		b.WriteByte(s[i])
-	}
-	return b.String()
-}
-
-// coerceSegment coerces a URL path segment string to a typed value matching segTy.
-func coerceSegment(tc semtypes.Context, segTy semtypes.SemType, s string) (values.BalValue, bool) {
-	// Literal segment: must equal the expected string constant, after decoding any
-	// Ballerina quoted-identifier prefix or backslash escapes from the stored literal.
-	if shape := semtypes.SingleShape(segTy); shape.IsPresent() {
-		if lit, ok := shape.Get().Value.(string); ok {
-			if s != decodeBalIdentifier(lit) {
-				return nil, false
-			}
-			// Return the raw stored literal so its singleton type matches the stored
-			// entry type when LookupResourceMethod re-validates via resourcePathMatches.
-			return lit, true
-		}
-	}
-	// Parameter segment: coerce based on type.
-	if semtypes.IsSubtype(tc, semtypes.INT, segTy) {
-		n, err := strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			return nil, false
-		}
-		return n, true
-	}
-	if semtypes.IsSubtype(tc, semtypes.FLOAT, segTy) {
-		f, err := strconv.ParseFloat(s, 64)
-		if err != nil {
-			return nil, false
-		}
-		return f, true
-	}
-	if semtypes.IsSubtype(tc, semtypes.BOOLEAN, segTy) {
-		switch s {
-		case "true":
-			return true, true
-		case "false":
-			return false, true
-		}
-		return nil, false
-	}
-	// STRING or any other type: accept as-is.
-	return s, true
+	return buildRequest(tc, r.Method, r.URL.Path, r.Proto, r.Header, bodyStream, cl, r.URL.RawQuery, bodyBuf)
 }
 
 // buildRequest constructs a Ballerina Request object from HTTP request data.

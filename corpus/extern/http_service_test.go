@@ -60,6 +60,26 @@ func TestHttpServiceRouting(t *testing.T) {
 	runExtern(t, fileCase("http-svc-routing-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
+// TestHttpServiceMultiService attaches two services at distinct base paths to a
+// single listener and confirms each routes to the correct service.
+func TestHttpServiceMultiService(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-svc-multi-service-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceTypedParams exercises the runtime path dispatcher's coercion of
+// boolean, decimal, and string path parameters.
+func TestHttpServiceTypedParams(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-svc-typed-params-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceDuplicateBasePath verifies that attaching two services at the
+// same base path fails at listener-init time with a runtime error.
+func TestHttpServiceDuplicateBasePath(t *testing.T) {
+	runExtern(t, fileCase("http-svc-dup-path-p"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
 // TestHttpServiceTLS exercises a TLS listener: the server loads its cert/key
 // from disk (realFS) and the client connects over https with verification
 // disabled for the self-signed cert.

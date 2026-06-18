@@ -17,9 +17,13 @@
 package exec
 
 import (
+	"strconv"
+
+	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
 
@@ -64,6 +68,176 @@ func LookupResourceMethod(ctx *extern.Context, obj *values.Object, resourceMetho
 		return nil, false
 	}
 	return newResourceHandle(obj, matches[0], path), true
+}
+
+// LookupResourceMethodByPath resolves a resource method from a RAW, untyped
+// path: the URL-style string segments relative to the receiver's attach point
+// (e.g. ["items", "42"]). Unlike LookupResourceMethod — which matches the
+// shapes of already-typed BalValues — this entry point coerces each string
+// segment to the parameter type the candidate declares (int/float/decimal/
+// boolean/string, plus literal segments), then selects the unique matching
+// candidate. It is meant for network dispatchers (e.g. the HTTP listener) that
+// only have the wire-format path.
+//
+// The second result is the number of NON-path parameters the resolved resource
+// expects (a value injected by the caller, such as an http:Request); path
+// parameters are already baked into the returned handle. The third result is
+// false when no candidate matches or when more than one matches (ambiguous).
+func LookupResourceMethodByPath(ctx *extern.Context, obj *values.Object, accessor string, segments []string) (any, int, bool) {
+	candidates, ok := obj.ResourceEntries(accessor)
+	if !ok {
+		return nil, 0, false
+	}
+	var (
+		matchEntry *values.ResourceEntry
+		matchPath  []values.BalValue
+		count      int
+	)
+	for i := range candidates {
+		pathVals, ok := coercePathForEntry(ctx.TypeCtx, &candidates[i], segments)
+		if !ok {
+			continue
+		}
+		matchEntry = &candidates[i]
+		matchPath = pathVals
+		count++
+	}
+	if count != 1 {
+		return nil, 0, false
+	}
+	return newResourceHandle(obj, matchEntry, matchPath), resourceExtraArgCount(ctx, matchEntry), true
+}
+
+// resourceExtraArgCount returns how many parameters of the resource function
+// are not bound from the path (i.e. supplied by the caller). It mirrors the
+// arity accounting the path matcher relies on: total required params minus the
+// non-literal path-parameter segments (the rest segment, if any, lives in the
+// function's rest parameter, not RequiredParams).
+func resourceExtraArgCount(ctx *extern.Context, entry *values.ResourceEntry) int {
+	fn := ctx.Env.Registry.(*modules.Registry).GetBIRFunction(entry.FunctionLookupKey)
+	if fn == nil {
+		return 0
+	}
+	nonLiteral := 0
+	for i := range entry.PathSegments {
+		if _, isLit := values.LiteralPathSegment(entry.PathSegments[i]); !isLit {
+			nonLiteral++
+		}
+	}
+	if extra := len(fn.RequiredParams) - nonLiteral; extra > 0 {
+		return extra
+	}
+	return 0
+}
+
+// coercePathForEntry coerces the URL string segments to the typed values the
+// candidate resource entry expects, including any rest segments. Returns
+// (nil, false) when the segment count or any segment type does not match.
+func coercePathForEntry(tc semtypes.Context, entry *values.ResourceEntry, segments []string) ([]values.BalValue, bool) {
+	required := len(entry.PathSegments)
+	hasRest := !semtypes.IsNever(entry.RestSegmentTy)
+	if len(segments) < required {
+		return nil, false
+	}
+	if len(segments) > required && !hasRest {
+		return nil, false
+	}
+	result := make([]values.BalValue, len(segments))
+	for i := 0; i < required; i++ {
+		v, ok := coerceSegment(tc, entry.PathSegments[i].Ty, segments[i])
+		if !ok {
+			return nil, false
+		}
+		result[i] = v
+	}
+	for i := required; i < len(segments); i++ {
+		v, ok := coerceSegment(tc, entry.RestSegmentTy, segments[i])
+		if !ok {
+			return nil, false
+		}
+		result[i] = v
+	}
+	return result, true
+}
+
+// coerceSegment coerces a single URL path segment string to a typed value
+// matching segTy. Literal segments must equal the stored literal (after
+// decoding Ballerina quoted-identifier syntax). Parameter segments are parsed
+// by type; an unrecognised type is accepted as a string.
+func coerceSegment(tc semtypes.Context, segTy semtypes.SemType, s string) (values.BalValue, bool) {
+	if shape := semtypes.SingleShape(segTy); shape.IsPresent() {
+		if lit, ok := shape.Get().Value.(string); ok {
+			if s != decodeBalIdentifier(lit) {
+				return nil, false
+			}
+			// Return the stored literal so its singleton type matches the entry.
+			return lit, true
+		}
+	}
+	if semtypes.IsSubtype(tc, semtypes.INT, segTy) {
+		n, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, false
+		}
+		return n, true
+	}
+	if semtypes.IsSubtype(tc, semtypes.FLOAT, segTy) {
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, false
+		}
+		return f, true
+	}
+	if semtypes.IsSubtype(tc, semtypes.DECIMAL, segTy) {
+		d, derr := decimal.FromString(s)
+		if derr != nil {
+			return nil, false
+		}
+		return d, true
+	}
+	if semtypes.IsSubtype(tc, semtypes.BOOLEAN, segTy) {
+		switch s {
+		case "true":
+			return true, true
+		case "false":
+			return false, true
+		}
+		return nil, false
+	}
+	// STRING or any other type: accept as-is.
+	return s, true
+}
+
+// decodeBalIdentifier converts a Ballerina identifier token text to its
+// URL-path form: it strips a leading quoted-identifier prefix (') and removes
+// backslash escapes (\X -> X).
+func decodeBalIdentifier(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	if s[0] == '\'' {
+		s = s[1:]
+	}
+	if !containsByte(s, '\\') {
+		return s
+	}
+	out := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			i++
+		}
+		out = append(out, s[i])
+	}
+	return string(out)
+}
+
+func containsByte(s string, b byte) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return true
+		}
+	}
+	return false
 }
 
 // Invoke calls the closure captured by the handle returned from one of
