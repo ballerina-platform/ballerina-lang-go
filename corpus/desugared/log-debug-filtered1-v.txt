@@ -14,7 +14,8 @@
       (expression-stmt
         (invocation log printDebug (
           (simple-var-ref $desugar$0)
-          (simple-var-ref $desugar$1))))
+          (simple-var-ref $desugar$1)
+          (mapping-constructor-expr))))
       (expression-stmt
         (invocation io println (
           (literal ok)))))))

@@ -2,7 +2,9 @@
   (bb0 () ()
     (expression-stmt
       (invocation log printDebug (
-        (literal filtered debug message))))
+        (literal filtered debug message)
+        (named-arg keyValues
+          (mapping-constructor-expr)))))
     (expression-stmt
       (invocation io println (
         (literal ok))))

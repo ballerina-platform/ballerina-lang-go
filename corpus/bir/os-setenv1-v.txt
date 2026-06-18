@@ -13,7 +13,9 @@ main() -> nil|error{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb3 {
@@ -34,7 +36,9 @@ main() -> nil|error{
     %13 ? bb7 : bb8;
   }
   bb7 {
-    %0 = $desugar$1;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$1);
+    PopScopeFrame
     return;
   }
   bb8 {
