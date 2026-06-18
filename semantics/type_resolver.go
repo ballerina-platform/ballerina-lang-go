@@ -1012,6 +1012,10 @@ func resolveTopLevelAnnotationAttachments(t typeResolver, pkg *ast.BLangPackage)
 	for i := range pkg.GlobalVars {
 		collectAnnotationEvaluationTasks(t, &pkg.GlobalVars[i], ast.Point_VAR, model.SymbolRef{}, &tasks)
 	}
+	// Collection performs attachment validation and records source order first.
+	// Evaluation then uses one shared constant cache and commits values after
+	// workers finish, avoiding concurrent mutation of type annotation maps while
+	// still preserving repeated-annotation order.
 	evaluateAnnotationTasks(t, tasks)
 	if initialGlobalCount < len(pkg.GlobalVars) {
 		globals := make([]ast.BLangSimpleVariable, 0, len(pkg.GlobalVars))
