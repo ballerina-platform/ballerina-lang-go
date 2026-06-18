@@ -1241,6 +1241,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			return vals[0], nil
 		})
+
+	// Server-side listener/service support (see http_server.go).
+	registerListenerExterns(rt)
 }
 
 // splitOutsideQuotes splits s on every occurrence of sep that is not inside a

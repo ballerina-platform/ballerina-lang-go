@@ -165,6 +165,26 @@ func (rt *Runtime) GetTypeEnv() semtypes.Env {
 	return rt.env.TypeEnv
 }
 
+// NewExternContext creates a properly initialised extern.Context with a fresh
+// call stack. Use this when dispatching Ballerina code from outside the main
+// interpreter loop, such as from HTTP handler goroutines. Each concurrent
+// execution path must have its own context.
+func (rt *Runtime) NewExternContext() *extern.Context {
+	return exec.CreateContext(rt.env)
+}
+
+// GetBIRFunctionParamCount returns the number of required parameters of the BIR
+// function registered under lookupKey, or -1 if no such function is registered.
+// It is used by extern dispatch (e.g. the HTTP listener) to determine a
+// resource method's arity before constructing its arguments.
+func GetBIRFunctionParamCount(rt *Runtime, lookupKey string) int {
+	fn := rt.registry().GetBIRFunction(lookupKey)
+	if fn == nil {
+		return -1
+	}
+	return len(fn.RequiredParams)
+}
+
 // RegisterExternFunction registers a native (extern) function implementation in
 // the given runtime instance so it can be called from interpreted BIR code.
 func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl extern.NativeFunc) {
