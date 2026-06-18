@@ -39,8 +39,7 @@ func birLoc(de *diagnostics.DiagnosticEnv, pos diagnostics.Location) Location {
 
 type Context struct {
 	CompilerContext *compilerctx.CompilerContext
-	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
-	packageID       *model.PackageID            // Current package ID
+	packageID       *model.PackageID // Current package ID
 	birPkg          *BIRPackage
 	typeCtx         semtypes.Context
 	// PR-TODO: extract them to memoized types struc
@@ -345,6 +344,10 @@ func buildLookupKey(pkg model.PackageIdentifier, qualifiedName string) string {
 	return pkg.Organization + "/" + pkg.Package + ":" + qualifiedName
 }
 
+func packageIDFromIdentifier(ctx *compilerctx.CompilerContext, pkg model.PackageIdentifier) *model.PackageID {
+	return ctx.NewPackageID(model.Name(pkg.Organization), model.CreateNameComps(model.Name(pkg.Package)), model.Name(pkg.Version))
+}
+
 func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
 	sym := ctx.CompilerContext.GetSymbol(symRef)
 	if mono, ok := sym.(model.MonomorphicFunctionSymbol); ok {
@@ -367,7 +370,6 @@ func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
 func newContext(compilerCtx *compilerctx.CompilerContext, packageID *model.PackageID, birPkg *BIRPackage) *Context {
 	c := &Context{
 		CompilerContext:  compilerCtx,
-		importAliasMap:   make(map[string]*model.PackageID),
 		packageID:        packageID,
 		birPkg:           birPkg,
 		serviceClassKeys: make(map[*ast.BLangService]string),
@@ -381,7 +383,6 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 	birPkg.PackageID = ast.PackageID
 	genCtx := newContext(ctx, ast.PackageID, birPkg)
 	birPkg.GlobalVars = make(map[string]BIRGlobalVariableDcl)
-	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, globalVar := range ast.GlobalVars {
 		addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
@@ -415,53 +416,6 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 		}
 	}
 	return birPkg
-}
-
-func processImports(compilerCtx *compilerctx.CompilerContext, genCtx *Context, imports []ast.BLangImportPackage, birPkg *BIRPackage) {
-	for _, importPkg := range imports {
-		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
-			var orgName model.Name
-			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
-				orgName = model.Name(importPkg.OrgName.Value)
-			} else if genCtx.packageID != nil && genCtx.packageID.OrgName != nil {
-				orgName = *genCtx.packageID.OrgName
-			} else {
-				orgName = model.ANON_ORG
-			}
-			var nameComps []model.Name
-			if len(importPkg.PkgNameComps) > 0 {
-				for _, comp := range importPkg.PkgNameComps {
-					nameComps = append(nameComps, model.Name(comp.Value))
-				}
-			} else {
-				nameComps = []model.Name{model.DEFAULT_PACKAGE}
-			}
-			var version model.Name
-			if importPkg.Version != nil && importPkg.Version.Value != "" {
-				version = model.Name(importPkg.Version.Value)
-			} else {
-				version = model.DEFAULT_VERSION
-			}
-			pkgID := compilerCtx.NewPackageID(orgName, nameComps, version)
-			genCtx.importAliasMap[importPkg.Alias.Value] = pkgID
-		}
-		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
-	}
-}
-
-func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportModule {
-	// FIXME: fix this when we have symbol resolution, given only import we support is io we are going to hardcode it
-	orgName := model.Name("ballerina")
-	pkgName := model.Name("io")
-	version := model.Name("0.0.0")
-	return &BIRImportModule{
-		PackageID: &model.PackageID{
-			OrgName: &orgName,
-			PkgName: &pkgName,
-			Name:    &pkgName,
-			Version: &version,
-		},
-	}
 }
 
 func addGlobalVar(birPkg *BIRPackage, dcl BIRGlobalVariableDcl) {
@@ -1568,11 +1522,7 @@ func generateCall(ctx context, bb *BIRBasicBlock, callable callable) expressionE
 		sym := ctx.getSymbol(symRef)
 		if sym.Kind() == model.SymbolKindFunction {
 			call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.function().birCx, symRef)
-			if inv, ok := callable.(*ast.BLangInvocation); ok && inv.PkgAlias != nil && inv.PkgAlias.Value != "" {
-				call.CalleePkg = ctx.function().birCx.importAliasMap[inv.PkgAlias.Value]
-			} else if ctx.function().birCx.packageID != nil {
-				call.CalleePkg = ctx.function().birCx.packageID
-			}
+			call.CalleePkg = packageIDFromIdentifier(ctx.compilerContext(), ctx.symbolPackage(symRef))
 		} else {
 			call.Kind = INSTRUCTION_KIND_FP_CALL
 			unnarrowedRef := ctx.unnarrowedSymbol(symRef)
@@ -1754,12 +1704,7 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 	}
 
 	// Global variable reference
-	var pkgId *model.PackageID
-	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
-		pkgId = ctx.function().birCx.importAliasMap[expr.PkgAlias.Value]
-	} else {
-		pkgId = ctx.function().birCx.packageID
-	}
+	pkgId := packageIDFromIdentifier(ctx.compilerContext(), ctx.symbolPackage(symRef))
 	gv := &BIRGlobalVariableDcl{}
 	gv.Name = model.Name(varName)
 	gv.PkgId = pkgId
