@@ -36,12 +36,6 @@ var updateCFG = flag.Bool("update", false, "update expected CFG text files")
 var cfgGenerationSkipList = []string{
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
 	"subset8/08-xml/namespace12-v.bal",
-	// Standalone CFG generation yields a nil CFG for these ballerina/log
-	// programs. Pre-existing on the stdlibs-l2 branch (not introduced by the
-	// merge); the full integration pipeline compiles and runs them fine (see
-	// corpus/integration/log-*).
-	"log-debug-filtered1-v.bal",
-	"log-kv1-v.bal",
 }
 
 func TestCFGGeneration(t *testing.T) {

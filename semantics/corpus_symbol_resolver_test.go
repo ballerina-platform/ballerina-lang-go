@@ -33,13 +33,6 @@ import (
 var symbolResolverSkipList = []string{
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
 	"subset8/08-xml/namespace12-v.bal",
-	// The single-file standalone resolver pipeline cannot compile the
-	// ballerina/os package (its Process.output has a cross-module imported-value
-	// default parameter, io:stdout), so `import ballerina/os` is unresolved here.
-	// The full integration pipeline compiles and runs these fine (see
-	// corpus/integration/os-*).
-	"os-env1-v.bal",
-	"os-setenv1-v.bal",
 }
 
 func TestSymbolResolver(t *testing.T) {
