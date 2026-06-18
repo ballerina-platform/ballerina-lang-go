@@ -1015,7 +1015,7 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 	if n.GetPackageAlias() != nil {
 		prefix = n.GetPackageAlias().GetValue()
 	}
-	resolveTypeRef(resolver, name, prefix, n.GetPosition(), n)
+	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n, "Unknown type")
 	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
@@ -1034,7 +1034,14 @@ type symbolRefNode interface {
 	SetSymbol(symbolRef model.SymbolRef)
 }
 
-func resolveSymbolRef[T symbolResolver](resolver T, name, prefix string, pos diagnostics.Location, target symbolRefNode) {
+func resolveSymbolRef[T symbolResolver](
+	resolver T,
+	name string,
+	prefix string,
+	pos diagnostics.Location,
+	target symbolRefNode,
+	unknownMessage string,
+) {
 	if prefix != "" {
 		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
@@ -1044,23 +1051,7 @@ func resolveSymbolRef[T symbolResolver](resolver T, name, prefix string, pos dia
 	} else {
 		symRef, _, ok := resolver.GetSymbol(name)
 		if !ok {
-			semanticError(resolver, "Unknown symbol: "+name, pos)
-		}
-		target.SetSymbol(symRef)
-	}
-}
-
-func resolveTypeRef[T symbolResolver](resolver T, name, prefix string, pos diagnostics.Location, target symbolRefNode) {
-	if prefix != "" {
-		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
-		if !ok {
-			semanticError(resolver, "Unknown symbol: "+name, pos)
-		}
-		target.SetSymbol(symRef)
-	} else {
-		symRef, _, ok := resolver.GetSymbol(name)
-		if !ok {
-			semanticError(resolver, "Unknown type: "+name, pos)
+			semanticError(resolver, unknownMessage+": "+name, pos)
 		}
 		target.SetSymbol(symRef)
 	}
@@ -1088,7 +1079,7 @@ func referSimpleVariableReference[T symbolResolver](resolver T, n ast.SimpleVari
 	if n.GetPackageAlias() != nil {
 		prefix = n.GetPackageAlias().GetValue()
 	}
-	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n.(ast.BNodeWithSymbol))
+	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n.(ast.BNodeWithSymbol), "Unknown symbol")
 	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
@@ -1102,7 +1093,7 @@ type functionRefNode interface {
 func resolveFunctionRef[T symbolResolver](resolver T, invocation *ast.BLangInvocation) {
 	name := invocation.GetName().GetValue()
 	prefix := invocation.GetPackageAlias().GetValue()
-	resolveSymbolRef(resolver, name, prefix, invocation.GetPosition(), invocation)
+	resolveSymbolRef(resolver, name, prefix, invocation.GetPosition(), invocation, "Unknown symbol")
 	markUnprefixedRefUsed(resolver, name, prefix)
 }
 
@@ -1114,7 +1105,7 @@ type variableNode interface {
 
 func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	name := variable.GetName().GetValue()
-	resolveSymbolRef(resolver, name, "", variable.GetPosition(), variable)
+	resolveSymbolRef(resolver, name, "", variable.GetPosition(), variable, "Unknown symbol")
 }
 
 // isShadowed checks if a name is already defined in an enclosing block scope.
