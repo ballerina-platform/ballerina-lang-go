@@ -25,16 +25,17 @@ import (
 	"ballerina-lang-go/values"
 )
 
+// materializeConstantRef replaces a reference to a folded constant with a
+// literal carrying the folded value — the "apply" of the symbol's stored value
+// (the E in the design), realized here because model cannot import ast. Returns
+// nil for non-foldable constants (e.g. casts that panic at runtime), which keep
+// flowing through BIR as global variables.
 func materializeConstantRef(cx *functionContext, ref *ast.BLangSimpleVarRef) ast.BLangExpression {
-	sym := cx.getSymbol(ref.Symbol())
-	if sym.Kind() != model.SymbolKindConstant {
-		return nil
-	}
-	valueSym, ok := sym.(*model.ValueSymbol)
+	constSym, ok := cx.getSymbol(ref.Symbol()).(*model.ConstantValueSymbol)
 	if !ok {
 		return nil
 	}
-	value, ok := valueSym.ConstantValue()
+	value, ok := constSym.ConstantValue()
 	if !ok || !values.IsSerializableConstValue(value) {
 		return nil
 	}

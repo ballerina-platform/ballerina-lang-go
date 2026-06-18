@@ -845,7 +845,7 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 		// always valid
 	case *ast.BLangSimpleVarRef:
 		sym := ctx.GetSymbol(e.Symbol())
-		if vs, ok := sym.(*model.ValueSymbol); ok && vs.IsConst() {
+		if vs, ok := sym.(model.ValueSymbolView); ok && vs.IsConst() {
 			return
 		}
 		onNonConst(expr)
@@ -1839,7 +1839,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		if fa := enclosingFunctionAnalyzer(a); fa != nil && fa.locals != nil {
 			v := n.Var
 			final := v.IsFinal()
-			if sym, ok := a.ctx().GetSymbol(v.Symbol()).(*model.ValueSymbol); ok && sym.IsFinal() {
+			if sym, ok := a.ctx().GetSymbol(v.Symbol()).(model.ValueSymbolView); ok && sym.IsFinal() {
 				final = true
 			}
 			fa.locals.define(v.Symbol(), varDeclMetadata{
@@ -2178,7 +2178,7 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			}
 		case *ast.BLangSimpleVarRef:
 			sym := a.ctx().GetSymbol(inner.Symbol())
-			varSym, ok := sym.(*model.ValueSymbol)
+			varSym, ok := sym.(model.ValueSymbolView)
 			if !ok {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
 				return true

@@ -27,21 +27,21 @@
         (simple-var-ref v)
         (match-clause
           (const-pattern
-            (simple-var-ref ZERO))
+            (numeric-literal 0))
           (block-stmt
             (expression-stmt
               (invocation io println (
                 (literal none))))))
         (match-clause
           (const-pattern
-            (simple-var-ref ONE))
+            (numeric-literal 1))
           (block-stmt
             (expression-stmt
               (invocation io println (
                 (literal one))))))
         (match-clause
           (const-pattern
-            (simple-var-ref TWO))
+            (numeric-literal 2))
           (block-stmt
             (expression-stmt
               (invocation io println (

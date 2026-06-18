@@ -5692,7 +5692,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		sig := sym.Signature()
 		argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv, expectedType)
 		return argTys, fnSymbol, chain, ok
-	case *model.ValueSymbol:
+	case model.ValueSymbolView:
 		narrowedSymbol := lookupSymbol(chain, fnSymbol)
 		inv.SetResolvedSymbol(narrowedSymbol)
 		fnTy := t.symbolType(narrowedSymbol)
@@ -6732,9 +6732,7 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 	}
 	value, err := evaluateConstantExpression(t, expr, newConstantEvaluationCache(false))
 	if err == nil {
-		constant.ConstantValue = value
-		constant.ConstantValueKnown = true
-		if sym, ok := t.getSymbol(constant.Symbol()).(*model.ValueSymbol); ok {
+		if sym, ok := t.getSymbol(constant.Symbol()).(*model.ConstantValueSymbol); ok {
 			sym.SetConstantValue(value)
 		}
 	}

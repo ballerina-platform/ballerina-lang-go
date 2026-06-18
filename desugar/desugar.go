@@ -272,7 +272,7 @@ type moduleInitNode struct {
 	name *ast.BLangIdentifier
 }
 
-func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
+func collectModuleInitNodes(pkgCtx *packageContext, pkg *ast.BLangPackage) []moduleInitNode {
 	nodes := make([]moduleInitNode, 0, len(pkg.GlobalVars)+len(pkg.Constants))
 	for i := range pkg.GlobalVars {
 		gv := &pkg.GlobalVars[i]
@@ -288,7 +288,7 @@ func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
 	}
 	for i := range pkg.Constants {
 		c := &pkg.Constants[i]
-		if constantFoldedToSymbolValue(c) {
+		if constantFoldedToSymbolValue(pkgCtx.getSymbol(c.Symbol())) {
 			continue
 		}
 		var expr ast.BLangExpression
@@ -304,8 +304,16 @@ func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
 	return nodes
 }
 
-func constantFoldedToSymbolValue(c *ast.BLangConstant) bool {
-	return c.ConstantValueKnown && values.IsSerializableConstValue(c.ConstantValue)
+// constantFoldedToSymbolValue reports whether the constant was folded at compile
+// time to a serializable value held on its symbol. Such constants are inlined at
+// their use sites during desugar and never reach BIR, so they are skipped here.
+func constantFoldedToSymbolValue(sym model.Symbol) bool {
+	constSym, ok := sym.(*model.ConstantValueSymbol)
+	if !ok {
+		return false
+	}
+	value, known := constSym.ConstantValue()
+	return known && values.IsSerializableConstValue(value)
 }
 
 // We desugar module initializers into the init function, so they should no longer be there.
@@ -460,7 +468,7 @@ func buildInitAssignment(compilerCtx *context.CompilerContext, node moduleInitNo
 func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
 	var initStmts []ast.StatementNode
 
-	nodes := collectModuleInitNodes(pkg)
+	nodes := collectModuleInitNodes(pkgCtx, pkg)
 	order, ok := toplogicallySortInits(compilerCtx, nodes)
 	if !ok {
 		pkgCtx.internalError("module init dependency ordering failed")

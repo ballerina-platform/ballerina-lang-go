@@ -556,8 +556,8 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for _, constDef := range pkg.Constants {
 		name := constDef.Name.Value
 		isPublic := constDef.IsPublic()
-		symbol := model.NewValueSymbol(name, isPublic, true, false)
-		if !addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition()) {
+		symbol := model.NewConstantValueSymbol(name, isPublic)
+		if !addTopLevelSymbol(moduleResolver, name, symbol, constDef.Name.GetPosition()) {
 			continue
 		}
 		if !isPublic {

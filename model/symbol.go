@@ -66,6 +66,20 @@ type Symbol interface {
 	Copy() Symbol
 }
 
+// ValueSymbolView is satisfied by both *ValueSymbol and *ConstantValueSymbol.
+// Callers that only care about a symbol's value-symbol facets (whether it is a
+// constant, parameter, final, etc.) should type-assert against this interface
+// rather than the concrete *ValueSymbol, so that constants — which are stored as
+// *ConstantValueSymbol — are matched too.
+type ValueSymbolView interface {
+	Symbol
+	IsConst() bool
+	IsParameter() bool
+	IsIsolated() bool
+	IsFinal() bool
+	IsConfigurable() bool
+}
+
 // symbolTypeSetter is a private interface for updating symbol types during type resolution.
 // All concrete symbol types implement this through symbolBase.
 type symbolTypeSetter interface {
@@ -291,13 +305,27 @@ type (
 
 	ValueSymbol struct {
 		symbolBase
-		isConst            bool
-		isParameter        bool
-		isIsolated         bool
-		isFinal            bool
-		isConfigurable     bool
-		constantValue      values.BalValue
-		constantValueKnown bool
+		isConst        bool
+		isParameter    bool
+		isIsolated     bool
+		isFinal        bool
+		isConfigurable bool
+	}
+
+	// ConstantValueSymbol is a ValueSymbol for a module constant whose
+	// expression has been folded at compile time. It carries the folded value
+	// (the "E" of the design): a restricted, non-cyclic, serializable BalValue.
+	//
+	// Folding lives at the symbol level rather than on the type (a type cannot
+	// recover every possible value, e.g. compound shapes) or on the AST (AST
+	// mutations are ephemeral and would not survive incremental compilation).
+	// The value is materialized back into an expression node by the desugar
+	// package (the "apply", analogous to TypeOp.Apply) — that step cannot live
+	// here because model must not import ast.
+	ConstantValueSymbol struct {
+		ValueSymbol
+		value      values.BalValue
+		valueKnown bool
 	}
 
 	functionSymbol struct {
@@ -470,6 +498,9 @@ var (
 	_ MemberCarrier                  = &RecordSymbol{}
 	_ MemberCarrier                  = &ObjectTypeSymbol{}
 	_ Symbol                         = &ValueSymbol{}
+	_ Symbol                         = &ConstantValueSymbol{}
+	_ ValueSymbolView                = &ValueSymbol{}
+	_ ValueSymbolView                = &ConstantValueSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
 	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
@@ -924,17 +955,27 @@ func (vs *ValueSymbol) IsConfigurable() bool { return vs.isConfigurable }
 
 func (vs *ValueSymbol) SetConfigurable() { vs.isConfigurable = true }
 
-func (vs *ValueSymbol) SetConstantValue(value values.BalValue) {
-	vs.constantValue = value
-	vs.constantValueKnown = true
-}
-
-func (vs *ValueSymbol) ConstantValue() (values.BalValue, bool) {
-	return vs.constantValue, vs.constantValueKnown
-}
-
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs
+	return &cp
+}
+
+// SetConstantValue records the folded value for this constant. value must be a
+// restricted, serializable BalValue (see values.IsSerializableConstValue).
+func (cs *ConstantValueSymbol) SetConstantValue(value values.BalValue) {
+	cs.value = value
+	cs.valueKnown = true
+}
+
+// ConstantValue returns the folded value and whether folding succeeded. A
+// constant whose expression cannot be folded (e.g. a cast that panics at
+// runtime) keeps valueKnown false and still flows through BIR as a global.
+func (cs *ConstantValueSymbol) ConstantValue() (values.BalValue, bool) {
+	return cs.value, cs.valueKnown
+}
+
+func (cs *ConstantValueSymbol) Copy() Symbol {
+	cp := *cs
 	return &cp
 }
 
@@ -1063,6 +1104,12 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
 		isConst:     isConst,
 		isParameter: isParameter,
+	}
+}
+
+func NewConstantValueSymbol(name string, isPublic bool) *ConstantValueSymbol {
+	return &ConstantValueSymbol{
+		ValueSymbol: NewValueSymbol(name, isPublic, true, false),
 	}
 }
 

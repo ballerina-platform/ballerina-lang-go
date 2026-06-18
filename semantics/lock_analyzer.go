@@ -59,7 +59,7 @@ func findRestrictedVariable(a analyzer, body *ast.BLangBlockStmt) (key string, s
 		case *ast.BLangSimpleVarRef:
 			unnarrowed := a.ctx().UnnarrowedSymbol(n.Symbol())
 			switch s := a.ctx().GetSymbol(unnarrowed).(type) {
-			case *model.ValueSymbol:
+			case model.ValueSymbolView:
 				if s.IsIsolated() {
 					if sym != (model.SymbolRef{}) {
 						if unnarrowed != sym {
@@ -354,7 +354,7 @@ func (sa *SemanticAnalyzer) buildModuleVarMetadata() map[model.SymbolRef]varDecl
 	}
 	for _, space := range sa.importedSymbols {
 		for ref, sym := range space.PublicMainSymbols() {
-			vs, ok := sym.(*model.ValueSymbol)
+			vs, ok := sym.(model.ValueSymbolView)
 			if !ok || vs.IsParameter() {
 				continue
 			}
@@ -424,7 +424,7 @@ func isIsolatedExpression(a analyzer, expr ast.BLangExpression) bool {
 
 func checkIsolatedModuleVarOutsideLock(a analyzer, ref *ast.BLangSimpleVarRef) {
 	unnarrowed := a.ctx().UnnarrowedSymbol(ref.Symbol())
-	sym, ok := a.ctx().GetSymbol(unnarrowed).(*model.ValueSymbol)
+	sym, ok := a.ctx().GetSymbol(unnarrowed).(model.ValueSymbolView)
 	if !ok || !sym.IsIsolated() {
 		return
 	}
@@ -480,7 +480,7 @@ func inInitFunction(a analyzer) bool {
 // expression.
 func (sa *SemanticAnalyzer) validateModuleLevelIsolatedDecls(pkg *ast.BLangPackage) {
 	check := func(expr ast.BLangExpression, sym model.SymbolRef) {
-		vs, ok := sa.ctx().GetSymbol(sym).(*model.ValueSymbol)
+		vs, ok := sa.ctx().GetSymbol(sym).(model.ValueSymbolView)
 		if !ok || !vs.IsIsolated() {
 			return
 		}

@@ -232,11 +232,16 @@ func (e *constantExpressionEvaluator) evaluateConstantReference(ref model.Symbol
 	if result, ok := e.cache.get(ref); ok {
 		return result.value, result.err
 	}
+	// A folded value on the symbol is authoritative — this covers both
+	// constants already folded earlier in this module and constants imported
+	// from another module (whose folded value was serialized with the symbol).
+	if sym, ok := e.resolver.getSymbol(ref).(*model.ConstantValueSymbol); ok {
+		if value, known := sym.ConstantValue(); known {
+			return value, nil
+		}
+	}
 	if p, ok := e.resolver.(*packageTypeResolver); ok {
 		if constant, ok := p.packageConstants[ref]; ok {
-			if constant.ConstantValueKnown {
-				return constant.ConstantValue, nil
-			}
 			if e.visiting[ref] {
 				return nil, fmt.Errorf("cyclic constant reference to %s", e.resolver.symbolName(ref))
 			}
@@ -247,13 +252,13 @@ func (e *constantExpressionEvaluator) evaluateConstantReference(ref model.Symbol
 			e.visiting[ref] = true
 			value, err := e.evaluate(expr)
 			delete(e.visiting, ref)
+			if err == nil {
+				if sym, ok := e.resolver.getSymbol(ref).(*model.ConstantValueSymbol); ok {
+					sym.SetConstantValue(value)
+				}
+			}
 			result := e.cache.set(ref, constantEvaluationResult{value: value, err: err})
 			return result.value, result.err
-		}
-	}
-	if sym, ok := e.resolver.getSymbol(ref).(*model.ValueSymbol); ok {
-		if value, ok := sym.ConstantValue(); ok {
-			return value, nil
 		}
 	}
 

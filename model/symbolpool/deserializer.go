@@ -139,6 +139,8 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readObjectTypeSymbol(space)
 	case symTagValue:
 		sr.readValueSymbol(space)
+	case symTagConstantValue:
+		sr.readConstantValueSymbol(space)
 	case symTagAnnotation:
 		sr.readAnnotationSymbol(space)
 	case symTagFunction:
@@ -296,31 +298,58 @@ func (sr *symbolReader) setAnnotationValues(sym *model.TypeSymbol) {
 	}
 }
 
-func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
-	name, isPublic, ty := sr.readSymbolBase()
-	var isConst, isParameter, isFinal, isConfigurable, isIsolated bool
-	read(sr.r, &isConst)
-	read(sr.r, &isParameter)
-	read(sr.r, &isFinal)
-	read(sr.r, &isConfigurable)
-	read(sr.r, &isIsolated)
-	sym := model.NewValueSymbol(name, isPublic, isConst, isParameter)
-	sym.SetType(ty)
-	if isFinal {
+type valueSymbolFields struct {
+	name           string
+	isPublic       bool
+	ty             semtypes.SemType
+	isConst        bool
+	isParameter    bool
+	isFinal        bool
+	isConfigurable bool
+	isIsolated     bool
+}
+
+func (sr *symbolReader) readValueSymbolFields() valueSymbolFields {
+	f := valueSymbolFields{}
+	f.name, f.isPublic, f.ty = sr.readSymbolBase()
+	read(sr.r, &f.isConst)
+	read(sr.r, &f.isParameter)
+	read(sr.r, &f.isFinal)
+	read(sr.r, &f.isConfigurable)
+	read(sr.r, &f.isIsolated)
+	return f
+}
+
+func applyValueSymbolFields(sym *model.ValueSymbol, f valueSymbolFields) {
+	sym.SetType(f.ty)
+	if f.isFinal {
 		sym.SetFinal()
 	}
-	if isConfigurable {
+	if f.isConfigurable {
 		sym.SetConfigurable()
 	}
-	if isIsolated {
+	if f.isIsolated {
 		sym.SetIsolated()
 	}
-	var constantValueKnown bool
-	read(sr.r, &constantValueKnown)
-	if constantValueKnown {
+}
+
+func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
+	f := sr.readValueSymbolFields()
+	sym := model.NewValueSymbol(f.name, f.isPublic, f.isConst, f.isParameter)
+	applyValueSymbolFields(&sym, f)
+	space.AddSymbol(f.name, &sym)
+}
+
+func (sr *symbolReader) readConstantValueSymbol(space *model.SymbolSpace) {
+	f := sr.readValueSymbolFields()
+	sym := model.NewConstantValueSymbol(f.name, f.isPublic)
+	applyValueSymbolFields(&sym.ValueSymbol, f)
+	var valueKnown bool
+	read(sr.r, &valueKnown)
+	if valueKnown {
 		sym.SetConstantValue(sr.readAnnotationValue())
 	}
-	space.AddSymbol(name, &sym)
+	space.AddSymbol(f.name, sym)
 }
 
 func (sr *symbolReader) readAnnotationSymbol(space *model.SymbolSpace) {

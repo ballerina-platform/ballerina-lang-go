@@ -27,7 +27,7 @@ import (
 
 const (
 	symMagic   = "\x53\x59\x4d\x42"
-	symVersion = 4
+	symVersion = 5
 )
 
 const (
@@ -41,6 +41,7 @@ const (
 	symTagAnnotation
 	symTagNetworkClass
 	symTagResourceMethod
+	symTagConstantValue
 )
 
 const (
@@ -153,6 +154,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeObjectTypeSymbol(buf, s)
 	case *model.TypeSymbol:
 		return sw.writeTypeSymbol(buf, s)
+	case *model.ConstantValueSymbol:
+		return sw.writeConstantValueSymbol(buf, s)
 	case *model.ValueSymbol:
 		return sw.writeValueSymbol(buf, s)
 	case *model.AnnotationSymbol:
@@ -332,6 +335,10 @@ func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymb
 	if err := write(buf, symTagValue); err != nil {
 		return err
 	}
+	return sw.writeValueSymbolBody(buf, sym)
+}
+
+func (sw *symbolWriter) writeValueSymbolBody(buf *bytes.Buffer, sym *model.ValueSymbol) error {
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
@@ -347,15 +354,22 @@ func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymb
 	if err := write(buf, sym.IsConfigurable()); err != nil {
 		return err
 	}
-	if err := write(buf, sym.IsIsolated()); err != nil {
+	return write(buf, sym.IsIsolated())
+}
+
+func (sw *symbolWriter) writeConstantValueSymbol(buf *bytes.Buffer, sym *model.ConstantValueSymbol) error {
+	if err := write(buf, symTagConstantValue); err != nil {
 		return err
 	}
-	constantValue, constantValueKnown := sym.ConstantValue()
-	if err := write(buf, constantValueKnown); err != nil {
+	if err := sw.writeValueSymbolBody(buf, &sym.ValueSymbol); err != nil {
 		return err
 	}
-	if constantValueKnown {
-		return sw.writeAnnotationValue(buf, constantValue)
+	value, known := sym.ConstantValue()
+	if err := write(buf, known); err != nil {
+		return err
+	}
+	if known {
+		return sw.writeAnnotationValue(buf, value)
 	}
 	return nil
 }

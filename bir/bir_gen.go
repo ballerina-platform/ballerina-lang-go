@@ -373,7 +373,11 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 		addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
 	for _, constant := range ast.Constants {
-		if constantFoldedToSymbolValue(&constant) {
+		// Constants folded to a serializable value are inlined at their use
+		// sites during desugar, so they are dropped from the BIR package
+		// entirely. Only non-foldable constants (e.g. casts that panic at
+		// runtime) remain as globals evaluated by the init function.
+		if constantFoldedToSymbolValue(genCtx.CompilerContext.GetSymbol(constant.Symbol())) {
 			continue
 		}
 		addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
@@ -460,10 +464,19 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	return dcl
 }
 
-func constantFoldedToSymbolValue(c *ast.BLangConstant) bool {
-	return c.ConstantValueKnown && values.IsSerializableConstValue(c.ConstantValue)
+func constantFoldedToSymbolValue(sym model.Symbol) bool {
+	constSym, ok := sym.(*model.ConstantValueSymbol)
+	if !ok {
+		return false
+	}
+	value, known := constSym.ConstantValue()
+	return known && values.IsSerializableConstValue(value)
 }
 
+// transformConstantAsGlobal lowers a non-foldable constant to a BIR global
+// variable. Foldable constants never reach here — they are inlined during
+// desugar — so the declaration has no initial value and is initialized by the
+// init function (where its expression may panic at runtime).
 func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVariableDcl {
 	name := model.Name(c.GetName().GetValue())
 	dcl := BIRGlobalVariableDcl{}
@@ -473,14 +486,6 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
 	dcl.Flags = c.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
-	// Some valid constants cannot be represented as serialized BIR initial
-	// values yet, e.g. non-finite float-to-int casts that must fail at runtime.
-	// Those constants still use the expression path, so the declaration remains
-	// without HasInitialValue.
-	if constantFoldedToSymbolValue(c) {
-		dcl.InitialValue = c.ConstantValue
-		dcl.HasInitialValue = true
-	}
 	return dcl
 }
 
@@ -1769,18 +1774,8 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 			block:  curBB,
 		}
 	}
-	if sym.Kind() == model.SymbolKindConstant {
-		if valueSym, ok := sym.(*model.ValueSymbol); ok {
-			if value, known := valueSym.ConstantValue(); known && values.IsSerializableConstValue(value) {
-				resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-				curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, value, ctx.function().loc(expr.GetPosition())))
-				return expressionEffect{
-					result: resultOperand,
-					block:  curBB,
-				}
-			}
-		}
-	}
+	// Folded constants are inlined during desugar, so a constant reference that
+	// reaches BIR is a non-foldable constant lowered to a global variable.
 
 	// Global variable reference
 	var pkgId *model.PackageID
