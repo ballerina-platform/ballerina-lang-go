@@ -315,6 +315,11 @@ func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 	if isIsolated {
 		sym.SetIsolated()
 	}
+	var constantValueKnown bool
+	read(sr.r, &constantValueKnown)
+	if constantValueKnown {
+		sym.SetConstantValue(sr.readAnnotationValue())
+	}
 	space.AddSymbol(name, &sym)
 }
 

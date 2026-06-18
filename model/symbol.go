@@ -291,11 +291,13 @@ type (
 
 	ValueSymbol struct {
 		symbolBase
-		isConst        bool
-		isParameter    bool
-		isIsolated     bool
-		isFinal        bool
-		isConfigurable bool
+		isConst            bool
+		isParameter        bool
+		isIsolated         bool
+		isFinal            bool
+		isConfigurable     bool
+		constantValue      values.BalValue
+		constantValueKnown bool
 	}
 
 	functionSymbol struct {
@@ -921,6 +923,15 @@ func (vs *ValueSymbol) SetFinal() { vs.isFinal = true }
 func (vs *ValueSymbol) IsConfigurable() bool { return vs.isConfigurable }
 
 func (vs *ValueSymbol) SetConfigurable() { vs.isConfigurable = true }
+
+func (vs *ValueSymbol) SetConstantValue(value values.BalValue) {
+	vs.constantValue = value
+	vs.constantValueKnown = true
+}
+
+func (vs *ValueSymbol) ConstantValue() (values.BalValue, bool) {
+	return vs.constantValue, vs.constantValueKnown
+}
 
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs

@@ -6730,6 +6730,9 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 	if err == nil {
 		constant.ConstantValue = value
 		constant.ConstantValueKnown = true
+		if sym, ok := t.getSymbol(constant.Symbol()).(*model.ValueSymbol); ok {
+			sym.SetConstantValue(value)
+		}
 	}
 
 	// TODO: I am not sure if this is strictly correct given expression type would have changed based on the contextually expected type in things like structure constructor expressions.

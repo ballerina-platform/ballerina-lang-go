@@ -347,7 +347,17 @@ func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymb
 	if err := write(buf, sym.IsConfigurable()); err != nil {
 		return err
 	}
-	return write(buf, sym.IsIsolated())
+	if err := write(buf, sym.IsIsolated()); err != nil {
+		return err
+	}
+	constantValue, constantValueKnown := sym.ConstantValue()
+	if err := write(buf, constantValueKnown); err != nil {
+		return err
+	}
+	if constantValueKnown {
+		return sw.writeAnnotationValue(buf, constantValue)
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeAnnotationSymbol(buf *bytes.Buffer, sym *model.AnnotationSymbol) error {

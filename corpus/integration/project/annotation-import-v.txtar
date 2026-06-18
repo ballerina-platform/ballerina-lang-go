@@ -20,4 +20,7 @@ const-ref
 99
 99
 100
+const-list-ref
+31
+32
 -- stderr --

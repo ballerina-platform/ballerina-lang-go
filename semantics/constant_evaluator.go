@@ -251,6 +251,11 @@ func (e *constantExpressionEvaluator) evaluateConstantReference(ref model.Symbol
 			return result.value, result.err
 		}
 	}
+	if sym, ok := e.resolver.getSymbol(ref).(*model.ValueSymbol); ok {
+		if value, ok := sym.ConstantValue(); ok {
+			return value, nil
+		}
+	}
 
 	value, ok := constantSingleShapeValue(ty)
 	if !ok {

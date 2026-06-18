@@ -37,6 +37,11 @@ type ConstTagged record {|
     string value;
 |};
 
+@meta:info {name: "const-list-ref", code: meta:DEFAULT_CODE, values: meta:DEFAULT_VALUES}
+type ConstListTagged record {|
+    string value;
+|};
+
 public function main() {
     LocalInfo? localInfo = Person.@info;
     if localInfo is LocalInfo {
@@ -93,5 +98,12 @@ public function main() {
         io:println(constInfo.code); // @output 99
         io:println(constInfo.values[0]); // @output 99
         io:println(constInfo.values[1]); // @output 100
+    }
+
+    meta:Info? constListInfo = ConstListTagged.@meta:info;
+    if constListInfo is meta:Info {
+        io:println(constListInfo.name); // @output const-list-ref
+        io:println(constListInfo.values[0]); // @output 31
+        io:println(constListInfo.values[1]); // @output 32
     }
 }

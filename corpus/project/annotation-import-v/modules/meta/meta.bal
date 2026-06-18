@@ -32,6 +32,7 @@ public type NumericInfo record {|
 |};
 
 public const int DEFAULT_CODE = 99;
+public const DEFAULT_VALUES = [31, 32];
 
 public annotation Info info on type;
 public annotation marker on type;
