@@ -55,7 +55,6 @@ func (c *CompilerEnvironment) NewFunctionScope(parent model.Scope, pkg model.Pac
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
 			Main:   c.NewSymbolSpace(pkg),
-			XMLNS:  map[string]string{},
 		},
 	}
 }
@@ -65,7 +64,6 @@ func (c *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Packag
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
 			Main:   c.NewSymbolSpace(pkg),
-			XMLNS:  map[string]string{},
 		},
 	}
 }

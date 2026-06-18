@@ -204,7 +204,6 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		Main:       ctx.NewSymbolSpace(pkgID),
 		Prefix:     importedSymbols,
 		Annotation: ctx.NewSymbolSpace(pkgID),
-		XMLNS:      map[string]string{model.XMLNSReservedPrefix: model.XMLNSReservedURI},
 	}
 	return &moduleSymbolResolver{
 		ctx:          ctx,
@@ -876,9 +875,9 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangXMLElementLiteral:
-		rootNeeds := map[string]string{}
+		rootNeeds := map[string]model.SymbolRef{}
 		resolveXMLElementLiteralNamespaces(resolver, resolver.GetScope(), n, rootNeeds)
-		mergeNamespaces(n, rootNeeds)
+		mergeNamespaces(resolver, n, rootNeeds)
 		return nil
 	case *ast.BLangXMLTemplateExpr:
 		resolveXMLTemplateNamespaces(resolver, resolver.GetScope(), n)

@@ -1095,22 +1095,44 @@ func xmlElementLiteral(ctx context, curBB *BIRBasicBlock, expr *ast.BLangXMLElem
 	return expressionEffect{result: resultOp, block: curBB}
 }
 
-// buildXMLNamespacesMap constructs a string map of XML namespace declarations
-// from an element's resolved Namespaces map. Keys are stored in already
-// printable form ("xmlns" or "xmlns:<prefix>"). Iteration is sorted by key
-// for deterministic output.
-func buildXMLNamespacesMap(ctx context, curBB *BIRBasicBlock, ns map[string]string, pos Location) (*BIROperand, *BIRBasicBlock) {
-	keys := make([]string, 0, len(ns))
-	for k := range ns {
-		keys = append(keys, k)
+type xmlNamespaceDecl struct {
+	key string
+	uri string
+}
+
+func xmlNamespaceDecls(ctx context, refs []model.SymbolRef) []xmlNamespaceDecl {
+	decls := make([]xmlNamespaceDecl, 0, len(refs))
+	for _, ref := range refs {
+		symbol := ctx.getSymbol(ref)
+		key, err := model.XMLNamespaceDeclKey(symbol)
+		if err != nil {
+			ctx.internalError(err.Error(), diagnostics.Location{})
+			continue
+		}
+		uri, err := model.XMLNamespaceURI(symbol)
+		if err != nil {
+			ctx.internalError(err.Error(), diagnostics.Location{})
+			continue
+		}
+		decls = append(decls, xmlNamespaceDecl{key: key, uri: uri})
 	}
-	sort.Strings(keys)
-	entries := make([]MappingConstructorEntry, 0, len(keys))
-	for _, k := range keys {
+	return decls
+}
+
+// buildXMLNamespacesMap constructs a string map of XML namespace declarations
+// from an element's resolved namespace symbols. Iteration is sorted by emitted
+// declaration key for deterministic output.
+func buildXMLNamespacesMap(ctx context, curBB *BIRBasicBlock, ns []model.SymbolRef, pos Location) (*BIROperand, *BIRBasicBlock) {
+	namespaces := xmlNamespaceDecls(ctx, ns)
+	sort.SliceStable(namespaces, func(i, j int) bool {
+		return namespaces[i].key < namespaces[j].key
+	})
+	entries := make([]MappingConstructorEntry, 0, len(namespaces))
+	for _, ns := range namespaces {
 		keyOp := ctx.addTempVar(semtypes.STRING)
-		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(keyOp, k, pos))
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(keyOp, ns.key, pos))
 		valOp := ctx.addTempVar(semtypes.STRING)
-		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(valOp, ns[k], pos))
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(valOp, ns.uri, pos))
 		entries = append(entries, &MappingConstructorKeyValueEntry{keyOp: keyOp, valueOp: valOp})
 	}
 	resultOp := ctx.addTempVar(ctx.function().birCx.stringMapType())
