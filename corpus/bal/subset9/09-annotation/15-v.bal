@@ -22,6 +22,7 @@ type Meta readonly & record {|
 
 public const annotation Meta annotationMeta on source annotation;
 annotation Meta classMeta on class;
+annotation Meta serviceMeta on service;
 annotation Meta fieldMeta on object field;
 annotation Meta methodMeta on object function;
 annotation parameterMeta on parameter;
@@ -69,8 +70,17 @@ client class MetadataClient {
     }
 }
 
+@serviceMeta {name: "service"}
+service class MetadataService {
+}
+
 public function main() {
     Counter counter = new;
     Result result = counter.add(1, 2, 3);
     io:println(result); // @output 6
+
+    Meta? serviceInfo = MetadataService.@serviceMeta;
+    if serviceInfo is Meta {
+        io:println(serviceInfo.name); // @output service
+    }
 }

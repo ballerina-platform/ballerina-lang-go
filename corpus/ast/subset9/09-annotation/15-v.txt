@@ -13,6 +13,9 @@
   (annotation classMeta
     (user-defined-type Meta)
     (attach-point class))
+  (annotation serviceMeta
+    (user-defined-type Meta)
+    (attach-point service))
   (annotation fieldMeta
     (user-defined-type Meta)
     (attach-point objectfield))
@@ -106,6 +109,12 @@
       (block-function-body
         (return
           (literal 1)))))
+  (class-definition MetadataService
+    (annotation-attachment serviceMeta
+      (mapping-constructor-expr
+        (key-value
+          (literal name)
+          (literal service)))))
   (function main () (
     (value-type null))
     (block-function-body
@@ -123,4 +132,21 @@
             (literal 3))))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref result)))))))
+          (simple-var-ref result))))
+      (var-def
+        (variable serviceInfo (type
+          (union-type
+            (user-defined-type Meta)
+            (value-type null))) (expr
+          (annot-access-expr serviceMeta
+            (simple-var-ref MetadataService)))))
+      (if
+        (type-test-expr is
+          (simple-var-ref serviceInfo)
+          (user-defined-type Meta))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (field-based-access name
+                (simple-var-ref serviceInfo)))))) ())
+      (block-stmt))))

@@ -78,6 +78,14 @@ class MetadataClient {
     }
   }
 }
+class MetadataService {
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+}
 main() -> nil{
   bb0 {
     %1 = newObject $anon/.:Counter
@@ -111,6 +119,26 @@ main() -> nil{
     %15 = println(%14) -> bb6;
   }
   bb6 {
+    %16 = ConstantLoad typedesc
+    %17 = ConstantLoad $anon/.:0.0.0:serviceMeta
+    %18 = .@ %16 %17;
+    serviceInfo = %18;
+    %20 = serviceInfo is readonly&{| name: string, never... |}
+    %20 ? bb7 : bb9;
+  }
+  bb7 {
+    PushScopeFrame 3
+    %1 = ConstantLoad name
+    %0 = (1, serviceInfo)[%1];
+    %2 = println(%0) -> bb8;
+  }
+  bb8 {
+    PopScopeFrame
+    GOTO bb9;
+  }
+  bb9 {
+    PushScopeFrame 0
+    PopScopeFrame
     return;
   }
 }

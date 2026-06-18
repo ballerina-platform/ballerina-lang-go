@@ -986,7 +986,11 @@ func resolveTopLevelAnnotationAttachments(t typeResolver, pkg *ast.BLangPackage)
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		collectAnnotationEvaluationTasks(t, classDef, ast.Point_CLASS, classDef.Symbol(), &tasks)
+		classPoint := ast.Point_CLASS
+		if classDef.IsService() {
+			classPoint = ast.Point_SERVICE
+		}
+		collectAnnotationEvaluationTasks(t, classDef, classPoint, classDef.Symbol(), &tasks)
 		for j := range classDef.Fields {
 			collectAnnotationEvaluationTasks(t, classDef.Fields[j], ast.Point_OBJECT_FIELD, model.SymbolRef{}, &tasks)
 		}

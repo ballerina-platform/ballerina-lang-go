@@ -34,7 +34,7 @@
   )
 )
 (main
-  (bb0 () ()
+  (bb0 () (bb1 bb2)
     (var-def
       (variable counter (type
         (user-defined-type Counter)) (expr
@@ -50,5 +50,22 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref result))))
+    (var-def
+      (variable serviceInfo (type
+        (union-type
+          (user-defined-type Meta)
+          (value-type null))) (expr
+        (annot-access-expr serviceMeta
+          (simple-var-ref MetadataService)))))
+    (type-test-expr is
+      (simple-var-ref serviceInfo)
+      (user-defined-type Meta))
   )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (field-based-access name
+          (simple-var-ref serviceInfo)))))
+  )
+  (bb2 (bb1 bb0) ())
 )
