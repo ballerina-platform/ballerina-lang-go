@@ -19,6 +19,7 @@ package test_util
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -43,11 +44,59 @@ const (
 	Bench
 )
 
-// TestCase represents a test case: input file and expected output file
+// TestCase represents a test case: input file and expected output file.
+// For single-file tests InputPath is the .bal file. For project/workspace
+// tests InputPath is the project root directory and IsProject is true.
 type TestCase struct {
 	Name         string
-	InputPath    string // Absolute path to .bal file
-	ExpectedPath string // Absolute path to expected output (.txt or .json)
+	InputPath    string // Absolute path to .bal file OR project root dir
+	ExpectedPath string // Absolute path to expected output (.txt or .json or .txtar)
+	IsProject    bool
+}
+
+// TestSuffix is a bitset over the corpus naming convention
+// (-v / -e / -p / -fv / -fe / -fp). Callers pass a mask to discovery to
+// select a subset; consumers like the harness use it for suffix-based
+// invariants.
+type TestSuffix uint
+
+const (
+	SuffixNone        TestSuffix = 0
+	SuffixValid       TestSuffix = 1 << iota // -v
+	SuffixError                              // -e
+	SuffixPanic                              // -p
+	SuffixFutureValid                        // -fv
+	SuffixFutureError                        // -fe
+	SuffixFuturePanic                        // -fp
+
+	SuffixAnyFuture = SuffixFutureValid | SuffixFutureError | SuffixFuturePanic
+	SuffixAny       = SuffixValid | SuffixError | SuffixPanic | SuffixAnyFuture
+)
+
+// Suffix derives the test's suffix from its Name (or InputPath basename).
+// Every corpus test must follow the `-{v,e,p,fv,fe,fp}` naming convention;
+// names that don't match are programmer errors and cause a panic so they
+// surface loudly during discovery rather than silently being filtered out.
+func (tc TestCase) Suffix() TestSuffix {
+	base := strings.TrimSuffix(filepath.Base(tc.Name), ".bal")
+	i := strings.LastIndex(base, "-")
+	if i >= 0 {
+		switch base[i+1:] {
+		case "v":
+			return SuffixValid
+		case "e":
+			return SuffixError
+		case "p":
+			return SuffixPanic
+		case "fv":
+			return SuffixFutureValid
+		case "fe":
+			return SuffixFutureError
+		case "fp":
+			return SuffixFuturePanic
+		}
+	}
+	panic(fmt.Sprintf("test case %q has no recognised suffix (expected -v/-e/-p/-fv/-fe/-fp)", tc.Name))
 }
 
 // IsFutureTest reports whether the given file name belongs to the "future"

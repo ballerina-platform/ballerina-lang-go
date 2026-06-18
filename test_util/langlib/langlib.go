@@ -212,7 +212,7 @@ func compileBundledLib(cx *context.CompilerContext, cache map[string]model.Expor
 	if cu == nil {
 		return model.ExportedSymbolSpace{}, fmt.Errorf("langlib: AST generation failed for %s", lib.implicitID)
 	}
-	pkg := ast.ToPackage(cu)
+	pkg := ast.ToPackage(cx, cu)
 
 	nameComps := make([]model.Name, len(lib.nameComps))
 	for i, c := range lib.nameComps {
