@@ -2726,14 +2726,14 @@ func resolveInferredTypedescDefault(t typeResolver, chain *binding, e *ast.BLang
 func resolveTypedescExpr(t typeResolver, chain *binding, e *ast.BLangTypedescExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	constraint, ok := resolveBType(t, e.GetTypeDescriptor().(ast.BType), 0)
 	if !ok {
-		return nil, expressionEffect{}, false
+		return semtypes.SemType{}, expressionEffect{}, false
 	}
 	e.Constraint = constraint
 	ty := semtypes.TypedescContaining(t.typeEnv(), constraint)
-	if expectedType != nil && !semtypes.IsSubtype(t.typeContext(), ty, expectedType) {
+	if !semtypes.IsNever(expectedType) && !semtypes.IsSubtype(t.typeContext(), ty, expectedType) {
 		t.semanticError(fmt.Sprintf("incompatible types: expected '%s', found '%s'",
 			semtypes.ToString(t.typeContext(), expectedType), semtypes.ToString(t.typeContext(), ty)), e.GetPosition())
-		return nil, expressionEffect{}, false
+		return semtypes.SemType{}, expressionEffect{}, false
 	}
 	setExpectedType(e, ty)
 	return ty, defaultExpressionEffect(chain), true

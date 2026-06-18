@@ -37,7 +37,7 @@ func unionMemberTypes(tc semtypes.Context, ty semtypes.SemType) []semtypes.SemTy
 		}
 	}
 
-	simpleBasics := []semtypes.BasicTypeBitSet{
+	simpleBasics := []semtypes.SemType{
 		semtypes.NIL, semtypes.BOOLEAN, semtypes.INT, semtypes.FLOAT, semtypes.DECIMAL,
 		semtypes.STRING, semtypes.XML, semtypes.ERROR,
 	}

@@ -550,14 +550,14 @@ func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
 }
 
 func (p *PrettyPrinter) printTypedescExpr(node *BLangTypedescExpr) {
-	p.startNode()
-	p.printString("typedesc-expr")
+	p.StartNode()
+	p.PrintString("typedesc-expr")
 	if td := node.GetTypeDescriptor(); td != nil {
 		p.indentLevel++
 		p.PrintInner(td.(BLangNode))
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 // Binary and complex expression printers

@@ -43,7 +43,7 @@ func getConvertibleType(tc semtypes.Context, value core.BalValue, target semtype
 		if isNilable(target) {
 			return target, nil
 		}
-		return nil, cannotConvertNil(tc, target)
+		return semtypes.SemType{}, cannotConvertNil(tc, target)
 	}
 
 	if semtypes.IsSameType(tc, target, semtypes.CreateJSON(tc)) {
@@ -82,7 +82,7 @@ func getConvertibleType(tc semtypes.Context, value core.BalValue, target semtype
 		}
 	}
 
-	return nil, incompatibleConversion(tc, value, target)
+	return semtypes.SemType{}, incompatibleConversion(tc, value, target)
 }
 
 func getConvertibleUnionMember(tc semtypes.Context, value core.BalValue, target semtypes.SemType,
@@ -106,7 +106,7 @@ func getConvertibleUnionMember(tc semtypes.Context, value core.BalValue, target 
 			}
 		}
 		*unionErrors = append(*unionErrors, "}")
-		return nil, newConversionFailure(unionErrorMessage((*unionErrors)[initial:]))
+		return semtypes.SemType{}, newConversionFailure(unionErrorMessage((*unionErrors)[initial:]))
 	}
 
 	for _, member := range members {
@@ -119,7 +119,7 @@ func getConvertibleUnionMember(tc semtypes.Context, value core.BalValue, target 
 			return convertible, nil
 		}
 	}
-	return nil, incompatibleConversion(tc, value, target)
+	return semtypes.SemType{}, incompatibleConversion(tc, value, target)
 }
 
 func isConvertibleList(tc semtypes.Context, source *core.List, target semtypes.SemType,

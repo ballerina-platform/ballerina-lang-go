@@ -130,3 +130,13 @@ func CompareK(x, y BalValue, ascending bool) CompareResult {
 func Convert(tc semtypes.Context, value BalValue, targetType semtypes.SemType) (BalValue, *Error) {
 	return convert.Convert(tc, value, targetType)
 }
+
+// XML escape utilities
+
+func EscapeXMLAttribute(s string) string {
+	return core.EscapeXMLAttribute(s)
+}
+
+func EscapeXMLContent(s string) string {
+	return core.EscapeXMLContent(s)
+}
