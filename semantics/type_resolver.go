@@ -1182,7 +1182,7 @@ func prepareImplicitAnnotationValue(
 	valueType semtypes.SemType,
 ) bool {
 	if semtypes.IsSubtype(t.typeContext(), semtypes.BooleanConst(true), annotationType) {
-		ann.Expr = ast.NewBooleanLiteral(true, ann.GetPosition())
+		ann.Expr = newImplicitBooleanLiteral(true, ann.GetPosition())
 		return true
 	}
 	if !semtypes.IsSubtype(t.typeContext(), valueType, annotationMapType(t)) {
@@ -1195,6 +1195,17 @@ func prepareImplicitAnnotationValue(
 	expr.SetPosition(ann.GetPosition())
 	ann.Expr = expr
 	return true
+}
+
+func newImplicitBooleanLiteral(value bool, pos diagnostics.Location) *ast.BLangLiteral {
+	lit := &ast.BLangLiteral{}
+	lit.SetValueType(ast.NewBType(ast.TypeTags_BOOLEAN, model.Name(""), uint64(model.FlagReadonly)))
+	lit.SetDeterminedType(semtypes.BooleanConst(value))
+	lit.SetValue(value)
+	lit.SetOriginalValue(strconv.FormatBool(value))
+	lit.SetIsConstant(true)
+	lit.SetPosition(pos)
+	return lit
 }
 
 type annotationEvaluationResult struct {

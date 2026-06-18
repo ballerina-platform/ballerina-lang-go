@@ -766,21 +766,6 @@ func (b *BLangLiteral) SetOriginalValue(originalValue string) {
 	b.OriginalValue = originalValue
 }
 
-var sharedBooleanBType = &BTypeBasic{tag: TypeTags_BOOLEAN, flags: model.FlagReadonly}
-
-// NewBooleanLiteral creates a synthesized boolean literal with a resolved type.
-// Used for implicit marker annotation values.
-func NewBooleanLiteral(value bool, pos diagnostics.Location) *BLangLiteral {
-	lit := &BLangLiteral{}
-	lit.SetValueType(sharedBooleanBType)
-	lit.SetDeterminedType(semtypes.BooleanConst(value))
-	lit.SetValue(value)
-	lit.SetOriginalValue(strconv.FormatBool(value))
-	lit.SetIsConstant(true)
-	lit.SetPosition(pos)
-	return lit
-}
-
 func (b *BLangElvisExpr) GetLeftExpression() BLangExpression {
 	return b.LhsExpr
 }
