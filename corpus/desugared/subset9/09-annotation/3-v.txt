@@ -26,10 +26,7 @@
     (block-function-body
       (assignment
         (simple-var-ref offset)
-        (literal 1))
-      (assignment
-        (simple-var-ref LIMIT)
-        (literal 10))))
+        (literal 1))))
   (function add (
     (variable left (type
       (value-type int)))
@@ -60,5 +57,5 @@
       (expression-stmt
         (invocation io println (
           (binary-expr +
-            (simple-var-ref LIMIT)
+            (numeric-literal 10)
             (simple-var-ref offset))))))))

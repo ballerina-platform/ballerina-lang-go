@@ -458,7 +458,6 @@ func (e *constantExpressionEvaluator) evaluateBinaryExpression(expr *ast.BLangBi
 func isNilLiftedConstantOperator(op model.OperatorKind) bool {
 	switch op {
 	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD,
-		model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL, model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL,
 		model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR,
 		model.OperatorKind_BITWISE_LEFT_SHIFT, model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
 		return true

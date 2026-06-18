@@ -238,6 +238,70 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 	}
 }
 
+// IsSerializableConstValue reports whether v can be emitted as a BIR constant value.
+func IsSerializableConstValue(v BalValue) bool {
+	return isSerializableConstValue(v, make(map[any]bool))
+}
+
+func isSerializableConstValue(v BalValue, seen map[any]bool) bool {
+	switch v := v.(type) {
+	case nil, bool, int, int64, int32, int16, int8, byte, float64, float32, string:
+		return true
+	case *string, *decimal.Decimal:
+		return v != nil
+	case *Map:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for _, key := range v.Keys() {
+			elem, _ := v.Get(key)
+			if !isSerializableConstValue(elem, seen) {
+				return false
+			}
+		}
+		return true
+	case *List:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for i := 0; i < v.Len(); i++ {
+			if !isSerializableConstValue(v.Get(i), seen) {
+				return false
+			}
+		}
+		return true
+	case *TypeDesc:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for _, value := range v.Annotations {
+			if !isSerializableConstValue(value, seen) {
+				return false
+			}
+		}
+		return true
+	case *RuntimeAnnotationValueRef:
+		return v != nil
+	default:
+		return false
+	}
+}
+
 func String(v BalValue, visited map[uintptr]bool) string {
 	if v == nil {
 		return ""

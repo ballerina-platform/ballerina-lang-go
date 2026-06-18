@@ -135,11 +135,6 @@
           (literal values)
           (list-constructor-expr))))
     (value-type int))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref BASE)
-        (literal 100))))
   (function main () (
     (value-type null))
     (block-function-body

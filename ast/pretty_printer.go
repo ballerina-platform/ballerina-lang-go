@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/values"
 )
 
 // TODO: may be we should rewrite this on top of a visitor.
@@ -530,8 +531,17 @@ func (p *PrettyPrinter) printXMLTextLiteral(node *BLangXMLTextLiteral) {
 func (p *PrettyPrinter) printLiteral(node *BLangLiteral) {
 	p.startNode()
 	p.printString("literal")
-	p.printString(fmt.Sprintf("%v", node.Value))
+	p.printString(literalValueString(node.Value))
 	p.endNode()
+}
+
+func literalValueString(value any) string {
+	switch value.(type) {
+	case *values.Map, *values.List, *values.TypeDesc:
+		return values.String(value, make(map[uintptr]bool))
+	default:
+		return fmt.Sprintf("%v", value)
+	}
 }
 
 func (p *PrettyPrinter) printNumericLiteral(node *BLangNumericLiteral) {

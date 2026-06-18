@@ -8,11 +8,6 @@
         (value-type float))
       (field y
         (value-type float))))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref N)
-        (literal 10))))
   (function main () (
     (value-type null))
     (block-function-body
@@ -27,7 +22,7 @@
           (literal 0))))
       (var-def
         (variable $desugar$0 (expr
-          (simple-var-ref N))))
+          (numeric-literal 10))))
       (while
         (binary-expr <
           (simple-var-ref _)
@@ -54,7 +49,7 @@
           (literal 0))))
       (var-def
         (variable $desugar$1 (expr
-          (simple-var-ref N))))
+          (numeric-literal 10))))
       (while
         (binary-expr <
           (simple-var-ref i)
@@ -99,7 +94,7 @@
           (literal 0))))
       (var-def
         (variable $desugar$2 (expr
-          (simple-var-ref N))))
+          (numeric-literal 10))))
       (while
         (binary-expr <
           (simple-var-ref i)

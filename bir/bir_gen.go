@@ -373,6 +373,9 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 		addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
 	for _, constant := range ast.Constants {
+		if constantFoldedToSymbolValue(&constant) {
+			continue
+		}
 		addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
 	}
 	if ast.InitFunction != nil {
@@ -457,6 +460,10 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	return dcl
 }
 
+func constantFoldedToSymbolValue(c *ast.BLangConstant) bool {
+	return c.ConstantValueKnown && values.IsSerializableConstValue(c.ConstantValue)
+}
+
 func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVariableDcl {
 	name := model.Name(c.GetName().GetValue())
 	dcl := BIRGlobalVariableDcl{}
@@ -470,7 +477,7 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	// values yet, e.g. non-finite float-to-int casts that must fail at runtime.
 	// Those constants still use the expression path, so the declaration remains
 	// without HasInitialValue.
-	if c.ConstantValueKnown {
+	if constantFoldedToSymbolValue(c) {
 		dcl.InitialValue = c.ConstantValue
 		dcl.HasInitialValue = true
 	}
@@ -1009,6 +1016,8 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 		return binaryExpression(ctx, curBB, expr)
 	case *ast.BLangSimpleVarRef:
 		return simpleVariableReference(ctx, curBB, expr)
+	case *ast.BLangConstRef:
+		return simpleVariableReference(ctx, curBB, &expr.BLangSimpleVarRef)
 	case *ast.BLangUnaryExpr:
 		return unaryExpression(ctx, curBB, expr)
 	case *ast.BLangWildCardBindingPattern:
@@ -1758,6 +1767,18 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 		return expressionEffect{
 			result: resultOperand,
 			block:  curBB,
+		}
+	}
+	if sym.Kind() == model.SymbolKindConstant {
+		if valueSym, ok := sym.(*model.ValueSymbol); ok {
+			if value, known := valueSym.ConstantValue(); known && values.IsSerializableConstValue(value) {
+				resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+				curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, value, ctx.function().loc(expr.GetPosition())))
+				return expressionEffect{
+					result: resultOperand,
+					block:  curBB,
+				}
+			}
 		}
 	}
 

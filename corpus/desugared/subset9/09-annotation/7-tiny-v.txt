@@ -27,11 +27,6 @@
             (simple-var-ref BASE)
             (literal 2)))))
     (value-type int))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref BASE)
-        (literal 10))))
   (function main () (
     (value-type null))
     (block-function-body

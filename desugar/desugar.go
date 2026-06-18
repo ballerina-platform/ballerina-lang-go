@@ -288,6 +288,9 @@ func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
 	}
 	for i := range pkg.Constants {
 		c := &pkg.Constants[i]
+		if constantFoldedToSymbolValue(c) {
+			continue
+		}
 		var expr ast.BLangExpression
 		if c.Expr != nil {
 			expr = c.Expr.(ast.BLangExpression)
@@ -301,7 +304,11 @@ func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
 	return nodes
 }
 
-// We desugar by moving all these to the init function, so they should no longer be there
+func constantFoldedToSymbolValue(c *ast.BLangConstant) bool {
+	return c.ConstantValueKnown && values.IsSerializableConstValue(c.ConstantValue)
+}
+
+// We desugar module initializers into the init function, so they should no longer be there.
 func clearModuleInitExprs(pkg *ast.BLangPackage) {
 	for i := range pkg.GlobalVars {
 		pkg.GlobalVars[i].Expr = nil

@@ -25,14 +25,6 @@
     (record-type
       (field id
         (value-type string))))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref LABEL)
-        (literal from-const))
-      (assignment
-        (simple-var-ref CODE)
-        (literal 42))))
   (function main () (
     (value-type null))
     (block-function-body

@@ -92,11 +92,6 @@
     (record-type
       (field id
         (value-type string))))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref BASE)
-        (literal 10))))
   (function main () (
     (value-type null))
     (block-function-body

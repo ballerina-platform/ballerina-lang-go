@@ -3,17 +3,6 @@
   (const ZERO () ())
   (const ONE () ())
   (const TWO () ())
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref ZERO)
-        (literal 0))
-      (assignment
-        (simple-var-ref ONE)
-        (literal 1))
-      (assignment
-        (simple-var-ref TWO)
-        (literal 2))))
   (function main () (
     (value-type null))
     (block-function-body
