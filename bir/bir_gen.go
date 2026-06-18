@@ -466,6 +466,10 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
 	dcl.Flags = c.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
+	// Some valid constants cannot be represented as serialized BIR initial
+	// values yet, e.g. non-finite float-to-int casts that must fail at runtime.
+	// Those constants still use the expression path, so the declaration remains
+	// without HasInitialValue.
 	if c.ConstantValueKnown {
 		dcl.InitialValue = c.ConstantValue
 		dcl.HasInitialValue = true

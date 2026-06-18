@@ -260,7 +260,10 @@ type (
 
 	BLangConstant struct {
 		BLangVariableBase
-		Name               *BLangIdentifier
+		Name *BLangIdentifier
+		// ConstantValueKnown is set only when the compile-time value can be
+		// represented directly in BIR. Some constants are still valid even when
+		// this is false because their expression must be evaluated at runtime.
 		ConstantValue      values.BalValue
 		ConstantValueKnown bool
 	}
