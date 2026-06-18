@@ -29,12 +29,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/platform/pal"
@@ -220,8 +222,28 @@ func (p *testPal) Platform() pal.Platform {
 		},
 		FS: pal.FS{
 			ReadFile: func(path string) ([]byte, error) {
-				return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+				return os.ReadFile(normalizePath(path))
 			},
+			WriteFile: func(path string, data []byte) error {
+				return os.WriteFile(normalizePath(path), data, 0o644)
+			},
+			AppendFile: func(path string, data []byte) (err error) {
+				f, err := os.OpenFile(normalizePath(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
+				_, err = f.Write(data)
+				return err
+			},
+		},
+		Time: pal.Time{
+			Now:          func() time.Time { return time.Time{} },
+			MonotonicNow: func() time.Duration { return 0 },
 		},
 		HTTP: pal.HTTP{
 			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
@@ -230,6 +252,15 @@ func (p *testPal) Platform() pal.Platform {
 		},
 		Signals: p.signalSrc,
 	}
+}
+
+// normalizePath maps /tmp/-prefixed paths to os.TempDir() on Windows, where
+// the Unix /tmp directory does not exist.
+func normalizePath(path string) string {
+	if goruntime.GOOS == "windows" && strings.HasPrefix(path, "/tmp/") {
+		return filepath.Join(os.TempDir(), path[5:])
+	}
+	return path
 }
 
 func (p *testPal) ensureSignalSource() {

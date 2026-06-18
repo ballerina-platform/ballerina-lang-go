@@ -375,3 +375,45 @@ func generateTestCerts(t *testing.T) (caCertPEM, serverCertPEM, serverKeyPEM, cl
 	clientCertPEM, clientKeyPEM = newLeafCert("client", nil, x509.ExtKeyUsageClientAuth)
 	return
 }
+
+// TestHttpClientForward verifies that Client.forward proxies a Request's
+// method, body, and headers to the target unchanged, and returns the target's
+// response. The capturing server records what it received so the forwarded
+// method/body/header are asserted after the program runs.
+func TestHttpClientForward(t *testing.T) {
+	type forwardResult struct {
+		method string
+		body   []byte
+		header string
+	}
+	resultCh := make(chan forwardResult, 1)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		resultCh <- forwardResult{
+			method: r.Method,
+			body:   body,
+			header: r.Header.Get("X-Forwarded-From"),
+		}
+		w.WriteHeader(200)
+		_, _ = fmt.Fprint(w, "forwarded ok")
+	}))
+	defer server.Close()
+
+	runExtern(t, fileCase("http-client-forward-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+
+	select {
+	case received := <-resultCh:
+		if received.method != "POST" {
+			t.Errorf("expected forwarded method POST, got %q", received.method)
+		}
+		if string(received.body) != "hello body" {
+			t.Errorf("expected forwarded body %q, got %q", "hello body", string(received.body))
+		}
+		if received.header != "test" {
+			t.Errorf("expected X-Forwarded-From header %q, got %q", "test", received.header)
+		}
+	default:
+		t.Error("forward target server received no request")
+	}
+}
