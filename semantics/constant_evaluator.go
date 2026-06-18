@@ -192,7 +192,7 @@ func (e *constantExpressionEvaluator) evaluate(expr ast.BLangExpression) (values
 		return e.evaluateUnaryExpression(expr)
 	case *ast.BLangBinaryExpr:
 		ty := expr.GetDeterminedType()
-		if expr.OpKind == model.OperatorKind_ADD && ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.STRING) {
+		if expr.OpKind == model.OperatorKind_ADD && !semtypes.IsZero(ty) && semtypes.IsSubtypeSimple(ty, semtypes.STRING) {
 			if value, ok := constantSingleShapeValue(ty); ok {
 				return value, nil
 			}
@@ -211,7 +211,7 @@ func (e *constantExpressionEvaluator) evaluate(expr ast.BLangExpression) (values
 }
 
 func constantSingleShapeValue(ty semtypes.SemType) (values.BalValue, bool) {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return nil, false
 	}
 	shape := semtypes.SingleShape(ty)

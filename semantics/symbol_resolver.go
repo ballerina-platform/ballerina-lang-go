@@ -21,6 +21,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -28,14 +29,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 
-	array "ballerina-lang-go/lib/array/compile"
-	bError "ballerina-lang-go/lib/error/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
 	langinternal "ballerina-lang-go/lib/langinternal/compile"
-	bMap "ballerina-lang-go/lib/map/compile"
-	bString "ballerina-lang-go/lib/string/compile"
-	bValue "ballerina-lang-go/lib/value/compile"
-	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
 type scopeKind int
@@ -399,7 +393,7 @@ func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedTyp
 			return false
 		}
 		ty := ms.ctx.GetSymbol(symRef).Type()
-		return ty != nil && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
+		return !semtypes.IsZero(ty) && semtypes.IsSubtype(ms.tyCtx, ty, semtypes.TYPEDESC)
 	}
 	symRef, _, ok := ms.GetSymbol(typeName)
 	if !ok {
@@ -511,6 +505,7 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
+	injectOpaqueSymbols(*pkg.PackageID, moduleResolver)
 	// Type definitions are registered first so that function-symbol allocation can walk alias
 	// chains when classifying typedesc parameters (needed for dependently-typed detection).
 	for i := range pkg.TypeDefinitions {
@@ -578,6 +573,9 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		if globalVar.Flags().Has(model.FlagIsolated) {
 			symbol.SetIsolated()
 		}
+		if globalVar.IsListener() {
+			symbol.SetListener()
+		}
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition()) {
 			continue
 		}
@@ -636,6 +634,59 @@ func newClassSymbolForDefn(classDef *ast.BLangClassDefinition) model.ClassSymbol
 		return model.NewNetworkClassSymbol(name, isPublic)
 	}
 	return model.NewClassSymbol(name, isPublic)
+}
+
+// injectOpaqueSymbols adds the Go-defined symbols of a builtin lang library to
+// the package's symbol table before its AST symbols are resolved. It is a no-op
+// for non-builtin packages, where model.OpaqueSymbols returns nil.
+func injectOpaqueSymbols(pkgID model.PackageID, r *moduleSymbolResolver) {
+	pkg := model.PackageIdentifier{
+		Organization: pkgID.OrgName.Value(),
+		Package:      pkgID.PkgName.Value(),
+		Version:      pkgID.Version.Value(),
+	}
+	space := r.scope.MainSpace()
+	for _, sym := range model.OpaqueSymbols(pkg) {
+		fillinOpaqueSymbol(sym, space)
+		r.AddSymbol(sym.Name(), sym)
+	}
+}
+
+// fillinOpaqueSymbol fills in any information that needs to be stored in the opaque symbol
+// that is used within semantic package.
+func fillinOpaqueSymbol(sym model.Symbol, space *model.SymbolSpace) {
+	fn, ok := sym.(*model.OpaqueFunctionSymbol)
+	if !ok {
+		return
+	}
+	fn.SymbolSpace = space
+	fn.Lookup, fn.Store = newMonomorphizationCache()
+}
+
+// TODO: when we have cases where we have more than one type param types we need to properly
+// implement this
+func newMonomorphizationCache() (func(...semtypes.SemType) (model.SymbolRef, bool), func(model.SymbolRef, ...semtypes.SemType)) {
+	var mu sync.Mutex
+	interner := semtypes.NewSemtypeInterner()
+	cache := make(map[semtypes.InternHandle]model.SymbolRef)
+	keyOf := func(keys []semtypes.SemType) semtypes.InternHandle {
+		if len(keys) != 1 {
+			panic("monomorphization cache supports a single key type")
+		}
+		return interner.Intern(keys[0])
+	}
+	lookup := func(keys ...semtypes.SemType) (model.SymbolRef, bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		ref, ok := cache[keyOf(keys)]
+		return ref, ok
+	}
+	store := func(ref model.SymbolRef, keys ...semtypes.SemType) {
+		mu.Lock()
+		defer mu.Unlock()
+		cache[keyOf(keys)] = ref
+	}
+	return lookup, store
 }
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
@@ -750,32 +801,6 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// ballerina/lang.* bind to compiler-intrinsic symbols. io and http are
-		// also handled as intrinsics below until their bala bundles are introduced
-		// in dedicated PRs; at that point they will resolve through publicSymbols
-		// like all other ballerina/* packages.
-		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if isLangImport(&imp, "array") {
-				bindIntrinsicImport(&imp, "array", array.GetArraySymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "map") {
-				bindIntrinsicImport(&imp, "map", bMap.GetMapSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "error") {
-				bindIntrinsicImport(&imp, "error", bError.GetErrorSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "string") {
-				bindIntrinsicImport(&imp, "string", bString.GetStringSymbols(ctx), result)
-				continue
-			}
-			if isLangImport(&imp, "value") {
-				bindIntrinsicImport(&imp, "value", bValue.GetValueSymbols(ctx), result)
-				continue
-			}
-		}
 		resolveExternalImport(ctx, &imp, defaultOrg, publicSymbols, result)
 	}
 
@@ -849,14 +874,7 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[langinternal.PackageName] = langinternal.GetInternalSymbols(ctx)
-	result[bError.PackageName] = bError.GetErrorSymbols(ctx)
-	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
-	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
-	result[bString.PackageName] = bString.GetStringSymbols(ctx)
-	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
-	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }
 
@@ -924,9 +942,11 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		}
 		return nil
 	case *ast.BLangFieldBaseAccess:
-		if classDef := getEnclosingClassDef(resolver); isSelfFieldAccess(n) && classDef != nil {
-			resolveSelfFieldAccess(resolver, n, classDef)
-			return nil
+		if isSelfFieldAccess(n) {
+			if classScope, ok := getEnclosingClassBodyScope(resolver); ok {
+				resolveSelfFieldAccess(resolver, n, classScope)
+				return nil
+			}
 		}
 	case *ast.BLangMappingConstructorExpr:
 		return resolveMappingConstructor(resolver, n)
@@ -1261,6 +1281,9 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		n.SetSymbol(symRef)
 		resolveClassDefinition(ms, n)
 		return nil
+	case *ast.BLangService:
+		resolveServiceDefinition(ms, n)
+		return nil
 	default:
 		return visitInnerSymbolResolver(ms, n)
 	}
@@ -1308,7 +1331,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 				carrier = s
 			case *model.ObjectTypeSymbol:
 				incTy := ctx.SymbolType(symRef)
-				if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.OBJECT) {
+				if semtypes.IsZero(incTy) || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.OBJECT) {
 					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 					continue
 				}
@@ -1358,7 +1381,7 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 				continue
 			}
 			incTy := ctx.SymbolType(symRef)
-			if incTy == nil || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.MAPPING) {
+			if semtypes.IsZero(incTy) || !semtypes.IsSubtype(resolver.TypeContext(), incTy, semtypes.MAPPING) {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
 			}
@@ -1440,19 +1463,49 @@ type namedClassMethod struct {
 	method *ast.BLangFunction
 }
 
-// classMethodsInResolutionOrder returns class methods in sorted name order so
-// that default-param symbol counter assignments are deterministic regardless of
-// Go's map iteration order.
-func classMethodsInResolutionOrder(classDef *ast.BLangClassDefinition) []namedClassMethod {
-	names := slices.Sorted(maps.Keys(classDef.Methods))
+func methodsInResolutionOrder(methods map[string]*ast.BLangFunction) []namedClassMethod {
+	names := slices.Sorted(maps.Keys(methods))
 	result := make([]namedClassMethod, len(names))
 	for i, name := range names {
-		result[i] = namedClassMethod{name: name, method: classDef.Methods[name]}
+		result[i] = namedClassMethod{name: name, method: methods[name]}
 	}
 	return result
 }
 
+func resolveServiceDefinition(ms *moduleSymbolResolver, svc *ast.BLangService) {
+	if typeDescriptor := svc.GetTypeData().TypeDescriptor; typeDescriptor != nil {
+		ast.Walk(ms, typeDescriptor.(ast.BLangNode))
+	}
+
+	for _, expr := range svc.AttachedExprs {
+		ast.Walk(ms, expr.(ast.BLangNode))
+	}
+
+	if svc.InitFunction != nil && len(svc.InitFunction.RequiredParams) > 0 {
+		semanticError(ms, "service 'init' must not declare required parameters", svc.InitFunction.RequiredParams[0].GetPosition())
+	}
+
+	serviceMethodSymbolName := func(methodName string) string {
+		return methodName
+	}
+	resourceMethodsAreNetworkClass := true
+
+	svcResolver := newBlockSymbolResolverWithBlockScope(ms, svc)
+	svc.SetScope(svcResolver.scope)
+
+	allocateServiceResourceMethodSymbols(svcResolver, svc.ResourceMethods)
+
+	finishResolveClassDefinition(ms, svcResolver, svc.Fields, svc.Methods, svc.ResourceMethods, svc.InitFunction, nil, svcResolver.scope, serviceMethodSymbolName, resourceMethodsAreNetworkClass)
+}
+
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
+	className := classDef.Name.Value
+	classMethodSymbolName := func(methodName string) string {
+		return className + "." + methodName
+	}
+	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(model.ClassSymbol)
+	networkClassSym, isNetworkClass := ms.ctx.GetSymbol(classDef.Symbol()).(*model.NetworkClassSymbol)
+
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
 	for i := range classDef.AnnAttachments {
@@ -1461,90 +1514,120 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 
 	var includedFields []inclusionMemberForSymbolResolution
 	classDef.Inclusions, classDef.InclusionPositions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
+	allocateObjectResourceMethodSymbols(ms, classResolver, classDef, networkClassSym, isNetworkClass)
 
-	for _, field := range classDef.Fields {
+	finishResolveClassDefinition(ms, classResolver, classDef.Fields, classDef.Methods, classDef.ResourceMethods, classDef.InitFunction, includedFields, ms.scope, classMethodSymbolName, isNetworkClass)
+
+	publishObjectMethodTable(classSym, classDef)
+}
+
+func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbolResolver, fields []ast.SimpleVariableNode, methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod, initFn *ast.BLangFunction, includedFields []inclusionMemberForSymbolResolution, methodTargetScope methodSymbolTargetScope, methodSymbolName func(string) string, resourceMethodsAreNetworkClass bool) {
+	for _, field := range fields {
 		name := field.GetName().GetValue()
-		if _, sk, exists := classResolver.GetSymbol(name); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
+		if _, sk, exists := blockRes.GetSymbol(name); exists && sk == blockScopeKind {
+			semanticError(blockRes, "redeclared symbol '"+name+"'", field.GetPosition())
 			continue
 		}
-		symbol := model.NewValueSymbol(name, field.IsPublic(), false, false)
-		classResolver.AddSymbol(name, &symbol)
+		isPublic := field.IsPublic()
+		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		blockRes.AddSymbol(name, &symbol)
 	}
 
-	className := classDef.Name.Value
-	methods := classMethodsInResolutionOrder(classDef)
-	for _, m := range methods {
-		if _, sk, exists := classResolver.GetSymbol(m.name); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(m.name)+"'", m.method.Name.GetPosition())
+	orderedMethods := methodsInResolutionOrder(methods)
+	for _, m := range orderedMethods {
+		if _, sk, exists := blockRes.GetSymbol(m.name); exists && sk == blockScopeKind {
+			semanticError(blockRes, "redeclared symbol '"+model.StripRemotePrefix(m.name)+"'", m.method.Name.GetPosition())
 			continue
 		}
 		isPublic := m.method.IsPublic()
 		symbol := ms.allocateFunctionSymbol(m.method, m.name, isPublic)
-		mangledName := className + "." + m.name
-		ms.scope.AddSymbol(mangledName, symbol)
-		moduleRef, _ := ms.scope.GetSymbol(mangledName)
-		m.method.SetSymbol(moduleRef)
-	}
-
-	networkClassSym, isNetworkClass := ms.ctx.GetSymbol(classDef.Symbol()).(*model.NetworkClassSymbol)
-	for idx, rm := range classDef.ResourceMethods {
-		if !isNetworkClass {
-			semanticError(classResolver, "resource methods are only allowed in client or service classes", rm.GetPosition())
-			continue
-		}
-		mangledName := className + "." + mangledResourceMethodName(rm.Name.Value, idx)
-		symbol := model.NewResourceMethodSymbol(mangledName, rm.Name.Value, classDef.IsPublic() && rm.IsPublic())
-		ms.scope.AddSymbol(mangledName, symbol)
-		symRef, _ := ms.scope.GetSymbol(mangledName)
-		rm.SetSymbol(symRef)
-		networkClassSym.AddResourceMethod(symRef)
+		symbolName := methodSymbolName(m.name)
+		methodTargetScope.AddSymbol(symbolName, symbol)
+		symRef, _ := methodTargetScope.MainSpace().GetSymbol(symbolName)
+		m.method.SetSymbol(symRef)
 	}
 
 	for _, m := range includedFields {
-		if _, _, exists := classResolver.GetSymbol(m.name); exists {
+		if _, _, exists := blockRes.GetSymbol(m.name); exists {
 			continue
 		}
 		symbol := model.NewValueSymbol(m.name, m.isPublic, false, false)
-		classResolver.AddSymbol(m.name, &symbol)
+		blockRes.AddSymbol(m.name, &symbol)
 	}
 
-	if classDef.InitFunction != nil {
+	if initFn != nil {
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol("init", signature, false)
-		addSymbolAndSetOnNode(classResolver, "init", symbol, classDef.InitFunction)
+		addSymbolAndSetOnNode(blockRes, "init", symbol, initFn)
 	}
 
 	selfSymbol := model.NewValueSymbol("self", false, false, false)
-	classResolver.AddSymbol("self", &selfSymbol)
+	blockRes.AddSymbol("self", &selfSymbol)
 
-	for _, field := range classDef.Fields {
-		ast.Walk(classResolver, field.(ast.BLangNode))
+	for _, field := range fields {
+		ast.Walk(blockRes, field.(ast.BLangNode))
 	}
 
-	if classDef.InitFunction != nil {
-		initResolver := newFunctionResolver(classResolver, classDef.InitFunction)
-		classDef.InitFunction.SetScope(initResolver.scope)
-		resolveFunction(initResolver, classDef.InitFunction)
-		allocateDefaultParamSymbols(ms, ms.scope, classDef.InitFunction)
+	if initFn != nil {
+		initResolver := newFunctionResolver(blockRes, initFn)
+		initFn.SetScope(initResolver.scope)
+		resolveFunction(initResolver, initFn)
+		allocateDefaultParamSymbols(ms, ms.scope, initFn)
 	}
 
-	for _, rm := range classDef.ResourceMethods {
-		if !isNetworkClass {
-			continue
-		}
-		methodResolver := newFunctionResolver(classResolver, rm)
-		rm.SetScope(methodResolver.scope)
-		resolveResourceMethod(methodResolver, rm)
-	}
-
-	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(model.ClassSymbol)
-	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
-	for _, m := range methods {
-		methodResolver := newFunctionResolver(classResolver, m.method)
+	for _, m := range orderedMethods {
+		methodResolver := newFunctionResolver(blockRes, m.method)
 		m.method.SetScope(methodResolver.scope)
 		resolveFunction(methodResolver, m.method)
 		allocateDefaultParamSymbols(ms, ms.scope, m.method)
+	}
+
+	for _, rm := range resourceMethods {
+		if !resourceMethodsAreNetworkClass {
+			continue
+		}
+		methodResolver := newFunctionResolver(blockRes, rm)
+		rm.SetScope(methodResolver.scope)
+		resolveResourceMethod(methodResolver, rm)
+	}
+}
+
+type methodSymbolTargetScope interface {
+	AddSymbol(name string, symbol model.Symbol)
+	MainSpace() *model.SymbolSpace
+}
+
+func allocateObjectResourceMethodSymbols(ms *moduleSymbolResolver, blockRes *blockSymbolResolver, classDef *ast.BLangClassDefinition, networkClassSym *model.NetworkClassSymbol, isNetworkClass bool) {
+	className := classDef.Name.Value
+	for idx, rm := range classDef.ResourceMethods {
+		if !isNetworkClass {
+			semanticError(blockRes, "resource methods are only allowed in client or service classes", rm.GetPosition())
+			continue
+		}
+		mangledName := className + "." + mangledResourceMethodName(rm.Name.Value, idx)
+		symRef := allocateResourceMethodSymbol(ms.scope, rm, mangledName, classDef.IsPublic() && rm.IsPublic())
+		networkClassSym.AddResourceMethod(symRef)
+	}
+}
+
+func allocateServiceResourceMethodSymbols(blockRes *blockSymbolResolver, resourceMethods []*ast.BLangResourceMethod) {
+	for idx, rm := range resourceMethods {
+		key := mangledResourceMethodName(rm.Name.Value, idx)
+		allocateResourceMethodSymbol(blockRes.scope, rm, key, rm.IsPublic())
+	}
+}
+
+func allocateResourceMethodSymbol(targetScope methodSymbolTargetScope, rm *ast.BLangResourceMethod, symbolName string, isPublic bool) model.SymbolRef {
+	symbol := model.NewResourceMethodSymbol(symbolName, rm.Name.Value, isPublic)
+	targetScope.AddSymbol(symbolName, symbol)
+	symRef, _ := targetScope.MainSpace().GetSymbol(symbolName)
+	rm.SetSymbol(symRef)
+	return symRef
+}
+
+func publishObjectMethodTable(classSym model.ClassSymbol, classDef *ast.BLangClassDefinition) {
+	methodTable := make(map[string]model.SymbolRef, len(classDef.Methods))
+	for _, m := range methodsInResolutionOrder(classDef.Methods) {
 		methodTable[m.name] = m.method.Symbol()
 	}
 	if classDef.InitFunction != nil {
@@ -1592,6 +1675,20 @@ func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
 	}
 }
 
+func getEnclosingClassBodyScope(resolver symbolResolver) (model.BlockLevelScope, bool) {
+	for {
+		bs, ok := resolver.(*blockSymbolResolver)
+		if !ok {
+			return nil, false
+		}
+		switch bs.node.(type) {
+		case *ast.BLangClassDefinition, *ast.BLangService:
+			return bs.scope, true
+		}
+		resolver = bs.parent
+	}
+}
+
 func isSelfFieldAccess(n *ast.BLangFieldBaseAccess) bool {
 	varRef, ok := n.Expr.(*ast.BLangSimpleVarRef)
 	if !ok {
@@ -1600,11 +1697,10 @@ func isSelfFieldAccess(n *ast.BLangFieldBaseAccess) bool {
 	return varRef.VariableName.Value == "self"
 }
 
-func resolveSelfFieldAccess[T symbolResolver](resolver T, n *ast.BLangFieldBaseAccess, classDef *ast.BLangClassDefinition) {
+func resolveSelfFieldAccess[T symbolResolver](resolver T, n *ast.BLangFieldBaseAccess, classScope model.BlockLevelScope) {
 	varRef := n.Expr.(*ast.BLangSimpleVarRef)
 	referSimpleVariableReference(resolver, varRef)
 	fieldName := n.Field.Value
-	classScope := classDef.Scope().(model.BlockLevelScope)
 	if _, ok := classScope.MainSpace().GetSymbol(fieldName); !ok {
 		semanticError(resolver, "undefined member '"+fieldName+"'", n.Field.GetPosition())
 	}

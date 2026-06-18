@@ -579,17 +579,22 @@ func TestMultiModuleDependencyOrder(t *testing.T) {
 	result, err := loadProject(absPath)
 	require.NoError(err, "Failed to load multi-module-project")
 
-	// Get package resolution which performs topological sorting
+	// Get package resolution which performs topological sorting. Implicit lang
+	// library modules (e.g. ballerina/lang.int) are compiled ahead of the
+	// project's modules; filter them out so we assert only the project's order.
 	resolution := result.Project().CurrentPackage().Resolution()
-	sortedModuleNames := resolution.TopologicallySortedModuleNames()
-	require.Len(sortedModuleNames, 4)
+	var sortedModuleNames []string
+	for _, name := range resolution.TopologicallySortedModuleNames() {
+		if strings.HasPrefix(name, "multimoduleproject") {
+			sortedModuleNames = append(sortedModuleNames, name)
+		}
+	}
+	require.Len(sortedModuleNames, 3)
 
-	// Verify the order: ballerina/io comes first because storage depends on it,
-	// then the intra-package order: storage → services → root.
-	assert.Equal("io", sortedModuleNames[0])
-	assert.Equal("multimoduleproject.storage", sortedModuleNames[1])
-	assert.Equal("multimoduleproject.services", sortedModuleNames[2])
-	assert.Equal("multimoduleproject", sortedModuleNames[3])
+	// Verify the intra-package order: storage → services → root.
+	assert.Equal("multimoduleproject.storage", sortedModuleNames[0])
+	assert.Equal("multimoduleproject.services", sortedModuleNames[1])
+	assert.Equal("multimoduleproject", sortedModuleNames[2])
 }
 
 // TestBuildProject_CompilationDiagnosticUnresolvedImport verifies that a build

@@ -89,6 +89,10 @@ type (
 	}
 )
 
+// AbstractExpression expression is there to allow other packages (such as Desugar) to define their
+// own ast nodes. All stages after that will need to be aware on how to handle them.
+type AbstractExpression = bLangExpressionBase
+
 func (*bLangExpressionBase) actionOrExpression() {}
 func (*bLangExpressionBase) expressionNode()     {}
 

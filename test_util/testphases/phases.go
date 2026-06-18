@@ -31,6 +31,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/test_util/langlib"
 	"ballerina-lang-go/tools/text"
 )
 
@@ -76,9 +77,8 @@ type stdlibEntry struct {
 }
 
 // builtinStdlibs is the ordered list of standard-library packages baked into the
-// binary. Order matters if any entry imports another.
+// binary that are still seeded manually for hand-rolled compile drivers.
 var builtinStdlibs = []stdlibEntry{
-	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
 }
 
@@ -136,19 +136,35 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 	return result
 }
 
+func LoadLanglibs(env *context.CompilerEnvironment, cx *context.CompilerContext) (*langlib.Symbols, error) {
+	stdlibSymbols := loadBuiltinPublicSymbols(env)
+	symbols, err := langlib.Build(cx, stdlibSymbols)
+	if err != nil {
+		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
+	}
+	return symbols, nil
+}
+
 // RunPipeline runs the frontend compilation pipeline up to the specified phase.
 // It returns a PipelineResult containing the outputs relevant to that phase.
-func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
+func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, langlibs *langlib.Symbols, phase Phase, inputPath string) (*PipelineResult, error) {
+	content, err := os.ReadFile(inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", inputPath, err)
+	}
+	return RunPipelineWithContent(env, cx, langlibs, phase, inputPath, string(content))
+}
+
+// RunPipelineWithContent runs the frontend compilation pipeline for preloaded content.
+// It returns a PipelineResult containing the outputs relevant to that phase.
+func RunPipelineWithContent(env *context.CompilerEnvironment, cx *context.CompilerContext, langlibs *langlib.Symbols, phase Phase, inputPath string, content string) (*PipelineResult, error) {
 	result := &PipelineResult{}
 
 	// Register source file with DiagnosticEnv
-	content, err := os.ReadFile(inputPath)
-	if err == nil {
-		cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
-	}
+	cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(content))
 
 	// Phase 1: Parse
-	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, string(content))
+	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath, content)
 	if err != nil {
 		return nil, fmt.Errorf("parsing failed: %w", err)
 	}
@@ -166,12 +182,15 @@ func RunPipeline(env *context.CompilerEnvironment, cx *context.CompilerContext, 
 		return result, nil
 	}
 
-	// Pre-compile the embedded standard-library packages so that imports like
-	// ballerina/io and ballerina/http resolve correctly during symbol resolution.
-	stdlibSymbols := loadBuiltinPublicSymbols(env)
-
 	// Phase 3: Symbol Resolution
-	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), stdlibSymbols, "")
+	if langlibs == nil {
+		var err error
+		langlibs, err = LoadLanglibs(env, cx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	importedSymbols := semantics.ResolveImports(cx, result.Package, langlibs.ImplicitImports, langlibs.PublicSymbols, "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil

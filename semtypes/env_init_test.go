@@ -56,7 +56,7 @@ func TestEnvInitAtomTable(t *testing.T) {
 	typeAtom8 := env.cellAtom(&cellAtomicUndef)
 
 	listAtomicTwoElement := listAtomicTypeFrom(
-		fixedLengthArrayFrom([]ComplexSemType{*CELL_SEMTYPE_VAL}, 2),
+		fixedLengthArrayFrom([]SemType{CELL_SEMTYPE_VAL}, 2),
 		CELL_SEMTYPE_UNDEF,
 	)
 	typeAtom9 := env.listAtom(&listAtomicTwoElement)
@@ -152,10 +152,9 @@ func TestEnvInitRecAtoms(t *testing.T) {
 	env.recListAtomsMutex.Unlock()
 
 	assertEqual(t, len(recListAtoms), 2)
-	listAtomicRo := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
 	if recListAtoms[0] == nil {
 		t.Error("recListAtoms[0] should not be nil")
-	} else if !recListAtoms[0].equals(&listAtomicRo) {
+	} else if recListAtoms[0] != LIST_ATOMIC_RO {
 		t.Errorf("recListAtoms[0] does not match expected ListAtomicType")
 	}
 	if recListAtoms[1] != nil {
@@ -170,12 +169,12 @@ func TestEnvInitRecAtoms(t *testing.T) {
 	assertEqual(t, len(recMappingAtoms), 2)
 	if recMappingAtoms[0] == nil {
 		t.Error("recMappingAtoms[0] should not be nil")
-	} else if !recMappingAtoms[0].equals(MAPPING_ATOMIC_RO) {
+	} else if recMappingAtoms[0] != MAPPING_ATOMIC_RO {
 		t.Errorf("recMappingAtoms[0] does not match MAPPING_ATOMIC_RO")
 	}
 	if recMappingAtoms[1] == nil {
 		t.Error("recMappingAtoms[1] should not be nil")
-	} else if !recMappingAtoms[1].equals(MAPPING_ATOMIC_OBJECT_RO) {
+	} else if recMappingAtoms[1] != MAPPING_ATOMIC_OBJECT_RO {
 		t.Errorf("recMappingAtoms[1] does not match MAPPING_ATOMIC_OBJECT_RO")
 	}
 

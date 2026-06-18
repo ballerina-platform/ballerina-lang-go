@@ -40,6 +40,7 @@ func CreateTypeEnv() Env {
 	for _, each := range predefTypeEnv.initializedListAtoms {
 		env.listAtom(each.atomicType)
 	}
+	env.preallocatedTypeVals = newPreallocatedTypeVals(env)
 	return env
 }
 
@@ -65,6 +66,8 @@ type env struct {
 	atomTable      map[atomicType]typeAtom
 
 	types map[string]SemType
+
+	preallocatedTypeVals preallocatedTypeVals
 }
 
 func (e *env) recListAtomCount() int {

@@ -18,6 +18,7 @@ package model
 
 import (
 	"iter"
+	"slices"
 	"sync"
 
 	"ballerina-lang-go/semtypes"
@@ -88,9 +89,20 @@ type symbolTypeSetter interface {
 
 type FuncSymbolFlags uint8
 
+type valueSymbolFlags uint8
+
 const (
 	FuncSymbolFlagIsolated FuncSymbolFlags = 1 << iota
 	FuncSymbolFlagTransactional
+)
+
+const (
+	valueSymbolFlagConst valueSymbolFlags = 1 << iota
+	valueSymbolFlagParameter
+	valueSymbolFlagIsolated
+	valueSymbolFlagFinal
+	valueSymbolFlagConfigurable
+	valueSymbolFlagListener
 )
 
 type FunctionSymbol interface {
@@ -102,15 +114,6 @@ type FunctionSymbol interface {
 	IncludedRecordParams() *IncludedRecordParamInfo
 	SetIncludedRecordParams(*IncludedRecordParamInfo)
 	ParamNames() []string
-}
-
-// ContainerGenericFunctionSymbol represents functions with [@typeParam] types defined for a container.
-// For these we are guranteed to get the container as a reference (**so we know the type**) to the first argument, thus we can always
-// Monomorphize the symbol type with it
-type ContainerGenericFunctionSymbol interface {
-	FunctionSymbol
-	Monomorphize(containerTy semtypes.SemType) SymbolRef
-	Space() *SymbolSpace
 }
 
 // DependentlyTypedFunctionSymbol represents a [dependently typed function]. Actual function signature
@@ -202,7 +205,6 @@ type (
 
 	// We are using indeces here with the same rational as RefAtoms, instead of pointers
 	SymbolRef struct {
-		Package    PackageIdentifier
 		Index      int
 		SpaceIndex int
 	}
@@ -305,11 +307,7 @@ type (
 
 	ValueSymbol struct {
 		symbolBase
-		isConst        bool
-		isParameter    bool
-		isIsolated     bool
-		isFinal        bool
-		isConfigurable bool
+		flags valueSymbolFlags
 	}
 
 	// ConstantValueSymbol is a ValueSymbol for a module constant whose
@@ -345,13 +343,6 @@ type (
 		methodName   string
 		pathListType semtypes.SemType
 		pathParams   []SymbolRef
-	}
-
-	containerGenericFunctionSymbol struct {
-		name          string
-		space         *SymbolSpace
-		monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef
-		paramNames    []string
 	}
 
 	dependentlyTypedFunctionSymbol struct {
@@ -392,6 +383,10 @@ type (
 		fieldNames [][]string
 	}
 )
+
+func (ref SymbolRef) IsEmpty() bool {
+	return ref == SymbolRef{}
+}
 
 const (
 	DefaultableParamKindExpr DefaultableParamKind = iota
@@ -503,7 +498,6 @@ var (
 	_ ValueSymbolView                = &ConstantValueSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
-	_ ContainerGenericFunctionSymbol = &containerGenericFunctionSymbol{}
 	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
 	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
 	_ FunctionSymbol                 = &ResourceMethodSymbol{}
@@ -528,7 +522,7 @@ func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	if !ok {
 		return SymbolRef{}, false
 	}
-	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}, true
+	return SymbolRef{Index: index, SpaceIndex: space.SpaceIndex()}, true
 }
 
 // AppendSymbol appends a symbol to the space and returns its index. Thread-safe.
@@ -543,12 +537,12 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 
 // RefAt returns a SymbolRef for the symbol at the given index.
 func (space *SymbolSpace) RefAt(index int) SymbolRef {
-	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}
+	return SymbolRef{Index: index, SpaceIndex: space.SpaceIndex()}
 }
 
-// SymbolAt returns the symbol at the given index. Thread-safe.
+// SpaceIndex returns the non-zero symbol-space index used in SymbolRef.
 func (space *SymbolSpace) SpaceIndex() int {
-	return space.index
+	return space.index + 1
 }
 
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
@@ -579,12 +573,15 @@ func (space *SymbolSpace) Symbols() iter.Seq2[int, Symbol] {
 }
 
 func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
-	pkg := PackageIdentifier{
-		Organization: packageID.OrgName.Value(),
-		Package:      packageID.PkgName.Value(),
-		Version:      packageID.Version.Value(),
+	return &SymbolSpace{index: index, Pkg: PackageIdentifierFromID(&packageID), lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
+}
+
+func PackageIdentifierFromID(id *PackageID) PackageIdentifier {
+	return PackageIdentifier{
+		Organization: id.OrgName.Value(),
+		Package:      id.PkgName.Value(),
+		Version:      id.Version.Value(),
 	}
-	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -888,7 +885,7 @@ func (m *memberHolderBase) AddMember(im InclusionMember) {
 func (m *memberHolderBase) FieldDefaults() []FieldDefault {
 	var defaults []FieldDefault
 	for _, im := range m.members {
-		if fd, ok := im.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
+		if fd, ok := im.(*FieldDescriptor); ok && !fd.DefaultFnRef.IsEmpty() {
 			defaults = append(defaults, FieldDefault{FieldName: fd.name, FnRef: fd.DefaultFnRef})
 		}
 	}
@@ -928,32 +925,40 @@ func (r *RecordSymbol) RestField() (*RestTypeDescriptor, bool) {
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
-	if vs.isConst {
+	if vs.hasFlag(valueSymbolFlagConst) {
 		return SymbolKindConstant
 	}
-	if vs.isParameter {
+	if vs.hasFlag(valueSymbolFlagParameter) {
 		return SymbolKindParemeter
 	}
 	return SymbolKindVariable
 }
 
 func (vs *ValueSymbol) IsConst() bool {
-	return vs.isConst || vs.isParameter
+	return vs.hasFlag(valueSymbolFlagConst) || vs.hasFlag(valueSymbolFlagParameter)
 }
 
-func (vs *ValueSymbol) IsParameter() bool { return vs.isParameter }
+func (vs *ValueSymbol) IsParameter() bool { return vs.hasFlag(valueSymbolFlagParameter) }
 
-func (vs *ValueSymbol) IsIsolated() bool { return vs.isIsolated }
+func (vs *ValueSymbol) IsIsolated() bool { return vs.hasFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) SetIsolated() { vs.isIsolated = true }
+func (vs *ValueSymbol) SetIsolated() { vs.setFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) IsFinal() bool { return vs.isFinal }
+func (vs *ValueSymbol) IsFinal() bool { return vs.hasFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) SetFinal() { vs.isFinal = true }
+func (vs *ValueSymbol) SetFinal() { vs.setFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) IsConfigurable() bool { return vs.isConfigurable }
+func (vs *ValueSymbol) IsConfigurable() bool { return vs.hasFlag(valueSymbolFlagConfigurable) }
 
-func (vs *ValueSymbol) SetConfigurable() { vs.isConfigurable = true }
+func (vs *ValueSymbol) SetConfigurable() { vs.setFlag(valueSymbolFlagConfigurable) }
+
+func (vs *ValueSymbol) IsListener() bool { return vs.hasFlag(valueSymbolFlagListener) }
+
+func (vs *ValueSymbol) SetListener() { vs.setFlag(valueSymbolFlagListener) }
+
+func (vs *ValueSymbol) hasFlag(flag valueSymbolFlags) bool { return vs.flags&flag != 0 }
+
+func (vs *ValueSymbol) setFlag(flag valueSymbolFlags) { vs.flags |= flag }
 
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs
@@ -1018,7 +1023,7 @@ func (fs *functionSymbol) ParamNames() []string {
 
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return &functionSymbol{
-		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
 		signature:  signature,
 	}
 }
@@ -1071,10 +1076,8 @@ func (i *IncludedRecordParamInfo) Fields(index int) []string {
 
 func (i *IncludedRecordParamInfo) LookupField(name string) (int, bool) {
 	for idx, names := range i.fieldNames {
-		for _, n := range names {
-			if n == name {
-				return idx, true
-			}
+		if slices.Contains(names, name) {
+			return idx, true
 		}
 	}
 	return -1, false
@@ -1100,10 +1103,16 @@ func (fs *FunctionSignature) IsTransactional() bool {
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
+	var flags valueSymbolFlags
+	if isConst {
+		flags |= valueSymbolFlagConst
+	}
+	if isParameter {
+		flags |= valueSymbolFlagParameter
+	}
 	return ValueSymbol{
-		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
-		isConst:     isConst,
-		isParameter: isParameter,
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
+		flags:      flags,
 	}
 }
 
@@ -1115,7 +1124,7 @@ func NewConstantValueSymbol(name string, isPublic bool) *ConstantValueSymbol {
 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
-		symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:  symbolBase{name: name, isPublic: isPublic},
 		annotations: values.NewAnnotationValues(),
 	}
 }
@@ -1126,7 +1135,7 @@ func NewAnnotationSymbol(name string, isPublic bool, isConst bool, attachPoints 
 		attachPointMap[point] = true
 	}
 	return AnnotationSymbol{
-		symbolBase:   symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:   symbolBase{name: name, isPublic: isPublic},
 		isConst:      isConst,
 		attachPoints: attachPointMap,
 	}
@@ -1149,7 +1158,7 @@ func NewNetworkClassSymbol(name string, isPublic bool) ClassSymbol {
 func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
 	return classSymbolBase{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, isPublic: isPublic},
 			annotations: values.NewAnnotationValues(),
 		},
 		methods: map[string]SymbolRef{},
@@ -1167,7 +1176,7 @@ func (c *classSymbolBase) AddResourceMethod(ref SymbolRef) {
 func NewResourceMethodSymbol(name, methodName string, isPublic bool) *ResourceMethodSymbol {
 	return &ResourceMethodSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 		methodName: methodName,
 	}
@@ -1201,7 +1210,7 @@ func (r *ResourceMethodSymbol) Copy() Symbol {
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 	return RecordSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, isPublic: isPublic},
 			annotations: values.NewAnnotationValues(),
 		},
 	}
@@ -1210,7 +1219,7 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, ty: nil, isPublic: isPublic},
+			symbolBase:  symbolBase{name: name, isPublic: isPublic},
 			annotations: values.NewAnnotationValues(),
 		},
 	}
@@ -1225,73 +1234,9 @@ func (c *classSymbolBase) MethodSymbol(name string) (SymbolRef, bool) {
 	return ref, ok
 }
 
-func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s ContainerGenericFunctionSymbol, containerTy semtypes.SemType) SymbolRef) ContainerGenericFunctionSymbol {
-	return &containerGenericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
-}
-
-func (s *containerGenericFunctionSymbol) Name() string {
-	return s.name
-}
-
-func (s *containerGenericFunctionSymbol) ParamNames() []string {
-	return s.paramNames
-}
-
-func (s *containerGenericFunctionSymbol) Type() semtypes.SemType {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) Kind() SymbolKind {
-	return SymbolKindFunction
-}
-
-func (s *containerGenericFunctionSymbol) SetType(_ semtypes.SemType) {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) IsPublic() bool {
-	return true
-}
-
-func (s *containerGenericFunctionSymbol) Signature() FunctionSignature {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) SetSignature(_ FunctionSignature) {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
-	return &DefaultableParamInfo{}
-}
-
-func (s *containerGenericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) SetIncludedRecordParams(_ *IncludedRecordParamInfo) {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) Copy() Symbol {
-	panic("GenericSymbol must be Monomorphized")
-}
-
-func (s *containerGenericFunctionSymbol) Monomorphize(containerTy semtypes.SemType) SymbolRef {
-	return s.monomorphizer(s, containerTy)
-}
-
-func (s *containerGenericFunctionSymbol) Space() *SymbolSpace {
-	return s.space
-}
-
 func NewDependentlyTypedFunctionSymbol(name string, paramNames []string, nRequiredArgs int, flags FuncSymbolFlags, isPublic bool) DependentlyTypedFunctionSymbol {
 	return &dependentlyTypedFunctionSymbol{
-		symbolBase:    symbolBase{name: name, ty: nil, isPublic: isPublic},
+		symbolBase:    symbolBase{name: name, isPublic: isPublic},
 		paramNames:    paramNames,
 		nRequiredArgs: nRequiredArgs,
 		Flags:         flags,
@@ -1354,7 +1299,7 @@ func (s *dependentlyTypedFunctionSymbol) SetReturnType(op TypeOp) {
 
 func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name string, origRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol {
 	fixed := argTys
-	var rest semtypes.SemType = semtypes.NEVER
+	var rest = semtypes.NEVER
 	if len(argTys) > s.nRequiredArgs {
 		fixed = argTys[:s.nRequiredArgs]
 		for _, each := range argTys[s.nRequiredArgs:] {
@@ -1371,7 +1316,7 @@ func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name
 	}
 	return &monomorphicFunctionSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase:           symbolBase{name: name, ty: nil, isPublic: s.isPublic},
+			symbolBase:           symbolBase{name: name, isPublic: s.isPublic},
 			signature:            sig,
 			defaultableParams:    s.defaultable,
 			includedRecordParams: s.includedRecordParams,

@@ -109,24 +109,36 @@ func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 func (sr *symbolReader) readSymbolSpace() *model.SymbolSpace {
 	var count int64
 	read(sr.r, &count)
-	if count == 0 {
+	if count == symbolSpaceNilSentinel {
 		return nil
 	}
 
 	pkgID := sr.readPackageIdentifier()
 	space := sr.env.NewSymbolSpace(*pkgID)
+	opaque := model.OpaqueSymbols(space.Pkg)
 	for i := int64(0); i < count; i++ {
-		sr.readSymbol(space)
+		sr.readSymbol(space, opaque)
 	}
 
 	return space
 }
 
-func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readSymbol(space *model.SymbolSpace, opaque []model.Symbol) {
 	var tag uint8
 	read(sr.r, &tag)
 
 	switch tag {
+	case symTagOpaque:
+		var idx int32
+		read(sr.r, &idx)
+		sym := opaque[idx]
+		// Set the space the (monomorphized) function is added to. No
+		// monomorphization cache is installed here; nil closures mean no
+		// caching (the symbol resolver installs one when compiling from source).
+		if fn, ok := sym.(*model.OpaqueFunctionSymbol); ok {
+			fn.SymbolSpace = space
+		}
+		space.AddSymbol(sym.Name(), sym)
 	case symTagType:
 		sr.readTypeSymbol(space)
 	case symTagClass:
@@ -243,19 +255,9 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 }
 
 func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
-	org := sr.readStringCP()
-	pkg := sr.readStringCP()
-	version := sr.readStringCP()
-	var index, spaceIndex int32
+	var index int32
 	read(sr.r, &index)
-	read(sr.r, &spaceIndex)
-	_ = spaceIndex // use the current space's index instead of the serialized one
 	return model.SymbolRef{
-		Package: model.PackageIdentifier{
-			Organization: org,
-			Package:      pkg,
-			Version:      version,
-		},
 		Index:      int(index),
 		SpaceIndex: space.SpaceIndex(),
 	}
@@ -520,7 +522,7 @@ func (sr *symbolReader) readType() semtypes.SemType {
 	var idx int32
 	read(sr.r, &idx)
 	if idx == -1 {
-		return nil
+		return semtypes.SemType{}
 	}
 	return sr.tp.Get(semtypes.TypePoolIndex(idx))
 }

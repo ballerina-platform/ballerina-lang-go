@@ -14674,10 +14674,6 @@ func (b *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 	return (((token.Kind() == common.MAP_KEYWORD) || (token.Kind() == common.START_KEYWORD)) || (token.Kind() == common.JOIN_KEYWORD))
 }
 
-// GetSyntaxTreeFromContent parses Ballerina source from an in-memory string.
-// It is the counterpart to GetSyntaxTree for sources that have no real
-// filesystem path (e.g. stdlib .bal files embedded via embed.FS).
-// virtualPath is used only for diagnostic messages; no file I/O is performed.
 // GetSyntaxTree parses content into a syntax tree, attributing it to fileName
 // (used for diagnostics and the syntax tree's text document).
 func GetSyntaxTree(ctx *context.CompilerContext, fileName string, content string) (*tree.SyntaxTree, error) {

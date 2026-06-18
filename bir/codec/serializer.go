@@ -723,7 +723,7 @@ func (bw *birWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) 
 }
 
 func (bw *birWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		write(buf, int32(-1))
 		return
 	}

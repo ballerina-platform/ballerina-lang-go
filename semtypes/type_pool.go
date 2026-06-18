@@ -25,13 +25,15 @@ import (
 )
 
 type TypePool struct {
-	tys  []SemType
-	memo map[SemType]TypePoolIndex
+	tys      []SemType
+	memo     map[InternHandle]TypePoolIndex
+	interner *SemtypeInterner
 }
 
 func NewTypePool() *TypePool {
 	return &TypePool{
-		memo: make(map[SemType]TypePoolIndex),
+		memo:     make(map[InternHandle]TypePoolIndex),
+		interner: NewSemtypeInterner(),
 	}
 }
 
@@ -45,25 +47,23 @@ const indexMask = (1 << 31) - 1
 func (pool *TypePool) Get(i TypePoolIndex) SemType {
 	if i <= 0 {
 		bits := i & indexMask
-		return basicTypeBitSetFrom(int(bits))
+		return basicTypeBitSet(bits).semType()
 	}
 	return pool.tys[i-1]
 }
 
 func (pool *TypePool) Put(ty SemType) TypePoolIndex {
-	switch ty := ty.(type) {
-	case BasicTypeBitSet:
+	if ty.some() == 0 {
 		return TypePoolIndex(ty.all() | 1<<31)
-	case *ComplexSemType:
-		if cached, ok := pool.memo[ty]; ok {
-			return cached
-		}
-		id := len(pool.tys) + 1
-		pool.tys = append(pool.tys, ty)
-		pool.memo[ty] = TypePoolIndex(id)
-		return TypePoolIndex(id)
 	}
-	panic("unreachable")
+	handle := pool.interner.Intern(ty)
+	if cached, ok := pool.memo[handle]; ok {
+		return cached
+	}
+	id := len(pool.tys) + 1
+	pool.tys = append(pool.tys, ty)
+	pool.memo[handle] = TypePoolIndex(id)
+	return TypePoolIndex(id)
 }
 
 func fromTypePool(pool *TypePool, env Env) binaryPool {
@@ -72,8 +72,7 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 	sc := newBddSerializationContext(pool, cx, &bp)
 	for i := 0; i < len(pool.tys); i++ {
 		ty := pool.tys[i]
-		cst := ty.(*ComplexSemType)
-		subtypes := unpack(cst)
+		subtypes := unpack(ty)
 		start := uint32(len(bp.subtypeData))
 		for _, bs := range subtypes {
 			var entry subtypeDataEntry
@@ -132,8 +131,8 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 		}
 		end := uint32(len(bp.subtypeData))
 		bp.types = append(bp.types, typeEntry{
-			all:              uint32(cst.all()),
-			some:             uint32(cst.some()),
+			all:              uint32(ty.all()),
+			some:             uint32(ty.some()),
 			subtypeDataStart: start,
 			subtypeDataEnd:   end,
 		})
@@ -161,8 +160,9 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 
 func toTypePool(bp binaryPool, env Env) *TypePool {
 	pool := &TypePool{
-		memo: make(map[SemType]TypePoolIndex),
-		tys:  make([]SemType, len(bp.types)),
+		memo:     make(map[InternHandle]TypePoolIndex),
+		interner: NewSemtypeInterner(),
+		tys:      make([]SemType, len(bp.types)),
 	}
 	dc := newBddDeserializationContext(pool, env, &bp)
 	for i := range bp.types {

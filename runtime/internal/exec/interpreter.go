@@ -20,12 +20,11 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/runtime/internal/modules"
-	"ballerina-lang-go/values"
 )
 
 func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 	ctx := extern.CreateContext(env)
-	cs := &callStack{elements: make([]*Frame, 0, 32)}
+	cs := &callStack{elements: make([]callStackEntry, 0, 32)}
 	ctx.CallStack = cs
 	birModule, err := modules.NewBIRModule(ctx, &pkg)
 	if err != nil {
@@ -46,10 +45,7 @@ func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 			}
 		}()
 		if result := executeFunction(ctx, *pkg.InitFunction, nil, nil); result != nil {
-			if _, ok := result.(*values.Error); ok {
-				err = getFormattedError(cs, result)
-				return
-			}
+			panic(result)
 		}
 	}
 	if pkg.MainFunction != nil {
@@ -60,9 +56,7 @@ func Interpret(pkg bir.BIRPackage, env *extern.Env) (err error) {
 			}
 		}()
 		if result := executeFunction(ctx, *pkg.MainFunction, nil, nil); result != nil {
-			if _, ok := result.(*values.Error); ok {
-				err = getFormattedError(cs, result)
-			}
+			panic(result)
 		}
 	}
 	return err

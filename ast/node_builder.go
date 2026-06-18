@@ -810,22 +810,19 @@ func createIdentifier(pos diagnostics.Location, value, originalValue *string) BL
 	if value == nil {
 		return bLIdentifer
 	}
-	strValue := *value
-	// Handle identifier literal prefix
-	const IDENTIFIER_LITERAL_PREFIX = "'"
-
-	// TODO: properly handle unicode
-	if len(strValue) > 0 && strValue[0:1] == IDENTIFIER_LITERAL_PREFIX {
-		// Remove the prefix and mark as literal
-		bLIdentifer.SetValue(strValue[1:])
-		bLIdentifer.SetLiteral(true)
-	} else {
-		bLIdentifer.SetValue(strValue)
-		bLIdentifer.SetLiteral(false)
-	}
-
+	identifierValue, isLiteral := normalizedIdentifierValue(*value)
+	bLIdentifer.SetValue(identifierValue)
+	bLIdentifer.SetLiteral(isLiteral)
 	bLIdentifer.SetOriginalValue(*originalValue)
 	return bLIdentifer
+}
+
+func normalizedIdentifierValue(value string) (string, bool) {
+	const IDENTIFIER_LITERAL_PREFIX = "'"
+	if len(value) > 0 && value[0:1] == IDENTIFIER_LITERAL_PREFIX {
+		return value[1:], true
+	}
+	return value, false
 }
 
 // createIdentifierFromToken creates an identifier from a token, handling missing tokens and validation
@@ -959,10 +956,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 		}
 	}
 
-	// Remove all whitespace (equivalent to Java's replaceAll("\\s+", ""))
-	whitespaceRegex := regexp.MustCompile(`\s+`)
-	typeTextNoWhitespace := whitespaceRegex.ReplaceAllString(typeText, "")
-	typeKind := stringToTypeKind(typeTextNoWhitespace)
+	typeKind := stringToTypeKind(typeText)
 
 	kind := typeNode.Kind()
 	switch kind {
@@ -990,7 +984,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 	}
 }
 
-func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier {
+func (n *NodeBuilder) createBLangNameReference(node tree.Node) [2]BLangIdentifier {
 	switch node.Kind() {
 	case common.QUALIFIED_NAME_REFERENCE:
 		iNode := node.(*tree.QualifiedNameReferenceNode)
@@ -999,7 +993,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 		pkgAlias := createIdentifierFromToken(getPosition(n.de(), modulePrefix), modulePrefix)
 		namePos := getPosition(n.de(), identifier)
 		name := createIdentifierFromToken(namePos, identifier)
-		return []BLangIdentifier{pkgAlias, name}
+		return [...]BLangIdentifier{pkgAlias, name}
 	case common.ERROR_TYPE_DESC:
 		builtinNode := node.(*tree.BuiltinSimpleNameReferenceNode)
 		node = builtinNode.Name()
@@ -1019,7 +1013,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	emptyStr := ""
 	pkgAlias := createIdentifier(diagnostics.NewBuiltinLocation(), &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(n.de(), iToken), iToken)
-	return []BLangIdentifier{pkgAlias, name}
+	return [...]BLangIdentifier{pkgAlias, name}
 }
 
 // isFunctionCallAsync checks if a function call expression is async
@@ -1587,7 +1581,43 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 }
 
 func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree.ListenerDeclarationNode) BLangNode {
-	panic("TransformListenerDeclaration unimplemented")
+	metadata := listenerDeclarationNode.Metadata()
+
+	pos := getPositionWithoutMetadata(n.de(), listenerDeclarationNode)
+	nameToken := listenerDeclarationNode.VariableName()
+	namePos := getPosition(n.de(), nameToken)
+	identifier := createIdentifierFromToken(namePos, nameToken)
+
+	bLSimpleVar := createSimpleVariableNode()
+	bLSimpleVar.SetName(&identifier)
+	bLSimpleVar.pos = pos
+
+	typeDesc := listenerDeclarationNode.TypeDescriptor()
+	if typeDesc != nil && !typeDesc.IsMissing() {
+		bLSimpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+	} else {
+		bLSimpleVar.IsDeclaredWithVar = true
+	}
+
+	if initializer := listenerDeclarationNode.Initializer(); initializer != nil {
+		bLSimpleVar.SetInitialExpression(n.createExpression(initializer))
+	}
+
+	if visQual := listenerDeclarationNode.VisibilityQualifier(); visQual != nil && visQual.Kind() == common.PUBLIC_KEYWORD {
+		bLSimpleVar.SetPublic()
+	}
+
+	if metadata != nil && !metadata.IsMissing() {
+		if annotations := metadata.Annotations(); annotations.Size() > 0 {
+			panic("TransformListenerDeclaration: annotations not yet supported")
+		}
+		bLSimpleVar.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(getDocumentationString(metadata))
+	}
+
+	// Listeners are final (the binding cannot be reassigned).
+	bLSimpleVar.SetFinal()
+	bLSimpleVar.SetListener()
+	return bLSimpleVar
 }
 
 func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefinitionNode) BLangNode {
@@ -1618,7 +1648,152 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 }
 
 func (n *NodeBuilder) TransformServiceDeclaration(serviceDeclarationNode *tree.ServiceDeclarationNode) BLangNode {
-	panic("TransformServiceDeclaration unimplemented")
+	metadata := serviceDeclarationNode.Metadata()
+
+	service := NewBLangService()
+	service.pos = getPositionWithoutMetadata(n.de(), serviceDeclarationNode)
+
+	if metadata != nil && !metadata.IsMissing() {
+		if annotations := metadata.Annotations(); annotations.Size() > 0 {
+			panic("TransformServiceDeclaration: annotations not yet supported")
+		}
+		service.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(getDocumentationString(metadata))
+	}
+
+	if typeDesc := serviceDeclarationNode.TypeDescriptor(); typeDesc != nil && !typeDesc.IsMissing() {
+		service.SetTypeData(TypeData{TypeDescriptor: n.createTypeNode(typeDesc)})
+	}
+
+	n.populateServiceQualifiers(&service, serviceDeclarationNode)
+	n.populateServiceAttachPoint(&service, serviceDeclarationNode)
+	n.populateServiceAttachedExprs(&service, serviceDeclarationNode)
+
+	members := n.collectClassDefnMembers(serviceDeclarationNode.Members())
+	service.Fields = members.Fields
+	service.Methods = members.Methods
+	service.InitFunction = members.InitFunction
+	service.ResourceMethods = members.ResourceMethods
+	for _, each := range members.UnresolvedInclusions {
+		// Parser should catch these
+		n.cx.InternalError("unexpected inclusions in service decl", each.pos)
+	}
+
+	return &service
+}
+
+// populateServiceQualifiers reads the user-controllable qualifiers from the
+// service declaration. The `service` flag is already set by NewBLangService.
+func (n *NodeBuilder) populateServiceQualifiers(service *BLangService, node *tree.ServiceDeclarationNode) {
+	quals := node.Qualifiers()
+	for qual := range quals.Iterator() {
+		if qual.Kind() == common.ISOLATED_KEYWORD {
+			service.SetIsolated()
+		}
+	}
+}
+
+func (n *NodeBuilder) populateServiceAttachPoint(service *BLangService, node *tree.ServiceDeclarationNode) {
+	paths := node.AbsoluteResourcePath()
+	if node.HasDiagnostics() {
+		n.reportSyntaxDiagnostics(node)
+		return
+	}
+	for i := 0; i < paths.Size(); i++ {
+		seg := paths.Get(i)
+		tok, ok := seg.(tree.Token)
+		if !ok {
+			n.cx.InternalError("unexpected node in service attach point", getPosition(n.de(), seg))
+			continue
+		}
+		switch tok.Kind() {
+		case common.STRING_LITERAL:
+			lit, ok := n.createExpression(tok).(*BLangLiteral)
+			if !ok {
+				n.cx.InternalError("invalid service attach point literal", getPosition(n.de(), tok))
+				continue
+			}
+			if _, isString := lit.GetValue().(string); !isString {
+				n.cx.InternalError("service attach point literal must be a string", getPosition(n.de(), tok))
+				continue
+			}
+			service.AttachPointLiteral = lit
+		case common.IDENTIFIER_TOKEN:
+			ident := createIdentifierFromToken(getPosition(n.de(), tok), tok)
+			service.AbsoluteResourcePath = append(service.AbsoluteResourcePath, ident)
+		case common.SLASH_TOKEN:
+			// Slash tokens between segments are ignored.
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected token in service attach point: %v", tok.Kind()), getPosition(n.de(), tok))
+		}
+	}
+}
+
+func (n *NodeBuilder) populateServiceAttachedExprs(service *BLangService, node *tree.ServiceDeclarationNode) {
+	exprs := node.Expressions()
+	for i := 0; i < exprs.Size(); i += 2 {
+		service.AttachedExprs = append(service.AttachedExprs, n.createExpression(exprs.Get(i)))
+	}
+}
+
+type classDefnMembers struct {
+	Fields               []SimpleVariableNode
+	Methods              map[string]*BLangFunction
+	InitFunction         *BLangFunction
+	ResourceMethods      []*BLangResourceMethod
+	UnresolvedInclusions []*BLangUserDefinedType
+}
+
+func newClassDefnMembers() classDefnMembers {
+	return classDefnMembers{Methods: map[string]*BLangFunction{}}
+}
+
+func (n *NodeBuilder) collectClassDefnMembers(memberNodes tree.NodeList[tree.Node]) classDefnMembers {
+	members := newClassDefnMembers()
+	for i := 0; i < memberNodes.Size(); i++ {
+		member := memberNodes.Get(i)
+		switch member.Kind() {
+		case common.OBJECT_FIELD:
+			field := n.transformClassField(member.(*tree.ObjectFieldNode))
+			members.Fields = append(members.Fields, field)
+		case common.FUNCTION_DEFINITION, common.OBJECT_METHOD_DEFINITION:
+			n.addCollectedMethod(&members, member.(*tree.FunctionDefinition))
+		case common.RESOURCE_ACCESSOR_DEFINITION:
+			rm := n.createResourceMethodNode(member.(*tree.FunctionDefinition))
+			members.ResourceMethods = append(members.ResourceMethods, rm)
+		case common.TYPE_REFERENCE:
+			typeRef := member.(*tree.TypeReferenceNode)
+			members.UnresolvedInclusions = append(members.UnresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
+		default:
+			panic("collectClassDefnMembers: unsupported member kind")
+		}
+	}
+	return members
+}
+
+func (n *NodeBuilder) addCollectedMethod(members *classDefnMembers, funcDef *tree.FunctionDefinition) {
+	bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
+	bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
+	bLFunction.SetAttached()
+	n.populateMetadata(funcDef.Metadata(), bLFunction)
+
+	funcName := bLFunction.Name.Value
+	if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
+		if members.InitFunction != nil {
+			n.cx.SyntaxError("redeclared symbol 'init'", bLFunction.pos)
+			return
+		}
+		members.InitFunction = bLFunction
+		return
+	}
+	if bLFunction.IsRemote() {
+		funcName = model.RemoteMethodName(funcName)
+		bLFunction.Name.Value = funcName
+	}
+	if _, exists := members.Methods[funcName]; exists {
+		n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
+		return
+	}
+	members.Methods[funcName] = bLFunction
 }
 
 func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree.AssignmentStatementNode) BLangNode {
@@ -2387,7 +2562,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 		switch member.Kind() {
 		case common.OBJECT_FIELD:
 			objectField := member.(*tree.ObjectFieldNode)
-			fieldName := objectField.FieldName().Text()
+			fieldName, _ := normalizedIdentifierValue(objectField.FieldName().Text())
 			bField := &BObjectField{
 				Ty: n.createTypeNode(objectField.TypeName()).(BType),
 			}
@@ -2402,7 +2577,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			}
 		case common.METHOD_DECLARATION:
 			methodDecl := member.(*tree.MethodDeclarationNode)
-			methodName := methodDecl.MethodName().Text()
+			methodName, _ := normalizedIdentifierValue(methodDecl.MethodName().Text())
 			bMethod := &BMethodDecl{}
 			bMethod.name = methodName
 			bMethod.pos = getPosition(n.de(), methodDecl)
@@ -2447,7 +2622,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
 					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type()).(BType)
 				} else {
-					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: TypeKind_NIL}
+					nilRet := &BLangValueType{TypeKind: TypeKind_NIL}
+					nilRet.pos = diagnostics.NewBuiltinLocation()
+					bMethod.ReturnTypeDescriptor = nilRet
 				}
 			}
 
@@ -4881,45 +5058,12 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 	// Handle class type qualifiers
 	n.setClassQualifiers(&blangClass, classDefinitionNode.ClassTypeQualifiers())
 
-	// Process members
-	members := classDefinitionNode.Members()
-	for i := 0; i < members.Size(); i++ {
-		member := members.Get(i)
-		switch member.Kind() {
-		case common.OBJECT_FIELD:
-			field := n.transformClassField(member.(*tree.ObjectFieldNode))
-			blangClass.AddField(field)
-		case common.FUNCTION_DEFINITION, common.OBJECT_METHOD_DEFINITION:
-			funcDef := member.(*tree.FunctionDefinition)
-			bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
-			bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
-			bLFunction.SetAttached()
-			n.populateMetadata(funcDef.Metadata(), bLFunction)
-
-			funcName := bLFunction.Name.Value
-			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
-				blangClass.InitFunction = bLFunction
-			} else {
-				if bLFunction.IsRemote() {
-					funcName = model.RemoteMethodName(funcName)
-					bLFunction.Name.Value = funcName
-				}
-				if blangClass.GetMethod(funcName) != nil {
-					n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
-				}
-				blangClass.AddMethod(funcName, bLFunction)
-			}
-		case common.RESOURCE_ACCESSOR_DEFINITION:
-			funcDef := member.(*tree.FunctionDefinition)
-			rm := n.createResourceMethodNode(funcDef)
-			blangClass.ResourceMethods = append(blangClass.ResourceMethods, rm)
-		case common.TYPE_REFERENCE:
-			typeRef := member.(*tree.TypeReferenceNode)
-			blangClass.unresolvedInclusions = append(blangClass.unresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
-		default:
-			panic("TransformClassDefinition: unsupported member kind")
-		}
-	}
+	members := n.collectClassDefnMembers(classDefinitionNode.Members())
+	blangClass.Fields = members.Fields
+	blangClass.Methods = members.Methods
+	blangClass.InitFunction = members.InitFunction
+	blangClass.ResourceMethods = members.ResourceMethods
+	blangClass.unresolvedInclusions = members.UnresolvedInclusions
 
 	return &blangClass
 }

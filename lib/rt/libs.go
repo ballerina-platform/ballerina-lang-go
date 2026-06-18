@@ -17,12 +17,12 @@
 package rt
 
 import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/error/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
 	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-	_ "ballerina-lang-go/lib/string/runtime"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.array"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.error"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.int"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.map"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.string"
 
 	// standard libraries
 	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"

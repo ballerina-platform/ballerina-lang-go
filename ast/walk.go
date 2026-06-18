@@ -147,39 +147,19 @@ func Walk(v Visitor, node BLangNode) {
 		for _, expr := range node.AttachedExprs {
 			Walk(v, expr.(BLangNode))
 		}
-		if node.ServiceClass != nil {
-			Walk(v, node.ServiceClass)
+		if node.AttachPointLiteral != nil {
+			Walk(v, node.AttachPointLiteral)
 		}
-		if node.Name != nil {
-			Walk(v, node.Name)
+		for i := range node.AbsoluteResourcePath {
+			Walk(v, &node.AbsoluteResourcePath[i])
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-		for i := range node.ResourceFunctions {
-			Walk(v, &node.ResourceFunctions[i])
-		}
+		walkClassDefnBody(v, &node.classDefnBase)
 
 	case *BLangClassDefinition:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-		if node.InitFunction != nil {
-			Walk(v, node.InitFunction)
-		}
-		for _, method := range node.Methods {
-			Walk(v, method)
-		}
-		for _, method := range node.ResourceMethods {
-			Walk(v, method)
-		}
-		for _, field := range node.Fields {
-			Walk(v, field.(BLangNode))
-		}
-		WalkTypeData(v, &node.typeData)
+		walkClassDefnBody(v, &node.classDefnBase)
 
 	case *BLangAnnotation:
 		if node.Name != nil {
@@ -1005,6 +985,25 @@ func WalkTypeData(v Visitor, typeData *TypeData) {
 		Walk(v, tdNode)
 	}
 	v.Visit(nil)
+}
+
+func walkClassDefnBody(v Visitor, b *classDefnBase) {
+	for i := range b.AnnAttachments {
+		Walk(v, &b.AnnAttachments[i])
+	}
+	if b.InitFunction != nil {
+		Walk(v, b.InitFunction)
+	}
+	for _, method := range b.Methods {
+		Walk(v, method)
+	}
+	for _, method := range b.ResourceMethods {
+		Walk(v, method)
+	}
+	for _, field := range b.Fields {
+		Walk(v, field.(BLangNode))
+	}
+	WalkTypeData(v, &b.typeData)
 }
 
 func walkTypeDescriptor(v Visitor, td TypeDescriptor) {

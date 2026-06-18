@@ -34,6 +34,9 @@ type PrettyPrinter struct {
 	beginningPrinted   bool
 	addSpaceBeforeNode bool
 	buffer             strings.Builder
+	// Fallback handles node types this printer doesn't know about (e.g.
+	// desugar-only nodes).
+	Fallback func(p *PrettyPrinter, node BLangNode)
 }
 
 func (p *PrettyPrinter) Print(node BLangNode) string {
@@ -157,6 +160,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printMethodDecl(t)
 	case *BLangClassDefinition:
 		p.printClassDefinition(t)
+	case *BLangService:
+		p.printService(t)
 	case *BLangNewExpression:
 		p.printNewExpression(t)
 	case *BLangFieldBaseAccess:
@@ -246,61 +251,65 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 	case *BLangXMLNS:
 		p.printXMLNS(t)
 	default:
+		if p.Fallback != nil {
+			p.Fallback(p, node)
+			return
+		}
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
 	}
 }
 
 func (p *PrettyPrinter) printXMLNS(node *BLangXMLNS) {
-	p.startNode()
-	p.printString("xmlns")
+	p.StartNode()
+	p.PrintString("xmlns")
 	p.indentLevel++
 	if uri := node.GetNamespaceURI(); uri != nil {
 		p.PrintInner(uri.(BLangNode))
 	}
 	if prefix := node.GetPrefix(); prefix != nil {
-		p.printString("as")
-		p.printString(prefix.GetValue())
+		p.PrintString("as")
+		p.PrintString(prefix.GetValue())
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printCompoundAssignment(t *BLangCompoundAssignment) {
-	p.startNode()
-	p.printString("compound-assignment")
+	p.StartNode()
+	p.PrintString("compound-assignment")
 	p.printOperatorKind(t.OpKind)
 	p.indentLevel++
 	p.PrintInner(t.VarRef.(BLangNode))
 	p.PrintInner(t.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printImportPackage(node *BLangImportPackage) {
-	p.startNode()
-	p.printString("import-package")
-	p.printString(node.OrgName.Value)
+	p.StartNode()
+	p.PrintString("import-package")
+	p.PrintString(node.OrgName.Value)
 	for _, pkgNameComp := range node.PkgNameComps {
-		p.printString(pkgNameComp.Value)
+		p.PrintString(pkgNameComp.Value)
 	}
 	if node.Alias != nil && node.Alias.Value != "" {
-		p.printString("(as")
-		p.printString(node.Alias.Value)
+		p.PrintString("(as")
+		p.PrintString(node.Alias.Value)
 		p.printSticky(")")
 	}
 	if node.Version != nil && node.Version.Value != "" {
-		p.printString("(version")
-		p.printString(node.Version.Value)
+		p.PrintString("(version")
+		p.PrintString(node.Version.Value)
 		p.printSticky(")")
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
-	p.startNode()
-	p.printString("compilation-unit")
-	p.printString(node.Name)
+	p.StartNode()
+	p.PrintString("compilation-unit")
+	p.PrintString(node.Name)
 	p.printSourceKind(node.sourceKind)
 	p.printPackageID(node.packageID)
 	p.printBLangNodeBase(&node.bLangNodeBase)
@@ -309,23 +318,23 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 		p.PrintInner(topLevelNode.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printSourceKind(sourceKind SourceKind) {
 	switch sourceKind {
 	case SourceKind_REGULAR_SOURCE:
-		p.printString("regular-source")
+		p.PrintString("regular-source")
 	case SourceKind_TEST_SOURCE:
-		p.printString("test-source")
+		p.PrintString("test-source")
 	default:
 		panic(fmt.Sprintf("Unsupported source kind: %d", int(sourceKind)))
 	}
 }
 
 func (p *PrettyPrinter) printPackage(node *BLangPackage) {
-	p.startNode()
-	p.printString("package")
+	p.StartNode()
+	p.PrintString("package")
 	p.indentLevel++
 	for i := range node.Imports {
 		p.printImportPackage(&node.Imports[i])
@@ -345,6 +354,9 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	for i := range node.ClassDefinitions {
 		p.printClassDefinition(&node.ClassDefinitions[i])
 	}
+	for i := range node.Services {
+		p.printService(&node.Services[i])
+	}
 	if node.InitFunction != nil {
 		p.printFunction(node.InitFunction)
 	}
@@ -352,14 +364,14 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 		p.printFunction(&node.Functions[i])
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printBLangNodeBase(node *bLangNodeBase) {
 	// no-op
 }
 
-func (p *PrettyPrinter) startNode() {
+func (p *PrettyPrinter) StartNode() {
 	if !p.beginningPrinted {
 		p.beginningPrinted = true
 	} else {
@@ -372,7 +384,7 @@ func (p *PrettyPrinter) startNode() {
 	p.addSpaceBeforeNode = false
 }
 
-func (p *PrettyPrinter) endNode() {
+func (p *PrettyPrinter) EndNode() {
 	p.printSticky(")")
 }
 
@@ -380,7 +392,7 @@ func (p *PrettyPrinter) printSticky(str string) {
 	p.buffer.WriteString(str)
 }
 
-func (p *PrettyPrinter) printString(str string) {
+func (p *PrettyPrinter) PrintString(str string) {
 	if p.addSpaceBeforeNode {
 		p.buffer.WriteString(" ")
 	}
@@ -390,24 +402,24 @@ func (p *PrettyPrinter) printString(str string) {
 
 func (p *PrettyPrinter) printPackageID(packageID *model.PackageID) {
 	if packageID.IsUnnamed() {
-		p.printString("(unnamed-package)")
+		p.PrintString("(unnamed-package)")
 	} else {
-		p.startNode()
-		p.printString("package-id")
-		p.printString(string(*packageID.OrgName))
-		p.printString(string(*packageID.PkgName))
-		p.printString(string(*packageID.Version))
-		p.endNode()
+		p.StartNode()
+		p.PrintString("package-id")
+		p.PrintString(string(*packageID.OrgName))
+		p.PrintString(string(*packageID.PkgName))
+		p.PrintString(string(*packageID.Version))
+		p.EndNode()
 	}
 }
 
 // Helper methods
 func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
-	p.printString(string(opKind))
+	p.PrintString(string(opKind))
 }
 
 func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
-	p.printString(string(typeKind))
+	p.PrintString(string(typeKind))
 }
 
 func (p *PrettyPrinter) printAnnotationAttachments(node AnnotatableNode) {
@@ -417,71 +429,71 @@ func (p *PrettyPrinter) printAnnotationAttachments(node AnnotatableNode) {
 }
 
 func (p *PrettyPrinter) printTemplateExpr(node *BLangTemplateExpr) {
-	p.startNode()
+	p.StartNode()
 	switch node.Kind {
 	case TemplateExprKindString:
-		p.printString("string-template-literal")
+		p.PrintString("string-template-literal")
 	case TemplateExprKindXML:
-		p.printString("xml-template-literal")
+		p.PrintString("xml-template-literal")
 	default:
 		panic("unsupported template expr kind")
 	}
 	p.indentLevel++
 	for i, s := range node.Strings {
-		p.startNode()
-		p.printString("template-string")
-		p.printString(fmt.Sprintf("%q", s))
-		p.endNode()
+		p.StartNode()
+		p.PrintString("template-string")
+		p.PrintString(fmt.Sprintf("%q", s))
+		p.EndNode()
 		if i < len(node.Insertions) {
 			p.PrintInner(node.Insertions[i].(BLangNode))
 		}
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLTemplateExpr(node *BLangXMLTemplateExpr) {
-	p.startNode()
-	p.printString("xml-template-literal")
+	p.StartNode()
+	p.PrintString("xml-template-literal")
 	p.indentLevel++
 	for i, s := range node.Strings {
-		p.startNode()
-		p.printString("template-string")
-		p.printString(fmt.Sprintf("%q", s))
-		p.endNode()
+		p.StartNode()
+		p.PrintString("template-string")
+		p.PrintString(fmt.Sprintf("%q", s))
+		p.EndNode()
 		if i < len(node.Insertions) {
-			p.startNode()
+			p.StartNode()
 			switch node.InsertionKinds[i] {
 			case XMLTemplateInsertionKindAttribute:
-				p.printString("xml-template-attribute-insertion")
+				p.PrintString("xml-template-attribute-insertion")
 			default:
-				p.printString("xml-template-content-insertion")
+				p.PrintString("xml-template-content-insertion")
 			}
 			p.indentLevel++
 			p.PrintInner(node.Insertions[i].(BLangNode))
 			p.indentLevel--
-			p.endNode()
+			p.EndNode()
 		}
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLSequenceLiteral(node *BLangXMLSequenceLiteral) {
-	p.startNode()
-	p.printString("xml-sequence-literal")
+	p.StartNode()
+	p.PrintString("xml-sequence-literal")
 	p.indentLevel++
 	for _, child := range node.Children {
 		p.PrintInner(child.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLElementLiteral(node *BLangXMLElementLiteral) {
-	p.startNode()
-	p.printString("xml-element-literal")
-	p.printString(node.Name)
+	p.StartNode()
+	p.PrintString("xml-element-literal")
+	p.PrintString(node.Name)
 	p.indentLevel++
 	for i := range node.Attrs {
 		p.PrintInner(&node.Attrs[i])
@@ -490,49 +502,49 @@ func (p *PrettyPrinter) printXMLElementLiteral(node *BLangXMLElementLiteral) {
 		p.PrintInner(node.Content.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLAttribute(node *BLangXMLAttribute) {
-	p.startNode()
-	p.printString("xml-attribute")
-	p.printString(node.Name)
+	p.StartNode()
+	p.PrintString("xml-attribute")
+	p.PrintString(node.Name)
 	if node.Value != nil {
 		p.indentLevel++
 		p.PrintInner(node.Value.(BLangNode))
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLPILiteral(node *BLangXMLPILiteral) {
-	p.startNode()
-	p.printString("xml-pi-literal")
-	p.printString(node.Target)
-	p.printString(node.Data)
-	p.endNode()
+	p.StartNode()
+	p.PrintString("xml-pi-literal")
+	p.PrintString(node.Target)
+	p.PrintString(node.Data)
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLCommentLiteral(node *BLangXMLCommentLiteral) {
-	p.startNode()
-	p.printString("xml-comment-literal")
-	p.printString(node.Body)
-	p.endNode()
+	p.StartNode()
+	p.PrintString("xml-comment-literal")
+	p.PrintString(node.Body)
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printXMLTextLiteral(node *BLangXMLTextLiteral) {
-	p.startNode()
-	p.printString("xml-text-literal")
-	p.printString(node.Body)
-	p.endNode()
+	p.StartNode()
+	p.PrintString("xml-text-literal")
+	p.PrintString(node.Body)
+	p.EndNode()
 }
 
 // Literal and basic expression printers
 func (p *PrettyPrinter) printLiteral(node *BLangLiteral) {
-	p.startNode()
-	p.printString("literal")
-	p.printString(literalValueString(node.Value))
-	p.endNode()
+	p.StartNode()
+	p.PrintString("literal")
+	p.PrintString(literalValueString(node.Value))
+	p.EndNode()
 }
 
 func literalValueString(value any) string {
@@ -545,31 +557,31 @@ func literalValueString(value any) string {
 }
 
 func (p *PrettyPrinter) printNumericLiteral(node *BLangNumericLiteral) {
-	p.startNode()
-	p.printString("numeric-literal")
-	p.printString(fmt.Sprintf("%v", node.Value))
-	p.endNode()
+	p.StartNode()
+	p.PrintString("numeric-literal")
+	p.PrintString(fmt.Sprintf("%v", node.Value))
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
-	p.startNode()
-	p.printString("simple-var-ref")
+	p.StartNode()
+	p.PrintString("simple-var-ref")
 	if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-		p.printString(node.PkgAlias.Value + " " + node.VariableName.Value)
+		p.PrintString(node.PkgAlias.Value + " " + node.VariableName.Value)
 	} else {
-		p.printString(node.VariableName.Value)
+		p.PrintString(node.VariableName.Value)
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printAnnotAccessExpr(node *BLangAnnotAccessExpr) {
-	p.startNode()
-	p.printString("annot-access-expr")
+	p.StartNode()
+	p.PrintString("annot-access-expr")
 	if node.AnnotationName != nil {
 		if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-			p.printString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
+			p.PrintString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
 		} else {
-			p.printString(node.AnnotationName.Value)
+			p.PrintString(node.AnnotationName.Value)
 		}
 	}
 	p.indentLevel++
@@ -577,53 +589,53 @@ func (p *PrettyPrinter) printAnnotAccessExpr(node *BLangAnnotAccessExpr) {
 		p.PrintInner(node.Expr.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printTypedescExpr(node *BLangTypedescExpr) {
-	p.startNode()
-	p.printString("typedesc-expr")
+	p.StartNode()
+	p.PrintString("typedesc-expr")
 	p.indentLevel++
 	if node.typeDescriptor != nil {
 		p.PrintInner(node.typeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Binary and complex expression printers
 func (p *PrettyPrinter) printBinaryExpr(node *BLangBinaryExpr) {
-	p.startNode()
-	p.printString("binary-expr")
+	p.StartNode()
+	p.PrintString("binary-expr")
 	p.printOperatorKind(node.OpKind)
 	p.indentLevel++
 	p.PrintInner(node.LhsExpr.(BLangNode))
 	p.PrintInner(node.RhsExpr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
-	p.startNode()
-	p.printString("invocation")
+	p.StartNode()
+	p.PrintString("invocation")
 
 	// Print function name with optional package alias
 	if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-		p.printString(node.PkgAlias.Value + " " + node.Name.Value)
+		p.PrintString(node.PkgAlias.Value + " " + node.Name.Value)
 	} else {
-		p.printString(node.Name.Value)
+		p.PrintString(node.Name.Value)
 	}
 
 	// Print expression for method calls if present
 	if node.Expr != nil {
-		p.printString("expr:")
+		p.PrintString("expr:")
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
 
 	// Print arguments if present
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgExprs {
@@ -633,31 +645,31 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 	p.printSticky(")")
 
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printResourcePathParamSegment(kind string, seg *BLangResourcePathSegment) {
-	p.startNode()
-	p.printString(kind)
-	p.printString(seg.Name)
+	p.StartNode()
+	p.PrintString(kind)
+	p.PrintString(seg.Name)
 	if seg.ParamType != nil {
 		p.indentLevel++
 		p.PrintInner(seg.ParamType.(BLangNode))
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
-	p.startNode()
-	p.printString("resource-function")
-	p.printString(node.Name.Value)
+	p.StartNode()
+	p.PrintString("resource-function")
+	p.PrintString(node.Name.Value)
 	p.indentLevel++
 	for i := range node.ResourcePath {
 		seg := &node.ResourcePath[i]
 		switch seg.Kind {
 		case ResourcePathSegmentName:
-			p.printString("name:" + seg.Name)
+			p.PrintString("name:" + seg.Name)
 		case ResourcePathSegmentParam:
 			p.printResourcePathParamSegment("param", seg)
 		case ResourcePathSegmentParamRest:
@@ -678,25 +690,25 @@ func (p *PrettyPrinter) printResourceMethod(node *BLangResourceMethod) {
 	}
 	p.printAnnotationAttachments(node)
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printClientResourceAccessAction(node *BLangClientResourceAccessAction) {
-	p.startNode()
-	p.printString("client-resource-access")
-	p.printString(node.MethodName)
+	p.StartNode()
+	p.PrintString("client-resource-access")
+	p.PrintString(node.MethodName)
 	p.indentLevel++
 	if node.Expr != nil {
-		p.printString("expr:")
+		p.PrintString("expr:")
 		p.PrintInner(node.Expr)
 	}
 	for i := range node.Path {
 		seg := &node.Path[i]
 		switch seg.Kind {
 		case ResourceAccessSegmentName:
-			p.printString("name:" + seg.Name)
+			p.PrintString("name:" + seg.Name)
 		case ResourceAccessSegmentComputed:
-			p.printString("computed:")
+			p.PrintString("computed:")
 			p.PrintInner(seg.Expr)
 		}
 	}
@@ -704,22 +716,22 @@ func (p *PrettyPrinter) printClientResourceAccessAction(node *BLangClientResourc
 		p.PrintInner(arg)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallAction) {
-	p.startNode()
-	p.printString("remote-method-call")
-	p.printString(node.Name.Value)
+	p.StartNode()
+	p.PrintString("remote-method-call")
+	p.PrintString(node.Name.Value)
 
 	if node.Expr != nil {
-		p.printString("expr:")
+		p.PrintString("expr:")
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
 
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgExprs {
@@ -729,130 +741,130 @@ func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallA
 	}
 	p.printSticky(")")
 
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printNamedArgsExpression(node *BLangNamedArgsExpression) {
-	p.startNode()
-	p.printString("named-arg")
-	p.printString(node.Name.Value)
+	p.StartNode()
+	p.PrintString("named-arg")
+	p.PrintString(node.Name.Value)
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Statement printers
 func (p *PrettyPrinter) printExpressionStmt(node *BLangExpressionStmt) {
-	p.startNode()
-	p.printString("expression-stmt")
+	p.StartNode()
+	p.PrintString("expression-stmt")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printReturn(node *BLangReturn) {
-	p.startNode()
-	p.printString("return")
+	p.StartNode()
+	p.PrintString("return")
 	if node.Expr != nil {
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printPanic(node *BLangPanic) {
-	p.startNode()
-	p.printString("panic")
+	p.StartNode()
+	p.PrintString("panic")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printBlockStmt(node *BLangBlockStmt) {
-	p.startNode()
-	p.printString("block-stmt")
+	p.StartNode()
+	p.PrintString("block-stmt")
 	p.indentLevel++
 	for _, stmt := range node.Stmts {
 		p.PrintInner(stmt.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printIf(node *BLangIf) {
-	p.startNode()
-	p.printString("if")
+	p.StartNode()
+	p.PrintString("if")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
-	p.printString("(")
+	p.PrintString("(")
 	if node.ElseStmt != nil {
 		p.PrintInner(node.ElseStmt.(BLangNode))
 	}
 	p.printSticky(")")
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Type node printers
 func (p *PrettyPrinter) printValueType(node *BLangValueType) {
-	p.startNode()
-	p.printString("value-type")
+	p.StartNode()
+	p.PrintString("value-type")
 	p.printTypeKind(node.TypeKind)
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printBuiltInRefTypeNode(node *BLangBuiltInRefTypeNode) {
-	p.startNode()
-	p.printString("builtin-ref-type")
+	p.StartNode()
+	p.PrintString("builtin-ref-type")
 	p.printTypeKind(node.TypeKind)
-	p.endNode()
+	p.EndNode()
 }
 
 // Variable and function body printers
 func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
-	p.startNode()
-	p.printString("variable")
-	p.printString(node.Name.Value)
+	p.StartNode()
+	p.PrintString("variable")
+	p.PrintString(node.Name.Value)
 	if node.TypeNode() != nil {
-		p.printString("(type")
+		p.PrintString("(type")
 		p.indentLevel++
 		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
 	if node.Expr != nil {
-		p.printString("(expr")
+		p.PrintString("(expr")
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printBlockFunctionBody(node *BLangBlockFunctionBody) {
-	p.startNode()
-	p.printString("block-function-body")
+	p.StartNode()
+	p.PrintString("block-function-body")
 	p.indentLevel++
 	for _, stmt := range node.Stmts {
 		p.PrintInner(stmt.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Function printer
 func (p *PrettyPrinter) printFunction(node *BLangFunction) {
-	p.startNode()
-	p.printString("function")
+	p.StartNode()
+	p.PrintString("function")
 
 	// Print function name
-	p.printString(node.Name.Value)
+	p.PrintString(node.Name.Value)
 
 	// Print markdown documentation if present
 	if node.MarkdownDocumentationAttachment != nil {
@@ -862,7 +874,7 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	}
 
 	// Print parameters
-	p.printString("(")
+	p.PrintString("(")
 	p.indentLevel++
 	for i := range node.RequiredParams {
 		p.PrintInner(&node.RequiredParams[i])
@@ -871,7 +883,7 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printSticky(")")
 
 	// Print return type
-	p.printString("(")
+	p.PrintString("(")
 	if ret := ReturnTypeAnnotatableOf(node); ret != nil {
 		p.indentLevel++
 		p.printAnnotationAttachments(ret)
@@ -894,58 +906,58 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printAnnotationAttachments(node)
 	p.indentLevel--
 
-	p.endNode()
+	p.EndNode()
 }
 
 // Unary expression printer
 func (p *PrettyPrinter) printUnaryExpr(node *BLangUnaryExpr) {
-	p.startNode()
-	p.printString("unary-expr")
+	p.StartNode()
+	p.PrintString("unary-expr")
 	p.printOperatorKind(node.Operator)
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Variable definition printer
 func (p *PrettyPrinter) printSimpleVariableDef(node *BLangSimpleVariableDef) {
-	p.startNode()
-	p.printString("var-def")
+	p.StartNode()
+	p.PrintString("var-def")
 	p.indentLevel++
 	p.PrintInner(node.Var)
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Grouped expression printer
 func (p *PrettyPrinter) printGroupExpr(node *BLangGroupExpr) {
-	p.startNode()
-	p.printString("group-expr")
+	p.StartNode()
+	p.PrintString("group-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expression.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printTypeConversionExpr(node *BLangTypeConversionExpr) {
-	p.startNode()
-	p.printString("type-conversion-expr")
+	p.StartNode()
+	p.PrintString("type-conversion-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expression.(BLangNode))
 	if node.TypeDescriptor != nil {
 		p.PrintInner(node.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
-	p.startNode()
+	p.StartNode()
 	if node.isNegation {
-		p.printString("type-test-expr !is")
+		p.PrintString("type-test-expr !is")
 	} else {
-		p.printString("type-test-expr is")
+		p.PrintString("type-test-expr is")
 	}
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
@@ -953,23 +965,23 @@ func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
 		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printQueryExpr(node *BLangQueryExpr) {
-	p.startNode()
-	p.printString("query-expr")
+	p.StartNode()
+	p.PrintString("query-expr")
 	p.indentLevel++
 	for i := range node.QueryClauseList {
 		p.PrintInner(node.QueryClauseList[i])
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
-	p.startNode()
-	p.printString("from-clause")
+	p.StartNode()
+	p.PrintString("from-clause")
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
 		p.PrintInner(node.VariableDefinitionNode)
@@ -978,15 +990,15 @@ func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
 		p.PrintInner(node.Collection)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
-	p.startNode()
+	p.StartNode()
 	if node.IsOuterJoinFlag {
-		p.printString("join-clause outer")
+		p.PrintString("join-clause outer")
 	} else {
-		p.printString("join-clause")
+		p.PrintString("join-clause")
 	}
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
@@ -999,23 +1011,23 @@ func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
 		p.PrintInner(&node.OnClause)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
-	p.startNode()
-	p.printString("let-clause")
+	p.StartNode()
+	p.PrintString("let-clause")
 	p.indentLevel++
 	for i := range node.LetVarDeclarations {
 		p.PrintInner(&node.LetVarDeclarations[i])
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printOnClause(node *BLangOnClause) {
-	p.startNode()
-	p.printString("on-clause")
+	p.StartNode()
+	p.PrintString("on-clause")
 	p.indentLevel++
 	if node.OnExpr != nil {
 		p.PrintInner(node.OnExpr)
@@ -1024,137 +1036,137 @@ func (p *PrettyPrinter) printOnClause(node *BLangOnClause) {
 		p.PrintInner(node.EqualsExpr)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printWhereClause(node *BLangWhereClause) {
-	p.startNode()
-	p.printString("where-clause")
+	p.StartNode()
+	p.PrintString("where-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printGroupByClause(node *BLangGroupByClause) {
-	p.startNode()
-	p.printString("group-by-clause")
+	p.StartNode()
+	p.PrintString("group-by-clause")
 	p.indentLevel++
 	for _, groupingKey := range node.GetGroupingKeyList() {
 		p.PrintInner(groupingKey.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printGroupingKey(node *BLangGroupingKey) {
-	p.startNode()
-	p.printString("grouping-key")
+	p.StartNode()
+	p.PrintString("grouping-key")
 	p.indentLevel++
 	if groupingKey := node.GetGroupingKey(); groupingKey != nil {
 		p.PrintInner(groupingKey.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printLimitClause(node *BLangLimitClause) {
-	p.startNode()
-	p.printString("limit-clause")
+	p.StartNode()
+	p.PrintString("limit-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printOrderByClause(node *BLangOrderByClause) {
-	p.startNode()
-	p.printString("order-by-clause")
+	p.StartNode()
+	p.PrintString("order-by-clause")
 	p.indentLevel++
 	for i := range node.OrderByKeyList {
 		p.PrintInner(&node.OrderByKeyList[i])
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printOrderKey(node *BLangOrderKey) {
-	p.startNode()
-	p.printString("order-key")
+	p.StartNode()
+	p.PrintString("order-key")
 	if node.IsDescending {
-		p.printString("descending")
+		p.PrintString("descending")
 	} else {
-		p.printString("ascending")
+		p.PrintString("ascending")
 	}
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printSelectClause(node *BLangSelectClause) {
-	p.startNode()
-	p.printString("select-clause")
+	p.StartNode()
+	p.PrintString("select-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printOnConflictClause(node *BLangOnConflictClause) {
-	p.startNode()
-	p.printString("on-conflict-clause")
+	p.StartNode()
+	p.PrintString("on-conflict-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printCollectClause(node *BLangCollectClause) {
-	p.startNode()
-	p.printString("collect-clause")
+	p.StartNode()
+	p.PrintString("collect-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // While loop printer
 func (p *PrettyPrinter) printWhile(node *BLangWhile) {
-	p.startNode()
-	p.printString("while")
+	p.StartNode()
+	p.PrintString("while")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
 	// OnFailClause handling can be added if needed in the future
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printLock(node *BLangLock) {
-	p.startNode()
-	p.printString("lock")
+	p.StartNode()
+	p.PrintString("lock")
 	p.indentLevel++
 	p.PrintInner(&node.Body)
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printForeach(node *BLangForeach) {
-	p.startNode()
-	p.printString("foreach")
+	p.StartNode()
+	p.PrintString("foreach")
 	p.indentLevel++
 	if node.VariableDef != nil {
 		p.PrintInner(node.VariableDef)
@@ -1164,19 +1176,19 @@ func (p *PrettyPrinter) printForeach(node *BLangForeach) {
 	}
 	p.PrintInner(&node.Body)
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Array type printer
 func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
-	p.startNode()
-	p.printString("array-type")
+	p.StartNode()
+	p.PrintString("array-type")
 	p.indentLevel++
 	p.PrintInner(node.Elemtype.TypeDescriptor.(BLangNode))
 	if node.Dimensions > 0 {
-		p.printString(fmt.Sprintf("dimensions: %d", node.Dimensions))
+		p.PrintString(fmt.Sprintf("dimensions: %d", node.Dimensions))
 	}
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.Sizes) > 0 {
 		for _, size := range node.Sizes {
 			p.printSticky("[")
@@ -1188,14 +1200,14 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	}
 	p.printSticky(")")
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Constant declaration printer
 func (p *PrettyPrinter) printConstant(node *BLangConstant) {
-	p.startNode()
-	p.printString("const")
-	p.printString(node.Name.Value)
+	p.StartNode()
+	p.PrintString("const")
+	p.PrintString(node.Name.Value)
 
 	// Print markdown documentation if present
 	if node.MarkdownDocumentationAttachment != nil {
@@ -1207,74 +1219,74 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 		}
 	}
 
-	p.printString("(")
+	p.PrintString("(")
 	if node.TypeNode() != nil {
 		p.indentLevel++
 		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.printString("(")
+	p.PrintString("(")
 	if node.Expr != nil {
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.endNode()
+	p.EndNode()
 }
 
 // Break statement printer
 func (p *PrettyPrinter) printBreak(node *BLangBreak) {
-	p.startNode()
-	p.printString("break")
-	p.endNode()
+	p.StartNode()
+	p.PrintString("break")
+	p.EndNode()
 }
 
 // Continue statement printer
 func (p *PrettyPrinter) printContinue(node *BLangContinue) {
-	p.startNode()
-	p.printString("continue")
-	p.endNode()
+	p.StartNode()
+	p.PrintString("continue")
+	p.EndNode()
 }
 
 // Assignment statement printer
 func (p *PrettyPrinter) printAssignment(node *BLangAssignment) {
-	p.startNode()
-	p.printString("assignment")
+	p.StartNode()
+	p.PrintString("assignment")
 	p.indentLevel++
 	p.PrintInner(node.VarRef.(BLangNode))
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Index-based access expression printer
 func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
-	p.startNode()
-	p.printString("index-based-access")
+	p.StartNode()
+	p.PrintString("index-based-access")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(node.IndexExpr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // List constructor expression printer
 func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr) {
-	p.startNode()
-	p.printString("list-constructor-expr")
+	p.StartNode()
+	p.PrintString("list-constructor-expr")
 	p.indentLevel++
 	for _, expr := range node.Exprs {
 		p.PrintInner(expr.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMappingConstructor(node *BLangMappingConstructorExpr) {
-	p.startNode()
-	p.printString("mapping-constructor-expr")
+	p.StartNode()
+	p.PrintString("mapping-constructor-expr")
 	p.indentLevel++
 	for _, f := range node.Fields {
 		if kv, ok := f.(*BLangMappingKeyValueField); ok {
@@ -1282,20 +1294,20 @@ func (p *PrettyPrinter) printMappingConstructor(node *BLangMappingConstructorExp
 		}
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printAnnotation(node *BLangAnnotation) {
-	p.startNode()
-	p.printString("annotation")
+	p.StartNode()
+	p.PrintString("annotation")
 	if node.Name != nil {
-		p.printString(node.Name.Value)
+		p.PrintString(node.Name.Value)
 	}
 	if node.IsPublic() {
-		p.printString("public")
+		p.PrintString("public")
 	}
 	if node.IsConst() {
-		p.printString("const")
+		p.PrintString("const")
 	}
 	p.indentLevel++
 	p.printAnnotationAttachments(node)
@@ -1303,26 +1315,26 @@ func (p *PrettyPrinter) printAnnotation(node *BLangAnnotation) {
 		p.PrintInner(node.typeDescriptor.(BLangNode))
 	}
 	for _, attachPoint := range node.AttachPoints() {
-		p.startNode()
-		p.printString("attach-point")
+		p.StartNode()
+		p.PrintString("attach-point")
 		if attachPoint.Source {
-			p.printString("source")
+			p.PrintString("source")
 		}
-		p.printString(string(attachPoint.Point))
-		p.endNode()
+		p.PrintString(string(attachPoint.Point))
+		p.EndNode()
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printAnnotationAttachment(node *BLangAnnotationAttachment) {
-	p.startNode()
-	p.printString("annotation-attachment")
+	p.StartNode()
+	p.PrintString("annotation-attachment")
 	if node.AnnotationName != nil {
 		if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-			p.printString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
+			p.PrintString(node.PkgAlias.Value + " " + node.AnnotationName.Value)
 		} else {
-			p.printString(node.AnnotationName.Value)
+			p.PrintString(node.AnnotationName.Value)
 		}
 	}
 	p.indentLevel++
@@ -1330,13 +1342,13 @@ func (p *PrettyPrinter) printAnnotationAttachment(node *BLangAnnotationAttachmen
 		p.PrintInner(node.Expr.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Mapping key-value field printer: prints as (key-value (key) (value))
 func (p *PrettyPrinter) printMappingKeyValueField(kv *BLangMappingKeyValueField) {
-	p.startNode()
-	p.printString("key-value")
+	p.StartNode()
+	p.PrintString("key-value")
 	p.indentLevel++
 	if kv.Key != nil && kv.Key.Expr != nil {
 		p.PrintInner(kv.Key.Expr.(BLangNode))
@@ -1345,54 +1357,54 @@ func (p *PrettyPrinter) printMappingKeyValueField(kv *BLangMappingKeyValueField)
 		p.PrintInner(kv.ValueExpr.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Wildcard binding pattern printer
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
-	p.startNode()
-	p.printString("wildcard-binding-pattern")
-	p.endNode()
+	p.StartNode()
+	p.PrintString("wildcard-binding-pattern")
+	p.EndNode()
 }
 
 // Finite type node printer
 func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
-	p.startNode()
-	p.printString("finite-type")
+	p.StartNode()
+	p.PrintString("finite-type")
 	p.indentLevel++
 	for _, value := range node.ValueSpace {
 		p.PrintInner(value.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Union type node printer
 func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
-	p.startNode()
-	p.printString("union-type")
+	p.StartNode()
+	p.PrintString("union-type")
 	p.indentLevel++
 	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
 	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Intersection type node printer
 func (p *PrettyPrinter) printIntersectionTypeNode(node *BLangIntersectionTypeNode) {
-	p.startNode()
-	p.printString("intersection-type")
+	p.StartNode()
+	p.PrintString("intersection-type")
 	p.indentLevel++
 	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
 	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Markdown documentation printers
 func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentation) {
-	p.startNode()
-	p.printString("md-doc")
+	p.StartNode()
+	p.PrintString("md-doc")
 	p.indentLevel++
 
 	// Print documentation lines
@@ -1501,32 +1513,32 @@ func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentat
 
 // Error type node printer
 func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
-	p.startNode()
-	p.printString("error-type")
+	p.StartNode()
+	p.PrintString("error-type")
 	if !node.IsTop() {
 		p.indentLevel++
 		p.PrintInner(node.DetailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkdownDocumentationLine(node *BLangMarkdownDocumentationLine) {
-	p.startNode()
-	p.printString("md-doc-line")
-	p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Text, "\"", "\\\"")))
-	p.endNode()
+	p.StartNode()
+	p.PrintString("md-doc-line")
+	p.PrintString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Text, "\"", "\\\"")))
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownParameterDocumentation) {
-	p.startNode()
-	p.printString("md-param-doc")
+	p.StartNode()
+	p.PrintString("md-param-doc")
 	p.indentLevel++
 
 	// Print parameter name
 	if node.ParameterName != nil {
-		p.printString("(param-name")
-		p.printString(node.ParameterName.Value)
+		p.PrintString("(param-name")
+		p.PrintString(node.ParameterName.Value)
 		p.printSticky(")")
 	}
 
@@ -1553,12 +1565,12 @@ func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownP
 	}
 
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMarkdownReturnParameterDocumentation) {
-	p.startNode()
-	p.printString("md-return-param-doc")
+	p.StartNode()
+	p.PrintString("md-return-param-doc")
 	p.indentLevel++
 
 	// Print return parameter documentation lines
@@ -1585,7 +1597,7 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 
 	// Print return type if present
 	if node.ReturnType != nil {
-		p.printString("(return-type")
+		p.PrintString("(return-type")
 		p.indentLevel++
 		p.PrintInner(node.ReturnType)
 		p.indentLevel--
@@ -1593,12 +1605,12 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 	}
 
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDownDeprecationDocumentation) {
-	p.startNode()
-	p.printString("md-deprec-doc")
+	p.StartNode()
+	p.PrintString("md-deprec-doc")
 	p.indentLevel++
 
 	if len(node.DeprecationDocumentationLines) > 0 {
@@ -1644,21 +1656,21 @@ func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDow
 	}
 
 	if node.IsCorrectDeprecationLine {
-		p.printString("is-correct-deprec-line")
+		p.PrintString("is-correct-deprec-line")
 	}
 
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkDownDeprecatedParametersDocumentation(node *BLangMarkDownDeprecatedParametersDocumentation) {
-	p.startNode()
-	p.printString("md-deprec-params-doc")
+	p.StartNode()
+	p.PrintString("md-deprec-params-doc")
 	p.indentLevel++
 
 	// Print deprecated parameters
 	if len(node.Parameters) > 0 {
-		p.printString("(params")
+		p.PrintString("(params")
 		p.indentLevel++
 		for i := range node.Parameters {
 			p.PrintInner(&node.Parameters[i])
@@ -1668,58 +1680,58 @@ func (p *PrettyPrinter) printMarkDownDeprecatedParametersDocumentation(node *BLa
 	}
 
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMarkdownReferenceDocumentation(node *BLangMarkdownReferenceDocumentation) {
-	p.startNode()
-	p.printString("md-ref-doc")
+	p.StartNode()
+	p.PrintString("md-ref-doc")
 	p.indentLevel++
 
 	// Print reference type
-	p.printString("(type")
-	p.printString(string(node.Type))
+	p.PrintString("(type")
+	p.PrintString(string(node.Type))
 	p.printSticky(")")
 
 	// Print qualifier if present
 	if node.Qualifier != "" {
-		p.printString("(qualifier")
-		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Qualifier, "\"", "\\\"")))
+		p.PrintString("(qualifier")
+		p.PrintString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Qualifier, "\"", "\\\"")))
 		p.printSticky(")")
 	}
 
 	// Print type name if present
 	if node.TypeName != "" {
-		p.printString("(type-name")
-		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.TypeName, "\"", "\\\"")))
+		p.PrintString("(type-name")
+		p.PrintString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.TypeName, "\"", "\\\"")))
 		p.printSticky(")")
 	}
 
 	// Print identifier if present
 	if node.Identifier != "" {
-		p.printString("(identifier")
-		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Identifier, "\"", "\\\"")))
+		p.PrintString("(identifier")
+		p.PrintString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Identifier, "\"", "\\\"")))
 		p.printSticky(")")
 	}
 
 	// Print reference name
 	if node.ReferenceName != "" {
-		p.printString("(reference-name")
-		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.ReferenceName, "\"", "\\\"")))
+		p.PrintString("(reference-name")
+		p.PrintString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.ReferenceName, "\"", "\\\"")))
 		p.printSticky(")")
 	}
 
 	if node.HasParserWarnings {
-		p.printString("has-parser-warnings")
+		p.PrintString("has-parser-warnings")
 	}
 
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
-	p.startNode()
-	p.printString("stream-type")
+	p.StartNode()
+	p.PrintString("stream-type")
 	p.indentLevel++
 	if node.ValueType.TypeDescriptor != nil {
 		p.PrintInner(node.ValueType.TypeDescriptor.(BLangNode))
@@ -1728,12 +1740,12 @@ func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
 		p.PrintInner(node.CompletionType.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
-	p.startNode()
-	p.printString("constrained-type")
+	p.StartNode()
+	p.PrintString("constrained-type")
 	p.indentLevel++
 	if node.Type.TypeDescriptor != nil {
 		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
@@ -1742,15 +1754,15 @@ func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
 		p.PrintInner(node.Constraint.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Type definition printer
 func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
-	p.startNode()
-	p.printString("type-definition")
+	p.StartNode()
+	p.PrintString("type-definition")
 	if node.Name != nil {
-		p.printString(node.Name.Value)
+		p.PrintString(node.Name.Value)
 	}
 	p.indentLevel++
 	p.printAnnotationAttachments(node)
@@ -1758,41 +1770,41 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Tuple type node printer
 func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
-	p.startNode()
-	p.printString("tuple-type")
+	p.StartNode()
+	p.PrintString("tuple-type")
 	p.indentLevel++
 	for _, member := range node.Members {
 		p.PrintInner(member.TypeDesc.(BLangNode))
 	}
 	if node.Rest != nil {
-		p.printString("(rest")
+		p.PrintString("(rest")
 		p.indentLevel++
 		p.PrintInner(node.Rest.(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
-	p.startNode()
-	p.printString("record-type")
+	p.StartNode()
+	p.PrintString("record-type")
 	p.indentLevel++
 	for name, field := range node.FieldPtrs() {
-		p.startNode()
-		p.printString("field")
-		p.printString(name)
+		p.StartNode()
+		p.PrintString("field")
+		p.PrintString(name)
 		if field.IsReadonly() {
-			p.printString("readonly")
+			p.PrintString("readonly")
 		}
 		if field.IsOptional() {
-			p.printString("optional")
+			p.PrintString("optional")
 		}
 		p.indentLevel++
 		p.printAnnotationAttachments(field)
@@ -1801,31 +1813,31 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 			p.PrintInner(field.DefaultExpr.(BLangNode))
 		}
 		p.indentLevel--
-		p.endNode()
+		p.EndNode()
 	}
 	if node.RestType != nil {
-		p.startNode()
-		p.printString("rest")
+		p.StartNode()
+		p.PrintString("rest")
 		p.indentLevel++
 		p.PrintInner(node.RestType.(BLangNode))
 		p.indentLevel--
-		p.endNode()
+		p.EndNode()
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
-	p.startNode()
-	p.printString("object-type")
+	p.StartNode()
+	p.PrintString("object-type")
 	if node.Isolated {
-		p.printString("isolated")
+		p.PrintString("isolated")
 	}
 	switch node.NetworkQuals {
 	case ObjectNetworkQualsClient:
-		p.printString("client")
+		p.PrintString("client")
 	case ObjectNetworkQualsService:
-		p.printString("service")
+		p.PrintString("service")
 	}
 	p.indentLevel++
 	members := slices.SortedFunc(node.Members(), func(a, b ObjectMember) int {
@@ -1835,78 +1847,78 @@ func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
 		p.PrintInner(member.(BLangNode))
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printObjectField(node *BObjectField) {
-	p.startNode()
-	p.printString("field")
-	p.printString(node.Name())
+	p.StartNode()
+	p.PrintString("field")
+	p.PrintString(node.Name())
 	if node.IsPublic() {
-		p.printString("public")
+		p.PrintString("public")
 	}
 	p.indentLevel++
 	p.printAnnotationAttachments(node)
 	p.PrintInner(node.Ty.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
-	p.startNode()
-	p.printString("method-decl")
-	p.printString(node.Name())
+	p.StartNode()
+	p.PrintString("method-decl")
+	p.PrintString(node.Name())
 	if node.IsPublic() {
-		p.printString("public")
+		p.PrintString("public")
 	}
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.RequiredParams) > 0 {
 		p.indentLevel++
 		for _, param := range node.RequiredParams {
-			p.startNode()
-			p.printString("param")
+			p.StartNode()
+			p.PrintString("param")
 			if param.Name != nil {
-				p.printString(param.Name.Value)
+				p.PrintString(param.Name.Value)
 			}
 			p.indentLevel++
 			p.PrintInner(param.TypeDesc.(BLangNode))
 			p.indentLevel--
-			p.endNode()
+			p.EndNode()
 		}
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.printString("(")
+	p.PrintString("(")
 	if node.ReturnTypeDescriptor != nil {
 		p.indentLevel++
 		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.endNode()
+	p.EndNode()
 }
 
 // Field-based access expression printer
 func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
-	p.startNode()
-	p.printString("field-based-access")
-	p.printString(node.Field.Value)
+	p.StartNode()
+	p.PrintString("field-based-access")
+	p.PrintString(node.Field.Value)
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Error constructor expression printer
 func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExpr) {
-	p.startNode()
-	p.printString("error-constructor-expr")
+	p.StartNode()
+	p.PrintString("error-constructor-expr")
 	if node.ErrorTypeRef != nil {
 		p.indentLevel++
 		p.PrintInner(node.ErrorTypeRef)
 		p.indentLevel--
 	}
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.PositionalArgs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.PositionalArgs {
@@ -1916,59 +1928,59 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 	}
 	p.printSticky(")")
 	if len(node.NamedArgs) > 0 {
-		p.printString("(")
+		p.PrintString("(")
 		p.indentLevel++
 		for _, namedArg := range node.NamedArgs {
-			p.startNode()
-			p.printString("named-arg")
-			p.printString(namedArg.Name.Value)
+			p.StartNode()
+			p.PrintString("named-arg")
+			p.PrintString(namedArg.Name.Value)
 			p.indentLevel++
 			p.PrintInner(namedArg.Expr.(BLangNode))
 			p.indentLevel--
-			p.endNode()
+			p.EndNode()
 		}
 		p.indentLevel--
 		p.printSticky(")")
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 // Checked expression printer
 func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
-	p.startNode()
-	p.printString("checked-expr")
+	p.StartNode()
+	p.PrintString("checked-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 // Check panicked expression printer
 func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
-	p.startNode()
-	p.printString("check-panicked-expr")
+	p.StartNode()
+	p.PrintString("check-panicked-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
-	p.startNode()
-	p.printString("trap-expr")
+	p.StartNode()
+	p.PrintString("trap-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
-	p.startNode()
-	p.printString("class-definition")
+	p.StartNode()
+	p.PrintString("class-definition")
 	if node.IsPublic() {
-		p.printString("public")
+		p.PrintString("public")
 	}
-	p.printString(node.Name.Value)
+	p.PrintString(node.Name.Value)
 	p.indentLevel++
 	p.printAnnotationAttachments(node)
 	// Print fields
@@ -1995,18 +2007,74 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 		p.printResourceMethod(rm)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
+}
+
+func (p *PrettyPrinter) printService(node *BLangService) {
+	p.StartNode()
+	p.PrintString("service")
+	if node.IsIsolated() {
+		p.PrintString("isolated")
+	}
+	if node.GetTypeData().TypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	if node.AttachPointLiteral != nil {
+		p.indentLevel++
+		p.PrintInner(node.AttachPointLiteral)
+		p.indentLevel--
+	} else if len(node.AbsoluteResourcePath) > 0 {
+		p.indentLevel++
+		p.StartNode()
+		p.PrintString("absolute-resource-path")
+		for i := range node.AbsoluteResourcePath {
+			p.PrintString(node.AbsoluteResourcePath[i].Value)
+		}
+		p.EndNode()
+		p.indentLevel--
+	}
+	p.indentLevel++
+	p.StartNode()
+	p.PrintString("on")
+	for _, expr := range node.AttachedExprs {
+		p.PrintInner(expr.(BLangNode))
+	}
+	p.EndNode()
+	// Print the embedded class members.
+	for _, field := range node.Fields {
+		p.PrintInner(field.(BLangNode))
+	}
+	if node.InitFunction != nil {
+		p.printFunction(node.InitFunction)
+	}
+	methodNames := slices.SortedFunc(func(yield func(string) bool) {
+		for name := range node.Methods {
+			if !yield(name) {
+				return
+			}
+		}
+	}, cmp.Compare[string])
+	for _, name := range methodNames {
+		p.printFunction(node.Methods[name])
+	}
+	for _, rm := range node.ResourceMethods {
+		p.printResourceMethod(rm)
+	}
+	p.indentLevel--
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
-	p.startNode()
-	p.printString("new")
+	p.StartNode()
+	p.PrintString("new")
 	if node.TypeDescriptor != nil {
 		p.indentLevel++
 		p.PrintInner(node.TypeDescriptor)
 		p.indentLevel--
 	}
-	p.printString("(")
+	p.PrintString("(")
 	if len(node.ArgsExprs) > 0 {
 		p.indentLevel++
 		for _, arg := range node.ArgsExprs {
@@ -2015,14 +2083,14 @@ func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.endNode()
+	p.EndNode()
 }
 
 // Function type printer
 func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
-	p.startNode()
-	p.printString("function-type")
-	p.printString("(")
+	p.StartNode()
+	p.PrintString("function-type")
+	p.PrintString("(")
 	if len(node.RequiredParams) > 0 {
 		p.indentLevel++
 		for i := range node.RequiredParams {
@@ -2039,55 +2107,55 @@ func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.printString("(")
+	p.PrintString("(")
 	if node.ReturnTypeDescriptor != nil {
 		p.indentLevel++
 		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printLambdaFunction(node *BLangLambdaFunction) {
-	p.startNode()
-	p.printString("lambda")
+	p.StartNode()
+	p.PrintString("lambda")
 	if node.Function != nil {
 		p.indentLevel++
 		p.PrintInner(node.Function)
 		p.indentLevel--
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
-	p.startNode()
-	p.printString("function-type-param")
+	p.StartNode()
+	p.PrintString("function-type-param")
 	if node.Name != nil {
 		p.PrintInner(node.Name)
 	}
 	if node.TypeDesc != nil {
 		p.PrintInner(node.TypeDesc.(BLangNode))
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 // User-defined type printer
 func (p *PrettyPrinter) printUserDefinedType(node *BLangUserDefinedType) {
-	p.startNode()
-	p.printString("user-defined-type")
+	p.StartNode()
+	p.PrintString("user-defined-type")
 	if node.PkgAlias.Value != "" {
-		p.printString(node.PkgAlias.Value + " " + node.TypeName.Value)
+		p.PrintString(node.PkgAlias.Value + " " + node.TypeName.Value)
 	} else {
-		p.printString(node.TypeName.Value)
+		p.PrintString(node.TypeName.Value)
 	}
-	p.endNode()
+	p.EndNode()
 }
 
 // Match statement printer
 func (p *PrettyPrinter) printMatchStatement(node *BLangMatchStatement) {
-	p.startNode()
-	p.printString("match")
+	p.StartNode()
+	p.PrintString("match")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	for i := range node.MatchClauses {
@@ -2095,12 +2163,12 @@ func (p *PrettyPrinter) printMatchStatement(node *BLangMatchStatement) {
 		p.printMatchClause(clause)
 	}
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printMatchClause(node *BLangMatchClause) {
-	p.startNode()
-	p.printString("match-clause")
+	p.StartNode()
+	p.PrintString("match-clause")
 	p.indentLevel++
 	// Print patterns
 	for _, pattern := range node.Patterns {
@@ -2108,29 +2176,29 @@ func (p *PrettyPrinter) printMatchClause(node *BLangMatchClause) {
 	}
 	// Print guard if present
 	if node.Guard != nil {
-		p.startNode()
-		p.printString("match-guard")
+		p.StartNode()
+		p.PrintString("match-guard")
 		p.indentLevel++
 		p.PrintInner(node.Guard)
 		p.indentLevel--
-		p.endNode()
+		p.EndNode()
 	}
 	p.PrintInner(&node.Body)
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printConstPattern(node *BLangConstPattern) {
-	p.startNode()
-	p.printString("const-pattern")
+	p.StartNode()
+	p.PrintString("const-pattern")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
-	p.endNode()
+	p.EndNode()
 }
 
 func (p *PrettyPrinter) printWildCardMatchPattern(node *BLangWildCardMatchPattern) {
-	p.startNode()
-	p.printString("wildcard-match-pattern")
-	p.endNode()
+	p.StartNode()
+	p.PrintString("wildcard-match-pattern")
+	p.EndNode()
 }

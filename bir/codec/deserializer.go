@@ -118,7 +118,7 @@ func (br *birReader) readType() semtypes.SemType {
 	var idx int32
 	br.read(&idx)
 	if idx == -1 {
-		return nil
+		return semtypes.SemType{}
 	}
 	return br.tp.Get(semtypes.TypePoolIndex(idx))
 }
@@ -296,7 +296,7 @@ func (br *birReader) readClassDef(classDef *bir.BIRClassDef) {
 				segs[k] = bir.ResourcePathSegmentDef{Ty: br.readType()}
 			}
 			restTy := br.readType()
-			if restTy == nil {
+			if semtypes.IsZero(restTy) {
 				restTy = semtypes.NEVER
 			}
 			fn := br.readFunction()
@@ -1155,7 +1155,7 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 }
 
 func (br *birReader) restFillerFactoryForListType(ty semtypes.SemType) values.FillerFactory {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return nil
 	}
 	tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())

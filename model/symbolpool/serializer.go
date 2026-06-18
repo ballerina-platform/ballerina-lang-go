@@ -27,7 +27,7 @@ import (
 
 const (
 	symMagic   = "\x53\x59\x4d\x42"
-	symVersion = 5
+	symVersion = 6
 )
 
 const (
@@ -42,6 +42,7 @@ const (
 	symTagNetworkClass
 	symTagResourceMethod
 	symTagConstantValue
+	symTagOpaque
 )
 
 const (
@@ -122,9 +123,13 @@ func (sw *symbolWriter) writePackageIdentifier(buf *bytes.Buffer, pkg model.Pack
 	return sw.writeStringCP(buf, pkg.Version)
 }
 
+// symbolSpaceNilSentinel marks a nil space, distinguishing it from a non-nil
+// but empty space (which still carries a package identifier).
+const symbolSpaceNilSentinel = int64(-1)
+
 func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolSpace) error {
 	if space == nil {
-		return write(buf, int64(0))
+		return write(buf, symbolSpaceNilSentinel)
 	}
 
 	if err := write(buf, int64(space.Len())); err != nil {
@@ -143,6 +148,12 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 }
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
+	if op, ok := sym.(model.OpaqueSymbol); ok {
+		if err := write(buf, symTagOpaque); err != nil {
+			return err
+		}
+		return write(buf, int32(op.OpaqueID()))
+	}
 	switch s := sym.(type) {
 	case *model.NetworkClassSymbol:
 		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
@@ -289,19 +300,7 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 }
 
 func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
-	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
-		return err
-	}
-	if err := write(buf, int32(ref.Index)); err != nil {
-		return err
-	}
-	return write(buf, int32(ref.SpaceIndex))
+	return write(buf, int32(ref.Index))
 }
 
 func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
@@ -429,10 +428,10 @@ func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}
-	if err := write(buf, sig.RestParamType != nil); err != nil {
+	if err := write(buf, !semtypes.IsZero(sig.RestParamType)); err != nil {
 		return err
 	}
-	if sig.RestParamType != nil {
+	if !semtypes.IsZero(sig.RestParamType) {
 		if err := sw.writeType(buf, sig.RestParamType); err != nil {
 			return err
 		}
@@ -598,7 +597,7 @@ func (sw *symbolWriter) writeStringCP(buf *bytes.Buffer, s string) error {
 }
 
 func (sw *symbolWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) error {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return write(buf, int32(-1))
 	}
 	return write(buf, int32(sw.tp.Put(ty)))

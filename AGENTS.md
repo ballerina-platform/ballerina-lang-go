@@ -52,6 +52,8 @@ Stages 5–10 then run concurrently per module, with no cross-module dependencie
 
 ## Tests
 
+- IMPORTANT: prefer adding corpus tests over adding unit tests for modules. If you can't write a corpus test to validate a scenario then that means that scenario can't happen in real world
+
 ### Corpus layout
 
 - `corpus/bal/` and per-stage golden dirs (`corpus/ast/`, etc.) — compiler pipeline corpus walked by `*/corpus_*_test.go` in each package

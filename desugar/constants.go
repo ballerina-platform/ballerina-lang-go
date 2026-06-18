@@ -43,7 +43,7 @@ func materializeConstantRef(cx *functionContext, ref *ast.BLangSimpleVarRef) ast
 }
 
 func constantValueLiteral(value values.BalValue, pos diagnostics.Location, ty semtypes.SemType) ast.BLangExpression {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		ty = values.SemTypeForValue(value)
 	}
 
