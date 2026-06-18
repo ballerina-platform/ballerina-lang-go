@@ -18,12 +18,9 @@ package native
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"sort"
 	"strings"
@@ -50,10 +47,10 @@ type listenerState struct {
 	port        int
 	timeout     time.Duration
 	httpVersion string
-	tlsCfg      *tls.Config
+	tlsCfg      *pal.ServerTLSConfig
 	mu          sync.RWMutex
 	services    []*serviceEntry
-	server      *http.Server
+	server      pal.ServerHandle
 }
 
 type serviceEntry struct {
@@ -271,8 +268,11 @@ func extractAttachPath(v values.BalValue) string {
 	return "/"
 }
 
-// buildListenerTLSConfig builds a *tls.Config from a ListenerSecureSocket map.
-func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*tls.Config, error) {
+// buildListenerTLSConfig builds a pal.ServerTLSConfig from a ListenerSecureSocket
+// map, reading all PEM material via fs. The concrete *tls.Config is assembled by
+// the platform (palnative), keeping this code free of crypto/tls so it stays
+// portable to the WASM target.
+func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*pal.ServerTLSConfig, error) {
 	keyVal, ok := ssMap.Get("key")
 	if !ok {
 		return nil, fmt.Errorf("secureSocket.key is required")
@@ -295,12 +295,8 @@ func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("key.keyFile: %w", err)
 	}
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		return nil, fmt.Errorf("X509KeyPair: %w", err)
-	}
 
-	tlsCfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+	cfg := &pal.ServerTLSConfig{CertPEM: certPEM, KeyPEM: keyPEM}
 
 	// mTLS: client certificate verification.
 	if v, ok := ssMap.Get("mutualSsl"); ok {
@@ -311,32 +307,27 @@ func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*tls.Config, error) {
 					if err != nil {
 						return nil, fmt.Errorf("secureSocket.cert (CA): %w", err)
 					}
-					pool := x509.NewCertPool()
-					if !pool.AppendCertsFromPEM(caCertPEM) {
-						return nil, fmt.Errorf("failed to parse CA certificate")
-					}
-					tlsCfg.ClientCAs = pool
-					tlsCfg.ClientAuth = tls.RequireAndVerifyClientCert
+					cfg.ClientCACertPEM = caCertPEM
 				}
 			}
 		}
 	}
 
-	// TLS version bounds.
+	// TLS version bounds (raw IANA version codes; platform applies them).
 	if v, ok := ssMap.Get("protocol"); ok {
 		if list, ok := v.(*values.List); ok {
 			tlsVersionMap := map[string]uint16{
-				"TLSv1.0": tls.VersionTLS10, "TLSv1.1": tls.VersionTLS11,
-				"TLSv1.2": tls.VersionTLS12, "TLSv1.3": tls.VersionTLS13,
+				"TLSv1.0": 0x0301, "TLSv1.1": 0x0302,
+				"TLSv1.2": 0x0303, "TLSv1.3": 0x0304,
 			}
 			for i := range list.Len() {
 				if s, ok := list.Get(i).(string); ok {
 					if ver, found := tlsVersionMap[s]; found {
-						if tlsCfg.MinVersion == 0 || ver < tlsCfg.MinVersion {
-							tlsCfg.MinVersion = ver
+						if cfg.MinVersion == 0 || ver < cfg.MinVersion {
+							cfg.MinVersion = ver
 						}
-						if ver > tlsCfg.MaxVersion {
-							tlsCfg.MaxVersion = ver
+						if ver > cfg.MaxVersion {
+							cfg.MaxVersion = ver
 						}
 					}
 				}
@@ -344,19 +335,12 @@ func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*tls.Config, error) {
 		}
 	}
 
-	// Cipher suites.
+	// Cipher suites — carried as IANA names; the platform resolves them to IDs.
 	if v, ok := ssMap.Get("ciphers"); ok {
 		if list, ok := v.(*values.List); ok {
-			allSuites := append(tls.CipherSuites(), tls.InsecureCipherSuites()...)
-			nameToID := make(map[string]uint16, len(allSuites))
-			for _, cs := range allSuites {
-				nameToID[cs.Name] = cs.ID
-			}
 			for i := range list.Len() {
 				if s, ok := list.Get(i).(string); ok {
-					if id, found := nameToID[s]; found {
-						tlsCfg.CipherSuites = append(tlsCfg.CipherSuites, id)
-					}
+					cfg.CipherSuiteNames = append(cfg.CipherSuiteNames, s)
 				}
 			}
 		}
@@ -365,11 +349,11 @@ func buildListenerTLSConfig(ssMap *values.Map, fs pal.FS) (*tls.Config, error) {
 	// Session tickets.
 	if v, ok := ssMap.Get("shareSession"); ok {
 		if b, ok := v.(bool); ok && !b {
-			tlsCfg.SessionTicketsDisabled = true
+			cfg.DisableSessionTickets = true
 		}
 	}
 
-	return tlsCfg, nil
+	return cfg, nil
 }
 
 // validateServiceForHTTP rejects service objects that contain remote methods,
@@ -382,11 +366,13 @@ func validateServiceForHTTP(svcObj *values.Object) string {
 	return ""
 }
 
-// startHTTPServer creates the net/http server, binds the listening socket
-// (optionally wrapped in TLS), and serves on a background goroutine.
-func startHTTPServer(rt *runtime.Runtime, state *listenerState) (*http.Server, error) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// startHTTPServer builds the platform-neutral dispatch handler and hands it to
+// the platform's HTTP.Listen, which owns the transport: the native platform
+// binds a TCP socket (optionally TLS-wrapped) and serves on a background
+// goroutine, while a WASM/web platform registers the handler with its JS host.
+// All request routing and dispatch stays here in the shared handler.
+func startHTTPServer(rt *runtime.Runtime, state *listenerState) (pal.ServerHandle, error) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				http.Error(w, fmt.Sprintf("%v", rec), http.StatusInternalServerError)
@@ -394,47 +380,14 @@ func startHTTPServer(rt *runtime.Runtime, state *listenerState) (*http.Server, e
 		}()
 		dispatchRequest(rt, state, w, r)
 	})
-
-	addr := fmt.Sprintf("%s:%d", state.host, state.port)
-	protocols := new(http.Protocols)
-	protocols.SetHTTP1(true)
-	if state.httpVersion == "2.0" {
-		protocols.SetHTTP2(true)
-		if state.tlsCfg == nil {
-			protocols.SetUnencryptedHTTP2(true)
-		}
+	cfg := pal.ServerConfig{
+		Host:         state.host,
+		Port:         state.port,
+		HTTPVersion:  state.httpVersion,
+		WriteTimeout: state.timeout,
+		TLS:          state.tlsCfg,
 	}
-
-	writeTimeout := state.timeout
-	if writeTimeout == 0 {
-		writeTimeout = 60 * time.Second
-	}
-	server := &http.Server{
-		Addr:      addr,
-		Handler:   mux,
-		Protocols: protocols,
-		// ReadHeaderTimeout guards against slow-loris without aborting request bodies
-		// mid-stream (ReadTimeout would do that and breaks proxies/uploads).
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      writeTimeout,
-		// Evict idle HTTP/1.1 keep-alive connections that haven't been used.
-		IdleTimeout: 300 * time.Second,
-		// 16 KB max header size; the default 1 MB is wasteful for typical REST APIs.
-		MaxHeaderBytes: 1 << 14,
-	}
-
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-	var serveLn net.Listener = ln
-	if state.tlsCfg != nil {
-		serveLn = tls.NewListener(ln, state.tlsCfg)
-	}
-	go func() {
-		_ = server.Serve(serveLn)
-	}()
-	return server, nil
+	return rt.Platform().HTTP.Listen(cfg, handler)
 }
 
 // dispatchRequest routes an incoming HTTP request to the matching service and

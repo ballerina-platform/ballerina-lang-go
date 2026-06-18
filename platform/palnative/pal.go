@@ -123,6 +123,7 @@ func NewPlatform() (pal.Platform, func()) {
 		},
 		HTTP: pal.HTTP{
 			NewClient: NewHTTPClient,
+			Listen:    Listen,
 		},
 		Signals: signals,
 	}, cleanupSignals
