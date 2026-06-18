@@ -566,6 +566,8 @@ func (ms *moduleSymbolResolver) allocateTypeSymbol(typeDef *ast.BLangTypeDefinit
 		symbol = new(model.NewRecordSymbol(name, isPublic))
 	case *ast.BLangObjectType:
 		symbol = new(model.NewObjectTypeSymbol(name, isPublic))
+	case *ast.BLangErrorTypeNode:
+		symbol = new(model.NewErrorTypeSymbol(name, isPublic))
 	default:
 		symbol = new(model.NewTypeSymbol(name, isPublic))
 	}
@@ -574,11 +576,13 @@ func (ms *moduleSymbolResolver) allocateTypeSymbol(typeDef *ast.BLangTypeDefinit
 	}
 	symRef, _, _ := ms.GetSymbol(name)
 	if typeDef.IsDistinct() {
-		carrier, ok := ms.ctx.GetSymbol(symRef).(model.ObjectType)
-		if !ok {
-			ms.ctx.Unimplemented("distinct types are only supported for object types", typeDef.GetPosition())
-		} else {
+		switch carrier := ms.ctx.GetSymbol(symRef).(type) {
+		case *model.ErrorTypeSymbol:
 			carrier.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+		case model.ObjectType:
+			carrier.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+		default:
+			ms.ctx.Unimplemented("distinct types are only supported for object and error types", typeDef.GetPosition())
 		}
 	}
 	ms.typeDefns[symRef] = typeDef
