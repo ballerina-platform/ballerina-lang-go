@@ -266,7 +266,11 @@ func (t *packageTypeResolver) nextMonoFnName(origName string) string {
 }
 
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	classRef, ok := t.classSymbolByType[t.semtypeInterner.Intern(receiverTy)]
+	handle, ok := t.semtypeInterner.Lookup(receiverTy)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	classRef, ok := t.classSymbolByType[handle]
 	if !ok {
 		return model.SymbolRef{}, false
 	}
