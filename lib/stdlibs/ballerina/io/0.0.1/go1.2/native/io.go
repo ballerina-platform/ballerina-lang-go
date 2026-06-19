@@ -33,7 +33,7 @@ const (
 	stderrStream = int64(2)
 )
 
-func write(rt *runtime.Runtime, stream int64, newline bool, vals []values.BalValue) {
+func Write(rt *runtime.Runtime, stream int64, newline bool, vals []values.BalValue) {
 	parts := make([]string, len(vals))
 	visited := make(map[uintptr]bool)
 	for i, v := range vals {
@@ -64,7 +64,7 @@ func externPrintExtern(rt *runtime.Runtime) extern.NativeFunc {
 				vals = append(vals, list.Get(i))
 			}
 		}
-		write(rt, stream, newLine, vals)
+		Write(rt, stream, newLine, vals)
 		return nil, nil
 	}
 }
