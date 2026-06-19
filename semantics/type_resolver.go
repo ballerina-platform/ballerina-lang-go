@@ -854,12 +854,20 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
-	// Annotation attachments are resolved after all top-level annotation
-	// declarations, types, constants, and function signatures are available.
-	// Attachments can refer to annotations and constants declared later in the
-	// module, so resolving them inline while each AST node is resolved would
-	// force many out-of-order lazy resolutions against partially initialized
-	// annotation symbols.
+	// Annotation attachments are resolved in a dedicated pass over the tree
+	// rather than inline as each node is resolved. Ordering is not the reason —
+	// annotation declarations, types, and constants are all resolved above
+	// (constants fold out of order via resolveConstant/ensureResolved), so an
+	// inline pass would read fully-resolved symbols. The dedicated pass exists
+	// because the work is naturally batched:
+	//
+	//  1. Attachment values are constant expressions, and evaluateAnnotationTasks
+	//     folds the whole batch in parallel across workers sharing one
+	//     constant-evaluation cache. A module that uses annotations tends to have
+	//     many, so this batching matters.
+	//  2. Repeated annotations on the same symbol are aggregated into a single
+	//     list value, which needs every attachment of that symbol collected
+	//     before the final value can be produced.
 	resolveTopLevelAnnotationAttachments(t, pkg)
 	for i := range pkg.Imports {
 		setOtherNodesAsNever(&pkg.Imports[i])
