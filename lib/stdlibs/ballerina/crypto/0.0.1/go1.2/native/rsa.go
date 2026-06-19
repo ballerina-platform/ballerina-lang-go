@@ -19,7 +19,7 @@ package native
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/md5"  //nolint:gosec
+	"crypto/md5" //nolint:gosec
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1" //nolint:gosec
@@ -47,7 +47,7 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.EncryptOAEP(oaepHash, rand.Reader, k, input, nil)
 				} else {
-					out, err = rsa.EncryptPKCS1v15(rand.Reader, k, input) //nolint:gosec
+					out, err = rsa.EncryptPKCS1v15(rand.Reader, k, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
@@ -60,7 +60,7 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.EncryptOAEP(oaepHash, rand.Reader, pub, input, nil)
 				} else {
-					out, err = rsa.EncryptPKCS1v15(rand.Reader, pub, input) //nolint:gosec
+					out, err = rsa.EncryptPKCS1v15(rand.Reader, pub, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
@@ -84,7 +84,7 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.DecryptOAEP(oaepHash, rand.Reader, k, input, nil)
 				} else {
-					out, err = rsa.DecryptPKCS1v15(rand.Reader, k, input)
+					out, err = rsa.DecryptPKCS1v15(rand.Reader, k, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA decrypt: %s", err.Error())), nil

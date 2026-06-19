@@ -167,6 +167,6 @@ func pbkdf2Params(alg string) (func() hash.Hash, int, string, error) {
 	case "SHA512":
 		return sha512.New, 64, "SHA512", nil
 	default:
-		return nil, 0, "", fmt.Errorf("Error occurred while hashing password: unsupported algorithm %q", alg)
+		return nil, 0, "", fmt.Errorf("error occurred while hashing password: unsupported algorithm %q", alg)
 	}
 }
