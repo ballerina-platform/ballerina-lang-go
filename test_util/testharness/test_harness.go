@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -36,6 +35,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/platform/pal"
