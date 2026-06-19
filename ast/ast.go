@@ -599,7 +599,9 @@ func (b *BLangAnnotation) AttachPoints() []AttachPoint {
 	}
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Point != result[j].Point {
-			return result[i].Point < result[j].Point
+			// Sort by the canonical key (alphabetical) to keep ordering stable
+			// across the byte-valued Point enum.
+			return result[i].Point.String() < result[j].Point.String()
 		}
 		return !result[i].Source && result[j].Source
 	})

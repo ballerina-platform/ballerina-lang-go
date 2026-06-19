@@ -1320,7 +1320,7 @@ func (p *PrettyPrinter) printAnnotation(node *BLangAnnotation) {
 		if attachPoint.Source {
 			p.PrintString("source")
 		}
-		p.PrintString(string(attachPoint.Point))
+		p.PrintString(attachPoint.Point.String())
 		p.EndNode()
 	}
 	p.indentLevel--

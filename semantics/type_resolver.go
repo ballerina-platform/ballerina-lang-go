@@ -1119,7 +1119,7 @@ func collectAnnotationEvaluationTasks(
 			t.internalError("annotation reference does not resolve to an annotation symbol", ann.GetPosition())
 			continue
 		}
-		pointKey := string(point)
+		pointKey := point.String()
 		if !sym.AllowsAttachPoint(pointKey) {
 			t.semanticError("annotation '"+sym.Name()+"' is not allowed on "+pointKey, ann.GetPosition())
 			continue

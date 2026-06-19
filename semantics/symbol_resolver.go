@@ -378,7 +378,7 @@ func addTopLevelAnnotationSymbol(resolver *moduleSymbolResolver, name string, sy
 }
 
 func annotationAttachPointKey(attachPoint ast.AttachPoint) string {
-	point := string(attachPoint.Point)
+	point := attachPoint.Point.String()
 	if attachPoint.Source {
 		return model.SourceAnnotationAttachPointKey(point)
 	}
