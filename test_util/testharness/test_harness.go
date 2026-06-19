@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"slices"
 	"sort"
 	"strconv"
@@ -204,6 +205,13 @@ func NewTestPal() TestPal {
 	return &testPal{}
 }
 
+func normalizePath(path string) string {
+	if goruntime.GOOS == "windows" && strings.HasPrefix(path, "/tmp/") {
+		return filepath.Join(os.TempDir(), path[5:])
+	}
+	return path
+}
+
 func (p *testPal) Platform() pal.Platform {
 	p.ensureSignalSource()
 	return pal.Platform{
@@ -221,13 +229,13 @@ func (p *testPal) Platform() pal.Platform {
 		},
 		FS: pal.FS{
 			ReadFile: func(path string) ([]byte, error) {
-				return os.ReadFile(path)
+				return os.ReadFile(normalizePath(path))
 			},
 			WriteFile: func(path string, data []byte) error {
-				return os.WriteFile(path, data, 0o644)
+				return os.WriteFile(normalizePath(path), data, 0o644)
 			},
 			AppendFile: func(path string, data []byte) (err error) {
-				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+				f, err := os.OpenFile(normalizePath(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 				if err != nil {
 					return err
 				}
