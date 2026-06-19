@@ -78,7 +78,10 @@ type stdlibEntry struct {
 
 // builtinStdlibs is the ordered list of standard-library packages baked into the
 // binary that are still seeded manually for hand-rolled compile drivers.
+// Order matters: a package must appear after all packages it imports
+// (e.g. io before os, time before crypto).
 var builtinStdlibs = []stdlibEntry{
+	{"ballerina", "io", "0.0.1"},
 	{"ballerina", "http", "0.0.1"},
 	{"ballerina", "log", "0.0.1"},
 	{"ballerina", "math.vector", "0.0.1"},

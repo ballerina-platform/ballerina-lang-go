@@ -42,6 +42,7 @@ func newProcessObject(handle pal.ProcessHandle) *values.Object {
 			"output":      "ballerina/os:Process.output",
 			"exit":        "ballerina/os:Process.exit",
 		},
+		nil,
 	)
 }
 
