@@ -58,6 +58,16 @@ type ModuleImport struct {
 	ModuleName string
 }
 
+type FrontendStage int
+
+const (
+	FrontendStageNone FrontendStage = iota
+	FrontendStageParsed
+	FrontendStageSymbolResolved
+	FrontendStageTopLevelTypeResolved
+	FrontendStageDesugared
+)
+
 type Module struct {
 	Name             string
 	Root             string
@@ -65,7 +75,11 @@ type Module struct {
 	Files            map[protocol.DocumentURI]SourceFile
 	CompilationUnits map[protocol.DocumentURI]*ast.BLangCompilationUnit
 	Fingerprint      string
+	Stage            FrontendStage
 	Imports          []ModuleImport
+	ImportedByCU     []semantics.CompilationUnitImports
+	ImportedSymbols  map[string]model.ExportedSymbolSpace
+	Package          *ast.BLangPackage
 	Exported         model.ExportedSymbolSpace
 }
 
@@ -168,7 +182,11 @@ func newBuildSnapshot(id int64, old *Snapshot, root string, openFiles map[protoc
 			}
 			reuseCompilationUnits(module, oldModule)
 			if oldModule.Fingerprint == module.Fingerprint {
+				module.Stage = oldModule.Stage
 				module.Imports = oldModule.Imports
+				module.ImportedByCU = oldModule.ImportedByCU
+				module.ImportedSymbols = oldModule.ImportedSymbols
+				module.Package = oldModule.Package
 				module.Exported = oldModule.Exported
 			}
 		}

@@ -35,12 +35,6 @@ import (
 
 const diagnosticSource = "ballerina-go"
 
-type compiledModule struct {
-	module          *Module
-	pkg             *ast.BLangPackage
-	importedSymbols map[string]model.ExportedSymbolSpace
-}
-
 func runDiagnostics(snapshot *Snapshot, source SourceFile) map[protocol.DocumentURI][]protocol.Diagnostic {
 	logLS(snapshot.Root, "compile dispatch snapshotID=%d kind=%s source=%s", snapshot.ID, projectKindString(snapshot.Kind), source.Path)
 	cx := context.NewCompilerContext(snapshot.Env)
@@ -48,172 +42,198 @@ func runDiagnostics(snapshot *Snapshot, source SourceFile) map[protocol.Document
 		_ = recover()
 	}()
 	if snapshot.Kind == ProjectKindBuild {
-		runProjectFrontendToDesugar(cx, snapshot, source)
-	} else {
-		runSingleFileFrontendToDesugar(cx, snapshot)
+		logLS(snapshot.Root, "project compile start snapshotID=%d modules=%d source=%s", snapshot.ID, len(snapshot.Modules), source.Path)
+		for _, moduleName := range sortedModuleNames(snapshot) {
+			module := snapshot.Modules[moduleName]
+			if module == nil || !runModuleFrontend(cx, snapshot, module, FrontendStageDesugared) || cx.HasDiagnostics() {
+				break
+			}
+		}
+		logLS(snapshot.Root, "project compile complete snapshotID=%d", snapshot.ID)
+	} else if module := snapshot.Modules[defaultModuleName]; module != nil {
+		runModuleFrontend(cx, snapshot, module, FrontendStageDesugared)
 	}
 	return convertDiagnostics(snapshot, cx.Diagnostics())
 }
 
-func runSingleFileFrontendToDesugar(cx *context.CompilerContext, snapshot *Snapshot) {
-	module := snapshot.Modules[defaultModuleName]
-	if module == nil {
-		return
+func runModuleFrontend(cx *context.CompilerContext, snapshot *Snapshot, module *Module, target FrontendStage) bool {
+	if module == nil || module.Stage >= target {
+		return true
 	}
-	runModuleFrontendToDesugar(cx, snapshot, module, nil)
+	if target >= FrontendStageParsed && !runModuleParse(cx, snapshot, module) {
+		return false
+	}
+	if target >= FrontendStageSymbolResolved && !runModuleSymbolResolution(cx, snapshot, module) {
+		return false
+	}
+	if target >= FrontendStageTopLevelTypeResolved && !runModuleTopLevelTypeResolution(cx, snapshot, module) {
+		return false
+	}
+	if target >= FrontendStageDesugared && !runModuleRemainingPhases(cx, snapshot.Root, module.Name, module.Package, module.ImportedSymbols) {
+		return false
+	}
+	module.Stage = target
+	return true
 }
 
-func runProjectFrontendToDesugar(cx *context.CompilerContext, snapshot *Snapshot, source SourceFile) {
-	logLS(snapshot.Root, "project compile start snapshotID=%d modules=%d source=%s", snapshot.ID, len(snapshot.Modules), source.Path)
-	unitsByModule := make(map[string][]*ast.BLangCompilationUnit, len(snapshot.Modules))
-	for name, module := range snapshot.Modules {
-		units := parseModuleCompilationUnits(cx, snapshot, module)
-		if cx.HasDiagnostics() {
-			return
+func runModuleParse(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
+	if module.Stage >= FrontendStageParsed {
+		return true
+	}
+	units := parseModuleCompilationUnits(cx, snapshot, module)
+	if len(units) == 0 || cx.HasDiagnostics() {
+		return false
+	}
+	module.Imports = localModuleImports(snapshot, units)
+	module.Stage = FrontendStageParsed
+	logLS(snapshot.Root, "module parsed snapshotID=%d module=%s files=%d units=%d imports=%d", snapshot.ID, module.Name, len(module.Files), len(units), len(module.Imports))
+	return true
+}
+
+func runModuleSymbolResolution(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
+	if module.Stage >= FrontendStageSymbolResolved {
+		return true
+	}
+	langlibs, publicSymbols, ok := prepareSymbolResolution(cx, snapshot, module)
+	if !ok {
+		return false
+	}
+	return runModuleSymbolResolutionWithSymbols(cx, snapshot, module, langlibs.ImplicitImports, publicSymbols)
+}
+
+func prepareSymbolResolution(cx *context.CompilerContext, snapshot *Snapshot, target *Module) (*langlib.Symbols, map[semantics.PackageIdentifier]model.ExportedSymbolSpace, bool) {
+	if snapshot.Kind != ProjectKindBuild {
+		langlibs, err := langlib.Build(cx, nil)
+		if err != nil {
+			cx.InternalError(err.Error(), diagnostics.NewBuiltinLocation())
+			return nil, nil, false
 		}
-		unitsByModule[name] = units
-		module.Imports = localModuleImports(snapshot, units)
-		logLS(snapshot.Root, "module parsed snapshotID=%d module=%s files=%d units=%d imports=%d", snapshot.ID, name, len(module.Files), len(units), len(module.Imports))
+		return langlibs, langlibs.PublicSymbols, true
 	}
 
+	for _, moduleName := range sortedModuleNames(snapshot) {
+		if !runModuleParse(cx, snapshot, snapshot.Modules[moduleName]) {
+			return nil, nil, false
+		}
+	}
 	order, ok := topologicalModuleOrder(snapshot)
 	if !ok {
 		logLS(snapshot.Root, "project compile stopped snapshotID=%d reason=module-import-cycle", snapshot.ID)
-		return
+		return nil, nil, false
 	}
-	changedIndex := changedModuleIndex(snapshot, source, order)
-	logLS(snapshot.Root, "module topo order snapshotID=%d order=%s changedIndex=%d", snapshot.ID, strings.Join(order, ","), changedIndex)
+	logLS(snapshot.Root, "module topo order snapshotID=%d order=%s", snapshot.ID, strings.Join(order, ","))
 
 	langlibs, err := langlib.Build(cx, nil)
 	if err != nil {
 		cx.InternalError(err.Error(), diagnostics.NewBuiltinLocation())
-		return
+		return nil, nil, false
 	}
 	publicSymbols := make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace, len(langlibs.PublicSymbols)+len(snapshot.Modules))
 	for id, exported := range langlibs.PublicSymbols {
 		publicSymbols[id] = exported
 	}
 
-	compiled := make([]compiledModule, 0, len(order))
-	for i, moduleName := range order {
-		module := snapshot.Modules[moduleName]
-		if module == nil {
+	for _, moduleName := range order {
+		current := snapshot.Modules[moduleName]
+		if current == nil {
 			continue
 		}
-		id := packageIdentifier(snapshot, module)
-		if i < changedIndex && module.Exported.MainSpaces != nil {
-			logLS(snapshot.Root, "module skipped snapshotID=%d module=%s reason=reused-exported-symbols", snapshot.ID, moduleName)
-			publicSymbols[id] = module.Exported
-			continue
+		if current == target {
+			return langlibs, publicSymbols, true
 		}
-
-		units := unitsByModule[moduleName]
-		if len(units) == 0 {
-			logLS(snapshot.Root, "module skipped snapshotID=%d module=%s reason=no-compilation-units", snapshot.ID, moduleName)
-			continue
+		if !runModuleSymbolResolutionWithSymbols(cx, snapshot, current, langlibs.ImplicitImports, publicSymbols) {
+			return nil, nil, false
 		}
-		logLS(snapshot.Root, "module compile top-level start snapshotID=%d module=%s units=%d", snapshot.ID, moduleName, len(units))
-		moduleCompiled, ok := runModuleTopLevel(cx, snapshot, module, units, langlibs.ImplicitImports, publicSymbols)
-		if !ok {
-			return
+		if !runModuleTopLevelTypeResolution(cx, snapshot, current) {
+			return nil, nil, false
 		}
-		publicSymbols[id] = module.Exported
-		logLS(snapshot.Root, "module compile top-level complete snapshotID=%d module=%s", snapshot.ID, moduleName)
-		compiled = append(compiled, moduleCompiled)
+		publicSymbols[packageIdentifier(snapshot, current)] = current.Exported
 	}
-
-	for _, module := range compiled {
-		logLS(snapshot.Root, "module compile remaining start snapshotID=%d module=%s", snapshot.ID, module.module.Name)
-		runModuleRemainingPhases(cx, snapshot.Root, module.module.Name, module.pkg, module.importedSymbols)
-		if cx.HasDiagnostics() {
-			logLS(snapshot.Root, "module compile remaining stopped snapshotID=%d module=%s diagnostics=%d", snapshot.ID, module.module.Name, len(cx.Diagnostics()))
-			return
-		}
-		logLS(snapshot.Root, "module compile remaining complete snapshotID=%d module=%s", snapshot.ID, module.module.Name)
-	}
-	logLS(snapshot.Root, "project compile complete snapshotID=%d compiledModules=%d", snapshot.ID, len(compiled))
+	return langlibs, publicSymbols, true
 }
 
-func runModuleFrontendToDesugar(cx *context.CompilerContext, snapshot *Snapshot, module *Module, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) {
-	logLS(snapshot.Root, "single-file compile start snapshotID=%d fileCount=%d", snapshot.ID, len(module.Files))
-	units := parseModuleCompilationUnits(cx, snapshot, module)
-	if len(units) == 0 || cx.HasDiagnostics() {
-		return
+func runModuleSymbolResolutionWithSymbols(cx *context.CompilerContext, snapshot *Snapshot, module *Module, implicitImports map[string]model.ExportedSymbolSpace, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) bool {
+	if module.Stage >= FrontendStageSymbolResolved {
+		return true
 	}
-	langlibs, err := langlib.Build(cx, publicSymbols)
-	if err != nil {
-		cx.InternalError(err.Error(), diagnostics.NewBuiltinLocation())
-		return
+	if !runModuleParse(cx, snapshot, module) {
+		return false
 	}
-	if publicSymbols == nil {
-		publicSymbols = langlibs.PublicSymbols
-	}
-	compiled, ok := runModuleTopLevel(cx, snapshot, module, units, langlibs.ImplicitImports, publicSymbols)
-	if !ok || cx.HasDiagnostics() {
-		return
-	}
-	runModuleRemainingPhases(cx, snapshot.Root, module.Name, compiled.pkg, compiled.importedSymbols)
-}
-
-func runModuleTopLevel(cx *context.CompilerContext, snapshot *Snapshot, module *Module, units []*ast.BLangCompilationUnit, implicitImports map[string]model.ExportedSymbolSpace, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace) (compiledModule, bool) {
+	units := moduleCompilationUnits(module)
 	if len(units) == 0 {
-		return compiledModule{}, false
+		return false
 	}
 	logLS(snapshot.Root, "stage start snapshotID=%d module=%s stage=import-resolution", snapshot.ID, module.Name)
-	importedByCU := semantics.ResolveCompilationUnitImports(cx, units, implicitImports, publicSymbols, snapshot.OrgName)
-	importedSymbols := mergeCompilationUnitImports(importedByCU)
+	module.ImportedByCU = semantics.ResolveCompilationUnitImports(cx, units, implicitImports, publicSymbols, snapshot.OrgName)
+	module.ImportedSymbols = mergeCompilationUnitImports(module.ImportedByCU)
 	logLS(snapshot.Root, "stage complete snapshotID=%d module=%s stage=import-resolution diagnostics=%d", snapshot.ID, module.Name, len(cx.Diagnostics()))
 
 	logLS(snapshot.Root, "stage start snapshotID=%d module=%s stage=symbol-resolution", snapshot.ID, module.Name)
-	pkgScope, exported := semantics.ResolveSymbols(cx, *module.PackageID, importedByCU)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *module.PackageID, module.ImportedByCU)
 	pkg := ast.ToPackageFromCompilationUnits(units)
 	pkg.Imports = nil
 	pkg.PackageID = module.PackageID
 	pkg.Scope = pkgScope
+	module.Package = pkg
+	module.Exported = exported
 	logLS(snapshot.Root, "stage complete snapshotID=%d module=%s stage=symbol-resolution diagnostics=%d", snapshot.ID, module.Name, len(cx.Diagnostics()))
 	if cx.HasErrors() {
-		return compiledModule{}, false
+		return false
 	}
-
-	logLS(snapshot.Root, "stage start snapshotID=%d module=%s stage=top-level-type-resolution", snapshot.ID, module.Name)
-	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
-	logLS(snapshot.Root, "stage complete snapshotID=%d module=%s stage=top-level-type-resolution diagnostics=%d", snapshot.ID, module.Name, len(cx.Diagnostics()))
-	if cx.HasErrors() {
-		return compiledModule{}, false
-	}
-	module.Exported = exported
-	return compiledModule{module: module, pkg: pkg, importedSymbols: importedSymbols}, true
+	module.Stage = FrontendStageSymbolResolved
+	return true
 }
 
-func runModuleRemainingPhases(cx *context.CompilerContext, root string, module string, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+func runModuleTopLevelTypeResolution(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
+	if module.Stage >= FrontendStageTopLevelTypeResolved {
+		return true
+	}
+	if !runModuleSymbolResolution(cx, snapshot, module) || module.Package == nil {
+		return false
+	}
+	logLS(snapshot.Root, "stage start snapshotID=%d module=%s stage=top-level-type-resolution", snapshot.ID, module.Name)
+	semantics.ResolveTopLevelNodes(cx, module.Package, module.ImportedSymbols)
+	logLS(snapshot.Root, "stage complete snapshotID=%d module=%s stage=top-level-type-resolution diagnostics=%d", snapshot.ID, module.Name, len(cx.Diagnostics()))
+	if cx.HasErrors() {
+		return false
+	}
+	module.Stage = FrontendStageTopLevelTypeResolved
+	return true
+}
+
+func runModuleRemainingPhases(cx *context.CompilerContext, root string, module string, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) bool {
+	if pkg == nil {
+		return false
+	}
 	logLS(root, "stage start module=%s stage=local-node-type-resolution", module)
 	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
 	logLS(root, "stage complete module=%s stage=local-node-type-resolution diagnostics=%d", module, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
-		return
+		return false
 	}
 	logLS(root, "stage start module=%s stage=semantic-analysis", module)
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg, importedSymbols)
 	logLS(root, "stage complete module=%s stage=semantic-analysis diagnostics=%d", module, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
-		return
+		return false
 	}
 	logLS(root, "stage start module=%s stage=cfg-creation", module)
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 	logLS(root, "stage complete module=%s stage=cfg-creation diagnostics=%d", module, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
-		return
+		return false
 	}
 	logLS(root, "stage start module=%s stage=cfg-analysis", module)
 	semantics.AnalyzeCFG(cx, pkg, cfg)
 	logLS(root, "stage complete module=%s stage=cfg-analysis diagnostics=%d", module, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
-		return
+		return false
 	}
 	logLS(root, "stage start module=%s stage=desugar", module)
 	desugar.DesugarPackage(cx, pkg, importedSymbols)
 	logLS(root, "stage complete module=%s stage=desugar diagnostics=%d", module, len(cx.Diagnostics()))
+	return !cx.HasDiagnostics()
 }
 
 func parseModuleCompilationUnits(cx *context.CompilerContext, snapshot *Snapshot, module *Module) []*ast.BLangCompilationUnit {
@@ -255,6 +275,26 @@ func sortedModuleFiles(module *Module) []SourceFile {
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
 	return files
+}
+
+func sortedModuleNames(snapshot *Snapshot) []string {
+	names := make([]string, 0, len(snapshot.Modules))
+	for name := range snapshot.Modules {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func moduleCompilationUnits(module *Module) []*ast.BLangCompilationUnit {
+	files := sortedModuleFiles(module)
+	units := make([]*ast.BLangCompilationUnit, 0, len(files))
+	for _, file := range files {
+		if unit := module.CompilationUnits[file.URI]; unit != nil {
+			units = append(units, unit)
+		}
+	}
+	return units
 }
 
 func localModuleImports(snapshot *Snapshot, units []*ast.BLangCompilationUnit) []ModuleImport {
