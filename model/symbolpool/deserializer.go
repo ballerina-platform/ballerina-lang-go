@@ -80,6 +80,20 @@ func (sr *symbolReader) deserialize() (result model.ExportedSymbolSpace, err err
 	return model.NewExportedSymbolSpace(mainSpace, annotationSpace), nil
 }
 
+func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {
+	name, isPublic, ty := sr.readSymbolBase()
+	methodName := sr.readStringCP()
+	pathType := sr.readType()
+	sig, defaults, included := sr.readFunctionSignatureBody(space)
+	rm := model.NewResourceMethodSymbol(name, methodName, isPublic)
+	rm.SetType(ty)
+	rm.SetSignature(sig)
+	rm.SetDefaultableParams(defaults)
+	rm.SetIncludedRecordParams(included)
+	rm.SetPathListType(pathType)
+	space.AddSymbol(name, rm)
+}
+
 func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 	org := sr.readStringCP()
 	pkg := sr.readStringCP()
@@ -95,28 +109,42 @@ func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
 func (sr *symbolReader) readSymbolSpace() *model.SymbolSpace {
 	var count int64
 	read(sr.r, &count)
-	if count == 0 {
+	if count == symbolSpaceNilSentinel {
 		return nil
 	}
 
 	pkgID := sr.readPackageIdentifier()
 	space := sr.env.NewSymbolSpace(*pkgID)
+	opaque := model.OpaqueSymbols(space.Pkg)
 	for i := int64(0); i < count; i++ {
-		sr.readSymbol(space)
+		sr.readSymbol(space, opaque)
 	}
 
 	return space
 }
 
-func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readSymbol(space *model.SymbolSpace, opaque []model.Symbol) {
 	var tag uint8
 	read(sr.r, &tag)
 
 	switch tag {
+	case symTagOpaque:
+		var idx int32
+		read(sr.r, &idx)
+		sym := opaque[idx]
+		// Set the space the (monomorphized) function is added to. No
+		// monomorphization cache is installed here; nil closures mean no
+		// caching (the symbol resolver installs one when compiling from source).
+		if fn, ok := sym.(*model.OpaqueFunctionSymbol); ok {
+			fn.SymbolSpace = space
+		}
+		space.AddSymbol(sym.Name(), sym)
 	case symTagType:
 		sr.readTypeSymbol(space)
 	case symTagClass:
-		sr.readClassSymbol(space)
+		sr.readClassSymbol(space, false)
+	case symTagNetworkClass:
+		sr.readClassSymbol(space, true)
 	case symTagRecord:
 		sr.readRecordSymbol(space)
 	case symTagObjectType:
@@ -127,6 +155,8 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readFunctionSymbol(space)
 	case symTagDependentlyTypedFunction:
 		sr.readDependentlyTypedFunctionSymbol(space)
+	case symTagResourceMethod:
+		sr.readResourceMethodSymbol(space)
 	default:
 		panic(fmt.Sprintf("unknown symbol tag: %d", tag))
 	}
@@ -218,27 +248,22 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 }
 
 func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
-	org := sr.readStringCP()
-	pkg := sr.readStringCP()
-	version := sr.readStringCP()
-	var index, spaceIndex int32
+	var index int32
 	read(sr.r, &index)
-	read(sr.r, &spaceIndex)
-	_ = spaceIndex // use the current space's index instead of the serialized one
 	return model.SymbolRef{
-		Package: model.PackageIdentifier{
-			Organization: org,
-			Package:      pkg,
-			Version:      version,
-		},
 		Index:      int(index),
 		SpaceIndex: space.SpaceIndex(),
 	}
 }
 
-func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
+func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool) {
 	name, isPublic, ty := sr.readSymbolBase()
-	sym := model.NewClassSymbol(name, isPublic)
+	var sym model.ClassSymbol
+	if isNetwork {
+		sym = model.NewNetworkClassSymbol(name, isPublic)
+	} else {
+		sym = model.NewClassSymbol(name, isPublic)
+	}
 	sym.SetType(ty)
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
@@ -248,7 +273,15 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 		}
 	}
 	sym.SetMethods(methods)
-	space.AddSymbol(name, &sym)
+	if isNetwork {
+		var rmCount int64
+		read(sr.r, &rmCount)
+		networkSym := sym.(*model.NetworkClassSymbol)
+		for i := int64(0); i < rmCount; i++ {
+			networkSym.AddResourceMethod(sr.readSymbolRef(space))
+		}
+	}
+	space.AddSymbol(name, sym)
 }
 
 func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
@@ -276,6 +309,15 @@ func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 
+	sig, defaultInfo, inclInfo := sr.readFunctionSignatureBody(space)
+	sym := model.NewFunctionSymbol(name, sig, isPublic)
+	sym.SetType(ty)
+	sym.SetDefaultableParams(defaultInfo)
+	sym.SetIncludedRecordParams(inclInfo)
+	space.AddSymbol(name, sym)
+}
+
+func (sr *symbolReader) readFunctionSignatureBody(space *model.SymbolSpace) (model.FunctionSignature, model.DefaultableParamInfo, *model.IncludedRecordParamInfo) {
 	var paramCount int64
 	read(sr.r, &paramCount)
 	paramTypes := make([]semtypes.SemType, paramCount)
@@ -295,10 +337,8 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	if hasRestParam {
 		restParamType = sr.readType()
 	}
-
 	var flags uint8
 	read(sr.r, &flags)
-
 	sig := model.FunctionSignature{
 		ParamTypes:    paramTypes,
 		ParamNames:    paramNames,
@@ -306,13 +346,9 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 		RestParamType: restParamType,
 		Flags:         model.FuncSymbolFlags(flags),
 	}
-	sym := model.NewFunctionSymbol(name, sig, isPublic)
-	sym.SetType(ty)
 	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
-	sym.SetDefaultableParams(defaultInfo)
 	inclInfo := sr.readIncludedRecordParams(int(paramCount))
-	sym.SetIncludedRecordParams(inclInfo)
-	space.AddSymbol(name, sym)
+	return sig, defaultInfo, inclInfo
 }
 
 func (sr *symbolReader) readDependentlyTypedFunctionSymbol(space *model.SymbolSpace) {
@@ -423,7 +459,7 @@ func (sr *symbolReader) readType() semtypes.SemType {
 	var idx int32
 	read(sr.r, &idx)
 	if idx == -1 {
-		return nil
+		return semtypes.SemType{}
 	}
 	return sr.tp.Get(semtypes.TypePoolIndex(idx))
 }

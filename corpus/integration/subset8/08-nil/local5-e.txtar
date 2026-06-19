@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: incompatible type: expected nil, got 1
   --> local5-e.bal:19:14
    |
-19 |     null n = 1; // @error
+19 |     null _ = 1; // @error
    |              ^

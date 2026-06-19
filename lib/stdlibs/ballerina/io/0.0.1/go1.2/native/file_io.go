@@ -20,6 +20,7 @@ package native
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -31,11 +32,11 @@ import (
 )
 
 type fileIOTypes struct {
-	strArrTy        semtypes.SemType
-	byteArrTy       semtypes.SemType
-	jsonListTy       semtypes.SemType
-	jsonMapTy        semtypes.SemType
-	stringMapTy      semtypes.SemType
+	strArrTy          semtypes.SemType
+	byteArrTy         semtypes.SemType
+	jsonListTy        semtypes.SemType
+	jsonMapTy         semtypes.SemType
+	stringMapTy       semtypes.SemType
 	stringMapAtomicTy *semtypes.MappingAtomicType
 }
 
@@ -206,6 +207,13 @@ func initFileIOModule(rt *runtime.Runtime) {
 			var raw any
 			if err := dec.Decode(&raw); err != nil {
 				return fileIOError(fmt.Sprintf("error while parsing JSON from file '%s': %s", path, err.Error())), nil
+			}
+			var extra any
+			if err := dec.Decode(&extra); err != io.EOF {
+				if err == nil {
+					return fileIOError(fmt.Sprintf("trailing content after JSON value in file '%s'", path)), nil
+				}
+				return fileIOError(fmt.Sprintf("error reading trailing content in file '%s': %s", path, err.Error())), nil
 			}
 			return goJSONToBalValue(ctx.TypeCtx, raw, types.jsonListTy, types.jsonMapTy), nil
 		})

@@ -179,13 +179,13 @@ func accumNarrowedTypes(t typeResolver, chain *binding, accum map[model.SymbolRe
 		// This is just a marker move to the next one
 		return accumNarrowedTypes(t, chain.prev, accum, accumDefault)
 	}
-	if chain.defaultType == nil {
+	if semtypes.IsZero(chain.defaultType) {
 		ref := chain.ref
 		_, hasTy := accum[ref]
 		if !hasTy {
 			accum[ref] = t.symbolType(chain.narrowedSymbol)
 		}
-	} else if accumDefault == nil {
+	} else if semtypes.IsZero(accumDefault) {
 		accumDefault = chain.defaultType
 	}
 	return accumNarrowedTypes(t, chain.prev, accum, accumDefault)
@@ -193,15 +193,15 @@ func accumNarrowedTypes(t typeResolver, chain *binding, accum map[model.SymbolRe
 
 func mergeChains(t typeResolver, c1 *binding, c2 *binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
-	d1 := accumNarrowedTypes(t, c1, m1, nil)
+	d1 := accumNarrowedTypes(t, c1, m1, semtypes.SemType{})
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
-	d2 := accumNarrowedTypes(t, c2, m2, nil)
+	d2 := accumNarrowedTypes(t, c2, m2, semtypes.SemType{})
 	type typePair struct{ ty1, ty2 semtypes.SemType }
 	pairs := make(map[model.SymbolRef]typePair)
 	for s, ty1 := range m1 {
 		ty2, ok := m2[s]
 		if !ok {
-			if d2 != nil {
+			if !semtypes.IsZero(d2) {
 				ty2 = d2
 			} else {
 				ty2 = t.symbolType(s)
@@ -211,7 +211,7 @@ func mergeChains(t typeResolver, c1 *binding, c2 *binding, mergeOp func(semtypes
 	}
 	for s, ty2 := range m2 {
 		if _, ok := m1[s]; !ok {
-			if d1 != nil {
+			if !semtypes.IsZero(d1) {
 				pairs[s] = typePair{d1, ty2}
 			} else {
 				pairs[s] = typePair{t.symbolType(s), ty2}
@@ -262,7 +262,7 @@ func singletonExprEffect(chain *binding, expr ast.BLangActionOrExpression) (expr
 }
 
 func singletonResultEffect(chain *binding, ty semtypes.SemType) (expressionEffect, bool) {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return expressionEffect{}, false
 	}
 	if isSingletonBool(ty, true) {

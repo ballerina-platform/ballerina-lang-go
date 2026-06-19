@@ -228,6 +228,8 @@ main() -> nil{
 }
 ignore(int,int) -> nil{
   bb0 {
+    _ = a;
+    _ = b;
     return;
   }
 }

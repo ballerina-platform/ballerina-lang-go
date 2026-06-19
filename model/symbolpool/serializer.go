@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	symMagic = "\x53\x59\x4d\x42"
-	// This will perpetually remain 1 unless we create a spec for this
+	symMagic   = "\x53\x59\x4d\x42"
 	symVersion = 1
 )
 
@@ -38,6 +37,9 @@ const (
 	symTagDependentlyTypedFunction
 	symTagRecord
 	symTagObjectType
+	symTagNetworkClass
+	symTagResourceMethod
+	symTagOpaque
 )
 
 const (
@@ -118,9 +120,13 @@ func (sw *symbolWriter) writePackageIdentifier(buf *bytes.Buffer, pkg model.Pack
 	return sw.writeStringCP(buf, pkg.Version)
 }
 
+// symbolSpaceNilSentinel marks a nil space, distinguishing it from a non-nil
+// but empty space (which still carries a package identifier).
+const symbolSpaceNilSentinel = int64(-1)
+
 func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolSpace) error {
 	if space == nil {
-		return write(buf, int64(0))
+		return write(buf, symbolSpaceNilSentinel)
 	}
 
 	if err := write(buf, int64(space.Len())); err != nil {
@@ -139,9 +145,17 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 }
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
+	if op, ok := sym.(model.OpaqueSymbol); ok {
+		if err := write(buf, symTagOpaque); err != nil {
+			return err
+		}
+		return write(buf, int32(op.OpaqueID()))
+	}
 	switch s := sym.(type) {
-	case *model.ClassSymbol:
-		return sw.writeClassSymbol(buf, s)
+	case *model.NetworkClassSymbol:
+		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
+	case model.ClassSymbol:
+		return sw.writeClassSymbol(buf, symTagClass, s)
 	case *model.RecordSymbol:
 		return sw.writeRecordSymbol(buf, s)
 	case *model.ObjectTypeSymbol:
@@ -152,6 +166,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeValueSymbol(buf, s)
 	case model.DependentlyTypedFunctionSymbol:
 		return sw.writeDependentlyTypedFunctionSymbol(buf, s)
+	case *model.ResourceMethodSymbol:
+		return sw.writeResourceMethodSymbol(buf, s)
 	case model.FunctionSymbol:
 		return sw.writeFunctionSymbol(buf, s)
 	default:
@@ -268,29 +284,31 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 }
 
 func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
-	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
-		return err
-	}
-	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
-		return err
-	}
-	if err := write(buf, int32(ref.Index)); err != nil {
-		return err
-	}
-	return write(buf, int32(ref.SpaceIndex))
+	return write(buf, int32(ref.Index))
 }
 
-func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymbol) error {
-	if err := write(buf, symTagClass); err != nil {
+func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
+	if err := write(buf, tag); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.Members())
+	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	if tag == symTagNetworkClass {
+		refs := sym.(*model.NetworkClassSymbol).ResourceMethods()
+		if err := write(buf, int64(len(refs))); err != nil {
+			return err
+		}
+		for _, ref := range refs {
+			if err := sw.writeSymbolRef(buf, ref); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {
@@ -322,7 +340,12 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	sig := sym.Signature()
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
+}
+
+func (sw *symbolWriter) writeFunctionSignatureBody(buf *bytes.Buffer, sig model.FunctionSignature,
+	defaults *model.DefaultableParamInfo, included *model.IncludedRecordParamInfo,
+) error {
 	if err := write(buf, int64(len(sig.ParamTypes))); err != nil {
 		return err
 	}
@@ -342,10 +365,10 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}
-	if err := write(buf, sig.RestParamType != nil); err != nil {
+	if err := write(buf, !semtypes.IsZero(sig.RestParamType)); err != nil {
 		return err
 	}
-	if sig.RestParamType != nil {
+	if !semtypes.IsZero(sig.RestParamType) {
 		if err := sw.writeType(buf, sig.RestParamType); err != nil {
 			return err
 		}
@@ -353,10 +376,26 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := write(buf, uint8(sig.Flags)); err != nil {
 		return err
 	}
-	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes)); err != nil {
+	if err := sw.writeDefaultableParams(buf, defaults, len(sig.ParamTypes)); err != nil {
 		return err
 	}
-	return sw.writeIncludedRecordParams(buf, sym.IncludedRecordParams(), len(sig.ParamTypes))
+	return sw.writeIncludedRecordParams(buf, included, len(sig.ParamTypes))
+}
+
+func (sw *symbolWriter) writeResourceMethodSymbol(buf *bytes.Buffer, sym *model.ResourceMethodSymbol) error {
+	if err := write(buf, symTagResourceMethod); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, sym.MethodName()); err != nil {
+		return err
+	}
+	if err := sw.writeType(buf, sym.PathListType()); err != nil {
+		return err
+	}
+	return sw.writeFunctionSignatureBody(buf, sym.Signature(), sym.DefaultableParams(), sym.IncludedRecordParams())
 }
 
 func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, sym model.DependentlyTypedFunctionSymbol) error {
@@ -495,7 +534,7 @@ func (sw *symbolWriter) writeStringCP(buf *bytes.Buffer, s string) error {
 }
 
 func (sw *symbolWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) error {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return write(buf, int32(-1))
 	}
 	return write(buf, int32(sw.tp.Put(ty)))

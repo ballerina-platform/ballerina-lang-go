@@ -19,8 +19,6 @@ package desugar
 
 import (
 	"ballerina-lang-go/ast"
-	array "ballerina-lang-go/lib/array/compile"
-	maplib "ballerina-lang-go/lib/map/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -245,7 +243,7 @@ func walkSimpleVariableDef(cx *functionContext, stmt *ast.BLangSimpleVariableDef
 
 	if stmt.Var != nil {
 		if typeNode := stmt.Var.TypeNode(); typeNode != nil {
-			result := desugarTypeDesc(cx, typeNode, stmt.Var.Symbol(), cx.currentScope())
+			result := desugarTypeDesc(cx, typeNode, cx.currentScope())
 			for _, rf := range result.recordFields {
 				rf.fn = desugarFunction(cx.pkgCtx, rf.fn)
 				fnType := cx.symbolType(rf.symRef)
@@ -491,7 +489,7 @@ func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpre
 }
 
 func createLengthInvocation(cx *functionContext, collection ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := array.PackageName
+	pkgName := "lang.array"
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")
@@ -673,7 +671,7 @@ func desugarForEachOnMap(cx *functionContext, collection ast.BLangActionOrExpres
 }
 
 func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := maplib.PackageName
+	pkgName := "lang.map"
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
 		cx.internalError(pkgName + " symbol space not found")
@@ -824,7 +822,7 @@ func isRangeExpr(expr ast.BLangActionOrExpression) bool {
 }
 
 func createMethodInvocation(cx *functionContext, receiver ast.BLangExpression, methodName string, receiverType semtypes.SemType, args []ast.BLangExpression) *ast.BLangInvocation {
-	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	tyCtx := cx.typeCtx()
 	fnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(methodName), receiverType)
 
 	argTys := make([]semtypes.SemType, len(args))
@@ -849,7 +847,7 @@ func createMethodInvocation(cx *functionContext, receiver ast.BLangExpression, m
 func desugarForEachOnIterable(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[ast.StatementNode] {
 	var initStmts []ast.StatementNode
 	basePos := collection.GetPosition()
-	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	tyCtx := cx.typeCtx()
 
 	// Step 1: Evaluate collection into temp var
 	collResult := walkExpression(cx, collection)

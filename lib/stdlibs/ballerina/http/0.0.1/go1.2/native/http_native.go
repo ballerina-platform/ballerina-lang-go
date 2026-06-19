@@ -106,15 +106,17 @@ type requestBodyHolder struct {
 	once          sync.Once
 	stream        io.ReadCloser
 	buf           []byte
+	readErr       error
 	contentLength int64 // -1 if unknown; >=0 is the known byte count
 }
 
 func (h *requestBodyHolder) materialize() []byte {
 	h.once.Do(func() {
 		if h.stream != nil {
-			data, _ := io.ReadAll(h.stream)
+			data, err := io.ReadAll(h.stream)
 			_ = h.stream.Close()
 			h.stream = nil
+			h.readErr = err
 			h.buf = data
 		}
 		if h.buf == nil {
@@ -242,25 +244,6 @@ func compressionModeOf(self *values.Object) string {
 }
 
 func initHttpModule(rt *runtime.Runtime) {
-	// Register module-level constants so BIR global-variable loads of http:LEADING
-	// and http:TRAILING resolve correctly.
-	runtime.RegisterModuleGlobals(rt, httpPackageID, map[string]values.BalValue{
-		"ballerina/http:LEADING":             "LEADING",
-		"ballerina/http:TRAILING":            "TRAILING",
-		"ballerina/http:HTTP_1_1":            "1.1",
-		"ballerina/http:HTTP_2_0":            "2.0",
-		"ballerina/http:GET":                 "GET",
-		"ballerina/http:POST":                "POST",
-		"ballerina/http:PUT":                 "PUT",
-		"ballerina/http:DELETE":              "DELETE",
-		"ballerina/http:PATCH":               "PATCH",
-		"ballerina/http:HEAD":                "HEAD",
-		"ballerina/http:OPTIONS":             "OPTIONS",
-		"ballerina/http:COMPRESSION_AUTO":    "AUTO",
-		"ballerina/http:COMPRESSION_ALWAYS":  "ALWAYS",
-		"ballerina/http:COMPRESSION_NEVER":   "NEVER",
-	})
-
 	var (
 		once  sync.Once
 		types httpTypes
@@ -289,7 +272,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			b := []byte(v)
 			return bytes.NewReader(b), int64(len(b)), "text/plain"
 		case *values.List:
-			if v.Type != nil && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
+			if !semtypes.IsZero(v.Type) && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
 					return bytes.NewReader(b), int64(len(b)), "application/octet-stream"
 				}
@@ -359,17 +342,17 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"init":             {FunctionLookupKey: "ballerina/http:Client.init"},
-			"initNative":       {FunctionLookupKey: "ballerina/http:Client.initNative"},
-			"$remote$get":      {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
-			"$remote$post":     {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
-			"$remote$head":     {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
-			"$remote$options":  {FunctionLookupKey: "ballerina/http:Client.$remote$options"},
-			"$remote$put":      {FunctionLookupKey: "ballerina/http:Client.$remote$put"},
-			"$remote$patch":    {FunctionLookupKey: "ballerina/http:Client.$remote$patch"},
-			"$remote$delete":   {FunctionLookupKey: "ballerina/http:Client.$remote$delete"},
-			"$remote$execute":  {FunctionLookupKey: "ballerina/http:Client.$remote$execute"},
-			"$remote$forward":  {FunctionLookupKey: "ballerina/http:Client.$remote$forward"},
+			"init":            {FunctionLookupKey: "ballerina/http:Client.init"},
+			"initNative":      {FunctionLookupKey: "ballerina/http:Client.initNative"},
+			"$remote$get":     {FunctionLookupKey: "ballerina/http:Client.$remote$get"},
+			"$remote$post":    {FunctionLookupKey: "ballerina/http:Client.$remote$post"},
+			"$remote$head":    {FunctionLookupKey: "ballerina/http:Client.$remote$head"},
+			"$remote$options": {FunctionLookupKey: "ballerina/http:Client.$remote$options"},
+			"$remote$put":     {FunctionLookupKey: "ballerina/http:Client.$remote$put"},
+			"$remote$patch":   {FunctionLookupKey: "ballerina/http:Client.$remote$patch"},
+			"$remote$delete":  {FunctionLookupKey: "ballerina/http:Client.$remote$delete"},
+			"$remote$execute": {FunctionLookupKey: "ballerina/http:Client.$remote$execute"},
+			"$remote$forward": {FunctionLookupKey: "ballerina/http:Client.$remote$forward"},
 		},
 	}
 	runtime.RegisterExternClassDef(rt, clientClassDef)
@@ -806,9 +789,15 @@ func initHttpModule(rt *runtime.Runtime) {
 				if stream := holder.takeStream(); stream != nil {
 					bodyReader = stream
 					forwardContentLength = holder.contentLength
-				} else if buf := holder.materialize(); len(buf) > 0 {
-					bodyReader = bytes.NewReader(buf)
-					forwardContentLength = int64(len(buf))
+				} else {
+					buf := holder.materialize()
+					if holder.readErr != nil {
+						return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+					}
+					if len(buf) > 0 {
+						bodyReader = bytes.NewReader(buf)
+						forwardContentLength = int64(len(buf))
+					}
 				}
 			}
 
@@ -1123,7 +1112,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			if holder == nil {
 				return "", nil
 			}
-			return string(holder.materialize()), nil
+			buf := holder.materialize()
+			if holder.readErr != nil {
+				return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+			}
+			return string(buf), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getJsonPayload",
@@ -1135,6 +1128,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			var body []byte
 			if holder != nil {
 				body = holder.materialize()
+				if holder.readErr != nil {
+					return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+				}
 			}
 			dec := json.NewDecoder(bytes.NewReader(body))
 			dec.UseNumber()
@@ -1154,6 +1150,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			var raw []byte
 			if holder != nil {
 				raw = holder.materialize()
+				if holder.readErr != nil {
+					return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+				}
 			}
 			items := make([]values.BalValue, len(raw))
 			for i, b := range raw {
@@ -1443,6 +1442,7 @@ func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][
 			"getHeaders":       "ballerina/http:Response.getHeaders",
 			"getHeaderNames":   "ballerina/http:Response.getHeaderNames",
 		},
+		nil,
 	)
 }
 

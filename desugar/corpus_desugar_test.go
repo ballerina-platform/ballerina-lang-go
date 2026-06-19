@@ -18,12 +18,14 @@ package desugar_test
 
 import (
 	"flag"
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
@@ -86,14 +88,19 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	result, err := testphases.RunPipeline(env, cx, testphases.PhaseDesugar, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	result, err := testphases.RunPipeline(env, cx, langlibs, testphases.PhaseDesugar, testCase.InputPath)
 	if err != nil {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
 
 	// Serialize AST after desugaring
-	prettyPrinter := ast.PrettyPrinter{}
+	prettyPrinter := ast.PrettyPrinter{Fallback: prettyPrintFallback}
 	actualAST := prettyPrinter.Print(result.Package)
 
 	// If update flag is set, update expected file
@@ -256,4 +263,18 @@ func normalizeDesugaredAST(s string) string {
 	}
 	canonicaliseInitFnBodies(root)
 	return printSExp(root)
+}
+
+// prettyPrintFallback handles desugar-introduced AST nodes when serializing a
+// desugared package via ast.PrettyPrinter. Wire it in by setting
+// PrettyPrinter.Fallback to this function.
+func prettyPrintFallback(p *ast.PrettyPrinter, node ast.BLangNode) {
+	switch n := node.(type) {
+	case *desugar.BLangServiceInit:
+		p.StartNode()
+		p.PrintString("service-init")
+		p.EndNode()
+	default:
+		panic(fmt.Sprintf("desugar pretty printer: unsupported node %T", n))
+	}
 }

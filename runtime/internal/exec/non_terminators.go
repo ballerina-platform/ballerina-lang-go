@@ -101,8 +101,24 @@ func execNewObject(ctx *extern.Context, newObject *bir.NewObject, frame *Frame) 
 	for methodName, method := range classDef.VTable {
 		methodKeys[methodName] = method.FunctionLookupKey
 	}
+	rtable := make(map[string][]values.ResourceEntry, len(classDef.RTable))
+	for methodName, entries := range classDef.RTable {
+		copied := make([]values.ResourceEntry, len(entries))
+		for i, entry := range entries {
+			segs := make([]values.ResourcePathSegmentDef, len(entry.PathSegments))
+			for j, seg := range entry.PathSegments {
+				segs[j] = values.ResourcePathSegmentDef{Ty: seg.Ty}
+			}
+			copied[i] = values.ResourceEntry{
+				PathSegments:      segs,
+				RestSegmentTy:     entry.RestSegmentTy,
+				FunctionLookupKey: entry.Fn.FunctionLookupKey,
+			}
+		}
+		rtable[methodName] = copied
+	}
 	objType := newObject.GetLhsOperand().VariableDcl.GetType()
-	obj := values.NewObject(objType, fieldValues, methodKeys)
+	obj := values.NewObject(objType, fieldValues, methodKeys, rtable)
 	setOperandValue(ctx, newObject.GetLhsOperand(), frame, obj)
 }
 
@@ -194,6 +210,7 @@ func execFPLoad(ctx *extern.Context, fpLoad *bir.FPLoad, frame *Frame) {
 		LookupKey: fpLoad.FunctionLookupKey,
 	}
 	if fpLoad.IsClosure {
+		frame.MarkEscaped()
 		fn.ParentFrame = frame
 	}
 	setOperandValue(ctx, fpLoad.LhsOp, frame, fn)
@@ -343,9 +360,6 @@ func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Fra
 }
 
 func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, frame *Frame) {
-	if instr.Kind != bir.TemplateKindString {
-		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
-	}
 	n := len(instr.Insertions)
 	buf := make([]byte, 0, instr.LiteralsTotalLen+8*n)
 	for i := 0; i < n; i++ {
@@ -357,7 +371,18 @@ func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, fram
 	if len(buf) > 0 {
 		result = unsafe.String(&buf[0], len(buf))
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, result)
+	switch instr.Kind {
+	case bir.TemplateKindString:
+		setOperandValue(ctx, instr.LhsOp, frame, result)
+	case bir.TemplateKindXML:
+		xmlValue, err := values.ParseAsXMLValue(result)
+		if err != nil {
+			panic(err)
+		}
+		setOperandValue(ctx, instr.LhsOp, frame, xmlValue)
+	default:
+		panic(fmt.Sprintf("unsupported template kind: %d", instr.Kind))
+	}
 }
 
 func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *Frame) {

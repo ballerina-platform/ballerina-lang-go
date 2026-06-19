@@ -61,7 +61,12 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	result, err := testphases.RunPipeline(env, cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	result, err := testphases.RunPipeline(env, cx, langlibs, testphases.PhaseCFGAnalysis, testCase.InputPath)
 	if err != nil {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
@@ -92,8 +97,8 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// legitimate type for guaranteed-divergent expressions (e.g.
 	// `check newError()` whose inner type is exactly `error`), so we only
 	// flag the unset case.
-	if _, ok := node.(ast.BLangExpression); !ok {
-		if node.GetDeterminedType() == nil {
+	if _, ok := node.(ast.BLangExpression); ok {
+		if semtypes.IsZero(node.GetDeterminedType()) {
 			v.t.Errorf("determinedType not set for expression %T at %v",
 				node, node.GetPosition())
 		}
@@ -105,7 +110,7 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// Check if node has a symbol that should have type set
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
-		if v.ctx.SymbolType(symbol) == nil {
+		if semtypes.IsZero(v.ctx.SymbolType(symbol)) {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T at %v",
 				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node, node.GetPosition())
 		}
@@ -122,7 +127,7 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *ast.TypeData) ast.Vi
 	// Check if type descriptor has a symbol that should have type set
 	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
 		symbol := typeWithSymbol.Symbol()
-		if v.ctx.SymbolType(symbol) == nil {
+		if semtypes.IsZero(v.ctx.SymbolType(symbol)) {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for type descriptor %T at %v",
 				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
 		}
@@ -172,7 +177,12 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 		t.Logf("Compile-time diagnostic correctly detected for %s", testCase.InputPath)
 	}()
 
-	_, _ = testphases.RunPipeline(env, cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
+	langlibs, err := testphases.LoadLanglibs(env, cx)
+	if err != nil {
+		t.Errorf("loading lang libraries failed for %s: %v", testCase.InputPath, err)
+		return
+	}
+	_, _ = testphases.RunPipeline(env, cx, langlibs, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
 }

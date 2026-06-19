@@ -18,10 +18,10 @@ class Foo {
 }
 
 public function main() {
-    foreach int a in 5 { // @error
+    foreach int _ in 5 { // @error
     }
 
     Foo f = new;
-    foreach int a in f { // @error
+    foreach int _ in f { // @error
     }
 }

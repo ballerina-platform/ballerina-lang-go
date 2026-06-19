@@ -389,7 +389,7 @@
         (variable $desugar$38 (expr
           (list-constructor-expr))))
       (var-def
-        (variable x))
+        (variable _))
       (var-def
         (variable $desugar$39 (expr
           (numeric-literal 0))))
@@ -399,7 +399,7 @@
           (simple-var-ref $desugar$37))
         (block-stmt
           (assignment
-            (simple-var-ref x)
+            (simple-var-ref _)
             (index-based-access
               (simple-var-ref $desugar$36)
               (simple-var-ref $desugar$39)))
@@ -423,7 +423,7 @@
         (variable $desugar$41 (expr
           (list-constructor-expr))))
       (var-def
-        (variable x))
+        (variable _))
       (var-def
         (variable $desugar$42 (expr
           (simple-var-ref xs))))
@@ -440,7 +440,7 @@
           (simple-var-ref $desugar$43))
         (block-stmt
           (assignment
-            (simple-var-ref x)
+            (simple-var-ref _)
             (index-based-access
               (simple-var-ref $desugar$42)
               (simple-var-ref $desugar$44)))
@@ -448,7 +448,7 @@
             (invocation lang.array push (
               (simple-var-ref $desugar$41)
               (list-constructor-expr
-                (simple-var-ref x)))))
+                (simple-var-ref _)))))
           (assignment
             (simple-var-ref $desugar$44)
             (binary-expr +
@@ -462,7 +462,7 @@
             (list-constructor-expr
               (literal false)))))))
       (assignment
-        (simple-var-ref x)
+        (simple-var-ref _)
         (index-based-access
           (simple-var-ref $desugar$45)
           (numeric-literal 0)))

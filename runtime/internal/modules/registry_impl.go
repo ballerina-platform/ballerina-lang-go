@@ -59,6 +59,15 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 				}
 				r.birFunctions[fn.FunctionLookupKey] = fn
 			}
+			for _, entries := range classDef.RTable {
+				for i := range entries {
+					fn := entries[i].Fn
+					if fn.Flags.Has(model.FlagNative) {
+						continue
+					}
+					r.birFunctions[fn.FunctionLookupKey] = fn
+				}
+			}
 		}
 	}
 	if id != nil && !id.IsUnnamed() {

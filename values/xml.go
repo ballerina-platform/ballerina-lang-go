@@ -97,29 +97,31 @@ func writeXMLStringMap(b *strings.Builder, m *Map, kind string) {
 		b.WriteByte(' ')
 		b.WriteString(k)
 		b.WriteString(`="`)
-		b.WriteString(escapeAttr(sv))
+		b.WriteString(EscapeXMLAttribute(sv))
 		b.WriteByte('"')
 	}
 }
 
-// escapeText escapes characters in XML text node bodies.
-func escapeText(s string) string {
-	replacer := strings.NewReplacer(
-		"&", "&amp;",
-		"<", "&lt;",
-		">", "&gt;",
-	)
-	return replacer.Replace(s)
+var xmlContentEscaper = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	">", "&gt;",
+)
+
+var xmlAttributeEscaper = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	"\"", "&quot;",
+)
+
+// EscapeXMLContent escapes characters in XML text node bodies.
+func EscapeXMLContent(s string) string {
+	return xmlContentEscaper.Replace(s)
 }
 
-// escapeAttr escapes characters in XML attribute values quoted with `"`.
-func escapeAttr(s string) string {
-	replacer := strings.NewReplacer(
-		"&", "&amp;",
-		"<", "&lt;",
-		"\"", "&quot;",
-	)
-	return replacer.Replace(s)
+// EscapeXMLAttribute escapes characters in XML attribute values quoted with `"`.
+func EscapeXMLAttribute(s string) string {
+	return xmlAttributeEscaper.Replace(s)
 }
 
 func (s *XMLSequence) XMLString() string {
@@ -138,7 +140,7 @@ func (p *XMLProcessingInstruction) XMLString() string {
 }
 
 func (t *XMLText) XMLString() string {
-	return escapeText(t.Body)
+	return EscapeXMLContent(t.Body)
 }
 
 func (c *XMLComment) XMLString() string {

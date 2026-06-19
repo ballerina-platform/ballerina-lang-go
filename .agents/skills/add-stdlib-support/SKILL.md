@@ -310,7 +310,7 @@ Add corpus tests under `corpus/bal/subset8/<NN>-<name>/`, where `<NN>` is the ne
 - Suffixes per `AGENTS.md`: `*-v.bal` (valid, end-to-end with `@output` markers), `*-e.bal` (compile-time errors, `@error` markers), `*-p.bal` (runtime panics, `@panic` markers), `*-f{v|e|p}.bal` (future, scope-deferred).
 - Name files **without leading zeros** in numeric parts (e.g. `print1-v.bal`, not `print01-v.bal`).
 - Hand off golden-file regeneration to the **`update-corpus-tests`** skill:
-  ```
+  ```shell
   go test ./corpus --update
   ```
   Then review `git diff corpus/` before committing.

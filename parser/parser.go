@@ -303,7 +303,6 @@ func (a *abstractParser) addInvalidTokenToNextToken(invalidNode tree.STToken) {
 
 type BallerinaParser struct {
 	abstractParser
-	suppressDebug bool
 }
 
 func NewBallerinaParserFromTokenReader(tokenReader *TokenReader) BallerinaParser {
@@ -318,10 +317,6 @@ func NewBallerinaParserFromTokenReader(tokenReader *TokenReader) BallerinaParser
 	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.tokenReader)
 	this.errorHandler = &errorHandler
 	return this
-}
-
-func (b *BallerinaParser) SetSuppressDebug(suppress bool) {
-	b.suppressDebug = suppress
 }
 
 func isParameterizedTypeToken(tokenKind common.SyntaxKind) bool {
@@ -605,9 +600,7 @@ func isDigit(c byte) bool {
 
 func (b *BallerinaParser) Parse() tree.STNode {
 	ast := b.parseCompUnit()
-	if !b.suppressDebug {
-		debugcommon.DebugWriteLazy(debugcommon.DUMP_ST, func() string { return tree.GenerateJSON(ast) })
-	}
+	debugcommon.DebugWriteLazy(debugcommon.DUMP_ST, func() string { return tree.GenerateJSON(ast) })
 	return ast
 }
 
@@ -14681,10 +14674,6 @@ func (b *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 	return (((token.Kind() == common.MAP_KEYWORD) || (token.Kind() == common.START_KEYWORD)) || (token.Kind() == common.JOIN_KEYWORD))
 }
 
-// GetSyntaxTreeFromContent parses Ballerina source from an in-memory string.
-// It is the counterpart to GetSyntaxTree for sources that have no real
-// filesystem path (e.g. stdlib .bal files embedded via embed.FS).
-// virtualPath is used only for diagnostic messages; no file I/O is performed.
 // GetSyntaxTree parses content into a syntax tree, attributing it to fileName
 // (used for diagnostics and the syntax tree's text document).
 func GetSyntaxTree(ctx *context.CompilerContext, fileName string, content string) (*tree.SyntaxTree, error) {

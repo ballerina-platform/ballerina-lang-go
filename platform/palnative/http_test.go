@@ -126,8 +126,8 @@ func TestNewHTTPClient_HTTP1_TLS(t *testing.T) {
 	if status != 200 {
 		t.Errorf("expected status 200, got %d", status)
 	}
-	if !strings.HasPrefix(gotProto, "HTTP/1") {
-		t.Errorf("expected HTTP/1.x connection with HTTPVersion 1.1, got proto: %s", gotProto)
+	if gotProto != "HTTP/1.1" {
+		t.Errorf("expected HTTP/1.1 connection with HTTPVersion 1.1, got proto: %s", gotProto)
 	}
 }
 
@@ -265,6 +265,7 @@ func TestNewHTTPClient_RedirectsDisabled(t *testing.T) {
 
 	client := NewHTTPClient(pal.ClientConfig{
 		FollowRedirects: pal.FollowRedirects{Enabled: false},
+		ResponseLimits:  pal.ResponseLimitConfig{MaxEntityBodySize: -1},
 	})
 	status, _, body, err := client.Execute(context.Background(), "GET", server.URL+"/redirect", nil, 0, "", nil)
 	if body != nil {

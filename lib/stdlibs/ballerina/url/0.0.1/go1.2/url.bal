@@ -1,8 +1,9 @@
-// Copyright (c) 2023 WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
+//
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -16,7 +17,7 @@
 
 # Encodes the given string value into a `string` using the provided charset.
 # ```ballerina
-# string value = "param1=http://xyz.com/?a=12&b=55¶m2=99";
+# string value = "param1=http://xyz.com/?a=12&b=55&param2=99";
 # string encoded = check url:encode(value, "UTF-8");
 # ```
 #
@@ -27,7 +28,7 @@ public isolated function encode(string value, string charset) returns string|err
 
 # Decodes the given string value into a `string` using the provided charset.
 # ```ballerina
-# string value = "http://www.domain.com/?param1=http%3A%2F%2Fxyz.com%2F%3Fa%3D12%26b%3D55¶m2=99";
+# string value = "http://www.domain.com/?param1=http%3A%2F%2Fxyz.com%2F%3Fa%3D12%26b%3D55&param2=99";
 # string decoded = check url:decode(value, "UTF-8");
 # ```
 #

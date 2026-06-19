@@ -76,6 +76,14 @@ type (
 		BIRTerminatorBase
 		LockKey string
 	}
+
+	ResourceFunctionCall struct {
+		BIRTerminatorBase
+		Receiver     BIROperand
+		MethodName   string
+		PathSegments []BIROperand
+		Args         []BIROperand
+	}
 )
 
 var (
@@ -86,6 +94,7 @@ var (
 	_ BIRTerminator        = &Panic{}
 	_ BIRTerminator        = &LockStart{}
 	_ BIRTerminator        = &LockEnd{}
+	_ BIRAssignInstruction = &ResourceFunctionCall{}
 )
 
 func (g *Goto) GetKind() InstructionKind {
@@ -196,6 +205,30 @@ func NewPanic(errorOp *BIROperand, pos Location) *Panic {
 			},
 		},
 		ErrorOp: errorOp,
+	}
+}
+
+func (r *ResourceFunctionCall) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_RESOURCE_CALL
+}
+
+func (r *ResourceFunctionCall) GetLhsOperand() *BIROperand {
+	return r.LhsOp
+}
+
+func NewResourceFunctionCall(receiver BIROperand, methodName string, pathSegments, args []BIROperand, thenBB *BIRBasicBlock, lhsOp *BIROperand, pos Location) *ResourceFunctionCall {
+	return &ResourceFunctionCall{
+		BIRTerminatorBase: BIRTerminatorBase{
+			BIRInstructionBase: BIRInstructionBase{
+				BIRNodeBase: BIRNodeBase{Pos: pos},
+				LhsOp:       lhsOp,
+			},
+			ThenBB: thenBB,
+		},
+		Receiver:     receiver,
+		MethodName:   methodName,
+		PathSegments: pathSegments,
+		Args:         args,
 	}
 }
 

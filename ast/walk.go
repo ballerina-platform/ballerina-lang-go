@@ -147,36 +147,19 @@ func Walk(v Visitor, node BLangNode) {
 		for _, expr := range node.AttachedExprs {
 			Walk(v, expr.(BLangNode))
 		}
-		if node.ServiceClass != nil {
-			Walk(v, node.ServiceClass)
+		if node.AttachPointLiteral != nil {
+			Walk(v, node.AttachPointLiteral)
 		}
-		if node.Name != nil {
-			Walk(v, node.Name)
+		for i := range node.AbsoluteResourcePath {
+			Walk(v, &node.AbsoluteResourcePath[i])
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-		for i := range node.ResourceFunctions {
-			Walk(v, &node.ResourceFunctions[i])
-		}
+		walkClassDefnBody(v, &node.classDefnBase)
 
 	case *BLangClassDefinition:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-		if node.InitFunction != nil {
-			Walk(v, node.InitFunction)
-		}
-		for _, method := range node.Methods {
-			Walk(v, method)
-		}
-		for _, field := range node.Fields {
-			Walk(v, field.(BLangNode))
-		}
-		WalkTypeData(v, &node.typeData)
+		walkClassDefnBody(v, &node.classDefnBase)
 
 	case *BLangAnnotation:
 		if node.Name != nil {
@@ -237,6 +220,26 @@ func Walk(v Visitor, node BLangNode) {
 	// Section 3: Function & Body
 	case *BLangFunction:
 		Walk(v, &node.Name)
+		for i := range node.RequiredParams {
+			Walk(v, &node.RequiredParams[i])
+		}
+		if node.RestParam != nil {
+			Walk(v, node.RestParam.(BLangNode))
+		}
+		if node.returnTypeDescriptor != nil {
+			walkTypeDescriptor(v, node.returnTypeDescriptor)
+		}
+		if node.Body != nil {
+			Walk(v, node.Body.(BLangNode))
+		}
+
+	case *BLangResourceMethod:
+		Walk(v, &node.Name)
+		for i := range node.ResourcePath {
+			if tn := node.ResourcePath[i].ParamType; tn != nil {
+				walkTypeDescriptor(v, tn)
+			}
+		}
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}
@@ -544,6 +547,11 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangTemplateExpr:
+		for _, ins := range node.Insertions {
+			Walk(v, ins)
+		}
+
+	case *BLangXMLTemplateExpr:
 		for _, ins := range node.Insertions {
 			Walk(v, ins)
 		}
@@ -918,6 +926,19 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, arg.(BLangNode))
 		}
 
+	case *BLangClientResourceAccessAction:
+		if node.Expr != nil {
+			Walk(v, node.Expr)
+		}
+		for i := range node.Path {
+			if e := node.Path[i].Expr; e != nil {
+				Walk(v, e)
+			}
+		}
+		for _, arg := range node.ArgExprs {
+			Walk(v, arg)
+		}
+
 	default:
 		panic(fmt.Sprintf("unexpected node type %T", node))
 	}
@@ -939,6 +960,25 @@ func WalkTypeData(v Visitor, typeData *TypeData) {
 		Walk(v, tdNode)
 	}
 	v.Visit(nil)
+}
+
+func walkClassDefnBody(v Visitor, b *classDefnBase) {
+	for i := range b.AnnAttachments {
+		Walk(v, &b.AnnAttachments[i])
+	}
+	if b.InitFunction != nil {
+		Walk(v, b.InitFunction)
+	}
+	for _, method := range b.Methods {
+		Walk(v, method)
+	}
+	for _, method := range b.ResourceMethods {
+		Walk(v, method)
+	}
+	for _, field := range b.Fields {
+		Walk(v, field.(BLangNode))
+	}
+	WalkTypeData(v, &b.typeData)
 }
 
 func walkTypeDescriptor(v Visitor, td TypeDescriptor) {

@@ -615,9 +615,9 @@ main() -> nil{
   bb81 {
     PushScopeFrame 8
     %0 = (1, $desugar$59)[(1, $desugar$61)];
-    (1, x) = %0;
+    (1, _) = %0;
     %1 = ConstantLoad 1
-    %2 = newArray list[%1]{(1, x)}
+    %2 = newArray list[%1]{(1, _)}
     %3 = push((1, $desugar$58),%2) -> bb83;
   }
   bb82 {
@@ -656,7 +656,7 @@ main() -> nil{
     $desugar$66 = %0;
     %3 = ConstantLoad 0
     %2 = $desugar$66[%3];
-    (1, x) = %2;
+    (1, _) = %2;
     %4 = ConstantLoad 1
     (1, one) = %4;
     %5 = (1, one);
@@ -708,7 +708,7 @@ main() -> nil{
     $desugar$70 = %0;
     %3 = ConstantLoad 0
     %2 = $desugar$70[%3];
-    (1, x) = %2;
+    (1, _) = %2;
     %5 = ConstantLoad 1
     %4 = $desugar$70[%5];
     (1, one) = %4;

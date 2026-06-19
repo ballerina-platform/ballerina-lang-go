@@ -15,9 +15,12 @@
 // under the License.
 
 
+import ballerina/io;
+
 function f() returns string => "x";
 
 const BAD = string `hello ${f()}`; // @error insertion is not a constant expression
 
 public function main() {
+    io:println(BAD);
 }

@@ -30,16 +30,12 @@ func StreamCompletionType(cx Context, streamTy SemType) SemType {
 
 func streamMemberAt(cx Context, streamTy SemType, index int64) SemType {
 	if !IsSubtypeSimple(streamTy, STREAM) {
-		return nil
+		return SemType{}
 	}
-	switch streamTy.(type) {
-	case BasicTypeBitSet:
+	if streamTy.some() == 0 {
 		return bareStreamMember(index)
-	case *ComplexSemType:
-		return ListMemberTypeInnerVal(cx, convertStreamToListTy(cx, streamTy), IntConst(index))
-	default:
-		panic("unexpected")
 	}
+	return ListMemberTypeInnerVal(cx, convertStreamToListTy(cx, streamTy), IntConst(index))
 }
 
 func bareStreamMember(index int64) SemType {
@@ -104,7 +100,7 @@ func streamPublicIsolatedMethod(name string, fnTy SemType) Member {
 func convertStreamToListTy(ctx Context, ty SemType) SemType {
 	streamTy := Intersect(ty, STREAM)
 	if IsEmpty(ctx, streamTy) {
-		return nil
+		return SemType{}
 	}
 	bdd := subtypeData(streamTy, BTStream)
 	return createBasicSemType(BTList, bdd)

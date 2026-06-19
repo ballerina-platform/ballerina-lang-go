@@ -18,5 +18,5 @@
 type MyNil ();
 
 public function main() {
-    MyNil n = false; // @error
+    MyNil _ = false; // @error
 }

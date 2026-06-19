@@ -27,6 +27,8 @@ var PackageID = model.INTERNAL_PKG
 
 const PackageName = "lang.__internal"
 
+var templateInsertionAllowedTypes = semtypes.Diff(semtypes.SIMPLE_OR_STRING, semtypes.NIL)
+
 func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*PackageID)
 	addInternalFunction(ctx, space, "querySort", model.FunctionSignature{
@@ -40,6 +42,14 @@ func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace 
 	addInternalFunction(ctx, space, "queryCollect", model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.LIST, semtypes.INT, semtypes.LIST},
 		ReturnType: semtypes.LIST,
+	})
+	addInternalFunction(ctx, space, "escapeXMLContent", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{templateInsertionAllowedTypes},
+		ReturnType: semtypes.STRING,
+	})
+	addInternalFunction(ctx, space, "escapeXMLAttribute", model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{templateInsertionAllowedTypes},
+		ReturnType: semtypes.STRING,
 	})
 	return model.NewExportedSymbolSpace(space, nil)
 }

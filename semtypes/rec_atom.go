@@ -51,8 +51,8 @@ func (r *recAtom) index() int {
 	return r.idx
 }
 
-func (r *recAtom) canonicalKey() string {
-	return fmt.Sprintf("r%d", r.idx)
+func (r *recAtom) canonicalKey() atomKey {
+	return recAtomKey(r.idx)
 }
 
 func (r *recAtom) String() string {

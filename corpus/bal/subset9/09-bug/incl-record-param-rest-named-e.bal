@@ -23,9 +23,11 @@ type IntConfig record {|
 |};
 
 function withStringRest(*StringConfig config) {
+    _ = config;
 }
 
 function withIntRest(*IntConfig config) {
+    _ = config;
 }
 
 public function main() {

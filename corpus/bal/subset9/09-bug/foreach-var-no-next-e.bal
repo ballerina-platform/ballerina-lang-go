@@ -22,6 +22,6 @@ class BadIterable {
 
 public function main() {
     BadIterable b = new;
-    foreach var a in b { // @error
+    foreach var _ in b { // @error
     }
 }

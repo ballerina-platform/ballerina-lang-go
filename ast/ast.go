@@ -36,7 +36,7 @@ type BNodeWithSymbol interface {
 
 // SymbolIsSet returns true if the AST node has its symbol set.
 func SymbolIsSet(node NodeWithSymbol) bool {
-	return node.Symbol() != (model.SymbolRef{})
+	return !node.Symbol().IsEmpty()
 }
 
 type NodeWithScope interface {
@@ -138,15 +138,14 @@ type (
 		Version      *BLangIdentifier
 	}
 
-	BLangClassDefinition struct {
+	classDefnBase struct {
 		bLangNodeBase
-		Name                            *BLangIdentifier
-		symbol                          model.SymbolRef
 		scope                           model.Scope
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
 		Methods                         map[string]*BLangFunction
+		ResourceMethods                 []*BLangResourceMethod
 		Fields                          []SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
 		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
@@ -155,23 +154,20 @@ type (
 		typeData                        TypeData
 		Definition                      semtypes.Definition
 		CycleDepth                      int
-		precedence                      int
+	}
+
+	BLangClassDefinition struct {
+		classDefnBase
+		Name   *BLangIdentifier
+		symbol model.SymbolRef
 	}
 
 	BLangService struct {
-		bLangNodeBase
-		symbol                          model.SymbolRef
-		ServiceVariable                 *BLangSimpleVariable
-		AttachedExprs                   []BLangExpression
-		ServiceClass                    *BLangClassDefinition
-		AbsoluteResourcePath            []BLangIdentifier
-		ServiceNameLiteral              *BLangLiteral
-		Name                            *BLangIdentifier
-		AnnAttachments                  []BLangAnnotationAttachment
-		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		ListenerType                    BType
-		ResourceFunctions               []BLangFunction
-		InferredServiceType             BType
+		classDefnBase
+		AttachedExprs []BLangExpression
+		// attach point either AbsoluteResourcePath or AttachPointLiteral
+		AbsoluteResourcePath []BLangIdentifier
+		AttachPointLiteral   *BLangLiteral
 	}
 
 	BLangCompilationUnit struct {
@@ -275,11 +271,23 @@ type (
 		returnTypeDescriptor            TypeDescriptor
 		Body                            FunctionBodyNode
 		flags                           model.Flag
+		scope                           model.Scope
 	}
 
 	BLangFunction struct {
 		bLangInvokableNodeBase
-		scope model.Scope
+	}
+
+	BLangResourcePathSegment struct {
+		bLangNodeBase
+		Kind      ResourcePathSegmentKind
+		Name      string
+		ParamType BType
+	}
+
+	BLangResourceMethod struct {
+		bLangInvokableNodeBase
+		ResourcePath []BLangResourcePathSegment
 	}
 
 	BLangTypeDefinition struct {
@@ -290,7 +298,6 @@ type (
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
 		flags                           model.Flag
-		precedence                      int
 		CycleDepth                      int
 		isBuiltinTypeDef                bool
 		hasCyclicReference              bool
@@ -345,24 +352,26 @@ func (b *BLangVariableBase) SetRequiredParam()       { b.flags |= model.FlagRequ
 func (b *BLangVariableBase) SetRestParam()           { b.flags |= model.FlagRestParam }
 func (b *BLangVariableBase) SetIncludedRecordParam() { b.flags |= model.FlagIncluded }
 func (b *BLangVariableBase) IsReadonly() bool        { return b.flags.Has(model.FlagReadonly) }
+func (b *BLangVariableBase) IsListener() bool        { return b.flags.Has(model.FlagListener) }
+func (b *BLangVariableBase) SetListener()            { b.flags |= model.FlagListener }
 func (b *BLangVariableBase) Flags() model.Flag       { return b.flags }
 
-// BLangClassDefinition flag methods
-func (b *BLangClassDefinition) IsPublic() bool   { return b.flags.Has(model.FlagPublic) }
-func (b *BLangClassDefinition) IsDistinct() bool { return b.flags.Has(model.FlagDistinct) }
-func (b *BLangClassDefinition) IsClient() bool   { return b.flags.Has(model.FlagClient) }
-func (b *BLangClassDefinition) IsReadonly() bool { return b.flags.Has(model.FlagReadonly) }
-func (b *BLangClassDefinition) IsService() bool  { return b.flags.Has(model.FlagService) }
-func (b *BLangClassDefinition) IsIsolated() bool { return b.flags.Has(model.FlagIsolated) }
+// classDefnBase flag methods (promoted to BLangClassDefinition / BLangService)
+func (b *classDefnBase) IsPublic() bool   { return b.flags.Has(model.FlagPublic) }
+func (b *classDefnBase) IsDistinct() bool { return b.flags.Has(model.FlagDistinct) }
+func (b *classDefnBase) IsClient() bool   { return b.flags.Has(model.FlagClient) }
+func (b *classDefnBase) IsReadonly() bool { return b.flags.Has(model.FlagReadonly) }
+func (b *classDefnBase) IsService() bool  { return b.flags.Has(model.FlagService) }
+func (b *classDefnBase) IsIsolated() bool { return b.flags.Has(model.FlagIsolated) }
 
-func (b *BLangClassDefinition) SetPublic()        { b.flags |= model.FlagPublic }
-func (b *BLangClassDefinition) SetDistinct()      { b.flags |= model.FlagDistinct }
-func (b *BLangClassDefinition) SetClient()        { b.flags |= model.FlagClient }
-func (b *BLangClassDefinition) SetReadonly()      { b.flags |= model.FlagReadonly }
-func (b *BLangClassDefinition) SetService()       { b.flags |= model.FlagService }
-func (b *BLangClassDefinition) SetIsolated()      { b.flags |= model.FlagIsolated }
-func (b *BLangClassDefinition) SetClass()         { b.flags |= model.FlagClass }
-func (b *BLangClassDefinition) Flags() model.Flag { return b.flags }
+func (b *classDefnBase) SetPublic()        { b.flags |= model.FlagPublic }
+func (b *classDefnBase) SetDistinct()      { b.flags |= model.FlagDistinct }
+func (b *classDefnBase) SetClient()        { b.flags |= model.FlagClient }
+func (b *classDefnBase) SetReadonly()      { b.flags |= model.FlagReadonly }
+func (b *classDefnBase) SetService()       { b.flags |= model.FlagService }
+func (b *classDefnBase) SetIsolated()      { b.flags |= model.FlagIsolated }
+func (b *classDefnBase) SetClass()         { b.flags |= model.FlagClass }
+func (b *classDefnBase) Flags() model.Flag { return b.flags }
 
 // BLangTypeDefinition flag methods
 func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.Has(model.FlagPublic) }
@@ -372,7 +381,6 @@ func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymou
 
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
-func (b *BLangService) IsPublic() bool        { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
 func (b *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
@@ -399,20 +407,12 @@ func (n *BLangClassDefinition) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
-func (n *BLangClassDefinition) Scope() model.Scope {
+func (n *classDefnBase) Scope() model.Scope {
 	return n.scope
 }
 
-func (n *BLangClassDefinition) SetScope(scope model.Scope) {
+func (n *classDefnBase) SetScope(scope model.Scope) {
 	n.scope = scope
-}
-
-func (n *BLangService) Symbol() model.SymbolRef {
-	return n.symbol
-}
-
-func (n *BLangService) SetSymbol(symbolRef model.SymbolRef) {
-	n.symbol = symbolRef
 }
 
 func (n *BLangVariableBase) Symbol() model.SymbolRef {
@@ -503,7 +503,6 @@ var (
 var (
 	// Assert that concrete types with symbols implement BNodeWithSymbol
 	_ BNodeWithSymbol = &BLangClassDefinition{}
-	_ BNodeWithSymbol = &BLangService{}
 	_ BNodeWithSymbol = &BLangConstant{}
 	_ BNodeWithSymbol = &BLangSimpleVariable{}
 	_ BNodeWithSymbol = &BLangFunction{}
@@ -644,15 +643,26 @@ func (b *BLangImportPackage) SetAlias(alias *BLangIdentifier) {
 	b.Alias = alias
 }
 
-func NewBLangClassDefinition() BLangClassDefinition {
-	b := BLangClassDefinition{}
+func newClassDefnBase() classDefnBase {
+	b := classDefnBase{}
 	b.CycleDepth = -1
 	b.Methods = map[string]*BLangFunction{}
+	return b
+}
+
+func NewBLangClassDefinition() BLangClassDefinition {
+	b := BLangClassDefinition{classDefnBase: newClassDefnBase()}
 	b.SetClass()
 	return b
 }
 
-func (b *BLangClassDefinition) PopUnresolvedInclusions() []*BLangUserDefinedType {
+func NewBLangService() BLangService {
+	b := BLangService{classDefnBase: newClassDefnBase()}
+	b.SetService()
+	return b
+}
+
+func (b *classDefnBase) PopUnresolvedInclusions() []*BLangUserDefinedType {
 	inclusions := b.unresolvedInclusions
 	b.unresolvedInclusions = nil
 	return inclusions
@@ -666,7 +676,7 @@ func (b *BLangClassDefinition) SetName(name *BLangIdentifier) {
 	b.Name = name
 }
 
-func (b *BLangClassDefinition) GetMethods() iter.Seq2[string, FunctionNode] {
+func (b *classDefnBase) GetMethods() iter.Seq2[string, FunctionNode] {
 	return func(yield func(string, FunctionNode) bool) {
 		for name, method := range b.Methods {
 			if !yield(name, method) {
@@ -676,33 +686,36 @@ func (b *BLangClassDefinition) GetMethods() iter.Seq2[string, FunctionNode] {
 	}
 }
 
-func (b *BLangClassDefinition) GetMethod(name string) FunctionNode {
+func (b *classDefnBase) GetMethod(name string) FunctionNode {
 	if method, ok := b.Methods[name]; ok {
 		return method
 	}
 	return nil
 }
 
-func (b *BLangClassDefinition) AddMethod(name string, function *BLangFunction) {
+func (b *classDefnBase) AddMethod(name string, function *BLangFunction) {
 	if b.Methods == nil {
 		b.Methods = map[string]*BLangFunction{}
 	}
 	b.Methods[name] = function
 }
 
-func (b *BLangClassDefinition) GetInitFunction() FunctionNode {
+func (b *classDefnBase) GetInitFunction() FunctionNode {
+	if b.InitFunction == nil {
+		return nil
+	}
 	return b.InitFunction
 }
 
-func (b *BLangClassDefinition) AddField(field VariableNode) {
+func (b *classDefnBase) AddField(field VariableNode) {
 	b.Fields = append(b.Fields, field.(*BLangSimpleVariable))
 }
 
-func (b *BLangClassDefinition) AddInclusion(symbolRef model.SymbolRef) {
+func (b *classDefnBase) AddInclusion(symbolRef model.SymbolRef) {
 	b.Inclusions = append(b.Inclusions, symbolRef)
 }
 
-func (b *BLangClassDefinition) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (b *classDefnBase) GetAnnotationAttachments() []AnnotationAttachmentNode {
 	attachments := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
 	for i := range b.AnnAttachments {
 		attachments[i] = &b.AnnAttachments[i]
@@ -710,7 +723,7 @@ func (b *BLangClassDefinition) GetAnnotationAttachments() []AnnotationAttachment
 	return attachments
 }
 
-func (b *BLangClassDefinition) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (b *classDefnBase) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		b.AnnAttachments = append(b.AnnAttachments, *annAttachment)
 		return
@@ -718,11 +731,14 @@ func (b *BLangClassDefinition) AddAnnotationAttachment(annAttachment AnnotationA
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (b *BLangClassDefinition) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (b *classDefnBase) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+	if b.MarkdownDocumentationAttachment == nil {
+		return nil
+	}
 	return b.MarkdownDocumentationAttachment
 }
 
-func (b *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (b *classDefnBase) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		b.MarkdownDocumentationAttachment = documentationNode
 		return
@@ -730,27 +746,19 @@ func (b *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationN
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (b *BLangClassDefinition) GetPrecedence() int {
-	return b.precedence
-}
-
-func (b *BLangClassDefinition) SetPrecedence(precedence int) {
-	b.precedence = precedence
-}
-
-func (b *BLangClassDefinition) GetTypeData() TypeData {
+func (b *classDefnBase) GetTypeData() TypeData {
 	return b.typeData
 }
 
-func (b *BLangClassDefinition) SetTypeData(typeData TypeData) {
+func (b *classDefnBase) SetTypeData(typeData TypeData) {
 	b.typeData = typeData
 }
 
-func (b *BLangClassDefinition) GetCycleDepth() int {
+func (b *classDefnBase) GetCycleDepth() int {
 	return b.CycleDepth
 }
 
-func (b *BLangClassDefinition) SetCycleDepth(depth int) {
+func (b *classDefnBase) SetCycleDepth(depth int) {
 	b.CycleDepth = depth
 }
 
@@ -814,14 +822,7 @@ func (b *BLangConstant) GetAssociatedType() semtypes.SemType {
 	if b.TypeNode() != nil {
 		return b.TypeNode().GetTypeData().Type
 	}
-	return nil
-}
-
-func (b *BLangConstant) GetPrecedence() int {
-	return 0
-}
-
-func (b *BLangConstant) SetPrecedence(precedence int) {
+	return semtypes.SemType{}
 }
 
 func (b *BLangSimpleVariable) GetName() *BLangIdentifier {
@@ -945,28 +946,10 @@ func (b *BLangMarkdownReferenceDocumentation) GetType() DocumentationReferenceTy
 	return b.Type
 }
 
-// BLangService methods
-
-func (b *BLangService) GetName() *BLangIdentifier {
-	return b.Name
-}
-
-func (b *BLangService) SetName(name *BLangIdentifier) {
-	b.Name = name
-}
-
-func (b *BLangService) IsAnonymousService() bool {
-	return false
-}
-
 func (b *BLangService) GetAttachedExprs() []BLangExpression {
 	result := make([]BLangExpression, len(b.AttachedExprs))
 	copy(result, b.AttachedExprs)
 	return result
-}
-
-func (b *BLangService) GetServiceClass() ClassDefinition {
-	return b.ServiceClass
 }
 
 func (b *BLangService) GetAbsolutePath() []*BLangIdentifier {
@@ -977,47 +960,33 @@ func (b *BLangService) GetAbsolutePath() []*BLangIdentifier {
 	return result
 }
 
-func (b *BLangService) GetServiceNameLiteral() LiteralNode {
-	return b.ServiceNameLiteral
-}
-
-func (b *BLangService) GetAnnotationAttachments() []AnnotationAttachmentNode {
-	result := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
-	for i := range b.AnnAttachments {
-		result[i] = &b.AnnAttachments[i]
+func (b *BLangService) GetAttachPointLiteral() LiteralNode {
+	if b.AttachPointLiteral == nil {
+		return nil
 	}
-	return result
+	return b.AttachPointLiteral
 }
 
-func (b *BLangService) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
-	if ann, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		b.AnnAttachments = append(b.AnnAttachments, *ann)
-	} else {
-		panic("annAttachment is not a BLangAnnotationAttachment")
-	}
-}
-
-func (b *BLangService) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
-	return b.MarkdownDocumentationAttachment
-}
-
-func (b *BLangService) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
-	if doc, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		b.MarkdownDocumentationAttachment = doc
-	} else {
-		panic("documentationNode is not a BLangMarkdownDocumentation")
-	}
-}
-
-func (b *BLangFunction) Scope() model.Scope {
+func (b *bLangInvokableNodeBase) Scope() model.Scope {
 	return b.scope
 }
 
-func (b *BLangFunction) SetScope(scope model.Scope) {
+func (b *bLangInvokableNodeBase) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-var _ NodeWithScope = &BLangFunction{}
+var (
+	_ NodeWithScope = &BLangFunction{}
+	_ NodeWithScope = &BLangResourceMethod{}
+)
+
+type ResourcePathSegmentKind uint8
+
+const (
+	ResourcePathSegmentName ResourcePathSegmentKind = iota
+	ResourcePathSegmentParam
+	ResourcePathSegmentParamRest
+)
 
 func (b *bLangInvokableNodeBase) GetName() IdentifierNode {
 	return &b.Name
@@ -1081,6 +1050,12 @@ func (b *bLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
 	} else {
 		panic("param is not a BLangSimpleVariable")
 	}
+}
+
+// RequiredParameters returns the concrete required-parameter nodes backing this
+// invokable so callers can take the address of an individual parameter.
+func (b *bLangInvokableNodeBase) RequiredParameters() []BLangSimpleVariable {
+	return b.RequiredParams
 }
 
 func (b *bLangInvokableNodeBase) GetRequiredParams() []SimpleVariableNode {
@@ -1245,14 +1220,6 @@ func (b *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNo
 	} else {
 		panic("documentationNode is not a BLangMarkdownDocumentation")
 	}
-}
-
-func (b *BLangTypeDefinition) GetPrecedence() int {
-	return b.precedence
-}
-
-func (b *BLangTypeDefinition) SetPrecedence(precedence int) {
-	b.precedence = precedence
 }
 
 func (b *BLangTypeDefinition) GetCycleDepth() int {

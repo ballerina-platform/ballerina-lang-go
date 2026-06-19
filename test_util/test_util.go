@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -194,6 +195,15 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	return filepath.Join(outputBaseDir, relPath)
 }
 
+// normalizePath maps /tmp/-prefixed paths to os.TempDir() on Windows, where
+// the Unix /tmp directory does not exist.
+func normalizePath(path string) string {
+	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/tmp/") {
+		return filepath.Join(os.TempDir(), path[5:])
+	}
+	return path
+}
+
 type stubHTTPClient struct{}
 
 func (c *stubHTTPClient) Execute(_ context.Context, _, _ string, _ io.Reader, _ int64, _ string, _ map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
@@ -208,17 +218,21 @@ func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 		},
 		FS: pal.FS{
 			ReadFile: func(path string) ([]byte, error) {
-				return os.ReadFile(path)
+				return os.ReadFile(normalizePath(path))
 			},
 			WriteFile: func(path string, data []byte) error {
-				return os.WriteFile(path, data, 0o644)
+				return os.WriteFile(normalizePath(path), data, 0o644)
 			},
-			AppendFile: func(path string, data []byte) error {
-				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+			AppendFile: func(path string, data []byte) (err error) {
+				f, err := os.OpenFile(normalizePath(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
 				_, err = f.Write(data)
 				return err
 			},

@@ -25,7 +25,9 @@ main() -> nil|error{
     %7 ? bb5 : bb6;
   }
   bb5 {
-    %0 = $desugar$0;
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
     return;
   }
   bb6 {
@@ -39,115 +41,128 @@ main() -> nil|error{
     %12 ? bb8 : bb11;
   }
   bb8 {
-    %14 = ConstantLoad hours
-    %13 = offset[%14];
-    %15 = %13;
-    %16 = println(%15) -> bb9;
+    PushScopeFrame 8
+    %1 = ConstantLoad hours
+    %0 = (1, offset)[%1];
+    %2 = %0;
+    %3 = println(%2) -> bb9;
   }
   bb9 {
-    %18 = ConstantLoad minutes
-    %17 = offset[%18];
-    %19 = %17;
-    %20 = println(%19) -> bb10;
+    %5 = ConstantLoad minutes
+    %4 = (1, offset)[%5];
+    %6 = %4;
+    %7 = println(%6) -> bb10;
   }
   bb10 {
+    PopScopeFrame
     GOTO bb11;
   }
   bb11 {
-    %21 = ConstantLoad 2007-12-03T10:15:30.00Z
-    %22 = utcFromString(%21) -> bb12;
+    PushScopeFrame 47
+    %0 = ConstantLoad 2007-12-03T10:15:30.00Z
+    %1 = utcFromString(%0) -> bb12;
   }
   bb12 {
-    $desugar$1 = %22;
-    %24 = $desugar$1 is error
-    %24 ? bb13 : bb14;
+    $desugar$1 = %1;
+    %3 = $desugar$1 is error
+    %3 ? bb13 : bb14;
   }
   bb13 {
-    %0 = $desugar$1;
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$1);
+    PopScopeFrame
+    PopScopeFrame
     return;
   }
   bb14 {
     utc = $desugar$1;
-    %26 = utcToCivil(tz,utc) -> bb15;
+    %5 = utcToCivil((1, tz),utc) -> bb15;
   }
   bb15 {
-    civil = %26;
-    %29 = ConstantLoad year
-    %28 = civil[%29];
-    %30 = %28;
-    %31 = println(%30) -> bb16;
+    civil = %5;
+    %8 = ConstantLoad year
+    %7 = civil[%8];
+    %9 = %7;
+    %10 = println(%9) -> bb16;
   }
   bb16 {
-    %33 = ConstantLoad month
-    %32 = civil[%33];
-    %34 = %32;
-    %35 = println(%34) -> bb17;
+    %12 = ConstantLoad month
+    %11 = civil[%12];
+    %13 = %11;
+    %14 = println(%13) -> bb17;
   }
   bb17 {
-    %37 = ConstantLoad day
-    %36 = civil[%37];
-    %38 = %36;
-    %39 = println(%38) -> bb18;
+    %16 = ConstantLoad day
+    %15 = civil[%16];
+    %17 = %15;
+    %18 = println(%17) -> bb18;
   }
   bb18 {
-    %41 = ConstantLoad hour
-    %40 = civil[%41];
-    %42 = %40;
-    %43 = println(%42) -> bb19;
+    %20 = ConstantLoad hour
+    %19 = civil[%20];
+    %21 = %19;
+    %22 = println(%21) -> bb19;
   }
   bb19 {
-    %45 = ConstantLoad minute
-    %44 = civil[%45];
-    %46 = %44;
-    %47 = println(%46) -> bb20;
+    %24 = ConstantLoad minute
+    %23 = civil[%24];
+    %25 = %23;
+    %26 = println(%25) -> bb20;
   }
   bb20 {
-    %48 = utcFromCivil(tz,civil) -> bb21;
+    %27 = utcFromCivil((1, tz),civil) -> bb21;
   }
   bb21 {
-    $desugar$2 = %48;
-    %50 = $desugar$2 is error
-    %50 ? bb22 : bb23;
+    $desugar$2 = %27;
+    %29 = $desugar$2 is error
+    %29 ? bb22 : bb23;
   }
   bb22 {
-    %0 = $desugar$2;
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$2);
+    PopScopeFrame
+    PopScopeFrame
     return;
   }
   bb23 {
     utc2 = $desugar$2;
-    %52 = utcToString(utc2) -> bb24;
+    %31 = utcToString(utc2) -> bb24;
   }
   bb24 {
-    %53 = println(%52) -> bb25;
+    %32 = println(%31) -> bb25;
   }
   bb25 {
-    %54 = ConstantLoad hours
-    %55 = ConstantLoad 2
-    %56 = newMap {| days: int, hours: int, minutes: int, months: int, seconds: decimal, weeks: int, years: int, never... |}{%54=%55} defaults{years=ballerina/time:$desugar$2, months=ballerina/time:$desugar$3, weeks=ballerina/time:$desugar$4, days=ballerina/time:$desugar$5, hours=ballerina/time:$desugar$6, minutes=ballerina/time:$desugar$7, seconds=ballerina/time:$desugar$8}
-    %57 = civilAddDuration(tz,civil,%56) -> bb26;
+    %33 = ConstantLoad hours
+    %34 = ConstantLoad 2
+    %35 = newMap {| days: int, hours: int, minutes: int, months: int, seconds: decimal, weeks: int, years: int, never... |}{%33=%34} defaults{years=ballerina/time:$desugar$2, months=ballerina/time:$desugar$3, weeks=ballerina/time:$desugar$4, days=ballerina/time:$desugar$5, hours=ballerina/time:$desugar$6, minutes=ballerina/time:$desugar$7, seconds=ballerina/time:$desugar$8}
+    %36 = civilAddDuration((1, tz),civil,%35) -> bb26;
   }
   bb26 {
-    $desugar$3 = %57;
-    %59 = $desugar$3 is error
-    %59 ? bb27 : bb28;
+    $desugar$3 = %36;
+    %38 = $desugar$3 is error
+    %38 ? bb27 : bb28;
   }
   bb27 {
-    %0 = $desugar$3;
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$3);
+    PopScopeFrame
+    PopScopeFrame
     return;
   }
   bb28 {
     civil2 = $desugar$3;
-    %62 = ConstantLoad hour
-    %61 = civil2[%62];
-    %63 = %61;
-    %64 = println(%63) -> bb29;
+    %41 = ConstantLoad hour
+    %40 = civil2[%41];
+    %42 = %40;
+    %43 = println(%42) -> bb29;
   }
   bb29 {
-    %66 = ConstantLoad timeAbbrev
-    %65 = civil2[%66];
-    %67 = println(%65) -> bb30;
+    %45 = ConstantLoad timeAbbrev
+    %44 = civil2[%45];
+    %46 = println(%44) -> bb30;
   }
   bb30 {
+    PopScopeFrame
     return;
   }
 }

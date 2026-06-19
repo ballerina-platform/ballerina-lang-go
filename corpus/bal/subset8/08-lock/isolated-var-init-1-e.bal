@@ -21,4 +21,7 @@ function makeList() returns int[] {
 isolated int[] xs = makeList(); // @error
 
 public function main() {
+    lock {
+        int[] _ = xs;
+    }
 }

@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: invalid capture of mutable variable in isolated lambda
   --> 6-e.bal:19:26
    |
-19 |     record {|int value = c;|} f = {}; // @error
+19 |     record {|int value = c;|} _ = {}; // @error
    |                          ^

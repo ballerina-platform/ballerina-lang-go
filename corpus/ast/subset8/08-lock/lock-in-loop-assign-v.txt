@@ -11,7 +11,7 @@
     (block-function-body
       (foreach
         (var-def
-          (variable i (type
+          (variable _ (type
             (value-type int))))
         (binary-expr ..<
           (literal 0)

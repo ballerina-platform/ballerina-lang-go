@@ -25,8 +25,9 @@ main() -> nil{
 }
 foo([int...]...) -> int:Unsigned8{
   bb0 {
-    %2 = ConstantLoad 0
-    %0 = %2;
+    _ = args;
+    %3 = ConstantLoad 0
+    %0 = %3;
     return;
   }
 }

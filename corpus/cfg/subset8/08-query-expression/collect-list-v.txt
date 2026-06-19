@@ -70,7 +70,7 @@
         (query-expr
           (from-clause
             (var-def
-              (variable x))
+              (variable _))
             (simple-var-ref xs))
           (select-clause
             (literal 1))))))
@@ -80,7 +80,7 @@
         (query-expr
           (from-clause
             (var-def
-              (variable x))
+              (variable _))
             (simple-var-ref xs))
           (collect-clause
             (literal 1))))))

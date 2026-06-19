@@ -45,14 +45,18 @@ func NewPlatform() pal.Platform {
 				return os.ReadFile(path)
 			},
 			WriteFile: func(path string, data []byte) error {
-			return os.WriteFile(path, data, 0o644)
+				return os.WriteFile(path, data, 0o644)
 			},
-			AppendFile: func(path string, data []byte) error {
+			AppendFile: func(path string, data []byte) (err error) {
 				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
 				_, err = f.Write(data)
 				return err
 			},

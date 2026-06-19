@@ -14,7 +14,7 @@ The Go Native Interpreter currently supports the **HTTP client subset only**: th
 
 - Send HTTP requests using GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, and custom verbs.
 - Forward inbound requests to upstream services preserving method, headers, and body (`forward`).
-- Configure request timeout, HTTP version (1.0/1.1/2.0), redirect behaviour, connection pool settings, and compression negotiation.
+- Configure request timeout, HTTP version (1.1/2.0), redirect behaviour, connection pool settings, and compression negotiation.
 - Secure connections with TLS and mutual TLS using PEM certificate and key files.
 - Set custom request headers and override the inferred Content-Type.
 - Read the response status code, text, JSON, or binary payload.

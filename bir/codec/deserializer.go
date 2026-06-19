@@ -118,7 +118,7 @@ func (br *birReader) readType() semtypes.SemType {
 	var idx int32
 	br.read(&idx)
 	if idx == -1 {
-		return nil
+		return semtypes.SemType{}
 	}
 	return br.tp.Get(semtypes.TypePoolIndex(idx))
 }
@@ -273,6 +273,34 @@ func (br *birReader) readClassDef(classDef *bir.BIRClassDef) {
 		vTable[methodName.Value()] = fn
 	}
 	classDef.VTable = vTable
+
+	rmCount := br.readLength()
+	rTable := make(map[string][]bir.BIRResourceMethod, rmCount)
+	for i := 0; i < int(rmCount); i++ {
+		methodNameN := br.readStringCPEntry()
+		methodName := methodNameN.Value()
+		entryCount := br.readLength()
+		entries := make([]bir.BIRResourceMethod, entryCount)
+		for j := 0; j < int(entryCount); j++ {
+			segCount := br.readLength()
+			segs := make([]bir.ResourcePathSegmentDef, segCount)
+			for k := 0; k < int(segCount); k++ {
+				segs[k] = bir.ResourcePathSegmentDef{Ty: br.readType()}
+			}
+			restTy := br.readType()
+			if semtypes.IsZero(restTy) {
+				restTy = semtypes.NEVER
+			}
+			fn := br.readFunction()
+			entries[j] = bir.BIRResourceMethod{
+				PathSegments:  segs,
+				RestSegmentTy: restTy,
+				Fn:            fn,
+			}
+		}
+		rTable[methodName] = entries
+	}
+	classDef.RTable = rTable
 }
 
 func (br *birReader) readFunctions() []bir.BIRFunction {
@@ -371,6 +399,10 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 					t.ThenBB = target
 				}
 			case *bir.LockEnd:
+				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
+					t.ThenBB = target
+				}
+			case *bir.ResourceFunctionCall:
 				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
 					t.ThenBB = target
 				}
@@ -905,6 +937,40 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 			},
 			LockKey: string(key),
 		}
+	case bir.INSTRUCTION_KIND_RESOURCE_CALL:
+		receiver := br.readOperand(varMap)
+		methodNameN := br.readStringCPEntry()
+		methodName := methodNameN.Value()
+		segCount := br.readLength()
+		pathSegments := make([]bir.BIROperand, segCount)
+		for k := 0; k < int(segCount); k++ {
+			pathSegments[k] = *br.readOperand(varMap)
+		}
+		argCount := br.readLength()
+		args := make([]bir.BIROperand, argCount)
+		for k := 0; k < int(argCount); k++ {
+			args[k] = *br.readOperand(varMap)
+		}
+		var lhsExists bool
+		br.read(&lhsExists)
+		var lhsOp *bir.BIROperand
+		if lhsExists {
+			lhsOp = br.readOperand(varMap)
+		}
+		thenBBId := br.readStringCPEntry()
+		return &bir.ResourceFunctionCall{
+			BIRTerminatorBase: bir.BIRTerminatorBase{
+				BIRInstructionBase: bir.BIRInstructionBase{
+					BIRNodeBase: bir.BIRNodeBase{Pos: pos},
+					LhsOp:       lhsOp,
+				},
+				ThenBB: &bir.BIRBasicBlock{Id: thenBBId},
+			},
+			Receiver:     *receiver,
+			MethodName:   methodName,
+			PathSegments: pathSegments,
+			Args:         args,
+		}
 	case bir.INSTRUCTION_KIND_UNLOCK:
 		key := br.readStringCPEntry()
 		thenBBId := br.readStringCPEntry()
@@ -1034,7 +1100,7 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 }
 
 func (br *birReader) restFillerFactoryForListType(ty semtypes.SemType) values.FillerFactory {
-	if ty == nil {
+	if semtypes.IsZero(ty) {
 		return nil
 	}
 	tyCx := semtypes.TypeCheckContext(br.ctx.GetTypeEnv())

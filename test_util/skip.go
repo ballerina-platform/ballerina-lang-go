@@ -138,15 +138,6 @@ var UnsupportedTests = []string{
 	"subset8/08-const/6-e.bal",
 	// ----- End of constant folding -----
 
-	// Unused local variable detection
-	// https://github.com/ballerina-platform/ballerina-lang-go/issues/439
-	"subset8/08-unused/unused1-e.bal",
-	"subset8/08-unused/unused2-e.bal",
-	"subset8/08-unused/unused3-e.bal",
-	"subset8/08-unused/unused4-e.bal",
-	"subset8/08-unused/unused5-e.bal",
-	"subset8/08-unused/unused6-e.bal",
-
 	// ----- Float-related skips -----
 	// BIR type-tests use plain `float` instead of the singleton union `Special`, so
 	// `x is Special` matches every float. Re-enable after TypeTest.Type keeps the union.
@@ -190,4 +181,3 @@ func MatchesSkip(path string, entries []string) bool {
 	}
 	return false
 }
-

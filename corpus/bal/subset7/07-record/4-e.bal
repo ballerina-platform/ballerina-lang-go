@@ -24,5 +24,5 @@ type Bar record {|
 |};
 
 public function main() {
-    Foo|Bar f = {}; // @error
+    Foo|Bar _ = {}; // @error
 }

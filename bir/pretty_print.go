@@ -123,7 +123,7 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 		p.write("...")
 	}
 	p.write(")")
-	if function.ReturnVariable != nil && function.ReturnVariable.Type != nil {
+	if function.ReturnVariable != nil && !semtypes.IsZero(function.ReturnVariable.Type) {
 		p.write(" -> ")
 		p.write(p.PrintSemType(function.ReturnVariable.Type))
 	}
@@ -196,6 +196,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintLockStart(instruction)
 	case *LockEnd:
 		return p.PrintLockEnd(instruction)
+	case *ResourceFunctionCall:
+		return p.PrintResourceFunctionCall(instruction)
 	case *NewObject:
 		return p.PrintNewObject(instruction)
 	case *NewStream:
@@ -351,8 +353,50 @@ func (p *PrettyPrinter) PrintClassDef(classDef BIRClassDef) {
 		p.PrintFunction(*classDef.VTable[name])
 		p.write("\n")
 	}
+	var rmNames []string
+	for name := range classDef.RTable {
+		rmNames = append(rmNames, name)
+	}
+	sort.Strings(rmNames)
+	for _, name := range rmNames {
+		for _, entry := range classDef.RTable[name] {
+			p.write("\n")
+			p.writeIndent()
+			p.write("resource ")
+			p.write(name)
+			p.write(" ")
+			p.write(p.printResourcePath(entry))
+			p.write(" ")
+			p.PrintFunction(*entry.Fn)
+			p.write("\n")
+		}
+	}
 	p.decreaseIndent()
 	p.write("}")
+}
+
+func literalPathSegment(seg ResourcePathSegmentDef) (string, bool) {
+	shape := semtypes.SingleShape(seg.Ty)
+	if !shape.IsPresent() {
+		return "", false
+	}
+	s, ok := shape.Get().Value.(string)
+	return s, ok
+}
+
+func (p *PrettyPrinter) printResourcePath(entry BIRResourceMethod) string {
+	parts := []string{}
+	for _, seg := range entry.PathSegments {
+		if s, ok := literalPathSegment(seg); ok {
+			parts = append(parts, s)
+		} else {
+			parts = append(parts, "["+p.PrintSemType(seg.Ty)+"]")
+		}
+	}
+	if !semtypes.IsNever(entry.RestSegmentTy) {
+		parts = append(parts, "["+p.PrintSemType(entry.RestSegmentTy)+"...]")
+	}
+	return strings.Join(parts, "/")
 }
 
 func (p *PrettyPrinter) PrintReturn(r *Return) string {
@@ -377,6 +421,24 @@ func (p *PrettyPrinter) PrintBranch(b *Branch) string {
 
 func (p *PrettyPrinter) PrintGoto(g *Goto) string {
 	return fmt.Sprintf("GOTO %s;", g.ThenBB.Id.Value())
+}
+
+func (p *PrettyPrinter) PrintResourceFunctionCall(call *ResourceFunctionCall) string {
+	segs := strings.Builder{}
+	for i, seg := range call.PathSegments {
+		if i > 0 {
+			segs.WriteString(",")
+		}
+		segs.WriteString(p.PrintOperand(seg))
+	}
+	args := strings.Builder{}
+	for i, arg := range call.Args {
+		if i > 0 {
+			args.WriteString(",")
+		}
+		args.WriteString(p.PrintOperand(arg))
+	}
+	return fmt.Sprintf("%s = %s->[%s].%s(%s) -> %s;", p.PrintOperand(*call.LhsOp), p.PrintOperand(call.Receiver), segs.String(), call.MethodName, args.String(), call.ThenBB.Id.Value())
 }
 
 func (p *PrettyPrinter) PrintCall(call *Call) string {
@@ -472,7 +534,7 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 }
 
 func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
-	if typeNode == nil {
+	if semtypes.IsZero(typeNode) {
 		return "<UNKNOWN>"
 	}
 	return semtypes.ToString(p.cx, typeNode)
@@ -527,6 +589,9 @@ func (p *PrettyPrinter) PrintNewXMLText(n *NewXMLText) string {
 
 func (p *PrettyPrinter) PrintEvalTemplateExpr(n *EvalTemplateExpr) string {
 	kindStr := "string"
+	if n.Kind == TemplateKindXML {
+		kindStr = "xml"
+	}
 	parts := strings.Builder{}
 	for i, s := range n.Strings {
 		if i > 0 {
