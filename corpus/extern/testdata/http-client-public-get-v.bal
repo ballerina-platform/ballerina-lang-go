@@ -20,6 +20,6 @@ import ballerina/io;
 public function main() returns error? {
     http:Client c = check new ("https://httpbun.com");
     http:Response r = check c->get("/status/200");
-    io:println(r.statusCode);
+    io:println(r.statusCode); // @output 200
     return;
 }

@@ -864,9 +864,6 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		pkg.Services[i].SetDeterminedType(semtypes.NEVER)
 	}
 	pkg.SetDeterminedType(semtypes.NEVER)
-	for i := range pkg.CompUnits {
-		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
-	}
 	for i := range pkg.GlobalVars {
 		resolveGlobalVarInit(t, &pkg.GlobalVars[i])
 		setOtherNodesAsNever(&pkg.GlobalVars[i])

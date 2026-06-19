@@ -21,16 +21,16 @@ public function main() returns error? {
     http:Client c = check new ("https://httpbun.com");
 
     http:Response r1 = check c->post("/post", "hello");
-    io:println(r1.statusCode);
+    io:println(r1.statusCode); // @output 200
 
     http:Response r2 = check c->put("/put", "world");
-    io:println(r2.statusCode);
+    io:println(r2.statusCode); // @output 200
 
     http:Response r3 = check c->delete("/delete");
-    io:println(r3.statusCode);
+    io:println(r3.statusCode); // @output 200
 
     http:Response r4 = check c->patch("/patch", {"key": "value"});
-    io:println(r4.statusCode);
+    io:println(r4.statusCode); // @output 200
 
     return;
 }

@@ -29,11 +29,11 @@ import (
 
 const maxRecursionDepth = 5000
 
-func executeFunction(ctx *extern.Context, birFunc bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
-	frame := createFunctionFrame(ctx, &birFunc, args, parentFrame)
+func executeFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
+	frame := createFunctionFrame(ctx, birFunc, args, parentFrame)
 	bb := &birFunc.BasicBlocks[0]
 	if len(birFunc.ErrorTable) > 0 {
-		executeFunctionWithTrap(ctx, &birFunc, bb, frame)
+		executeFunctionWithTrap(ctx, birFunc, bb, frame)
 	} else {
 		executeFunctionNoTrap(ctx, bb, frame)
 	}

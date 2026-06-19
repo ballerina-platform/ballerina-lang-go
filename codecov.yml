@@ -2,6 +2,8 @@ github_checks:
   annotations: true
 
 coverage:
+  ignore:
+    - "test_util/**"
   status:
     patch:
       default:
