@@ -48,11 +48,11 @@ type SignalSource struct {
 
 type (
 	Platform struct {
-		IO   IO
-		FS   FS
-		OS   OS
-		Time Time
-		HTTP HTTP
+		IO      IO
+		FS      FS
+		OS      OS
+		Time    Time
+		HTTP    HTTP
 		Signals SignalSource
 	}
 	IO struct {
