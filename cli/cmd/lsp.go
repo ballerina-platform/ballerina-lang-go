@@ -19,25 +19,16 @@ package main
 import (
 	"os"
 
+	"ballerina-lang-go/lsp"
+
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:           "bal",
-	Short:         "The build system and package manager of Ballerina",
-	Long:          `The build system and package manager of Ballerina`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-}
-
-func main() {
-	rootCmd.AddCommand(newCmd)
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(packCmd)
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(lspCmd)
-
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+var lspCmd = &cobra.Command{
+	Use:   "lsp",
+	Short: "Start the Ballerina language server",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		server := lsp.NewServer(os.Stdin, os.Stdout)
+		return server.Run()
+	},
 }
