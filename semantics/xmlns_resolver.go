@@ -96,7 +96,7 @@ func ensurePrefixMap[T symbolResolver](resolver T, scope model.Scope) {
 func defineXMLNSSymbol[T symbolResolver](resolver T, scope model.Scope, prefix, uri string) model.SymbolRef {
 	space := resolver.GetCtx().NewSymbolSpace(resolver.GetPkgID())
 	space.AddSymbol(prefix, model.NewXMLNSSymbol(prefix, uri))
-	exported := model.NewExportedSymbolSpace(space, nil)
+	exported := model.NewExportedSymbolSpaces([]*model.SymbolSpace{space}, nil)
 	setLocalPrefix(scope, prefix, exported)
 	ref, _ := exported.GetSymbol(prefix)
 	return ref
@@ -165,10 +165,17 @@ func lookupXMLNS(scope model.Scope, prefix string) (model.SymbolRef, model.Scope
 	return model.SymbolRef{}, nil, false
 }
 
-func processModuleXMLNS(resolver *moduleSymbolResolver, pkg *ast.BLangPackage) {
-	for i := range pkg.XmlnsList {
-		decl := &pkg.XmlnsList[i]
-		processXMLNSDecl(resolver, resolver.scope, decl)
+func processCompilationUnitXMLNSForAllScopes(resolvers []*moduleSymbolResolver, compilationUnitImports []CompilationUnitImports) {
+	for _, resolver := range resolvers {
+		for _, cuImports := range compilationUnitImports {
+			for _, node := range cuImports.CompilationUnit.TopLevelNodes {
+				decl, ok := node.(*ast.BLangXMLNS)
+				if !ok {
+					continue
+				}
+				processXMLNSDecl(resolver, resolver.scope, decl)
+			}
+		}
 	}
 }
 

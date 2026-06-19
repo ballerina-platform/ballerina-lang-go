@@ -77,7 +77,7 @@ func (sr *symbolReader) deserialize() (result model.ExportedSymbolSpace, err err
 	mainSpace := sr.readSymbolSpace()
 	annotationSpace := sr.readSymbolSpace()
 
-	return model.NewExportedSymbolSpace(mainSpace, annotationSpace), nil
+	return model.NewExportedSymbolSpaces([]*model.SymbolSpace{mainSpace}, []*model.SymbolSpace{annotationSpace}), nil
 }
 
 func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {

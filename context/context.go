@@ -74,6 +74,10 @@ func (c *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.Symbo
 	return c.env.NewSymbolSpace(packageID)
 }
 
+func (c *CompilerContext) NewModuleScope(pkg model.PackageID, prefixes map[string]model.ExportedSymbolSpace) *model.ModuleScope {
+	return c.env.NewModuleScope(pkg, prefixes)
+}
+
 func (c *CompilerContext) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
 	return c.env.NewFunctionScope(parent, pkg)
 }

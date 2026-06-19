@@ -193,10 +193,16 @@ type (
 		Annotation *SymbolSpace
 	}
 
-	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module
+	PackageScope struct {
+		Virtual    *ModuleScope   // Virtual scope is used to store virtual symbols that don't have a compilation unit
+		MainSpaces []*SymbolSpace // Virtual space + CU spaces
+	}
+
+	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module.
+	// A package can be backed by multiple compilation-unit symbol spaces.
 	ExportedSymbolSpace struct {
-		Main       *SymbolSpace
-		Annotation *SymbolSpace
+		MainSpaces       []*SymbolSpace
+		AnnotationSpaces []*SymbolSpace
 	}
 
 	BlockScopeBase struct {
@@ -432,6 +438,7 @@ var (
 
 var (
 	_ Scope                          = &ModuleScope{}
+	_ Scope                          = &PackageScope{}
 	_ Scope                          = &FunctionScope{}
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
@@ -454,6 +461,7 @@ var (
 	_ FunctionSymbol                 = &ResourceMethodSymbol{}
 	_ Symbol                         = &SymbolRef{}
 	_ SymbolSpaceProvider            = &ModuleScope{}
+	_ SymbolSpaceProvider            = &PackageScope{}
 )
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -536,7 +544,7 @@ func PackageIdentifierFromID(id *PackageID) PackageIdentifier {
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
-	return NewExportedSymbolSpace(ms.Main, ms.Annotation)
+	return NewExportedSymbolSpaces([]*SymbolSpace{ms.Main}, []*SymbolSpace{ms.Annotation})
 }
 
 func (ms *ModuleScope) GetSymbol(name string) (SymbolRef, bool) {
@@ -586,33 +594,59 @@ func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
 	ms.Annotation.AddSymbol(name, symbol)
 }
 
-func NewExportedSymbolSpace(main, annotation *SymbolSpace) ExportedSymbolSpace {
-	return ExportedSymbolSpace{Main: main, Annotation: annotation}
+func (ps *PackageScope) GetSymbol(name string) (SymbolRef, bool) {
+	for _, main := range ps.MainSpaces {
+		if ref, ok := main.GetSymbol(name); ok {
+			return ref, true
+		}
+	}
+	return ps.Virtual.GetSymbol(name)
+}
+
+func (ps *PackageScope) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) {
+	return ps.Virtual.GetPrefixedSymbol(prefix, name)
+}
+
+func (ps *PackageScope) AddSymbol(name string, symbol Symbol) {
+	ps.Virtual.AddSymbol(name, symbol)
+}
+
+func (ps *PackageScope) MainSpace() *SymbolSpace {
+	return ps.Virtual.Main
+}
+
+func NewExportedSymbolSpaces(mainSpaces, annotationSpaces []*SymbolSpace) ExportedSymbolSpace {
+	return ExportedSymbolSpace{MainSpaces: mainSpaces, AnnotationSpaces: annotationSpaces}
 }
 
 func (space *ExportedSymbolSpace) PublicMainSymbols() iter.Seq2[SymbolRef, Symbol] {
 	return func(yield func(SymbolRef, Symbol) bool) {
-		for i, sym := range space.Main.Symbols() {
-			if !sym.IsPublic() {
-				continue
-			}
-			if !yield(space.Main.RefAt(i), sym) {
-				return
+		for _, main := range space.MainSpaces {
+			for i, sym := range main.Symbols() {
+				if !sym.IsPublic() {
+					continue
+				}
+				if !yield(main.RefAt(i), sym) {
+					return
+				}
 			}
 		}
 	}
 }
 
 func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
-	ref, ok := space.Main.GetSymbol(name)
-	if !ok {
-		return SymbolRef{}, false
+	for _, main := range space.MainSpaces {
+		ref, ok := main.GetSymbol(name)
+		if !ok {
+			continue
+		}
+		sym := main.SymbolAt(ref.Index)
+		if !sym.IsPublic() {
+			return SymbolRef{}, false
+		}
+		return ref, true
 	}
-	sym := space.Main.SymbolAt(ref.Index)
-	if !sym.IsPublic() {
-		return SymbolRef{}, false
-	}
-	return ref, true
+	return SymbolRef{}, false
 }
 
 func (bs *BlockScopeBase) GetSymbol(name string) (SymbolRef, bool) {
@@ -1124,7 +1158,7 @@ func (s *dependentlyTypedFunctionSymbol) SetReturnType(op TypeOp) {
 
 func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name string, origRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol {
 	fixed := argTys
-	var rest = semtypes.NEVER
+	rest := semtypes.NEVER
 	if len(argTys) > s.nRequiredArgs {
 		fixed = argTys[:s.nRequiredArgs]
 		for _, each := range argTys[s.nRequiredArgs:] {

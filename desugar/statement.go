@@ -682,7 +682,7 @@ func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *
 		cx.internalError(pkgName + ":keys symbol not found")
 		return nil
 	}
-	fnSymbol := space.Main.SymbolAt(symbolRef.Index).(model.FunctionSymbol)
+	fnSymbol := cx.getSymbol(symbolRef).(model.FunctionSymbol)
 	returnType := fnSymbol.Signature().ReturnType
 	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
 		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},

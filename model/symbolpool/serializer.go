@@ -56,9 +56,10 @@ const (
 )
 
 type symbolWriter struct {
-	cp  *constantPool
-	tp  *semtypes.TypePool
-	env semtypes.Env
+	cp     *constantPool
+	tp     *semtypes.TypePool
+	env    semtypes.Env
+	refMap map[model.SymbolRef]int
 }
 
 func Marshal(exported model.ExportedSymbolSpace, env semtypes.Env) ([]byte, error) {
@@ -72,10 +73,10 @@ func Marshal(exported model.ExportedSymbolSpace, env semtypes.Env) ([]byte, erro
 
 func (sw *symbolWriter) serialize(exported model.ExportedSymbolSpace) ([]byte, error) {
 	body := &bytes.Buffer{}
-	if err := sw.writeSymbolSpace(body, exported.Main); err != nil {
+	if err := sw.writeSymbolSpaces(body, exported.MainSpaces); err != nil {
 		return nil, err
 	}
-	if err := sw.writeSymbolSpace(body, exported.Annotation); err != nil {
+	if err := sw.writeSymbolSpaces(body, exported.AnnotationSpaces); err != nil {
 		return nil, err
 	}
 
@@ -124,24 +125,52 @@ func (sw *symbolWriter) writePackageIdentifier(buf *bytes.Buffer, pkg model.Pack
 // but empty space (which still carries a package identifier).
 const symbolSpaceNilSentinel = int64(-1)
 
-func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolSpace) error {
-	if space == nil {
+func (sw *symbolWriter) writeSymbolSpaces(buf *bytes.Buffer, spaces []*model.SymbolSpace) error {
+	spaces = compactSymbolSpaces(spaces)
+	if len(spaces) == 0 {
 		return write(buf, symbolSpaceNilSentinel)
 	}
 
-	if err := write(buf, int64(space.Len())); err != nil {
+	totalLen := 0
+	for _, space := range spaces {
+		totalLen += space.Len()
+	}
+	if err := write(buf, int64(totalLen)); err != nil {
 		return err
 	}
-	if err := sw.writePackageIdentifier(buf, space.Pkg); err != nil {
+	if err := sw.writePackageIdentifier(buf, spaces[0].Pkg); err != nil {
 		return err
 	}
 
-	for _, sym := range space.Symbols() {
-		if err := sw.writeSymbol(buf, sym); err != nil {
-			return err
+	if sw.refMap == nil {
+		sw.refMap = make(map[model.SymbolRef]int)
+	}
+	nextIndex := 0
+	for _, space := range spaces {
+		for i := range space.Len() {
+			sw.refMap[space.RefAt(i)] = nextIndex
+			nextIndex++
+		}
+	}
+
+	for _, space := range spaces {
+		for _, sym := range space.Symbols() {
+			if err := sw.writeSymbol(buf, sym); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func compactSymbolSpaces(spaces []*model.SymbolSpace) []*model.SymbolSpace {
+	result := make([]*model.SymbolSpace, 0, len(spaces))
+	for _, space := range spaces {
+		if space != nil {
+			result = append(result, space)
+		}
+	}
+	return result
 }
 
 func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
@@ -284,6 +313,12 @@ func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model
 }
 
 func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
+	if ref.IsEmpty() {
+		return write(buf, int32(ref.Index))
+	}
+	if idx, ok := sw.refMap[ref]; ok {
+		return write(buf, int32(idx))
+	}
 	return write(buf, int32(ref.Index))
 }
 
