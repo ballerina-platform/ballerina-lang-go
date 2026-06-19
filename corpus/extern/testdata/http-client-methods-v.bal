@@ -22,30 +22,30 @@ public function main() returns error? {
 
     // PUT with string body
     http:Response r1 = check c->put("/echo", "put body");
-    io:println(r1.statusCode);
-    io:println(r1.getTextPayload());
+    io:println(r1.statusCode);             // @output 200
+    io:println(r1.getTextPayload());       // @output body: put body, ct: text/plain
 
     // PATCH with map body — serialized to JSON
     http:Response r2 = check c->patch("/echo", {"k": "v"});
-    io:println(r2.statusCode);
-    io:println(r2.getTextPayload());
+    io:println(r2.statusCode);             // @output 200
+    io:println(r2.getTextPayload());       // @output body: {"k":"v"}, ct: application/json
 
     // DELETE with no body
     http:Response r3 = check c->delete("/delete");
-    io:println(r3.statusCode);
+    io:println(r3.statusCode);             // @output 200
 
     // HEAD
     http:Response r4 = check c->head("/head");
-    io:println(r4.statusCode);
+    io:println(r4.statusCode);             // @output 200
 
     // OPTIONS
     http:Response r5 = check c->options("/options");
-    io:println(r5.statusCode);
+    io:println(r5.statusCode);             // @output 200
 
     // execute with explicit verb
     http:Response r6 = check c->execute("PUT", "/echo", "exec body");
-    io:println(r6.statusCode);
-    io:println(r6.getTextPayload());
+    io:println(r6.statusCode);             // @output 200
+    io:println(r6.getTextPayload());       // @output body: exec body, ct: text/plain
 
     return;
 }

@@ -21,21 +21,28 @@ import "ballerina-lang-go/values"
 // MethodHandle is an opaque reference to a resolved method on a Ballerina
 // object. Obtain one from Context.LookupObjectMethod,
 // Context.LookupRemoteMethod, or Context.LookupResourceMethod and pass it
-// to Context.InvokeMethod. Callers outside the runtime cannot read or
-// construct the inner payload.
+// to Context.InvokeMethod.
 type MethodHandle struct {
 	impl any
 }
 
+// FunctionHandle is an opaque reference to a function,
+// returned by Runtime.LookupFunction or Context.LookupFunction
+type FunctionHandle struct {
+	Fn any
+}
+
 // DispatchHandles carry the runtime's method-resolution and invocation
 // implementations. They are installed once by InitEnv and used by the
-// Context.Lookup*/InvokeMethod methods. Lookup hooks return the resolved
-// payload along with a found bool; Context methods forward both.
+// Context.Lookup*/InvokeMethod/StartMethod methods. Lookup hooks return the
+// resolved payload along with a found bool; Context methods forward both.
 type DispatchHandles struct {
 	LookupObject   func(*Context, *values.Object, string) (any, bool)
 	LookupRemote   func(*Context, *values.Object, string) (any, bool)
 	LookupResource func(*Context, *values.Object, string, []values.BalValue) (any, bool) // resourceMethodName, path
+	LookupFunction func(*Context, string, string, string) (any, bool)                    // org, module, name
 	Invoke         func(*Context, any, []values.BalValue) (values.BalValue, error)
+	Start          func(*Context, any, []values.BalValue) (<-chan values.BalValue, error)
 }
 
 // LookupObjectMethod resolves a regular method on obj. The second return is
@@ -71,4 +78,27 @@ func (c *Context) LookupResourceMethod(obj *values.Object, resourceMethodName st
 // into the handle; args is only the user-supplied call arguments.
 func (c *Context) InvokeMethod(h MethodHandle, args []values.BalValue) (values.BalValue, error) {
 	return c.Env.dispatch.Invoke(c, h.impl, args)
+}
+
+// LookupFunction resolves a top-level BIR function by qualified name.
+// The second return is false if no such function is registered.
+func (c *Context) LookupFunction(org, module, name string) (FunctionHandle, bool) {
+	impl, ok := c.Env.dispatch.LookupFunction(c, org, module, name)
+	return FunctionHandle{Fn: impl}, ok
+}
+
+// InvokeFunction calls the function captured by h.
+func (c *Context) InvokeFunction(h FunctionHandle, args []values.BalValue) (values.BalValue, error) {
+	return c.Env.dispatch.Invoke(c, h.Fn, args)
+}
+
+// StartMethod is the non-blocking counterpart to InvokeMethod. It spawns a
+// new strand to execute h and returns a buffered channel of capacity 1
+// that will receive exactly one BalValue and then be closed.
+//
+// The returned error is reserved for synchronous failures to schedule the
+// strand
+// Asynchronous failures —  will be returned as the error value in the channel
+func (c *Context) StartMethod(h MethodHandle, args []values.BalValue) (<-chan values.BalValue, error) {
+	return c.Env.dispatch.Start(c, h.impl, args)
 }

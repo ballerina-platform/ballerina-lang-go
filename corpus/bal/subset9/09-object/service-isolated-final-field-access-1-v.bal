@@ -55,7 +55,7 @@ class SimpleListener {
 listener SimpleListener l = new ();
 
 isolated service on l {
-    final int x = 10;
+    public final int x = 10;
 
     function getX() returns int {
         return self.x;

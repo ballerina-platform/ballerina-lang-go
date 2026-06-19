@@ -429,7 +429,7 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 		if dumpAST {
 			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
 		}
-		return ast.ToPackage(cu)
+		return ast.ToPackage(cx, cu)
 	}
 
 	pkg := &ast.BLangPackage{}
@@ -473,7 +473,7 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 			case *ast.BLangXMLNS:
 				pkg.XmlnsList = append(pkg.XmlnsList, *n)
 			default:
-				pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
+				cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
 			}
 		}
 	}

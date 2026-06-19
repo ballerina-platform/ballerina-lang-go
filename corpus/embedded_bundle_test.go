@@ -17,7 +17,6 @@
 package corpus
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"io/fs"
@@ -32,10 +31,10 @@ import (
 	"ballerina-lang-go/bir"
 	_ "ballerina-lang-go/corpus/package-resolution/testdata/bundled-embed/ballerina/foo/0.1.0/go1.2/native"
 	"ballerina-lang-go/lib/stdlibs"
-	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/test_util/testharness"
 )
 
 const packageResolutionTestDataDir = "package-resolution/testdata"
@@ -60,20 +59,15 @@ func bundledEmbedRepo(t *testing.T) *projects.FileSystemRepository {
 
 func interpretBIRPackagesStdout(t *testing.T, typeEnv semtypes.Env, birPkgs []*bir.BIRPackage) string {
 	t.Helper()
-	var stdout bytes.Buffer
-	testPal := pal.Platform{
-		IO: pal.IO{
-			Stdout: func(p []byte) (int, error) { return stdout.Write(p) },
-			Stderr: func(p []byte) (int, error) { return len(p), nil },
-		},
-	}
-	rt := runtime.NewRuntime(testPal, typeEnv)
+	pal := testharness.NewTestPal()
+	defer pal.Close()
+	rt := runtime.NewRuntime(pal.Platform(), typeEnv)
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
-			t.Fatalf("Interpret(%v): %v", birPkg.PackageID, err)
+		if err := rt.Init(*birPkg); err != nil {
+			t.Fatalf("Init(%v): %v", birPkg.PackageID, err)
 		}
 	}
-	return strings.TrimSpace(stdout.String())
+	return strings.TrimSpace(pal.Stdout())
 }
 
 // TestBundledRepository_LoadsEmbeddedPackage verifies that both a pure-Ballerina

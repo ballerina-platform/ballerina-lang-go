@@ -17,36 +17,61 @@
 package exec
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
-// methodHandleImpl is the concrete payload behind extern.MethodHandle. The
-// flavour of the resolved method (BIR, native, resource) is encoded entirely
-// in the captured closure; no flavour discriminator is stored on the struct.
-type methodHandleImpl struct {
+// InvokableHandle is provides a unified representation that can be used to execute any function/method
+// in runtime
+type InvokableHandle struct {
 	invoke func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error)
 }
 
-func newBIRHandle(fn *bir.BIRFunction) *methodHandleImpl {
-	return &methodHandleImpl{
+func NewBIRHandle(fn *bir.BIRFunction) *InvokableHandle {
+	return newBIRHandle(fn, nil)
+}
+
+func newBIRHandle(fn *bir.BIRFunction, parentFrame *Frame) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return executeFunction(ctx, *fn, args, nil), nil
+			return executeFunction(ctx, fn, args, parentFrame), nil
 		},
 	}
 }
 
-func newNativeHandle(fn extern.NativeFunc) *methodHandleImpl {
-	return &methodHandleImpl{
+func NewNativeHandle(fn extern.NativeFunc) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			return fn(ctx, args)
 		},
 	}
 }
 
-func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *methodHandleImpl {
-	return &methodHandleImpl{
+func NewFunctionValueHandle(env *extern.Env, fnValue *values.Function) (*InvokableHandle, error) {
+	reg := env.Registry.(*modules.Registry)
+	lookupKey := fnValue.LookupKey
+	if fn := reg.GetBIRFunction(lookupKey); fn != nil {
+		return newBIRHandle(fn, parentFrameFromFunctionValue(fnValue)), nil
+	}
+	if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
+		return NewNativeHandle(externFn.Impl), nil
+	}
+	return nil, fmt.Errorf("function not found: %s", lookupKey)
+}
+
+func parentFrameFromFunctionValue(fnValue *values.Function) *Frame {
+	if fnValue.ParentFrame == nil {
+		return nil
+	}
+	return fnValue.ParentFrame.(*Frame)
+}
+
+func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *InvokableHandle {
+	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			full := buildResourceCallArgs(ctx, receiver, match, path, args)
 			return lookupAndExecute(ctx, nil, full, match.FunctionLookupKey)

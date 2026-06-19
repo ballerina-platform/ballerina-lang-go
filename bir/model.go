@@ -63,12 +63,15 @@ type (
 		BIRNodeBase
 		PackageID *model.PackageID
 		// TODO: avoid duplicates here
-		ImportModules []BIRImportModule
-		GlobalVars    map[string]BIRGlobalVariableDcl
-		Functions     []BIRFunction
-		InitFunction  *BIRFunction
-		ClassDefs     []BIRClassDef
-		MainFunction  *BIRFunction
+		ImportModules         []BIRImportModule
+		GlobalVars            map[string]BIRGlobalVariableDcl
+		Functions             []BIRFunction
+		InitFunction          *BIRFunction
+		ClassDefs             []BIRClassDef
+		MainFunction          *BIRFunction
+		StartFunction         *BIRFunction
+		GracefulStopFunction  *BIRFunction
+		ImmediateStopFunction *BIRFunction
 	}
 
 	ObjectField struct {

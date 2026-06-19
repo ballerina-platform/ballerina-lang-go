@@ -68,11 +68,11 @@ func parseXMLFromBytes(data []byte, stringMapTy semtypes.SemType, stringMapAtomi
 	}
 	switch len(items) {
 	case 0:
-		return values.NewXMLSequence(nil), nil
+		return values.NewNormalizedXMLSequence(nil), nil
 	case 1:
 		return items[0], nil
 	default:
-		return values.NewXMLSequence(items), nil
+		return values.NewNormalizedXMLSequence(items), nil
 	}
 }
 
@@ -144,7 +144,7 @@ func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx nsCtx, 
 	}
 	var childVal values.XMLValue
 	if len(children) > 0 {
-		childVal = values.NewXMLSequence(children)
+		childVal = values.NewNormalizedXMLSequence(children)
 	}
 
 	return &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: childVal}, nil
