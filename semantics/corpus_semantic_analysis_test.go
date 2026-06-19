@@ -97,8 +97,8 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// legitimate type for guaranteed-divergent expressions (e.g.
 	// `check newError()` whose inner type is exactly `error`), so we only
 	// flag the unset case.
-	if _, ok := node.(ast.BLangExpression); !ok {
-		if node.GetDeterminedType() == nil {
+	if _, ok := node.(ast.BLangExpression); ok {
+		if semtypes.IsZero(node.GetDeterminedType()) {
 			v.t.Errorf("determinedType not set for expression %T at %v",
 				node, node.GetPosition())
 		}
@@ -110,7 +110,7 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// Check if node has a symbol that should have type set
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
-		if v.ctx.SymbolType(symbol) == nil {
+		if semtypes.IsZero(v.ctx.SymbolType(symbol)) {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T at %v",
 				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node, node.GetPosition())
 		}
@@ -127,7 +127,7 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *ast.TypeData) ast.Vi
 	// Check if type descriptor has a symbol that should have type set
 	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
 		symbol := typeWithSymbol.Symbol()
-		if v.ctx.SymbolType(symbol) == nil {
+		if semtypes.IsZero(v.ctx.SymbolType(symbol)) {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for type descriptor %T at %v",
 				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
 		}

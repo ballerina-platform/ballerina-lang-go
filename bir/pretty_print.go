@@ -123,7 +123,7 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 		p.write("...")
 	}
 	p.write(")")
-	if function.ReturnVariable != nil && function.ReturnVariable.Type != nil {
+	if function.ReturnVariable != nil && !semtypes.IsZero(function.ReturnVariable.Type) {
 		p.write(" -> ")
 		p.write(p.PrintSemType(function.ReturnVariable.Type))
 	}
@@ -534,7 +534,7 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 }
 
 func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
-	if typeNode == nil {
+	if semtypes.IsZero(typeNode) {
 		return "<UNKNOWN>"
 	}
 	return semtypes.ToString(p.cx, typeNode)

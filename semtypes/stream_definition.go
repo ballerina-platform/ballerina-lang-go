@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 // StreamDefinition represents a stream<T, C> type descriptor.
 //
 // @since 2201.12.0
@@ -43,7 +41,7 @@ func (s *StreamDefinition) GetSemType(env Env) SemType {
 }
 
 func (s *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
-	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
+	if sameSemType(VAL, completionTy) && sameSemType(VAL, valueTy) {
 		return STREAM
 	}
 	tuple := s.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)

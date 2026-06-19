@@ -14,31 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semtypes
+import ballerina/io;
 
-import "slices"
+import testorg/crossmoduleservicelistener.lifecycle;
 
-type ComplexSemType struct {
-	allBitSet  BasicTypeBitSet
-	someBitSet BasicTypeBitSet
-	dataList   []ProperSubtypeData
+listener lifecycle:MyListener l = new ();
+
+service on l {
+    public function onAttach(string message) {
+        io:println("listener-> ", message); // @output listener-> attached
+    }
+
+    public function onDetach(string message) {
+        io:println("listener-> ", message);
+    }
+
+    // @output listener start
+    function trigger(string message) {
+        io:println("trigger-> ", message); // @output trigger-> foo
+    }
 }
 
-var _ SemType = &ComplexSemType{}
-
-func (c *ComplexSemType) all() BasicTypeBitSet {
-	return c.allBitSet
-}
-
-func (c *ComplexSemType) some() BasicTypeBitSet {
-	return c.someBitSet
-}
-
-func (c *ComplexSemType) subtypeDataList() []ProperSubtypeData {
-	return c.dataList
-}
-
-func (c *ComplexSemType) equals(other *ComplexSemType) bool {
-	return c == other || (c.allBitSet == other.allBitSet && c.someBitSet == other.someBitSet &&
-		slices.Equal(c.dataList, other.dataList))
+public function main() {
+    l.trigger("foo");
 }

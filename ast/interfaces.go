@@ -188,7 +188,6 @@ type ClassDefinition interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	OrderedNode
 	GetName() *BLangIdentifier
 	GetMethods() iter.Seq2[string, FunctionNode]
 	GetMethod(name string) FunctionNode
@@ -199,13 +198,9 @@ type ServiceNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() *BLangIdentifier
-	SetName(name *BLangIdentifier)
-	IsAnonymousService() bool
 	GetAttachedExprs() []BLangExpression
-	GetServiceClass() ClassDefinition
 	GetAbsolutePath() []*BLangIdentifier
-	GetServiceNameLiteral() LiteralNode
+	GetAttachPointLiteral() LiteralNode
 }
 
 // Type-definition node (carries either a BLangTypeDefinition or a
@@ -214,7 +209,6 @@ type TypeDefinition interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	OrderedNode
 	NodeWithSymbol
 	GetName() *BLangIdentifier
 	SetName(name *BLangIdentifier)
@@ -849,12 +843,6 @@ type AnnotatableNode interface {
 	IsPublic() bool
 	GetAnnotationAttachments() []AnnotationAttachmentNode
 	AddAnnotationAttachment(annAttachment AnnotationAttachmentNode)
-}
-
-type OrderedNode interface {
-	Node
-	GetPrecedence() int
-	SetPrecedence(precedence int)
 }
 
 type AttachPoint struct {

@@ -25,10 +25,9 @@ import (
 
 var PackageID = model.INTERNAL_PKG
 
-const (
-	PackageName                   = "lang.__internal"
-	templateInsertionAllowedTypes = semtypes.BOOLEAN | semtypes.INT | semtypes.FLOAT | semtypes.DECIMAL | semtypes.STRING
-)
+const PackageName = "lang.__internal"
+
+var templateInsertionAllowedTypes = semtypes.Diff(semtypes.SIMPLE_OR_STRING, semtypes.NIL)
 
 func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*PackageID)
