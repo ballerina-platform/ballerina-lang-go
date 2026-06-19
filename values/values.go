@@ -26,10 +26,13 @@ import (
 
 // Type aliases — preserves the existing API surface for all callers.
 type (
-	BalValue               = core.BalValue
-	Function               = core.Function
-	TypeDesc               = core.TypeDesc
-	FillerFactory          = core.FillerFactory
+	// Core value types
+	BalValue      = core.BalValue
+	Function      = core.Function
+	TypeDesc      = core.TypeDesc
+	FillerFactory = core.FillerFactory
+
+	// Structured value types
 	List                   = core.List
 	Map                    = core.Map
 	MapEntry               = core.MapEntry
@@ -39,6 +42,7 @@ type (
 	Stream                 = core.Stream
 	Error                  = core.Error
 
+	// XML value types
 	XMLValue                 = core.XMLValue
 	XMLElement               = core.XMLElement
 	XMLSequence              = core.XMLSequence
@@ -46,6 +50,7 @@ type (
 	XMLText                  = core.XMLText
 	XMLComment               = core.XMLComment
 
+	// Comparison result
 	CompareResult = cmp.CompareResult
 )
 
@@ -86,6 +91,30 @@ func NewErrorWithMessage(message string) *Error {
 	return core.NewErrorWithMessage(message)
 }
 
+func NewXMLElement(name string, attrs, namespaces *Map, children XMLValue, isReadonly bool) *XMLElement {
+	return core.NewXMLElement(name, attrs, namespaces, children, isReadonly)
+}
+
+func NewXMLText(body string) *XMLText {
+	return core.NewXMLText(body)
+}
+
+func NewXMLComment(body string, isReadonly bool) *XMLComment {
+	return core.NewXMLComment(body, isReadonly)
+}
+
+func NewXMLProcessingInstruction(target, data string, isReadonly bool) *XMLProcessingInstruction {
+	return core.NewXMLProcessingInstruction(target, data, isReadonly)
+}
+
+func NewNormalizedXMLSequence(items []XMLValue) *XMLSequence {
+	return core.NewNormalizedXMLSequence(items)
+}
+
+func NewXMLConcatSequence(items ...XMLValue) *XMLSequence {
+	return core.NewXMLConcatSequence(items...)
+}
+
 // Value utilities
 
 func SemTypeForValue(v BalValue) semtypes.SemType {
@@ -104,18 +133,27 @@ func FillerFactoryFor(cx semtypes.Context, t semtypes.SemType) (FillerFactory, b
 	return core.FillerFactoryFor(cx, t)
 }
 
-// Float utilities
+// XML utilities
+
+func EscapeXMLAttribute(s string) string {
+	return core.EscapeXMLAttribute(s)
+}
+
+func EscapeXMLContent(s string) string {
+	return core.EscapeXMLContent(s)
+}
+
+// Equality
+
+func DeepEquals(v1, v2 BalValue) bool {
+	return core.DeepEquals(v1, v2)
+}
 
 func FloatExactEqual(a, b float64) bool {
 	return core.FloatExactEqual(a, b)
 }
 
-// DeepEquals implements the Ballerina DeepEquals abstract operation.
-func DeepEquals(v1, v2 BalValue) bool {
-	return core.DeepEquals(v1, v2)
-}
-
-// Compare functions
+// Comparison
 
 func Compare(x, y BalValue) CompareResult {
 	return cmp.Compare(x, y)
@@ -125,18 +163,10 @@ func CompareK(x, y BalValue, ascending bool) CompareResult {
 	return cmp.CompareK(x, y, ascending)
 }
 
+// Conversion
+
 // Convert converts a JSON value to the given target type.
 // On failure it returns a lang.value ConversionError as *Error.
 func Convert(tc semtypes.Context, value BalValue, targetType semtypes.SemType) (BalValue, *Error) {
 	return convert.Convert(tc, value, targetType)
-}
-
-// XML escape utilities
-
-func EscapeXMLAttribute(s string) string {
-	return core.EscapeXMLAttribute(s)
-}
-
-func EscapeXMLContent(s string) string {
-	return core.EscapeXMLContent(s)
 }
