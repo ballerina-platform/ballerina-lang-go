@@ -25,6 +25,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -46,7 +47,9 @@ type Server struct {
 	in            io.Reader
 	out           io.Writer
 	writeMu       sync.Mutex
-	snapshots     *SnapshotManager
+	snapshots     map[string]*SnapshotManager
+	snapshotsMu   sync.RWMutex
+	root          string
 	notifications chan notification
 	shutdown      atomic.Bool
 }
@@ -60,7 +63,7 @@ func NewServer(in io.Reader, out io.Writer) *Server {
 	return &Server{
 		in:            in,
 		out:           out,
-		snapshots:     NewSnapshotManager(),
+		snapshots:     make(map[string]*SnapshotManager),
 		notifications: make(chan notification, 64),
 	}
 }
@@ -103,10 +106,14 @@ func (s *Server) handleRequest(msg protocol.Message) {
 }
 
 func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, int, string) {
-	snapshot := s.snapshots.Current()
-	_ = snapshot
+	logLS(s.root, "request received method=%s", method)
 	switch method {
 	case "initialize":
+		var p protocol.InitializeParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid initialize params"
+		}
+		s.initializeSnapshots(p)
 		return protocol.InitializeResult{Capabilities: protocol.ServerCapabilities{TextDocumentSync: protocol.TextDocumentSyncOptions{
 			OpenClose: true,
 			Change:    1,
@@ -127,6 +134,7 @@ func (s *Server) runNotifications() {
 }
 
 func (s *Server) handleNotification(method string, params json.RawMessage) {
+	logLS(s.root, "notification received method=%s", method)
 	switch method {
 	case "initialized":
 		return
@@ -140,92 +148,103 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if decodeParams(params, &p) != nil {
 			return
 		}
-		s.updateSnapshot(func(files map[protocol.DocumentURI]SourceFile) (SourceFile, bool) {
-			uri := p.TextDocument.URI
-			path := pathFromURI(uri)
-			file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text, Open: true}
+		uri := p.TextDocument.URI
+		path := pathFromURI(uri)
+		file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text, Open: true}
+		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
-			return file, true
+			return file
 		})
 	case "textDocument/didChange":
 		var p protocol.DidChangeTextDocumentParams
 		if decodeParams(params, &p) != nil || len(p.ContentChanges) == 0 {
 			return
 		}
-		s.updateSnapshot(func(files map[protocol.DocumentURI]SourceFile) (SourceFile, bool) {
-			uri := p.TextDocument.URI
-			file := files[uri]
-			if file.URI == "" {
-				path := pathFromURI(uri)
-				file = SourceFile{URI: uri, Path: path, File: path, Open: true}
-			}
-			file.Version = p.TextDocument.Version
-			file.Content = p.ContentChanges[len(p.ContentChanges)-1].Text
-			file.Open = true
+		uri := p.TextDocument.URI
+		path := pathFromURI(uri)
+		file := s.sourceFile(uri)
+		if file.URI == "" {
+			file = SourceFile{URI: uri, Path: path, File: path, Open: true}
+		}
+		file.Version = p.TextDocument.Version
+		file.Content = p.ContentChanges[len(p.ContentChanges)-1].Text
+		file.Open = true
+		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
-			return file, true
+			return file
 		})
 	case "textDocument/didClose":
 		var p protocol.DidCloseTextDocumentParams
 		if decodeParams(params, &p) != nil {
 			return
 		}
-		s.updateSnapshot(func(files map[protocol.DocumentURI]SourceFile) (SourceFile, bool) {
-			file, ok := files[p.TextDocument.URI]
-			if !ok {
-				return SourceFile{}, false
-			}
-			file.Open = false
-			files[p.TextDocument.URI] = file
-			return file, true
+		uri := p.TextDocument.URI
+		file := s.sourceFile(uri)
+		if file.URI == "" {
+			return
+		}
+		file.Open = false
+		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
+			files[uri] = file
+			return file
 		})
 	case "textDocument/didSave":
 		var p protocol.DidSaveTextDocumentParams
 		if decodeParams(params, &p) != nil {
 			return
 		}
-		s.updateSnapshot(func(files map[protocol.DocumentURI]SourceFile) (SourceFile, bool) {
-			file, ok := files[p.TextDocument.URI]
-			if !ok {
-				return SourceFile{}, false
-			}
-			if p.Text != nil {
-				file.Content = *p.Text
-			}
-			files[p.TextDocument.URI] = file
-			return file, true
+		uri := p.TextDocument.URI
+		file := s.sourceFile(uri)
+		if file.URI == "" {
+			return
+		}
+		if p.Text != nil {
+			file.Content = *p.Text
+		}
+		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
+			files[uri] = file
+			return file
 		})
 	}
 }
 
-func (s *Server) updateSnapshot(update func(map[protocol.DocumentURI]SourceFile) (SourceFile, bool)) {
-	old := s.snapshots.Current()
-	var changed SourceFile
-	var shouldDiagnose bool
-	newSnapshot := nextSnapshot(old, func(files map[protocol.DocumentURI]SourceFile) {
-		changed, shouldDiagnose = update(files)
-	})
-	s.snapshots.Publish(newSnapshot)
-	if shouldDiagnose {
-		go s.publishDiagnostics(newSnapshot, changed)
+func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.DocumentURI]SourceFile) SourceFile) {
+	key := s.snapshotKey(source)
+	if s.root != "" && s.root != key {
+		logLS(s.root, "document mapped source=%s snapshotKey=%s projectLog=%s", source.Path, key, filepath.Join(key, ".bal", "lsp.log"))
 	}
+	manager := s.snapshotManager(key, source)
+	old := manager.Current()
+	logLS(key, "snapshot update start key=%s kind=%s oldID=%d source=%s", key, projectKindString(old.Kind), old.ID, source.Path)
+	var newSnapshot *Snapshot
+	var changed SourceFile
+	if old.Kind == ProjectKindBuild {
+		newSnapshot = nextBuildSnapshot(old, func(files map[protocol.DocumentURI]SourceFile) {
+			changed = update(files)
+		})
+	} else {
+		changed = update(map[protocol.DocumentURI]SourceFile{})
+		newSnapshot = nextSingleFileSnapshot(old, changed)
+	}
+	manager.Publish(newSnapshot)
+	logLS(key, "snapshot update published key=%s kind=%s newID=%d modules=%d files=%d", key, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files))
+	go s.publishDiagnostics(manager, newSnapshot, changed)
 }
 
-func (s *Server) publishDiagnostics(snapshot *Snapshot, source SourceFile) {
+func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile) {
+	logLS(snapshot.Root, "diagnostics start snapshotID=%d kind=%s source=%s", snapshot.ID, projectKindString(snapshot.Kind), source.Path)
 	diagnosticsByURI := runDiagnostics(snapshot, source)
-	if !s.snapshots.IsCurrent(snapshot) {
+	if !manager.IsCurrent(snapshot) {
 		return
 	}
-	if _, ok := diagnosticsByURI[source.URI]; !ok {
-		diagnosticsByURI[source.URI] = nil
-	}
-	for uri, diagnostics := range diagnosticsByURI {
+	logLS(snapshot.Root, "diagnostics complete snapshotID=%d diagnosticFiles=%d", snapshot.ID, len(diagnosticsByURI))
+	for uri, file := range snapshot.Files {
+		if !file.Open && uri != source.URI {
+			continue
+		}
+		diagnostics := diagnosticsByURI[uri]
 		if diagnostics == nil {
 			diagnostics = []protocol.Diagnostic{}
-		}
-		file, ok := snapshot.Files[uri]
-		if !ok {
-			continue
 		}
 		version := file.Version
 		s.writeNotification("textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{
@@ -234,6 +253,102 @@ func (s *Server) publishDiagnostics(snapshot *Snapshot, source SourceFile) {
 			Diagnostics: diagnostics,
 		})
 	}
+}
+
+func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
+	root := pathFromRoot(params)
+	if root == "" {
+		return
+	}
+	s.root = root
+	logLS(root, "initialize root=%s build=%t", root, isBuildProjectRoot(root))
+	if isBuildProjectRoot(root) {
+		s.snapshotsMu.Lock()
+		s.snapshots[root] = NewBuildSnapshotManager(root)
+		s.snapshotsMu.Unlock()
+	}
+}
+
+func pathFromRoot(params protocol.InitializeParams) string {
+	if params.RootURI != "" {
+		return pathFromURI(protocol.DocumentURI(params.RootURI))
+	}
+	if params.RootPath != "" {
+		return normalizePath(params.RootPath)
+	}
+	return ""
+}
+
+func (s *Server) snapshotKey(file SourceFile) string {
+	if root := s.projectRootForFile(file.Path); root != "" {
+		return root
+	}
+	return file.Path
+}
+
+func (s *Server) snapshotManager(key string, file SourceFile) *SnapshotManager {
+	s.snapshotsMu.RLock()
+	manager := s.snapshots[key]
+	s.snapshotsMu.RUnlock()
+	if manager != nil {
+		return manager
+	}
+	s.snapshotsMu.Lock()
+	defer s.snapshotsMu.Unlock()
+	if manager = s.snapshots[key]; manager != nil {
+		return manager
+	}
+	if isBuildProjectRoot(key) {
+		manager = NewBuildSnapshotManager(key)
+	} else {
+		manager = NewSingleFileSnapshotManager(file)
+	}
+	s.snapshots[key] = manager
+	return manager
+}
+
+func (s *Server) sourceFile(uri protocol.DocumentURI) SourceFile {
+	path := pathFromURI(uri)
+	key := s.snapshotKey(SourceFile{URI: uri, Path: path, File: path})
+	s.snapshotsMu.RLock()
+	manager := s.snapshots[key]
+	s.snapshotsMu.RUnlock()
+	if manager == nil {
+		return SourceFile{}
+	}
+	file := manager.Current().Files[uri]
+	return file
+}
+
+func (s *Server) projectRootForFile(path string) string {
+	path = normalizePath(path)
+	if s.root != "" && !isUnder(path, s.root) {
+		return ""
+	}
+	boundary := normalizePath(s.root)
+	dir := path
+	if filepath.Ext(path) != "" {
+		dir = filepath.Dir(path)
+	}
+	for {
+		if isBuildProjectRoot(dir) {
+			return dir
+		}
+		if dir == boundary {
+			return ""
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+func isUnder(path, root string) bool {
+	path = normalizePath(path)
+	root = normalizePath(root)
+	return path == root || strings.HasPrefix(path, root+string(filepath.Separator))
 }
 
 func decodeParams(params json.RawMessage, target any) error {

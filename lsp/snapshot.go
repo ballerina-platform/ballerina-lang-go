@@ -7,24 +7,42 @@
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package lsp
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"net/url"
+	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync/atomic"
 
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/common/tomlparser"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lsp/protocol"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/text"
 )
+
+type ProjectKind int
+
+const (
+	ProjectKindSingleFile ProjectKind = iota
+	ProjectKindBuild
+)
+
+const defaultModuleName = "."
 
 type SourceFile struct {
 	URI     protocol.DocumentURI
@@ -35,19 +53,47 @@ type SourceFile struct {
 	Open    bool
 }
 
+type ModuleImport struct {
+	Identifier semantics.PackageIdentifier
+	ModuleName string
+}
+
+type Module struct {
+	Name             string
+	Root             string
+	PackageID        *model.PackageID
+	Files            map[protocol.DocumentURI]SourceFile
+	CompilationUnits map[protocol.DocumentURI]*ast.BLangCompilationUnit
+	Fingerprint      string
+	Imports          []ModuleImport
+	Exported         model.ExportedSymbolSpace
+}
+
 type Snapshot struct {
-	ID    int64
-	Env   *context.CompilerEnvironment
-	Files map[protocol.DocumentURI]SourceFile
+	ID      int64
+	Kind    ProjectKind
+	Root    string
+	OrgName string
+	PkgName string
+	Version string
+	Env     *context.CompilerEnvironment
+	Files   map[protocol.DocumentURI]SourceFile
+	Modules map[string]*Module
 }
 
 type SnapshotManager struct {
 	current atomic.Pointer[Snapshot]
 }
 
-func NewSnapshotManager() *SnapshotManager {
+func NewSingleFileSnapshotManager(file SourceFile) *SnapshotManager {
 	manager := &SnapshotManager{}
-	manager.current.Store(newSnapshot(0, nil))
+	manager.current.Store(newSingleFileSnapshot(0, file))
+	return manager
+}
+
+func NewBuildSnapshotManager(root string) *SnapshotManager {
+	manager := &SnapshotManager{}
+	manager.current.Store(newBuildSnapshot(0, nil, root, nil))
 	return manager
 }
 
@@ -63,24 +109,238 @@ func (m *SnapshotManager) IsCurrent(snapshot *Snapshot) bool {
 	return m.Current() == snapshot
 }
 
-func newSnapshot(id int64, files map[protocol.DocumentURI]SourceFile) *Snapshot {
-	if files == nil {
-		files = make(map[protocol.DocumentURI]SourceFile)
+func nextSingleFileSnapshot(old *Snapshot, file SourceFile) *Snapshot {
+	return newSingleFileSnapshot(old.ID+1, file)
+}
+
+func nextBuildSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]SourceFile)) *Snapshot {
+	openFiles := make(map[protocol.DocumentURI]SourceFile)
+	for uri, file := range old.Files {
+		if file.Open {
+			openFiles[uri] = file
+		}
 	}
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
+	if update != nil {
+		update(openFiles)
+	}
+	return newBuildSnapshot(old.ID+1, old, old.Root, openFiles)
+}
+
+func newSingleFileSnapshot(id int64, file SourceFile) *Snapshot {
+	env := newCompilerEnvironment()
+	file.File = file.Path
+	files := map[protocol.DocumentURI]SourceFile{file.URI: file}
+	module := &Module{
+		Name:             defaultModuleName,
+		Root:             filepath.Dir(file.Path),
+		PackageID:        env.GetDefaultPackage(),
+		Files:            files,
+		CompilationUnits: make(map[protocol.DocumentURI]*ast.BLangCompilationUnit),
+		Fingerprint:      fingerprintFiles(files),
+	}
+	registerFiles(env, files)
+	return &Snapshot{
+		ID:      id,
+		Kind:    ProjectKindSingleFile,
+		Root:    file.Path,
+		OrgName: string(model.ANON_ORG),
+		PkgName: string(model.DEFAULT_PACKAGE),
+		Version: string(model.DEFAULT_VERSION),
+		Env:     env,
+		Files:   files,
+		Modules: map[string]*Module{defaultModuleName: module},
+	}
+}
+
+func newBuildSnapshot(id int64, old *Snapshot, root string, openFiles map[protocol.DocumentURI]SourceFile) *Snapshot {
+	root = normalizePath(root)
+	env := newCompilerEnvironment()
+	if old != nil && old.Kind == ProjectKindBuild && old.Root == root && old.Env != nil {
+		env = old.Env
+	}
+	orgName, pkgName, version := readPackageDescriptor(root)
+	files, modules := scanBuildProject(env, root, orgName, pkgName, version, openFiles)
+	if old != nil && old.Env == env {
+		for name, module := range modules {
+			oldModule := old.Modules[name]
+			if oldModule == nil {
+				continue
+			}
+			reuseCompilationUnits(module, oldModule)
+			if oldModule.Fingerprint == module.Fingerprint {
+				module.Imports = oldModule.Imports
+				module.Exported = oldModule.Exported
+			}
+		}
+	}
+	registerFiles(env, files)
+	return &Snapshot{
+		ID:      id,
+		Kind:    ProjectKindBuild,
+		Root:    root,
+		OrgName: orgName,
+		PkgName: pkgName,
+		Version: version,
+		Env:     env,
+		Files:   files,
+		Modules: modules,
+	}
+}
+
+func scanBuildProject(env *context.CompilerEnvironment, root, orgName, pkgName, version string, openFiles map[protocol.DocumentURI]SourceFile) (map[protocol.DocumentURI]SourceFile, map[string]*Module) {
+	files := make(map[protocol.DocumentURI]SourceFile)
+	modules := make(map[string]*Module)
+	addModule := func(name, moduleRoot string, packageID *model.PackageID) {
+		moduleFiles := scanModuleFiles(moduleRoot, openFiles)
+		for uri, file := range moduleFiles {
+			files[uri] = file
+		}
+		modules[name] = &Module{
+			Name:             name,
+			Root:             moduleRoot,
+			PackageID:        packageID,
+			Files:            moduleFiles,
+			CompilationUnits: make(map[protocol.DocumentURI]*ast.BLangCompilationUnit),
+			Fingerprint:      fingerprintFiles(moduleFiles),
+		}
+	}
+
+	addModule(defaultModuleName, root, modulePackageID(env, orgName, pkgName, version))
+	modulesDir := filepath.Join(root, "modules")
+	_ = filepath.WalkDir(modulesDir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || !entry.IsDir() || path == modulesDir {
+			return nil
+		}
+		if !hasBalFiles(path) {
+			return nil
+		}
+		rel, err := filepath.Rel(modulesDir, path)
+		if err != nil {
+			return nil
+		}
+		modulePart := strings.ReplaceAll(filepath.ToSlash(rel), "/", ".")
+		addModule(modulePart, path, modulePackageID(env, orgName, pkgName+"."+modulePart, version))
+		return nil
+	})
+	return files, modules
+}
+
+func hasBalFiles(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".bal") {
+			return true
+		}
+	}
+	return false
+}
+
+func scanModuleFiles(moduleRoot string, openFiles map[protocol.DocumentURI]SourceFile) map[protocol.DocumentURI]SourceFile {
+	result := make(map[protocol.DocumentURI]SourceFile)
+	entries, err := os.ReadDir(moduleRoot)
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".bal") {
+				continue
+			}
+			path := normalizePath(filepath.Join(moduleRoot, entry.Name()))
+			uri := uriFromPath(path)
+			content, _ := os.ReadFile(path)
+			result[uri] = SourceFile{URI: uri, Path: path, File: path, Content: string(content)}
+		}
+	}
+	for uri, file := range openFiles {
+		if filepath.Dir(file.Path) != moduleRoot {
+			continue
+		}
+		file.File = file.Path
+		result[uri] = file
+	}
+	return result
+}
+
+func reuseCompilationUnits(module *Module, oldModule *Module) {
+	if oldModule.CompilationUnits == nil {
+		return
+	}
+	for uri, file := range module.Files {
+		oldFile, ok := oldModule.Files[uri]
+		if !ok || sourceFileFingerprint(file) != sourceFileFingerprint(oldFile) {
+			continue
+		}
+		if unit := oldModule.CompilationUnits[uri]; unit != nil {
+			module.CompilationUnits[uri] = unit
+		}
+	}
+}
+
+func readPackageDescriptor(root string) (string, string, string) {
+	orgName := string(model.ANON_ORG)
+	pkgName := filepath.Base(root)
+	version := string(model.DEFAULT_VERSION)
+	toml, err := tomlparser.Read(os.DirFS(root), "Ballerina.toml")
+	if err != nil {
+		return orgName, pkgName, version
+	}
+	if value, ok := toml.GetString("package.org"); ok && value != "" {
+		orgName = value
+	}
+	if value, ok := toml.GetString("package.name"); ok && value != "" {
+		pkgName = value
+	}
+	if value, ok := toml.GetString("package.version"); ok && value != "" {
+		version = value
+	}
+	return orgName, pkgName, version
+}
+
+func modulePackageID(env *context.CompilerEnvironment, orgName string, moduleName string, version string) *model.PackageID {
+	nameParts := strings.Split(moduleName, ".")
+	comps := make([]model.Name, len(nameParts))
+	for i, part := range nameParts {
+		comps[i] = model.Name(part)
+	}
+	return env.NewPackageID(model.Name(orgName), comps, model.Name(version))
+}
+
+func registerFiles(env *context.CompilerEnvironment, files map[protocol.DocumentURI]SourceFile) {
 	for _, file := range files {
 		env.DiagnosticEnv().RegisterFile(file.File, text.NewStringTextDocument(file.Content))
 	}
-	return &Snapshot{ID: id, Env: env, Files: files}
 }
 
-func nextSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]SourceFile)) *Snapshot {
-	files := make(map[protocol.DocumentURI]SourceFile, len(old.Files))
-	for uri, file := range old.Files {
-		files[uri] = file
+func newCompilerEnvironment() *context.CompilerEnvironment {
+	return context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
+}
+
+func sourceFileFingerprint(file SourceFile) string {
+	return fmt.Sprintf("%s\x00%d\x00%s", file.Path, file.Version, file.Content)
+}
+
+func fingerprintFiles(files map[protocol.DocumentURI]SourceFile) string {
+	uris := make([]string, 0, len(files))
+	for uri := range files {
+		uris = append(uris, string(uri))
 	}
-	update(files)
-	return newSnapshot(old.ID+1, files)
+	sort.Strings(uris)
+	h := sha256.New()
+	for _, rawURI := range uris {
+		file := files[protocol.DocumentURI(rawURI)]
+		_, _ = fmt.Fprintf(h, "%s\x00", sourceFileFingerprint(file))
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func uriFromPath(path string) protocol.DocumentURI {
+	return protocol.DocumentURI((&url.URL{Scheme: "file", Path: filepath.ToSlash(path)}).String())
+}
+
+func isBuildProjectRoot(root string) bool {
+	info, err := os.Stat(filepath.Join(root, "Ballerina.toml"))
+	return err == nil && !info.IsDir()
 }
 
 func normalizePath(path string) string {

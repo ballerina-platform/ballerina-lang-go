@@ -67,10 +67,8 @@ func (de *DiagnosticEnv) RegisterFile(fileName string, doc text.TextDocument) {
 	de.mu.Lock()
 	defer de.mu.Unlock()
 	if idx, ok := de.nameToIndex[fileName]; ok {
-		if de.docs[idx] == doc {
-			return
-		}
-		panic(fmt.Sprintf("diagnostics: duplicte file declarations with same name: %q", fileName))
+		de.docs[idx-1] = doc
+		return
 	}
 	de.fileNames = append(de.fileNames, fileName)
 	de.docs = append(de.docs, doc)

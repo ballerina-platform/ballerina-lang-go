@@ -35,7 +35,8 @@ type ResponseError struct {
 }
 
 type InitializeParams struct {
-	RootURI string `json:"rootUri,omitempty"`
+	RootURI  string `json:"rootUri,omitempty"`
+	RootPath string `json:"rootPath,omitempty"`
 }
 
 type InitializeResult struct {
