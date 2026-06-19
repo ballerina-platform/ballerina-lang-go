@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/decimal"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
@@ -92,7 +93,7 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 	functions := br.readFunctions()
 
-	return &bir.BIRPackage{
+	pkg = &bir.BIRPackage{
 		PackageID:     pkgID,
 		ImportModules: imports,
 		GlobalVars:    globalVars,
@@ -100,7 +101,27 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		Functions:     functions,
 		InitFunction:  initFunction,
 		MainFunction:  mainFunction,
-	}, nil
+	}
+	rebindLifecycleFunctions(pkg)
+	return pkg, nil
+}
+
+// rebindLifecycleFunctions restores StartFunction/GracefulStopFunction/
+// ImmediateStopFunction pointers on a deserialized BIR package. These are
+// generated as regular functions named `$start`, `$gracefulStop` and
+// `$immediateStop` and not serialized as dedicated slots.
+func rebindLifecycleFunctions(pkg *bir.BIRPackage) {
+	for i := range pkg.Functions {
+		fn := &pkg.Functions[i]
+		switch fn.Name.Value() {
+		case desugar.StartFunctionName:
+			pkg.StartFunction = fn
+		case desugar.GracefulStopFunctionName:
+			pkg.GracefulStopFunction = fn
+		case desugar.ImmediateStopFunctionName:
+			pkg.ImmediateStopFunction = fn
+		}
+	}
 }
 
 func (br *birReader) readTypePool() {

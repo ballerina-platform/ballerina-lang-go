@@ -91,7 +91,17 @@ func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {
 	rm.SetDefaultableParams(defaults)
 	rm.SetIncludedRecordParams(included)
 	rm.SetPathListType(pathType)
-	space.AddSymbol(name, rm)
+	addDeserializedSymbol(space, name, rm)
+}
+
+func addDeserializedSymbol(space *model.SymbolSpace, name string, sym model.Symbol) {
+	if !sym.IsPublic() {
+		if _, exists := space.GetSymbol(name); exists {
+			space.AppendSymbol(sym)
+			return
+		}
+	}
+	space.AddSymbol(name, sym)
 }
 
 func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
@@ -179,7 +189,7 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	sym.SetType(ty)
 	sr.setAnnotationValues(&sym)
 	_ = sr.readInclusionMembers(space)
-	space.AddSymbol(name, &sym)
+	addDeserializedSymbol(space, name, &sym)
 }
 
 func (sr *symbolReader) readRecordSymbol(space *model.SymbolSpace) {
@@ -190,7 +200,7 @@ func (sr *symbolReader) readRecordSymbol(space *model.SymbolSpace) {
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
-	space.AddSymbol(name, &sym)
+	addDeserializedSymbol(space, name, &sym)
 }
 
 func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
@@ -201,7 +211,7 @@ func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
-	space.AddSymbol(name, &sym)
+	addDeserializedSymbol(space, name, &sym)
 }
 
 func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.InclusionMember {
@@ -291,7 +301,7 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool
 			networkSym.AddResourceMethod(sr.readSymbolRef(space))
 		}
 	}
-	space.AddSymbol(name, sym)
+	addDeserializedSymbol(space, name, sym)
 }
 
 func (sr *symbolReader) setAnnotationValues(sym *model.TypeSymbol) {
@@ -339,7 +349,7 @@ func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 	f := sr.readValueSymbolFields()
 	sym := model.NewValueSymbol(f.name, f.isPublic, f.isConst, f.isParameter)
 	applyValueSymbolFields(&sym, f)
-	space.AddSymbol(f.name, &sym)
+	addDeserializedSymbol(space, f.name, &sym)
 }
 
 func (sr *symbolReader) readConstantValueSymbol(space *model.SymbolSpace) {
@@ -351,7 +361,7 @@ func (sr *symbolReader) readConstantValueSymbol(space *model.SymbolSpace) {
 	if valueKnown {
 		sym.SetConstantValue(sr.readAnnotationValue())
 	}
-	space.AddSymbol(f.name, sym)
+	addDeserializedSymbol(space, f.name, sym)
 }
 
 func (sr *symbolReader) readAnnotationSymbol(space *model.SymbolSpace) {
@@ -366,7 +376,7 @@ func (sr *symbolReader) readAnnotationSymbol(space *model.SymbolSpace) {
 	}
 	sym := model.NewAnnotationSymbol(name, isPublic, isConst, attachPoints)
 	sym.SetType(ty)
-	space.AddSymbol(name, &sym)
+	addDeserializedSymbol(space, name, &sym)
 }
 
 func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
@@ -377,7 +387,7 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	sym.SetType(ty)
 	sym.SetDefaultableParams(defaultInfo)
 	sym.SetIncludedRecordParams(inclInfo)
-	space.AddSymbol(name, sym)
+	addDeserializedSymbol(space, name, sym)
 }
 
 func (sr *symbolReader) readFunctionSignatureBody(space *model.SymbolSpace) (model.FunctionSignature, model.DefaultableParamInfo, *model.IncludedRecordParamInfo) {
@@ -442,7 +452,7 @@ func (sr *symbolReader) readDependentlyTypedFunctionSymbol(space *model.SymbolSp
 	inclInfo := sr.readIncludedRecordParams(int(paramCount))
 	sym.SetIncludedRecordParams(inclInfo)
 	sym.SetReturnType(sr.readTypeOp())
-	space.AddSymbol(name, sym)
+	addDeserializedSymbol(space, name, sym)
 }
 
 func (sr *symbolReader) readTypeOp() model.TypeOp {

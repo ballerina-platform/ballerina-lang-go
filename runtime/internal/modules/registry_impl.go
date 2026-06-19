@@ -27,15 +27,17 @@ type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
 	birClassDefs    map[string]*bir.BIRClassDef
 	nativeFunctions map[string]*ExternFunction
+	runtimeBuiltins map[string]extern.NativeFunc
 	modules         map[string]*BIRModule
 	typeEnv         semtypes.Env
 }
 
-func NewRegistry() *Registry {
+func NewRegistry(builtins map[string]extern.NativeFunc) *Registry {
 	return &Registry{
 		birFunctions:    make(map[string]*bir.BIRFunction),
 		birClassDefs:    make(map[string]*bir.BIRClassDef),
 		nativeFunctions: make(map[string]*ExternFunction),
+		runtimeBuiltins: builtins,
 		modules:         make(map[string]*BIRModule),
 	}
 }
@@ -120,4 +122,8 @@ func (r *Registry) GetBIRFunction(funcName string) *bir.BIRFunction {
 
 func (r *Registry) GetNativeFunction(funcName string) *ExternFunction {
 	return r.nativeFunctions[funcName]
+}
+
+func (r *Registry) GetRuntimeBuiltin(lookupKey string) extern.NativeFunc {
+	return r.runtimeBuiltins[lookupKey]
 }

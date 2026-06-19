@@ -40,9 +40,6 @@ func Walk(v Visitor, node BLangNode) {
 	switch node := node.(type) {
 	// Section 1: Top-Level/Package Declarations
 	case *BLangPackage:
-		for i := range node.CompUnits {
-			Walk(v, &node.CompUnits[i])
-		}
 		for i := range node.Imports {
 			Walk(v, &node.Imports[i])
 		}
@@ -69,21 +66,12 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		if node.InitFunction != nil {
 			Walk(v, node.InitFunction)
-		}
-		if node.StartFunction != nil {
-			Walk(v, node.StartFunction)
-		}
-		if node.StopFunction != nil {
-			Walk(v, node.StopFunction)
 		}
 		for i := range node.ClassDefinitions {
 			Walk(v, &node.ClassDefinitions[i])
 		}
 
 	case *BLangTestablePackage:
-		for i := range node.CompUnits {
-			Walk(v, &node.CompUnits[i])
-		}
 		for i := range node.Imports {
 			Walk(v, &node.Imports[i])
 		}
@@ -110,12 +98,6 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		if node.InitFunction != nil {
 			Walk(v, node.InitFunction)
-		}
-		if node.StartFunction != nil {
-			Walk(v, node.StartFunction)
-		}
-		if node.StopFunction != nil {
-			Walk(v, node.StopFunction)
 		}
 		for i := range node.ClassDefinitions {
 			Walk(v, &node.ClassDefinitions[i])

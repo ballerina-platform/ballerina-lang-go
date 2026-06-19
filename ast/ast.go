@@ -17,6 +17,7 @@
 package ast
 
 import (
+	"fmt"
 	"iter"
 	"sort"
 	"strings"
@@ -53,23 +54,6 @@ type SourceKind uint8
 const (
 	SourceKind_REGULAR_SOURCE SourceKind = iota
 	SourceKind_TEST_SOURCE
-)
-
-type CompilerPhase uint8
-
-const (
-	CompilerPhase_DEFINE CompilerPhase = iota
-	CompilerPhase_TYPE_CHECK
-	CompilerPhase_CODE_ANALYZE
-	CompilerPhase_DATAFLOW_ANALYZE
-	CompilerPhase_ISOLATION_ANALYZE
-	CompilerPhase_DOCUMENTATION_ANALYZE
-	CompilerPhase_CONSTANT_PROPAGATION
-	CompilerPhase_COMPILER_PLUGIN
-	CompilerPhase_DESUGAR
-	CompilerPhase_BIR_GEN
-	CompilerPhase_BIR_EMIT
-	CompilerPhase_CODE_GEN
 )
 
 type BLangNode interface {
@@ -187,7 +171,6 @@ type (
 
 	BLangPackage struct {
 		bLangNodeBase
-		CompUnits        []BLangCompilationUnit
 		Imports          []BLangImportPackage
 		XmlnsList        []BLangXMLNS
 		Constants        []BLangConstant
@@ -197,18 +180,10 @@ type (
 		TypeDefinitions  []BLangTypeDefinition
 		Annotations      []BLangAnnotation
 		InitFunction     *BLangFunction
-		StartFunction    *BLangFunction
-		StopFunction     *BLangFunction
-		TopLevelNodes    []TopLevelNode
 		TestablePkgs     []*BLangTestablePackage
 		ClassDefinitions []BLangClassDefinition
-		CompletedPhases  common.UnorderedSet[CompilerPhase]
-		LambdaFunctions  []BLangLambdaFunction
 		PackageID        *model.PackageID
 		Scope            model.Scope
-		diagnostics      []diagnostics.Diagnostic
-		errorCount       int
-		warnCount        int
 	}
 	BLangTestablePackage struct {
 		BLangPackage
@@ -1336,22 +1311,6 @@ func (b *BLangXMLNS) SetPrefix(prefix *BLangIdentifier) {
 	b.prefix = prefix
 }
 
-func (b *BLangPackage) GetCompilationUnits() []CompilationUnitNode {
-	result := make([]CompilationUnitNode, len(b.CompUnits))
-	for i := range b.CompUnits {
-		result[i] = &b.CompUnits[i]
-	}
-	return result
-}
-
-func (b *BLangPackage) AddCompilationUnit(compUnit CompilationUnitNode) {
-	if cu, ok := compUnit.(*BLangCompilationUnit); ok {
-		b.CompUnits = append(b.CompUnits, *cu)
-	} else {
-		panic("compUnit is not a BLangCompilationUnit")
-	}
-}
-
 func (b *BLangPackage) GetImports() []ImportPackageNode {
 	result := make([]ImportPackageNode, len(b.Imports))
 	for i := range b.Imports {
@@ -1363,7 +1322,6 @@ func (b *BLangPackage) GetImports() []ImportPackageNode {
 func (b *BLangPackage) AddImport(importPkg ImportPackageNode) {
 	if imp, ok := importPkg.(*BLangImportPackage); ok {
 		b.Imports = append(b.Imports, *imp)
-		b.TopLevelNodes = append(b.TopLevelNodes, importPkg)
 	} else {
 		panic("importPkg is not a BLangImportPackage")
 	}
@@ -1380,7 +1338,6 @@ func (b *BLangPackage) GetNamespaceDeclarations() []XMLNSDeclarationNode {
 func (b *BLangPackage) AddNamespaceDeclaration(xmlnsDecl XMLNSDeclarationNode) {
 	if xmlns, ok := xmlnsDecl.(*BLangXMLNS); ok {
 		b.XmlnsList = append(b.XmlnsList, *xmlns)
-		b.TopLevelNodes = append(b.TopLevelNodes, xmlnsDecl)
 	} else {
 		panic("xmlnsDecl is not a BLangXMLNS")
 	}
@@ -1405,7 +1362,6 @@ func (b *BLangPackage) GetGlobalVariables() []VariableNode {
 func (b *BLangPackage) AddGlobalVariable(globalVar SimpleVariableNode) {
 	if sv, ok := globalVar.(*BLangSimpleVariable); ok {
 		b.GlobalVars = append(b.GlobalVars, *sv)
-		b.TopLevelNodes = append(b.TopLevelNodes, globalVar)
 	} else {
 		panic("globalVar is not a BLangSimpleVariable")
 	}
@@ -1422,7 +1378,6 @@ func (b *BLangPackage) GetServices() []ServiceNode {
 func (b *BLangPackage) AddService(service ServiceNode) {
 	if svc, ok := service.(*BLangService); ok {
 		b.Services = append(b.Services, *svc)
-		b.TopLevelNodes = append(b.TopLevelNodes, service)
 	} else {
 		panic("service is not a BLangService")
 	}
@@ -1439,7 +1394,6 @@ func (b *BLangPackage) GetFunctions() []FunctionNode {
 func (b *BLangPackage) AddFunction(function FunctionNode) {
 	if fn, ok := function.(*BLangFunction); ok {
 		b.Functions = append(b.Functions, *fn)
-		b.TopLevelNodes = append(b.TopLevelNodes, function)
 	} else {
 		panic("function is not a BLangFunction")
 	}
@@ -1456,7 +1410,6 @@ func (b *BLangPackage) GetTypeDefinitions() []TypeDefinition {
 func (b *BLangPackage) AddTypeDefinition(typeDefinition TypeDefinition) {
 	if td, ok := typeDefinition.(*BLangTypeDefinition); ok {
 		b.TypeDefinitions = append(b.TypeDefinitions, *td)
-		b.TopLevelNodes = append(b.TopLevelNodes, typeDefinition)
 	} else {
 		panic("typeDefinition is not a BLangTypeDefinition")
 	}
@@ -1473,7 +1426,6 @@ func (b *BLangPackage) GetAnnotations() []AnnotationNode {
 func (b *BLangPackage) AddAnnotation(annotation AnnotationNode) {
 	if ann, ok := annotation.(*BLangAnnotation); ok {
 		b.Annotations = append(b.Annotations, *ann)
-		b.TopLevelNodes = append(b.TopLevelNodes, annotation)
 	} else {
 		panic("annotation is not a BLangAnnotation")
 	}
@@ -1511,13 +1463,11 @@ func (b *BLangPackage) HasTestablePackage() bool {
 }
 
 func (b *BLangPackage) AddClassDefinition(classDefNode *BLangClassDefinition) {
-	b.TopLevelNodes = append(b.TopLevelNodes, classDefNode)
 	b.ClassDefinitions = append(b.ClassDefinitions, *classDefNode)
 }
 
 func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	b := &BLangPackage{}
-	b.CompUnits = []BLangCompilationUnit{}
 	b.Imports = []BLangImportPackage{}
 	b.XmlnsList = []BLangXMLNS{}
 	b.Constants = []BLangConstant{}
@@ -1526,14 +1476,8 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	b.Functions = []BLangFunction{}
 	b.TypeDefinitions = []BLangTypeDefinition{}
 	b.Annotations = []BLangAnnotation{}
-	b.TopLevelNodes = []TopLevelNode{}
 	b.TestablePkgs = []*BLangTestablePackage{}
 	b.ClassDefinitions = []BLangClassDefinition{}
-	b.CompletedPhases = common.UnorderedSet[CompilerPhase]{}
-	b.LambdaFunctions = []BLangLambdaFunction{}
-	b.errorCount = 0
-	b.warnCount = 0
-	b.diagnostics = []diagnostics.Diagnostic{}
 	return b
 }
 
@@ -1585,7 +1529,7 @@ func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree
 }
 
 // TODO: get rid of this once we have a proper project api. This just remaps compilation unit to a BLangPackage.
-func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
+func ToPackage(cx *context.CompilerContext, compilationUnit *BLangCompilationUnit) *BLangPackage {
 	p := BLangPackage{}
 	p.PackageID = compilationUnit.packageID
 	for _, node := range compilationUnit.TopLevelNodes {
@@ -1613,7 +1557,7 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 		case *BLangClassDefinition:
 			p.ClassDefinitions = append(p.ClassDefinitions, *node)
 		default:
-			p.TopLevelNodes = append(p.TopLevelNodes, node)
+			cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
 		}
 	}
 	return &p

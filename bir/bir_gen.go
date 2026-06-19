@@ -410,8 +410,15 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 		}
 		birFunc := TransformFunction(genCtx, &function)
 		birPkg.Functions = append(birPkg.Functions, *birFunc)
-		if birFunc.Name.Value() == "main" {
+		switch birFunc.Name.Value() {
+		case "main":
 			birPkg.MainFunction = birFunc
+		case desugar.StartFunctionName:
+			birPkg.StartFunction = birFunc
+		case desugar.GracefulStopFunctionName:
+			birPkg.GracefulStopFunction = birFunc
+		case desugar.ImmediateStopFunctionName:
+			birPkg.ImmediateStopFunction = birFunc
 		}
 	}
 	return birPkg
