@@ -104,6 +104,13 @@ var migratedLangLibs = []bundledLib{
 		balPath:    "ballerina/lang.map/0.0.1/any/lang.map.bal",
 		version:    "0.0.1",
 	},
+	{
+		org:       "ballerina",
+		nameComps: []string{"lang", "runtime"},
+		srcFS:     langlibs.FS,
+		balPath:   "ballerina/lang.runtime/0.0.1/any/lang.runtime.bal",
+		version:   "0.0.1",
+	},
 }
 
 var bundledStdlibs = []bundledLib{

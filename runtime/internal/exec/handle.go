@@ -17,8 +17,11 @@
 package exec
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/extern"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
 )
 
@@ -29,9 +32,13 @@ type InvokableHandle struct {
 }
 
 func NewBIRHandle(fn *bir.BIRFunction) *InvokableHandle {
+	return newBIRHandle(fn, nil)
+}
+
+func newBIRHandle(fn *bir.BIRFunction, parentFrame *Frame) *InvokableHandle {
 	return &InvokableHandle{
 		invoke: func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return executeFunction(ctx, fn, args, nil), nil
+			return executeFunction(ctx, fn, args, parentFrame), nil
 		},
 	}
 }
@@ -42,6 +49,25 @@ func NewNativeHandle(fn extern.NativeFunc) *InvokableHandle {
 			return fn(ctx, args)
 		},
 	}
+}
+
+func NewFunctionValueHandle(env *extern.Env, fnValue *values.Function) (*InvokableHandle, error) {
+	reg := env.Registry.(*modules.Registry)
+	lookupKey := fnValue.LookupKey
+	if fn := reg.GetBIRFunction(lookupKey); fn != nil {
+		return newBIRHandle(fn, parentFrameFromFunctionValue(fnValue)), nil
+	}
+	if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
+		return NewNativeHandle(externFn.Impl), nil
+	}
+	return nil, fmt.Errorf("function not found: %s", lookupKey)
+}
+
+func parentFrameFromFunctionValue(fnValue *values.Function) *Frame {
+	if fnValue.ParentFrame == nil {
+		return nil
+	}
+	return fnValue.ParentFrame.(*Frame)
 }
 
 func newResourceHandle(receiver *values.Object, match *values.ResourceEntry, path []values.BalValue) *InvokableHandle {

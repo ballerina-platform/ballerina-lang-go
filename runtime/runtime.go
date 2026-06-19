@@ -41,6 +41,32 @@ func InvokeFunction(rt *Runtime, fn any, args []values.BalValue) (values.BalValu
 	return exec.Invoke(cx, fn, args)
 }
 
+const onGracefulStopLookupKey = "ballerina/lang.runtime:onGracefulStop"
+
+func (rt *Runtime) runtimeBuiltins() map[string]extern.NativeFunc {
+	return map[string]extern.NativeFunc{
+		onGracefulStopLookupKey: rt.invokeOnGracefulStop,
+	}
+}
+
+func (rt *Runtime) invokeOnGracefulStop(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	if len(args) != 1 {
+		return nil, errors.New("lang.runtime:onGracefulStop expects one argument")
+	}
+	handler, ok := args[0].(*values.Function)
+	if !ok {
+		return nil, errors.New("lang.runtime:onGracefulStop expects a function")
+	}
+	handle, err := exec.NewFunctionValueHandle(rt.env, handler)
+	if err != nil {
+		return nil, err
+	}
+	if err := rt.registerGracefulStopHandler(handle); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 // Runtime represents a Ballerina runtime instance that owns a module registry
 // and is used as the execution context for interpreting BIR packages.
 //
@@ -61,7 +87,14 @@ var moduleInitializers []ModuleInitializer
 // NewRuntime constructs a new runtime with an empty registry and runs all
 // registered module initializers.
 func NewRuntime(platform pal.Platform, tyEnv semtypes.Env) *Runtime {
-	registry := modules.NewRegistry()
+	exitChanel := make(chan uint8, 1)
+	rt := &Runtime{
+		ExitStatus: exitChanel,
+		lifeCycle: lifeCycle{
+			exitCodeChan: exitChanel,
+		},
+	}
+	registry := modules.NewRegistry(rt.runtimeBuiltins())
 	env := extern.InitEnv(platform, tyEnv, registry, extern.DispatchHandles{
 		LookupObject:   exec.LookupObjectMethod,
 		LookupRemote:   exec.LookupRemoteMethod,
@@ -72,15 +105,7 @@ func NewRuntime(platform pal.Platform, tyEnv semtypes.Env) *Runtime {
 			return exec.LookupFunction(cx.Env, org, module, name)
 		},
 	})
-	exitChanel := make(chan uint8, 1)
-
-	rt := &Runtime{
-		env:        env,
-		ExitStatus: exitChanel,
-		lifeCycle: lifeCycle{
-			exitCodeChan: exitChanel,
-		},
-	}
+	rt.env = env
 	for _, init := range moduleInitializers {
 		init(rt)
 	}
@@ -117,7 +142,7 @@ func (rt *Runtime) abortInitialization(err error) error {
 		rt.exitCode = 1
 	}
 	rt.mu.Unlock()
-	rt.transition(StateStopped)
+	rt.transition(StateGracefulStopping)
 	return err
 }
 
@@ -143,12 +168,13 @@ func (rt *Runtime) recordLifecycleHooks(pkg *bir.BIRPackage) error {
 func (rt *Runtime) Listen() {
 	rt.mu.Lock()
 	stopped := rt.state == StateStopped
+	hasListeners := len(rt.startFns) > 0
 	rt.mu.Unlock()
 	if stopped {
 		return
 	}
-	if len(rt.startFns) == 0 {
-		rt.transition(StateStopped)
+	if !hasListeners {
+		rt.transition(StateGracefulStopping)
 		return
 	}
 	rt.transition(StateListening)
