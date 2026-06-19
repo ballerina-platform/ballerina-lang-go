@@ -106,11 +106,11 @@ func parseXMLItems(dec *xml.Decoder, ctx nsCtx, ty semtypes.SemType, atomic *sem
 			if topLevel && strings.TrimSpace(body) == "" {
 				continue
 			}
-			items = append(items, &values.XMLText{Body: body})
+			items = append(items, values.NewXMLText(body))
 		case xml.Comment:
-			items = append(items, &values.XMLComment{Body: string(t)})
+			items = append(items, values.NewXMLComment(string(t), false))
 		case xml.ProcInst:
-			items = append(items, &values.XMLProcessingInstruction{Target: t.Target, Data: string(t.Inst)})
+			items = append(items, values.NewXMLProcessingInstruction(t.Target, string(t.Inst), false))
 		case xml.Directive:
 			// skip DOCTYPE and similar directives
 		}
@@ -147,5 +147,5 @@ func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx nsCtx, 
 		childVal = values.NewNormalizedXMLSequence(children)
 	}
 
-	return &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: childVal}, nil
+	return values.NewXMLElement(name, attrs, namespaces, childVal, false), nil
 }

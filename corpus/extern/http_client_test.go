@@ -17,7 +17,7 @@
 package extern_test
 
 import (
-	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -49,17 +49,13 @@ type rewritingHTTPClient struct {
 	client    *http.Client
 }
 
-func (c *rewritingHTTPClient) Execute(method, url string, body []byte, contentType string, reqHeaders map[string][]string) (int, map[string][]string, []byte, error) {
+func (c *rewritingHTTPClient) Execute(ctx context.Context, method, url string, body io.Reader, _ int64, contentType string, reqHeaders map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
 	const prefix = "http://testserver"
 	if !strings.HasPrefix(url, prefix) {
 		return 0, nil, nil, fmt.Errorf("rewritingHTTPClient: expected URL with prefix %q, got %q", prefix, url)
 	}
 	realURL := c.serverURL + url[len(prefix):]
-	var bodyReader io.Reader
-	if body != nil {
-		bodyReader = bytes.NewReader(body)
-	}
-	req, err := http.NewRequest(method, realURL, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, realURL, body)
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -75,9 +71,7 @@ func (c *rewritingHTTPClient) Execute(method, url string, body []byte, contentTy
 	if err != nil {
 		return 0, nil, nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	respBody, err := io.ReadAll(resp.Body)
-	return resp.StatusCode, map[string][]string(resp.Header), respBody, err
+	return resp.StatusCode, map[string][]string(resp.Header), resp.Body, nil
 }
 
 // rewriteClient returns a NewClient factory that forwards every request to
@@ -164,6 +158,7 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 		if cfg.TLS.InsecureSkipVerify {
 			serverTLSConfig.InsecureSkipVerify = true //nolint:gosec
 		}
+		serverTLSConfig.NextProtos = []string{"http/1.1"}
 		return &rewritingHTTPClient{
 			serverURL: server.URL,
 			client:    &http.Client{Timeout: cfg.Timeout, Transport: &http.Transport{TLSClientConfig: serverTLSConfig}},
@@ -267,6 +262,7 @@ func TestHttpClientMTLS(t *testing.T) {
 		Certificates: []tls.Certificate{serverTLSCert},
 		ClientCAs:    clientCertPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+		NextProtos:   []string{"http/1.1"},
 	}
 	server.StartTLS()
 	defer server.Close()
@@ -297,6 +293,7 @@ import ballerina/io;
 
 public function main() returns error? {
     http:Client c = check new ("%s", {
+        httpVersion: http:HTTP_1_1,
         secureSocket: {
             verifyHostName: false,
             key: {certFile: "%s", keyFile: "%s"}

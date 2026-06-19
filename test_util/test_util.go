@@ -295,5 +295,9 @@ func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
 				return &stubHTTPClient{}
 			},
 		},
+		Signals: func() pal.SignalSource {
+			src, _, _ := NewTestSignalSource(nil, TestSignalTimeout)
+			return src
+		}(),
 	}
 }

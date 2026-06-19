@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -220,8 +221,28 @@ func (p *testPal) Platform() pal.Platform {
 		},
 		FS: pal.FS{
 			ReadFile: func(path string) ([]byte, error) {
-				return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+				return os.ReadFile(path)
 			},
+			WriteFile: func(path string, data []byte) error {
+				return os.WriteFile(path, data, 0o644)
+			},
+			AppendFile: func(path string, data []byte) (err error) {
+				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
+				_, err = f.Write(data)
+				return err
+			},
+		},
+		Time: pal.Time{
+			Now:          time.Now,
+			MonotonicNow: func() time.Duration { return time.Since(time.Time{}) },
 		},
 		HTTP: pal.HTTP{
 			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {
