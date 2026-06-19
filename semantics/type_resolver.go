@@ -260,7 +260,11 @@ func (t *packageTypeResolver) nextMonoFnName(origName string) string {
 }
 
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	classRef, ok := t.classSymbolByType[t.semtypeInterner.Intern(receiverTy)]
+	handle, ok := t.semtypeInterner.Lookup(receiverTy)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	classRef, ok := t.classSymbolByType[handle]
 	if !ok {
 		return model.SymbolRef{}, false
 	}
@@ -860,9 +864,6 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		pkg.Services[i].SetDeterminedType(semtypes.NEVER)
 	}
 	pkg.SetDeterminedType(semtypes.NEVER)
-	for i := range pkg.CompUnits {
-		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
-	}
 	for i := range pkg.GlobalVars {
 		resolveGlobalVarInit(t, &pkg.GlobalVars[i])
 		setOtherNodesAsNever(&pkg.GlobalVars[i])

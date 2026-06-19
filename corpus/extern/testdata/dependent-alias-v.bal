@@ -21,16 +21,16 @@ type ChainedTargetType TargetType;
 
 public function main() {
     int a = viaAlias(0);
-    io:println(a);
+    io:println(a); // @output 10
 
     string b = viaAlias(1);
-    io:println(b);
+    io:println(b); // @output alias
 
     int|error c = viaAliasUnion(2);
-    io:println(c);
+    io:println(c); // @output 10
 
     string d = viaChainedAlias(3);
-    io:println(d);
+    io:println(d); // @output alias
 }
 
 function viaAlias(int val, TargetType retTy = <>) returns retTy = external;

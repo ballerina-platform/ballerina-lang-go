@@ -1,5 +1,6 @@
 -- stdout --
 listener-> attached
-listener start
 trigger-> foo
+listener start
+graceful stop
 -- stderr --

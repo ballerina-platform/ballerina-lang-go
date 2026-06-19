@@ -66,7 +66,7 @@ func execNewMap(ctx *extern.Context, newMap *bir.NewMap, frame *Frame) {
 			continue
 		}
 		fn := ctx.Env.Registry.(*modules.Registry).GetBIRFunction(def.FunctionLookupKey)
-		val := executeFunction(ctx, *fn, nil, frame)
+		val := executeFunction(ctx, fn, nil, frame)
 		entries = append(entries, values.MapEntry{Key: def.FieldName, Value: val})
 	}
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, newMap.Type)

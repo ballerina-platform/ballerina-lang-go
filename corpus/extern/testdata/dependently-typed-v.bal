@@ -22,7 +22,7 @@ public function main() {
     int a = inferred(0);
     io:println(a); // @output 1
     string b = inferred(1);
-    io:println(b); // @output "foo"
+    io:println(b); // @output foo
 
     int x = inferredSubType(0);
     io:println(x); // @output 1
@@ -34,7 +34,7 @@ public function main() {
     io:println(d); // @output 0
 
     string|error e = inferredPartially(0);
-    io:println(e); // @output "bar"
+    io:println(e); // @output bar
 
     Point p1 = {x: 1, y: 2};
     Point p2 = shiftBy(p1, 10, 20);
@@ -54,7 +54,7 @@ public function main() {
     int defB = inferredWithDefault(val = 100);
     io:println(defB); // @output 100
     string defC = inferredWithDefault(val = 7);
-    io:println(defC); // @output "7"
+    io:println(defC); // @output 7
 }
 
 function inferred(int val, typedesc retTy = <>) returns retTy = external;

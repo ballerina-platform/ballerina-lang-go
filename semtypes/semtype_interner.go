@@ -16,6 +16,9 @@
 
 package semtypes
 
+// SemtypeInterner is meant to be used to intern copies of the same semtype. IMPORTANT: this does not
+// actually check if two given types are equal under IsEqual. SemtypeInterner is thread compatible,
+// leaving users to apply suitable synchronization logic where needed.
 type SemtypeInterner struct {
 	basicTypeHandles      map[basicTypeBitSet]InternHandle
 	complexSemtypeHandles map[complexSemtypeInternKey]complexSemtypeInternValues
@@ -46,7 +49,7 @@ func (i *SemtypeInterner) Intern(ty SemType) InternHandle {
 		if handle, ok := i.basicTypeHandles[bits]; ok {
 			return handle
 		}
-		handle := InternHandle(-int(bits) - 1)
+		handle := basicInternHandle(bits)
 		i.basicTypeHandles[bits] = handle
 		return handle
 	}
@@ -65,6 +68,28 @@ func (i *SemtypeInterner) Intern(ty SemType) InternHandle {
 	values.dataLists = append(values.dataLists, dataList)
 	i.complexSemtypeHandles[key] = values
 	return complexInternHandle(values.base, idx)
+}
+
+func (i *SemtypeInterner) Lookup(ty SemType) (InternHandle, bool) {
+	if ty.some() == 0 {
+		return basicInternHandle(ty.all()), true
+	}
+	key := complexSemtypeInternKey{all: ty.all(), some: ty.some()}
+	values, ok := i.complexSemtypeHandles[key]
+	if !ok {
+		return 0, false
+	}
+	dataList := ty.subtypeDataList()
+	for idx, existing := range values.dataLists {
+		if sameSubtypeDataList(existing, dataList) {
+			return complexInternHandle(values.base, idx), true
+		}
+	}
+	return 0, false
+}
+
+func basicInternHandle(bits basicTypeBitSet) InternHandle {
+	return InternHandle(-int(bits) - 1)
 }
 
 func complexInternHandle(base int32, index int) InternHandle {
