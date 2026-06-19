@@ -29,6 +29,23 @@ import (
 	"time"
 )
 
+// Signal is a platform-agnostic shutdown request delivered to the runtime.
+// Each platform implementation decides how to source these (OS signals,
+// HTTP control plane, test injection, ...).
+type Signal uint8
+
+const (
+	GracefulStop Signal = iota
+	ImmediateStop
+)
+
+// SignalSource is the runtime's read-only view of incoming shutdown signals.
+// Implementations close the channel only on platform shutdown; the runtime
+// must treat a closed channel as "no more signals" (not as a signal value).
+type SignalSource struct {
+	Signals <-chan Signal
+}
+
 type (
 	Platform struct {
 		IO   IO
@@ -36,6 +53,7 @@ type (
 		OS   OS
 		Time Time
 		HTTP HTTP
+		Signals SignalSource
 	}
 	IO struct {
 		Stdout func(p []byte) (n int, err error)

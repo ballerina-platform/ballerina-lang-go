@@ -142,7 +142,7 @@ func TestHttpClientGet(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -212,7 +212,7 @@ func TestHttpClientPost(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -289,7 +289,7 @@ func TestHttpClientMethods(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -367,7 +367,7 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -421,7 +421,7 @@ func TestHttpClientPublicGet(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -471,7 +471,7 @@ func TestHttpClientRedirect(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -525,7 +525,7 @@ func runNetworkBal(t *testing.T, balFile string) string {
 	testPal.HTTP = pal.HTTP{NewClient: palnative.NewHTTPClient}
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -712,7 +712,7 @@ public function main() returns error? {
 	testPal.HTTP = pal.HTTP{NewClient: palnative.NewHTTPClient}
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -789,7 +789,7 @@ func TestHttpClientForward(t *testing.T) {
 
 	rt := runtime.NewRuntime(testPal, result.Project().Environment().TypeEnv())
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}

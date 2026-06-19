@@ -73,8 +73,6 @@ type CompilationUnitNode interface {
 
 type PackageNode interface {
 	Node
-	GetCompilationUnits() []CompilationUnitNode
-	AddCompilationUnit(compUnit CompilationUnitNode)
 	GetImports() []ImportPackageNode
 	AddImport(importPkg ImportPackageNode)
 	GetNamespaceDeclarations() []XMLNSDeclarationNode

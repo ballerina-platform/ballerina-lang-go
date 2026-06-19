@@ -22,6 +22,6 @@ public function main() returns error? {
         timeout: 5
     });
     http:Response|error result = c->get("/");
-    io:println(result is error);
+    io:println(result is error); // @output true
     return;
 }

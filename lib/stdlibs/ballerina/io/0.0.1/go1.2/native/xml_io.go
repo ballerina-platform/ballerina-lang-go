@@ -68,11 +68,11 @@ func parseXMLFromBytes(data []byte, stringMapTy semtypes.SemType, stringMapAtomi
 	}
 	switch len(items) {
 	case 0:
-		return values.NewXMLSequence(nil), nil
+		return values.NewNormalizedXMLSequence(nil), nil
 	case 1:
 		return items[0], nil
 	default:
-		return values.NewXMLSequence(items), nil
+		return values.NewNormalizedXMLSequence(items), nil
 	}
 }
 
@@ -106,11 +106,11 @@ func parseXMLItems(dec *xml.Decoder, ctx nsCtx, ty semtypes.SemType, atomic *sem
 			if topLevel && strings.TrimSpace(body) == "" {
 				continue
 			}
-			items = append(items, &values.XMLText{Body: body})
+			items = append(items, values.NewXMLText(body))
 		case xml.Comment:
-			items = append(items, &values.XMLComment{Body: string(t)})
+			items = append(items, values.NewXMLComment(string(t), false))
 		case xml.ProcInst:
-			items = append(items, &values.XMLProcessingInstruction{Target: t.Target, Data: string(t.Inst)})
+			items = append(items, values.NewXMLProcessingInstruction(t.Target, string(t.Inst), false))
 		case xml.Directive:
 			// skip DOCTYPE and similar directives
 		}
@@ -144,8 +144,8 @@ func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx nsCtx, 
 	}
 	var childVal values.XMLValue
 	if len(children) > 0 {
-		childVal = values.NewXMLSequence(children)
+		childVal = values.NewNormalizedXMLSequence(children)
 	}
 
-	return &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: childVal}, nil
+	return values.NewXMLElement(name, attrs, namespaces, childVal, false), nil
 }

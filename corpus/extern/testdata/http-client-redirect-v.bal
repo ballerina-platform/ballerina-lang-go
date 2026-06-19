@@ -22,6 +22,6 @@ public function main() returns error? {
         followRedirects: {enabled: true, maxCount: 3}
     });
     http:Response r = check c->get("/redirect/1");
-    io:println(r.statusCode);
+    io:println(r.statusCode); // @output 200
     return;
 }

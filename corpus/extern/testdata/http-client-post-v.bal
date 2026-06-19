@@ -22,12 +22,12 @@ public function main() returns error? {
 
     // String body
     http:Response r = check c->post("/echo", "hello post");
-    io:println(r.statusCode);
-    io:println(r.getTextPayload());
+    io:println(r.statusCode);            // @output 200
+    io:println(r.getTextPayload());      // @output body: hello post, ct: text/plain
 
     // Map body — should be serialized to JSON
     http:Response r2 = check c->post("/echo", {"msg": "hello"});
-    io:println(r2.statusCode);
-    io:println(r2.getTextPayload());
+    io:println(r2.statusCode);           // @output 200
+    io:println(r2.getTextPayload());     // @output body: {"msg":"hello"}, ct: application/json
     return;
 }

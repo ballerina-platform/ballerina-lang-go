@@ -115,7 +115,7 @@ class $service$0 {
 
   get() -> int{
     bb0 {
-      lock-start "$anon/.:$service.330.0.count" GOTO bb1;
+      lock-start "$anon/.:$service.209.0.count" GOTO bb1;
     }
     bb1 {
       PushScopeFrame 2
@@ -123,7 +123,7 @@ class $service$0 {
       %0 = (1, self)[%1];
       (1, %0) = %0;
       PopScopeFrame
-      lock-end "$anon/.:$service.330.0.count" GOTO bb2;
+      lock-end "$anon/.:$service.209.0.count" GOTO bb2;
     }
     bb2 {
       return;
@@ -135,7 +135,7 @@ class $service$0 {
 
   inc() -> nil{
     bb0 {
-      lock-start "$anon/.:$service.330.0.count" GOTO bb1;
+      lock-start "$anon/.:$service.209.0.count" GOTO bb1;
     }
     bb1 {
       PushScopeFrame 7
@@ -148,7 +148,7 @@ class $service$0 {
       %6 = ConstantLoad count
       (1, self)[%6] = %0;
       PopScopeFrame
-      lock-end "$anon/.:$service.330.0.count" GOTO bb2;
+      lock-end "$anon/.:$service.209.0.count" GOTO bb2;
     }
     bb2 {
       return;
@@ -190,5 +190,149 @@ $default$0(isolated service object { private function get() returns int; private
     %2 = ConstantLoad <nil>
     %0 = %2;
     return;
+  }
+}
+$start() -> nil|error{
+  bb0 {
+    $desugar$0 = $moduleListeners;
+    %2 = ConstantLoad 0
+    $desugar$1 = %2;
+    %4 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$2 = %4;
+    GOTO bb2;
+  }
+  bb2 {
+    %7 = $desugar$1;
+    %8 = $desugar$2;
+    %6 = < %7 %8;
+    %6 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 9
+    %0 = (1, $desugar$0)[(1, $desugar$1)];
+    $listener = %0;
+    %2 = start($listener) -> bb5;
+  }
+  bb4 {
+    return;
+  }
+  bb5 {
+    $desugar$3 = %2;
+    %4 = $desugar$3 is error
+    %4 ? bb6 : bb7;
+  }
+  bb6 {
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$3);
+    PopScopeFrame
+    PopScopeFrame
+    return;
+  }
+  bb7 {
+    %6 = (1, $desugar$1);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, $desugar$1) = %5;
+    PopScopeFrame
+    GOTO bb2;
+  }
+}
+$gracefulStop() -> nil|error{
+  bb0 {
+    $desugar$0 = $moduleListeners;
+    %2 = ConstantLoad 0
+    $desugar$1 = %2;
+    %4 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$2 = %4;
+    GOTO bb2;
+  }
+  bb2 {
+    %7 = $desugar$1;
+    %8 = $desugar$2;
+    %6 = < %7 %8;
+    %6 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 9
+    %0 = (1, $desugar$0)[(1, $desugar$1)];
+    $listener = %0;
+    %2 = gracefulStop($listener) -> bb5;
+  }
+  bb4 {
+    return;
+  }
+  bb5 {
+    $desugar$3 = %2;
+    %4 = $desugar$3 is error
+    %4 ? bb6 : bb7;
+  }
+  bb6 {
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$3);
+    PopScopeFrame
+    PopScopeFrame
+    return;
+  }
+  bb7 {
+    %6 = (1, $desugar$1);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, $desugar$1) = %5;
+    PopScopeFrame
+    GOTO bb2;
+  }
+}
+$immediateStop() -> nil|error{
+  bb0 {
+    $desugar$0 = $moduleListeners;
+    %2 = ConstantLoad 0
+    $desugar$1 = %2;
+    %4 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$2 = %4;
+    GOTO bb2;
+  }
+  bb2 {
+    %7 = $desugar$1;
+    %8 = $desugar$2;
+    %6 = < %7 %8;
+    %6 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 9
+    %0 = (1, $desugar$0)[(1, $desugar$1)];
+    $listener = %0;
+    %2 = immediateStop($listener) -> bb5;
+  }
+  bb4 {
+    return;
+  }
+  bb5 {
+    $desugar$3 = %2;
+    %4 = $desugar$3 is error
+    %4 ? bb6 : bb7;
+  }
+  bb6 {
+    PushScopeFrame 0
+    (2, %0) = (1, $desugar$3);
+    PopScopeFrame
+    PopScopeFrame
+    return;
+  }
+  bb7 {
+    %6 = (1, $desugar$1);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, $desugar$1) = %5;
+    PopScopeFrame
+    GOTO bb2;
   }
 }

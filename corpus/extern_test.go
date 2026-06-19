@@ -102,7 +102,7 @@ func TestExternValid(t *testing.T) {
 	})
 
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -114,7 +114,7 @@ func TestExternValid(t *testing.T) {
 }
 
 func TestExternTypeMismatchArg(t *testing.T) {
-	balFile := filepath.Join(externTestDataDir, "2-v.bal")
+	balFile := filepath.Join(externTestDataDir, "2-e.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +154,7 @@ func TestExternTypeMismatchArg(t *testing.T) {
 }
 
 func TestExternTypeMismatchReturn(t *testing.T) {
-	balFile := filepath.Join(externTestDataDir, "3-v.bal")
+	balFile := filepath.Join(externTestDataDir, "3-e.bal")
 	absPath, err := filepath.Abs(balFile)
 	if err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestDependentlyTyped(t *testing.T) {
 	})
 
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -362,7 +362,7 @@ func TestDependentlyTypedAlias(t *testing.T) {
 	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaChainedAlias", aliasImpl)
 
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -426,7 +426,7 @@ func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
 	})
 
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -483,7 +483,7 @@ func TestDependentlyTypedMethod(t *testing.T) {
 		})
 
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -537,7 +537,7 @@ func TestExternResourceMethod(t *testing.T) {
 		})
 
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -623,7 +623,7 @@ func TestListenerDispatch(t *testing.T) {
 		})
 
 	for _, birPkg := range birPkgs {
-		if err := rt.Interpret(*birPkg); err != nil {
+		if err := rt.Init(*birPkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -677,7 +677,7 @@ func TestExternHandle(t *testing.T) {
 	})
 
 	for _, pkg := range birPkgs {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -783,7 +783,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 	}
 	pkgsToRun = append(pkgsToRun, deserializedHelperBIR, mainBIR)
 	for _, pkg := range pkgsToRun {
-		if err := rt.Interpret(*pkg); err != nil {
+		if err := rt.Init(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)
 		}
 	}
@@ -815,7 +815,7 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 	if cu == nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
-	pkg := ast.ToPackage(cu)
+	pkg := ast.ToPackage(cx, cu)
 	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
 	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
@@ -850,7 +850,7 @@ func compileBuiltinWithBIR(env *context.CompilerEnvironment, org, name, version 
 	if cu == nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
 	}
-	pkg := ast.ToPackage(cu)
+	pkg := ast.ToPackage(cx, cu)
 	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
 	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
@@ -910,7 +910,7 @@ func compileSingleFileModule(
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}
 	cu := ast.GetCompilationUnit(cx, st)
-	pkg := ast.ToPackage(cu)
+	pkg := ast.ToPackage(cx, cu)
 	pkg.PackageID = cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
 
 	langlibs, err := langlib.Build(cx, publicSymbols)

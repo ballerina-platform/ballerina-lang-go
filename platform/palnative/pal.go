@@ -33,8 +33,10 @@ import (
 var processStart = time.Now()
 
 // NewPlatform returns the native-CLI pal.Platform, wiring os.Stdout/Stderr for
-// IO and NewHTTPClient for HTTP.
-func NewPlatform() pal.Platform {
+// IO and NewHTTPClient for HTTP. The returned cleanup function releases signal
+// resources owned by the platform.
+func NewPlatform() (pal.Platform, func()) {
+	signals, cleanupSignals := newSignalSource()
 	return pal.Platform{
 		IO: pal.IO{
 			Stdout: func(p []byte) (n int, err error) { return os.Stdout.Write(p) },
@@ -122,7 +124,8 @@ func NewPlatform() pal.Platform {
 		HTTP: pal.HTTP{
 			NewClient: NewHTTPClient,
 		},
-	}
+		Signals: signals,
+	}, cleanupSignals
 }
 
 type nativeProcess struct {

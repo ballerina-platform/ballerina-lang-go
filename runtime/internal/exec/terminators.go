@@ -45,7 +45,7 @@ func executeCall(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue
 		return dispatchMethodCall(ctx, callInfo, args)
 	}
 	if callInfo.CachedBIRFunc != nil {
-		return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
+		return executeFunction(ctx, callInfo.CachedBIRFunc, args, nil)
 	}
 	if callInfo.CachedNativeFunc != nil {
 		result, err := callInfo.CachedNativeFunc(ctx, args)
@@ -72,7 +72,7 @@ func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.B
 	// of objects with different concrete types). Cache only when it matches the receiver.
 	if callInfo.CachedMethodLookupKey == lookupKey {
 		if callInfo.CachedBIRFunc != nil {
-			return executeFunction(ctx, *callInfo.CachedBIRFunc, args, nil)
+			return executeFunction(ctx, callInfo.CachedBIRFunc, args, nil)
 		}
 		if callInfo.CachedNativeFunc != nil {
 			result, err := callInfo.CachedNativeFunc(ctx, args)
@@ -94,14 +94,17 @@ func dispatchMethodCall(ctx *extern.Context, callInfo *bir.Call, args []values.B
 }
 
 func lookupAndExecute(ctx *extern.Context, callInfo *bir.Call, args []values.BalValue, lookupKey string) (values.BalValue, error) {
-	isResourceFnCall := callInfo == nil
 	reg := ctx.Env.Registry.(*modules.Registry)
+	if builtin := reg.GetRuntimeBuiltin(lookupKey); builtin != nil {
+		return builtin(ctx, args)
+	}
+	isResourceFnCall := callInfo == nil
 	fn := reg.GetBIRFunction(lookupKey)
 	if fn != nil {
 		if !isResourceFnCall {
 			callInfo.CachedBIRFunc = fn
 		}
-		return executeFunction(ctx, *fn, args, nil), nil
+		return executeFunction(ctx, fn, args, nil), nil
 	}
 	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
@@ -122,7 +125,7 @@ func execResourceCall(ctx *extern.Context, instr *bir.ResourceFunctionCall, fram
 		panic(values.NewErrorWithMessage("no matching resource method"))
 	}
 	argVals := extractArgs(ctx, instr.Args, frame)
-	result, err := InvokeMethod(ctx, impl, argVals)
+	result, err := Invoke(ctx, impl, argVals)
 	if err != nil {
 		panic(err)
 	}
@@ -206,26 +209,28 @@ func execFpCall(ctx *extern.Context, callInfo *bir.Call, frame *Frame) *bir.BIRB
 	args := extractArgs(ctx, callInfo.Args, frame)
 	fnValue := getOperandValue(ctx, callInfo.FpOperand, frame).(*values.Function)
 	lookupKey := fnValue.LookupKey
+	var result values.BalValue
 	var parentFrame *Frame
 	if fnValue.ParentFrame != nil {
 		parentFrame = fnValue.ParentFrame.(*Frame)
 	}
 	reg := ctx.Env.Registry.(*modules.Registry)
-	fn := reg.GetBIRFunction(lookupKey)
-	var result values.BalValue
-	if fn != nil {
-		result = executeFunction(ctx, *fn, args, parentFrame)
-	} else {
-		externFn := reg.GetNativeFunction(lookupKey)
-		if externFn != nil {
-			var err error
-			result, err = externFn.Impl(ctx, args)
-			if err != nil {
-				panic(err)
-			}
-		} else {
-			panic("function not found: " + callInfo.Name.Value())
+	if builtin := reg.GetRuntimeBuiltin(lookupKey); builtin != nil {
+		var err error
+		result, err = builtin(ctx, args)
+		if err != nil {
+			panic(err)
 		}
+	} else if fn := reg.GetBIRFunction(lookupKey); fn != nil {
+		result = executeFunction(ctx, fn, args, parentFrame)
+	} else if externFn := reg.GetNativeFunction(lookupKey); externFn != nil {
+		var err error
+		result, err = externFn.Impl(ctx, args)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		panic("function not found: " + callInfo.Name.Value())
 	}
 	if callInfo.LhsOp != nil {
 		setOperandValue(ctx, callInfo.LhsOp, frame, result)
