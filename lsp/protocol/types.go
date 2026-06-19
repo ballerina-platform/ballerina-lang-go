@@ -44,7 +44,12 @@ type InitializeResult struct {
 }
 
 type ServerCapabilities struct {
-	TextDocumentSync TextDocumentSyncOptions `json:"textDocumentSync"`
+	TextDocumentSync   TextDocumentSyncOptions `json:"textDocumentSync"`
+	CompletionProvider *CompletionOptions      `json:"completionProvider,omitempty"`
+}
+
+type CompletionOptions struct {
+	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
 }
 
 type TextDocumentSyncOptions struct {
@@ -94,6 +99,28 @@ type DidSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Text         *string                `json:"text,omitempty"`
 }
+
+type CompletionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+type CompletionList struct {
+	IsIncomplete bool             `json:"isIncomplete"`
+	Items        []CompletionItem `json:"items"`
+}
+
+type CompletionItem struct {
+	Label string `json:"label"`
+	Kind  int    `json:"kind,omitempty"`
+}
+
+const (
+	CompletionItemKindFunction = 3
+	CompletionItemKindVariable = 6
+	CompletionItemKindClass    = 7
+	CompletionItemKindConstant = 21
+)
 
 type Position struct {
 	Line      int `json:"line"`

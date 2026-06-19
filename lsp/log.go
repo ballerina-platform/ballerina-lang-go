@@ -19,11 +19,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 )
-
-var lspLogMu sync.Mutex
 
 func logLS(root string, format string, args ...any) {
 	if !lspLoggingEnabled() || root == "" {
@@ -43,8 +40,6 @@ func logLS(root string, format string, args ...any) {
 	defer file.Close()
 
 	line := fmt.Sprintf(format, args...)
-	lspLogMu.Lock()
-	defer lspLogMu.Unlock()
 	_, _ = fmt.Fprintf(file, "%s %s\n", time.Now().Format(time.RFC3339Nano), line)
 }
 

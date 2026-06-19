@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync/atomic"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/common/tomlparser"
@@ -96,31 +95,27 @@ type Snapshot struct {
 }
 
 type SnapshotManager struct {
-	current atomic.Pointer[Snapshot]
+	current *Snapshot
 }
 
 func NewSingleFileSnapshotManager(file SourceFile) *SnapshotManager {
-	manager := &SnapshotManager{}
-	manager.current.Store(newSingleFileSnapshot(0, file))
-	return manager
+	return &SnapshotManager{current: newSingleFileSnapshot(0, file)}
 }
 
 func NewBuildSnapshotManager(root string) *SnapshotManager {
-	manager := &SnapshotManager{}
-	manager.current.Store(newBuildSnapshot(0, nil, root, nil))
-	return manager
+	return &SnapshotManager{current: newBuildSnapshot(0, nil, root, nil)}
 }
 
 func (m *SnapshotManager) Current() *Snapshot {
-	return m.current.Load()
+	return m.current
 }
 
 func (m *SnapshotManager) Publish(snapshot *Snapshot) {
-	m.current.Store(snapshot)
+	m.current = snapshot
 }
 
 func (m *SnapshotManager) IsCurrent(snapshot *Snapshot) bool {
-	return m.Current() == snapshot
+	return m.current == snapshot
 }
 
 func nextSingleFileSnapshot(old *Snapshot, file SourceFile) *Snapshot {

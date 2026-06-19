@@ -29,8 +29,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"ballerina-lang-go/lsp/protocol"
 )
@@ -44,32 +42,22 @@ const (
 )
 
 type Server struct {
-	in            io.Reader
-	out           io.Writer
-	writeMu       sync.Mutex
-	snapshots     map[string]*SnapshotManager
-	snapshotsMu   sync.RWMutex
-	root          string
-	notifications chan notification
-	shutdown      atomic.Bool
-}
-
-type notification struct {
-	method string
-	params json.RawMessage
+	in        io.Reader
+	out       io.Writer
+	snapshots map[string]*SnapshotManager
+	root      string
+	shutdown  bool
 }
 
 func NewServer(in io.Reader, out io.Writer) *Server {
 	return &Server{
-		in:            in,
-		out:           out,
-		snapshots:     make(map[string]*SnapshotManager),
-		notifications: make(chan notification, 64),
+		in:        in,
+		out:       out,
+		snapshots: make(map[string]*SnapshotManager),
 	}
 }
 
 func (s *Server) Run() error {
-	go s.runNotifications()
 	reader := bufio.NewReader(s.in)
 	for {
 		payload, err := readMessage(reader)
@@ -89,10 +77,10 @@ func (s *Server) Run() error {
 			continue
 		}
 		if len(msg.ID) == 0 {
-			s.notifications <- notification{method: msg.Method, params: msg.Params}
+			s.handleNotification(msg.Method, msg.Params)
 			continue
 		}
-		go s.handleRequest(msg)
+		s.handleRequest(msg)
 	}
 }
 
@@ -114,22 +102,25 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			return nil, invalidParams, "invalid initialize params"
 		}
 		s.initializeSnapshots(p)
-		return protocol.InitializeResult{Capabilities: protocol.ServerCapabilities{TextDocumentSync: protocol.TextDocumentSyncOptions{
-			OpenClose: true,
-			Change:    1,
-			Save:      protocol.SaveOptions{IncludeText: true},
-		}}}, 0, ""
+		return protocol.InitializeResult{Capabilities: protocol.ServerCapabilities{
+			TextDocumentSync: protocol.TextDocumentSyncOptions{
+				OpenClose: true,
+				Change:    1,
+				Save:      protocol.SaveOptions{IncludeText: true},
+			},
+			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
+		}}, 0, ""
+	case "textDocument/completion":
+		var p protocol.CompletionParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid completion params"
+		}
+		return s.completion(p), 0, ""
 	case "shutdown":
-		s.shutdown.Store(true)
+		s.shutdown = true
 		return nil, 0, ""
 	default:
 		return nil, methodNotFound, "method not found: " + method
-	}
-}
-
-func (s *Server) runNotifications() {
-	for notification := range s.notifications {
-		s.handleNotification(notification.method, notification.params)
 	}
 }
 
@@ -139,7 +130,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 	case "initialized":
 		return
 	case "exit":
-		if s.shutdown.Load() {
+		if s.shutdown {
 			os.Exit(0)
 		}
 		os.Exit(1)
@@ -198,9 +189,10 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if file.URI == "" {
 			return
 		}
-		if p.Text != nil {
-			file.Content = *p.Text
+		if p.Text == nil || *p.Text == file.Content {
+			return
 		}
+		file.Content = *p.Text
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -228,7 +220,7 @@ func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.Docu
 	}
 	manager.Publish(newSnapshot)
 	logLS(key, "snapshot update published key=%s kind=%s newID=%d modules=%d files=%d", key, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files))
-	go s.publishDiagnostics(manager, newSnapshot, changed)
+	s.publishDiagnostics(manager, newSnapshot, changed)
 }
 
 func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile) {
@@ -263,9 +255,7 @@ func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
 	s.root = root
 	logLS(root, "initialize root=%s build=%t", root, isBuildProjectRoot(root))
 	if isBuildProjectRoot(root) {
-		s.snapshotsMu.Lock()
 		s.snapshots[root] = NewBuildSnapshotManager(root)
-		s.snapshotsMu.Unlock()
 	}
 }
 
@@ -287,15 +277,8 @@ func (s *Server) snapshotKey(file SourceFile) string {
 }
 
 func (s *Server) snapshotManager(key string, file SourceFile) *SnapshotManager {
-	s.snapshotsMu.RLock()
 	manager := s.snapshots[key]
-	s.snapshotsMu.RUnlock()
 	if manager != nil {
-		return manager
-	}
-	s.snapshotsMu.Lock()
-	defer s.snapshotsMu.Unlock()
-	if manager = s.snapshots[key]; manager != nil {
 		return manager
 	}
 	if isBuildProjectRoot(key) {
@@ -310,9 +293,7 @@ func (s *Server) snapshotManager(key string, file SourceFile) *SnapshotManager {
 func (s *Server) sourceFile(uri protocol.DocumentURI) SourceFile {
 	path := pathFromURI(uri)
 	key := s.snapshotKey(SourceFile{URI: uri, Path: path, File: path})
-	s.snapshotsMu.RLock()
 	manager := s.snapshots[key]
-	s.snapshotsMu.RUnlock()
 	if manager == nil {
 		return SourceFile{}
 	}
@@ -443,8 +424,6 @@ func (s *Server) writeMessage(msg any) {
 	var buffer bytes.Buffer
 	_, _ = fmt.Fprintf(&buffer, "Content-Length: %d\r\n\r\n", len(payload))
 	buffer.Write(payload)
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
 	_, _ = s.out.Write(buffer.Bytes())
 }
 

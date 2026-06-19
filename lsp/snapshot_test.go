@@ -16,6 +16,7 @@
 package lsp
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,19 +24,36 @@ import (
 	"ballerina-lang-go/lsp/protocol"
 )
 
+func TestDidSaveDoesNotCreateSnapshotWhenContentUnchanged(t *testing.T) {
+	root := t.TempDir()
+	writeBuildProjectFiles(t, root, "public function main() {}")
+	mainPath := filepath.Join(root, "main.bal")
+	uri := uriFromPath(mainPath)
+
+	server := NewServer(nil, nil)
+	server.root = root
+	server.snapshots[root] = NewBuildSnapshotManager(root)
+	before := server.snapshots[root].Current().ID
+	text := "public function main() {}"
+	params, err := json.Marshal(protocol.DidSaveTextDocumentParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+		Text:         &text,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server.handleNotification("textDocument/didSave", params)
+
+	if after := server.snapshots[root].Current().ID; after != before {
+		t.Fatalf("snapshot ID = %d, want %d", after, before)
+	}
+}
+
 func TestBuildSnapshotCanRefreshOpenFileContent(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "Ballerina.toml"), []byte(`[package]
-org = "testorg"
-name = "sample"
-version = "0.1.0"
-`), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	writeBuildProjectFiles(t, root, "public function main() {}")
 	mainPath := filepath.Join(root, "main.bal")
-	if err := os.WriteFile(mainPath, []byte("public function main() {}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	manager := NewBuildSnapshotManager(root)
 	old := manager.Current()
@@ -54,5 +72,19 @@ version = "0.1.0"
 	})
 	if got := newSnapshot.Files[uri].Content; got != updated.Content {
 		t.Fatalf("content = %q, want %q", got, updated.Content)
+	}
+}
+
+func writeBuildProjectFiles(t *testing.T, root string, mainContent string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(root, "Ballerina.toml"), []byte(`[package]
+org = "testorg"
+name = "sample"
+version = "0.1.0"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "main.bal"), []byte(mainContent), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
