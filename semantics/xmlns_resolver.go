@@ -53,11 +53,12 @@ func defineXMLNS[T symbolResolver](resolver T, scope model.Scope, prefix, uri st
 	}
 	name := xmlnsPrefixName(prefix)
 	if localXMLNSPrefixExists(scope, name) {
-		if prefix == model.XMLNSReservedPrefix {
+		switch prefix {
+		case model.XMLNSReservedPrefix:
 			semanticError(resolver, "cannot redeclare reserved XML namespace prefix 'xmlns'", pos)
-		} else if prefix == "" {
+		case "":
 			semanticError(resolver, "default XML namespace already declared in this scope", pos)
-		} else {
+		default:
 			semanticError(resolver, "XML namespace prefix '"+prefix+"' already declared in this scope", pos)
 		}
 		return model.SymbolRef{}, false
@@ -165,17 +166,13 @@ func lookupXMLNS(scope model.Scope, prefix string) (model.SymbolRef, model.Scope
 	return model.SymbolRef{}, nil, false
 }
 
-func processCompilationUnitXMLNSForAllScopes(resolvers []*moduleSymbolResolver, compilationUnitImports []CompilationUnitImports) {
-	for _, resolver := range resolvers {
-		for _, cuImports := range compilationUnitImports {
-			for _, node := range cuImports.CompilationUnit.TopLevelNodes {
-				decl, ok := node.(*ast.BLangXMLNS)
-				if !ok {
-					continue
-				}
-				processXMLNSDecl(resolver, resolver.scope, decl)
-			}
+func processCompilationUnitXMLNS(resolver *moduleSymbolResolver, cu *ast.BLangCompilationUnit) {
+	for _, node := range cu.TopLevelNodes {
+		decl, ok := node.(*ast.BLangXMLNS)
+		if !ok {
+			continue
 		}
+		processXMLNSDecl(resolver, resolver.scope, decl)
 	}
 }
 

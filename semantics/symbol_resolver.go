@@ -507,10 +507,10 @@ func ResolveSymbols(cx *context.CompilerContext, pkgID model.PackageID, cuImport
 		resolver.allocateTopLevelSymbols(cuImportsList[i].CompilationUnit)
 	}
 
-	processCompilationUnitXMLNSForAllScopes(cuResolvers, cuImportsList)
 	for i, cuImports := range cuImportsList {
 		cu := cuImports.CompilationUnit
 		resolver := cuResolvers[i]
+		processCompilationUnitXMLNS(resolver, cu)
 		ast.Walk(resolver, cu)
 		reportUnusedImports(resolver, compilationUnitImports(cu))
 		reportUnusedVariables(cx, resolver.getUnused())

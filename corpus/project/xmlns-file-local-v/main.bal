@@ -14,8 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-xmlns "https:foo/bar" as bar;
+import ballerina/io;
 
-function makeBaz() returns xml {
-    return xml `<bar:elem></bar:elem>`;
+xmlns "https:foo/main" as bar;
+
+function makeMainXml() returns xml {
+    return xml `<bar:main><bar:item></bar:item></bar:main>`;
+}
+
+public function main() {
+    io:println(makeMainXml()); // @output <bar:main xmlns:bar="https:foo/main"><bar:item/></bar:main>
+    io:println(makeUtilXml()); // @output <bar:util xmlns:bar="https:foo/util"><bar:item/></bar:util>
 }
