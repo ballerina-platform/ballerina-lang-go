@@ -323,18 +323,18 @@ func toDecimal(value any) *decimal.Decimal {
 
 func execNewXMLText(ctx *extern.Context, instr *bir.NewXMLText, frame *Frame) {
 	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
-	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLText{Body: body})
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLText(body))
 }
 
 func execNewXMLComment(ctx *extern.Context, instr *bir.NewXMLComment, frame *Frame) {
 	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
-	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLComment{Body: body})
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLComment(body, xmlResultReadonly(ctx, instr.LhsOp)))
 }
 
 func execNewXMLPI(ctx *extern.Context, instr *bir.NewXMLPI, frame *Frame) {
 	target := getOperandValue(ctx, instr.TargetOp, frame).(string)
 	data := getOperandValue(ctx, instr.DataOp, frame).(string)
-	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLProcessingInstruction{Target: target, Data: data})
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLProcessingInstruction(target, data, xmlResultReadonly(ctx, instr.LhsOp)))
 }
 
 func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Frame) {
@@ -356,7 +356,11 @@ func execNewXMLElement(ctx *extern.Context, instr *bir.NewXMLElement, frame *Fra
 	if instr.NamespacesOp != nil {
 		namespaces = getOperandValue(ctx, instr.NamespacesOp, frame).(*values.Map)
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children})
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLElement(name, attrs, namespaces, children, xmlResultReadonly(ctx, instr.LhsOp)))
+}
+
+func xmlResultReadonly(ctx *extern.Context, op *bir.BIROperand) bool {
+	return semtypes.IsSubtype(ctx.TypeCtx, op.VariableDcl.GetType(), semtypes.VAL_READONLY)
 }
 
 func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, frame *Frame) {
@@ -395,5 +399,5 @@ func execNewXMLSequence(ctx *extern.Context, instr *bir.NewXMLSequence, frame *F
 		}
 		items = append(items, x)
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLSequence(items))
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewNormalizedXMLSequence(items))
 }

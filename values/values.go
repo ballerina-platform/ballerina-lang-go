@@ -141,6 +141,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Stream:
 		return v.Type
+	case XMLValue:
+		return v.Type()
 	case *TypeDesc:
 		return semtypes.TYPEDESC
 	default:
