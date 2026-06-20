@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -231,20 +232,44 @@ func invalidateChangedDependents(old *Snapshot, snapshot *Snapshot, changedURI p
 	if changedModule == "" {
 		return
 	}
-	order := old.TopoOrder
-	if len(order) == 0 {
-		order = sortedModuleNames(snapshot)
-	}
-	reset := false
-	for _, name := range order {
-		if name == changedModule {
-			reset = true
-		}
-		if reset {
-			resetModuleState(snapshot.Modules[name])
-		}
+	for _, name := range dependentModuleClosure(old, changedModule) {
+		resetModuleState(snapshot.Modules[name])
 	}
 	snapshot.TopoOrder = nil
+}
+
+func dependentModuleClosure(snapshot *Snapshot, changedModule string) []string {
+	if snapshot == nil {
+		return []string{changedModule}
+	}
+	dependents := make(map[string][]string, len(snapshot.Modules))
+	for name, module := range snapshot.Modules {
+		for _, imp := range module.Imports {
+			if imp.ModuleName == name {
+				continue
+			}
+			dependents[imp.ModuleName] = append(dependents[imp.ModuleName], name)
+		}
+	}
+	seen := map[string]bool{changedModule: true}
+	queue := []string{changedModule}
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+		for _, dependent := range dependents[name] {
+			if seen[dependent] {
+				continue
+			}
+			seen[dependent] = true
+			queue = append(queue, dependent)
+		}
+	}
+	result := make([]string, 0, len(seen))
+	for name := range seen {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func resetModuleState(module *Module) {
