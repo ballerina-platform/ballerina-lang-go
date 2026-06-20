@@ -19,6 +19,7 @@ package lsp
 import (
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf16"
 	"unicode/utf8"
 
@@ -49,17 +50,41 @@ func runDiagnostics(snapshot *Snapshot, source SourceFile) map[protocol.Document
 		if !runModuleFrontend(cx, snapshot, snapshot.Modules[last], FrontendStageTopLevelTypeResolved) || cx.HasDiagnostics() {
 			return convertDiagnostics(snapshot, cx.Diagnostics())
 		}
-		for _, moduleName := range snapshot.TopoOrder {
-			module := snapshot.Modules[moduleName]
-			if module == nil || !runModuleFrontend(cx, snapshot, module, FrontendStageCFGAnalyzed) || cx.HasDiagnostics() {
-				break
-			}
-		}
+		localDiagnostics := runLocalPackagePipelines(snapshot)
+		allDiagnostics := append([]diagnostics.Diagnostic{}, cx.Diagnostics()...)
+		allDiagnostics = append(allDiagnostics, localDiagnostics...)
 		logLS(snapshot.Root, "project compile complete snapshotID=%d", snapshot.ID)
+		return convertDiagnostics(snapshot, allDiagnostics)
 	} else if module := snapshot.Modules[defaultModuleName]; module != nil {
 		runModuleFrontend(cx, snapshot, module, FrontendStageCFGAnalyzed)
 	}
 	return convertDiagnostics(snapshot, cx.Diagnostics())
+}
+
+func runLocalPackagePipelines(snapshot *Snapshot) []diagnostics.Diagnostic {
+	var wg sync.WaitGroup
+	diagnosticsCh := make(chan []diagnostics.Diagnostic, len(snapshot.TopoOrder))
+	for _, moduleName := range snapshot.TopoOrder {
+		module := snapshot.Modules[moduleName]
+		if module == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(module *Module) {
+			defer wg.Done()
+			cx := context.NewCompilerContext(snapshot.Env)
+			runModuleFrontend(cx, snapshot, module, FrontendStageCFGAnalyzed)
+			diagnosticsCh <- cx.Diagnostics()
+		}(module)
+	}
+	wg.Wait()
+	close(diagnosticsCh)
+
+	var result []diagnostics.Diagnostic
+	for moduleDiagnostics := range diagnosticsCh {
+		result = append(result, moduleDiagnostics...)
+	}
+	return result
 }
 
 func runModuleFrontend(cx *context.CompilerContext, snapshot *Snapshot, module *Module, target FrontendStage) bool {
