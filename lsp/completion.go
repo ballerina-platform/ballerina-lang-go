@@ -72,7 +72,10 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 	}
 
 	cx := context.NewCompilerContext(snapshot.Env)
-	parseModuleCompilationUnits(cx, snapshot, module)
+	if !dispatchParseAll(cx, snapshot) || !dispatchTopoSort(cx, snapshot) || cx.HasDiagnostics() {
+		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s alias=%s items=0 reason=parse-or-toposort-failed", snapshot.ID, module.Name, completionCtx.alias)
+		return result
+	}
 	cu := module.CompilationUnits[source.URI]
 	if cu == nil {
 		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s alias=%s items=0 reason=no-compilation-unit", snapshot.ID, module.Name, completionCtx.alias)

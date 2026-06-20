@@ -24,7 +24,6 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/lsp/protocol"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
@@ -43,15 +42,22 @@ func runDiagnostics(snapshot *Snapshot, source SourceFile) map[protocol.Document
 	}()
 	if snapshot.Kind == ProjectKindBuild {
 		logLS(snapshot.Root, "project compile start snapshotID=%d modules=%d source=%s", snapshot.ID, len(snapshot.Modules), source.Path)
-		for _, moduleName := range sortedModuleNames(snapshot) {
+		if !dispatchParseAll(cx, snapshot) || !dispatchTopoSort(cx, snapshot) || len(snapshot.TopoOrder) == 0 {
+			return convertDiagnostics(snapshot, cx.Diagnostics())
+		}
+		last := snapshot.TopoOrder[len(snapshot.TopoOrder)-1]
+		if !runModuleFrontend(cx, snapshot, snapshot.Modules[last], FrontendStageTopLevelTypeResolved) || cx.HasDiagnostics() {
+			return convertDiagnostics(snapshot, cx.Diagnostics())
+		}
+		for _, moduleName := range snapshot.TopoOrder {
 			module := snapshot.Modules[moduleName]
-			if module == nil || !runModuleFrontend(cx, snapshot, module, FrontendStageDesugared) || cx.HasDiagnostics() {
+			if module == nil || !runModuleFrontend(cx, snapshot, module, FrontendStageCFGAnalyzed) || cx.HasDiagnostics() {
 				break
 			}
 		}
 		logLS(snapshot.Root, "project compile complete snapshotID=%d", snapshot.ID)
 	} else if module := snapshot.Modules[defaultModuleName]; module != nil {
-		runModuleFrontend(cx, snapshot, module, FrontendStageDesugared)
+		runModuleFrontend(cx, snapshot, module, FrontendStageCFGAnalyzed)
 	}
 	return convertDiagnostics(snapshot, cx.Diagnostics())
 }
@@ -69,17 +75,27 @@ func runModuleFrontend(cx *context.CompilerContext, snapshot *Snapshot, module *
 	if target >= FrontendStageTopLevelTypeResolved && !runModuleTopLevelTypeResolution(cx, snapshot, module) {
 		return false
 	}
-	if target >= FrontendStageDesugared && !runModuleRemainingPhases(cx, snapshot.Root, module.Name, module.Package, module.ImportedSymbols) {
+	if target >= FrontendStageLocalTypeResolved && !runModuleLocalTypeResolution(cx, snapshot.Root, module) {
 		return false
 	}
-	module.Stage = target
+	if target >= FrontendStageSemanticAnalyzed && !runModuleSemanticAnalysis(cx, snapshot.Root, module) {
+		return false
+	}
+	if target >= FrontendStageCFGBuilt && !runModuleBuildCFG(cx, snapshot.Root, module) {
+		return false
+	}
+	if target >= FrontendStageCFGAnalyzed && !runModuleCFGAnalysis(cx, snapshot.Root, module) {
+		return false
+	}
 	return true
 }
 
 func runModuleParse(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
 	if module.Stage >= FrontendStageParsed {
+		logLS(snapshot.Root, "action skipped snapshotID=%d module=%s action=parse", snapshot.ID, module.Name)
 		return true
 	}
+	logLS(snapshot.Root, "action dispatch snapshotID=%d module=%s action=parse", snapshot.ID, module.Name)
 	units := parseModuleCompilationUnits(cx, snapshot, module)
 	if len(units) == 0 || cx.HasDiagnostics() {
 		return false
@@ -92,8 +108,10 @@ func runModuleParse(cx *context.CompilerContext, snapshot *Snapshot, module *Mod
 
 func runModuleSymbolResolution(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
 	if module.Stage >= FrontendStageSymbolResolved {
+		logLS(snapshot.Root, "action skipped snapshotID=%d module=%s action=symbolResolve", snapshot.ID, module.Name)
 		return true
 	}
+	logLS(snapshot.Root, "action dispatch snapshotID=%d module=%s action=symbolResolve", snapshot.ID, module.Name)
 	langlibs, publicSymbols, ok := prepareSymbolResolution(cx, snapshot, module)
 	if !ok {
 		return false
@@ -111,17 +129,10 @@ func prepareSymbolResolution(cx *context.CompilerContext, snapshot *Snapshot, ta
 		return langlibs, langlibs.PublicSymbols, true
 	}
 
-	for _, moduleName := range sortedModuleNames(snapshot) {
-		if !runModuleParse(cx, snapshot, snapshot.Modules[moduleName]) {
-			return nil, nil, false
-		}
-	}
-	order, ok := topologicalModuleOrder(snapshot)
-	if !ok {
-		logLS(snapshot.Root, "project compile stopped snapshotID=%d reason=module-import-cycle", snapshot.ID)
+	if !dispatchParseAll(cx, snapshot) || !dispatchTopoSort(cx, snapshot) {
 		return nil, nil, false
 	}
-	logLS(snapshot.Root, "module topo order snapshotID=%d order=%s", snapshot.ID, strings.Join(order, ","))
+	order := snapshot.TopoOrder
 
 	langlibs, err := langlib.Build(cx, nil)
 	if err != nil {
@@ -186,8 +197,10 @@ func runModuleSymbolResolutionWithSymbols(cx *context.CompilerContext, snapshot 
 
 func runModuleTopLevelTypeResolution(cx *context.CompilerContext, snapshot *Snapshot, module *Module) bool {
 	if module.Stage >= FrontendStageTopLevelTypeResolved {
+		logLS(snapshot.Root, "action skipped snapshotID=%d module=%s action=topLevelTypeResolve", snapshot.ID, module.Name)
 		return true
 	}
+	logLS(snapshot.Root, "action dispatch snapshotID=%d module=%s action=topLevelTypeResolve", snapshot.ID, module.Name)
 	if !runModuleSymbolResolution(cx, snapshot, module) || module.Package == nil {
 		return false
 	}
@@ -201,39 +214,81 @@ func runModuleTopLevelTypeResolution(cx *context.CompilerContext, snapshot *Snap
 	return true
 }
 
-func runModuleRemainingPhases(cx *context.CompilerContext, root string, module string, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) bool {
-	if pkg == nil {
+func runModuleLocalTypeResolution(cx *context.CompilerContext, root string, module *Module) bool {
+	if module.Stage >= FrontendStageLocalTypeResolved {
+		logLS(root, "action skipped module=%s action=localTypeResolve", module.Name)
+		return true
+	}
+	logLS(root, "action dispatch module=%s action=localTypeResolve", module.Name)
+	if module.Package == nil {
 		return false
 	}
-	logLS(root, "stage start module=%s stage=local-node-type-resolution", module)
-	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
-	logLS(root, "stage complete module=%s stage=local-node-type-resolution diagnostics=%d", module, len(cx.Diagnostics()))
+	logLS(root, "stage start module=%s stage=local-node-type-resolution", module.Name)
+	semantics.ResolveLocalNodes(cx, module.Package, module.ImportedSymbols)
+	logLS(root, "stage complete module=%s stage=local-node-type-resolution diagnostics=%d", module.Name, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
 		return false
 	}
-	logLS(root, "stage start module=%s stage=semantic-analysis", module)
+	module.Stage = FrontendStageLocalTypeResolved
+	return true
+}
+
+func runModuleSemanticAnalysis(cx *context.CompilerContext, root string, module *Module) bool {
+	if module.Stage >= FrontendStageSemanticAnalyzed {
+		logLS(root, "action skipped module=%s action=semanticAnalysis", module.Name)
+		return true
+	}
+	logLS(root, "action dispatch module=%s action=semanticAnalysis", module.Name)
+	if !runModuleLocalTypeResolution(cx, root, module) {
+		return false
+	}
+	logLS(root, "stage start module=%s stage=semantic-analysis", module.Name)
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg, importedSymbols)
-	logLS(root, "stage complete module=%s stage=semantic-analysis diagnostics=%d", module, len(cx.Diagnostics()))
+	semanticAnalyzer.Analyze(module.Package, module.ImportedSymbols)
+	logLS(root, "stage complete module=%s stage=semantic-analysis diagnostics=%d", module.Name, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
 		return false
 	}
-	logLS(root, "stage start module=%s stage=cfg-creation", module)
-	cfg := semantics.CreateControlFlowGraph(cx, pkg)
-	logLS(root, "stage complete module=%s stage=cfg-creation diagnostics=%d", module, len(cx.Diagnostics()))
+	module.Stage = FrontendStageSemanticAnalyzed
+	return true
+}
+
+func runModuleBuildCFG(cx *context.CompilerContext, root string, module *Module) bool {
+	if module.Stage >= FrontendStageCFGBuilt {
+		logLS(root, "action skipped module=%s action=buildCFG", module.Name)
+		return true
+	}
+	logLS(root, "action dispatch module=%s action=buildCFG", module.Name)
+	if !runModuleSemanticAnalysis(cx, root, module) {
+		return false
+	}
+	logLS(root, "stage start module=%s stage=cfg-creation", module.Name)
+	module.CFG = semantics.CreateControlFlowGraph(cx, module.Package)
+	logLS(root, "stage complete module=%s stage=cfg-creation diagnostics=%d", module.Name, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
 		return false
 	}
-	logLS(root, "stage start module=%s stage=cfg-analysis", module)
-	semantics.AnalyzeCFG(cx, pkg, cfg)
-	logLS(root, "stage complete module=%s stage=cfg-analysis diagnostics=%d", module, len(cx.Diagnostics()))
+	module.Stage = FrontendStageCFGBuilt
+	return true
+}
+
+func runModuleCFGAnalysis(cx *context.CompilerContext, root string, module *Module) bool {
+	if module.Stage >= FrontendStageCFGAnalyzed {
+		logLS(root, "action skipped module=%s action=cfgAnalysis", module.Name)
+		return true
+	}
+	logLS(root, "action dispatch module=%s action=cfgAnalysis", module.Name)
+	if !runModuleBuildCFG(cx, root, module) || module.CFG == nil {
+		return false
+	}
+	logLS(root, "stage start module=%s stage=cfg-analysis", module.Name)
+	semantics.AnalyzeCFG(cx, module.Package, module.CFG)
+	logLS(root, "stage complete module=%s stage=cfg-analysis diagnostics=%d", module.Name, len(cx.Diagnostics()))
 	if cx.HasDiagnostics() {
 		return false
 	}
-	logLS(root, "stage start module=%s stage=desugar", module)
-	desugar.DesugarPackage(cx, pkg, importedSymbols)
-	logLS(root, "stage complete module=%s stage=desugar diagnostics=%d", module, len(cx.Diagnostics()))
-	return !cx.HasDiagnostics()
+	module.Stage = FrontendStageCFGAnalyzed
+	return true
 }
 
 func parseModuleCompilationUnits(cx *context.CompilerContext, snapshot *Snapshot, module *Module) []*ast.BLangCompilationUnit {
@@ -266,6 +321,37 @@ func parseModuleCompilationUnits(cx *context.CompilerContext, snapshot *Snapshot
 		units = append(units, compilationUnit)
 	}
 	return units
+}
+
+func dispatchParseAll(cx *context.CompilerContext, snapshot *Snapshot) bool {
+	logLS(snapshot.Root, "action dispatch snapshotID=%d action=parseAll", snapshot.ID)
+	for _, moduleName := range sortedModuleNames(snapshot) {
+		if !runModuleParse(cx, snapshot, snapshot.Modules[moduleName]) {
+			return false
+		}
+	}
+	return true
+}
+
+func dispatchTopoSort(cx *context.CompilerContext, snapshot *Snapshot) bool {
+	_ = cx
+	if len(snapshot.TopoOrder) > 0 {
+		logLS(snapshot.Root, "action skipped snapshotID=%d action=topoSort", snapshot.ID)
+		return true
+	}
+	logLS(snapshot.Root, "action dispatch snapshotID=%d action=topoSort", snapshot.ID)
+	if snapshot.Kind == ProjectKindSingleFile {
+		snapshot.TopoOrder = []string{defaultModuleName}
+		return true
+	}
+	order, ok := topologicalModuleOrder(snapshot)
+	if !ok {
+		logLS(snapshot.Root, "project compile stopped snapshotID=%d reason=module-import-cycle", snapshot.ID)
+		return false
+	}
+	snapshot.TopoOrder = order
+	logLS(snapshot.Root, "module topo order snapshotID=%d order=%s", snapshot.ID, strings.Join(order, ","))
+	return true
 }
 
 func sortedModuleFiles(module *Module) []SourceFile {

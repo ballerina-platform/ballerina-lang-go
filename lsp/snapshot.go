@@ -64,7 +64,10 @@ const (
 	FrontendStageParsed
 	FrontendStageSymbolResolved
 	FrontendStageTopLevelTypeResolved
-	FrontendStageDesugared
+	FrontendStageLocalTypeResolved
+	FrontendStageSemanticAnalyzed
+	FrontendStageCFGBuilt
+	FrontendStageCFGAnalyzed
 )
 
 type Module struct {
@@ -80,18 +83,20 @@ type Module struct {
 	ImportedSymbols  map[string]model.ExportedSymbolSpace
 	Package          *ast.BLangPackage
 	Exported         model.ExportedSymbolSpace
+	CFG              *semantics.PackageCFG
 }
 
 type Snapshot struct {
-	ID      int64
-	Kind    ProjectKind
-	Root    string
-	OrgName string
-	PkgName string
-	Version string
-	Env     *context.CompilerEnvironment
-	Files   map[protocol.DocumentURI]SourceFile
-	Modules map[string]*Module
+	ID        int64
+	Kind      ProjectKind
+	Root      string
+	OrgName   string
+	PkgName   string
+	Version   string
+	Env       *context.CompilerEnvironment
+	Files     map[protocol.DocumentURI]SourceFile
+	Modules   map[string]*Module
+	TopoOrder []string
 }
 
 type SnapshotManager struct {
@@ -123,16 +128,14 @@ func nextSingleFileSnapshot(old *Snapshot, file SourceFile) *Snapshot {
 }
 
 func nextBuildSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]SourceFile)) *Snapshot {
-	openFiles := make(map[protocol.DocumentURI]SourceFile)
+	files := make(map[protocol.DocumentURI]SourceFile, len(old.Files))
 	for uri, file := range old.Files {
-		if file.Open {
-			openFiles[uri] = file
-		}
+		files[uri] = file
 	}
 	if update != nil {
-		update(openFiles)
+		update(files)
 	}
-	return newBuildSnapshot(old.ID+1, old, old.Root, openFiles)
+	return newBuildSnapshot(old.ID+1, old, old.Root, files)
 }
 
 func newSingleFileSnapshot(id int64, file SourceFile) *Snapshot {
@@ -149,15 +152,16 @@ func newSingleFileSnapshot(id int64, file SourceFile) *Snapshot {
 	}
 	registerFiles(env, files)
 	return &Snapshot{
-		ID:      id,
-		Kind:    ProjectKindSingleFile,
-		Root:    file.Path,
-		OrgName: string(model.ANON_ORG),
-		PkgName: string(model.DEFAULT_PACKAGE),
-		Version: string(model.DEFAULT_VERSION),
-		Env:     env,
-		Files:   files,
-		Modules: map[string]*Module{defaultModuleName: module},
+		ID:        id,
+		Kind:      ProjectKindSingleFile,
+		Root:      file.Path,
+		OrgName:   string(model.ANON_ORG),
+		PkgName:   string(model.DEFAULT_PACKAGE),
+		Version:   string(model.DEFAULT_VERSION),
+		Env:       env,
+		Files:     files,
+		Modules:   map[string]*Module{defaultModuleName: module},
+		TopoOrder: []string{defaultModuleName},
 	}
 }
 
@@ -183,20 +187,22 @@ func newBuildSnapshot(id int64, old *Snapshot, root string, openFiles map[protoc
 				module.ImportedSymbols = oldModule.ImportedSymbols
 				module.Package = oldModule.Package
 				module.Exported = oldModule.Exported
+				module.CFG = oldModule.CFG
 			}
 		}
 	}
 	registerFiles(env, files)
 	return &Snapshot{
-		ID:      id,
-		Kind:    ProjectKindBuild,
-		Root:    root,
-		OrgName: orgName,
-		PkgName: pkgName,
-		Version: version,
-		Env:     env,
-		Files:   files,
-		Modules: modules,
+		ID:        id,
+		Kind:      ProjectKindBuild,
+		Root:      root,
+		OrgName:   orgName,
+		PkgName:   pkgName,
+		Version:   version,
+		Env:       env,
+		Files:     files,
+		Modules:   modules,
+		TopoOrder: copyStringSlice(oldTopoOrder(old)),
 	}
 }
 
@@ -345,6 +351,22 @@ func fingerprintFiles(files map[protocol.DocumentURI]SourceFile) string {
 		_, _ = fmt.Fprintf(h, "%s\x00", sourceFileFingerprint(file))
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func oldTopoOrder(snapshot *Snapshot) []string {
+	if snapshot == nil {
+		return nil
+	}
+	return snapshot.TopoOrder
+}
+
+func copyStringSlice(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	result := make([]string, len(values))
+	copy(result, values)
+	return result
 }
 
 func uriFromPath(path string) protocol.DocumentURI {

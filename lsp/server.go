@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	"ballerina-lang-go/lsp/protocol"
+	"ballerina-lang-go/model"
 )
 
 const (
@@ -85,6 +86,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) handleRequest(msg protocol.Message) {
+	logLS(s.root, "request handling method=%s id=%s", msg.Method, string(msg.ID))
 	result, errCode, errMessage := s.dispatchRequest(msg.Method, msg.Params)
 	if errCode != 0 {
 		s.writeError(msg.ID, errCode, errMessage)
@@ -108,7 +110,7 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 				Change:    1,
 				Save:      protocol.SaveOptions{IncludeText: true},
 			},
-			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
+			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":"}},
 		}}, 0, ""
 	case "textDocument/completion":
 		var p protocol.CompletionParams
@@ -141,7 +143,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		}
 		uri := p.TextDocument.URI
 		path := pathFromURI(uri)
-		file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text, Open: true}
+		file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text}
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -152,14 +154,13 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 			return
 		}
 		uri := p.TextDocument.URI
-		path := pathFromURI(uri)
 		file := s.sourceFile(uri)
 		if file.URI == "" {
-			file = SourceFile{URI: uri, Path: path, File: path, Open: true}
+			return
 		}
 		file.Version = p.TextDocument.Version
 		file.Content = p.ContentChanges[len(p.ContentChanges)-1].Text
-		file.Open = true
+		file.File = file.Path
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -169,16 +170,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if decodeParams(params, &p) != nil {
 			return
 		}
-		uri := p.TextDocument.URI
-		file := s.sourceFile(uri)
-		if file.URI == "" {
-			return
-		}
-		file.Open = false
-		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
-			files[uri] = file
-			return file
-		})
+		return
 	case "textDocument/didSave":
 		var p protocol.DidSaveTextDocumentParams
 		if decodeParams(params, &p) != nil {
@@ -189,10 +181,11 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if file.URI == "" {
 			return
 		}
-		if p.Text == nil || *p.Text == file.Content {
+		content, err := os.ReadFile(file.Path)
+		if err != nil || string(content) == file.Content {
 			return
 		}
-		file.Content = *p.Text
+		file.Content = string(content)
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -214,6 +207,7 @@ func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.Docu
 		newSnapshot = nextBuildSnapshot(old, func(files map[protocol.DocumentURI]SourceFile) {
 			changed = update(files)
 		})
+		invalidateChangedDependents(old, newSnapshot, changed.URI)
 	} else {
 		changed = update(map[protocol.DocumentURI]SourceFile{})
 		newSnapshot = nextSingleFileSnapshot(old, changed)
@@ -221,6 +215,49 @@ func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.Docu
 	manager.Publish(newSnapshot)
 	logLS(key, "snapshot update published key=%s kind=%s newID=%d modules=%d files=%d", key, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files))
 	s.publishDiagnostics(manager, newSnapshot, changed)
+}
+
+func invalidateChangedDependents(old *Snapshot, snapshot *Snapshot, changedURI protocol.DocumentURI) {
+	if changedURI == "" {
+		return
+	}
+	changedModule := ""
+	for name, module := range snapshot.Modules {
+		if _, ok := module.Files[changedURI]; ok {
+			changedModule = name
+			break
+		}
+	}
+	if changedModule == "" {
+		return
+	}
+	order := old.TopoOrder
+	if len(order) == 0 {
+		order = sortedModuleNames(snapshot)
+	}
+	reset := false
+	for _, name := range order {
+		if name == changedModule {
+			reset = true
+		}
+		if reset {
+			resetModuleState(snapshot.Modules[name])
+		}
+	}
+	snapshot.TopoOrder = nil
+}
+
+func resetModuleState(module *Module) {
+	if module == nil {
+		return
+	}
+	module.Stage = FrontendStageNone
+	module.Imports = nil
+	module.ImportedByCU = nil
+	module.ImportedSymbols = nil
+	module.Package = nil
+	module.Exported = model.ExportedSymbolSpace{}
+	module.CFG = nil
 }
 
 func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile) {
@@ -231,9 +268,6 @@ func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot
 	}
 	logLS(snapshot.Root, "diagnostics complete snapshotID=%d diagnosticFiles=%d", snapshot.ID, len(diagnosticsByURI))
 	for uri, file := range snapshot.Files {
-		if !file.Open && uri != source.URI {
-			continue
-		}
 		diagnostics := diagnosticsByURI[uri]
 		if diagnostics == nil {
 			diagnostics = []protocol.Diagnostic{}
@@ -255,7 +289,9 @@ func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
 	s.root = root
 	logLS(root, "initialize root=%s build=%t", root, isBuildProjectRoot(root))
 	if isBuildProjectRoot(root) {
-		s.snapshots[root] = NewBuildSnapshotManager(root)
+		manager := NewBuildSnapshotManager(root)
+		s.snapshots[root] = manager
+		s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: root})
 	}
 }
 
@@ -386,6 +422,7 @@ func readMessage(reader *bufio.Reader) ([]byte, error) {
 }
 
 func (s *Server) writeResponse(id json.RawMessage, result any) {
+	logLS(s.root, "response sent id=%s", string(id))
 	payload := mustMarshal(result)
 	if payload == nil {
 		payload = json.RawMessage("null")
@@ -398,6 +435,7 @@ func (s *Server) writeResponse(id json.RawMessage, result any) {
 }
 
 func (s *Server) writeError(id json.RawMessage, code int, message string) {
+	logLS(s.root, "response error id=%s code=%d message=%s", string(id), code, message)
 	if id == nil {
 		id = json.RawMessage("null")
 	}
@@ -409,6 +447,7 @@ func (s *Server) writeError(id json.RawMessage, code int, message string) {
 }
 
 func (s *Server) writeNotification(method string, params any) {
+	logLS(s.root, "notification sent method=%s", method)
 	s.writeMessage(struct {
 		JSONRPC string          `json:"jsonrpc"`
 		Method  string          `json:"method"`
