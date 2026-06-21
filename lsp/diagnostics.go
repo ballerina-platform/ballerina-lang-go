@@ -543,10 +543,7 @@ func convertDiagnostics(snapshot *Snapshot, sourceDiagnostics []diagnostics.Diag
 			continue
 		}
 		result[file.URI] = append(result[file.URI], protocol.Diagnostic{
-			Range: protocol.Range{
-				Start: lspPosition(file.Content, loc.StartOffset()),
-				End:   lspPosition(file.Content, loc.EndOffset()),
-			},
+			Range:    lspRange(file.Content, loc),
 			Severity: lspSeverity(diag.DiagnosticInfo().Severity()),
 			Code:     diag.DiagnosticInfo().Code(),
 			Source:   diagnosticSource,
@@ -554,6 +551,26 @@ func convertDiagnostics(snapshot *Snapshot, sourceDiagnostics []diagnostics.Diag
 		})
 	}
 	return result
+}
+
+func sourceFileForLocation(snapshot *Snapshot, loc diagnostics.Location) (SourceFile, bool) {
+	if !diagnostics.LocationHasSource(loc) {
+		return SourceFile{}, false
+	}
+	fileName := snapshot.Env.DiagnosticEnv().FileName(loc)
+	for _, file := range snapshot.Files {
+		if file.File == fileName {
+			return file, true
+		}
+	}
+	return SourceFile{}, false
+}
+
+func lspRange(content string, loc diagnostics.Location) protocol.Range {
+	return protocol.Range{
+		Start: lspPosition(content, loc.StartOffset()),
+		End:   lspPosition(content, loc.EndOffset()),
+	}
 }
 
 func lspSeverity(severity diagnostics.DiagnosticSeverity) int {

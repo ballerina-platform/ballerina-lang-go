@@ -46,6 +46,7 @@ type InitializeResult struct {
 type ServerCapabilities struct {
 	TextDocumentSync   TextDocumentSyncOptions `json:"textDocumentSync"`
 	CompletionProvider *CompletionOptions      `json:"completionProvider,omitempty"`
+	DefinitionProvider bool                    `json:"definitionProvider,omitempty"`
 }
 
 type CompletionOptions struct {
@@ -105,6 +106,11 @@ type CompletionParams struct {
 	Position     Position               `json:"position"`
 }
 
+type DefinitionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
 type CompletionList struct {
 	IsIncomplete bool             `json:"isIncomplete"`
 	Items        []CompletionItem `json:"items"`
@@ -130,6 +136,11 @@ type Position struct {
 type Range struct {
 	Start Position `json:"start"`
 	End   Position `json:"end"`
+}
+
+type Location struct {
+	URI   DocumentURI `json:"uri"`
+	Range Range       `json:"range"`
 }
 
 type Diagnostic struct {
