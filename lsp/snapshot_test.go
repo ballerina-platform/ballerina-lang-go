@@ -75,6 +75,27 @@ func TestBuildSnapshotCanRefreshOpenFileContent(t *testing.T) {
 	}
 }
 
+func TestBuildSnapshotResetsGenerationAndCompilerEnvironment(t *testing.T) {
+	root := t.TempDir()
+	writeBuildProjectFiles(t, root, "public function main() {}")
+
+	manager := NewBuildSnapshotManager(root)
+	old := manager.Current()
+	old.ID = maxIncrementalSnapshotID
+	old.Modules[defaultModuleName].Stage = FrontendStageCFGAnalyzed
+
+	newSnapshot := nextBuildSnapshot(old, nil)
+	if newSnapshot.ID != initialSnapshotID {
+		t.Fatalf("snapshot ID = %d, want %d", newSnapshot.ID, initialSnapshotID)
+	}
+	if newSnapshot.Env == old.Env {
+		t.Fatal("compiler environment was reused after generation reset")
+	}
+	if got := newSnapshot.Modules[defaultModuleName].Stage; got != FrontendStageNone {
+		t.Fatalf("module stage = %d, want %d", got, FrontendStageNone)
+	}
+}
+
 func writeBuildProjectFiles(t *testing.T, root string, mainContent string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(root, "Ballerina.toml"), []byte(`[package]

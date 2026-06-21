@@ -41,7 +41,11 @@ const (
 	ProjectKindBuild
 )
 
-const defaultModuleName = "."
+const (
+	defaultModuleName              = "."
+	maxIncrementalSnapshotID       = 100000
+	initialSnapshotID        int64 = 0
+)
 
 type SourceFile struct {
 	URI     protocol.DocumentURI
@@ -104,11 +108,11 @@ type SnapshotManager struct {
 }
 
 func NewSingleFileSnapshotManager(file SourceFile) *SnapshotManager {
-	return &SnapshotManager{current: newSingleFileSnapshot(0, file)}
+	return &SnapshotManager{current: newSingleFileSnapshot(initialSnapshotID, file)}
 }
 
 func NewBuildSnapshotManager(root string) *SnapshotManager {
-	return &SnapshotManager{current: newBuildSnapshot(0, nil, root, nil)}
+	return &SnapshotManager{current: newBuildSnapshot(initialSnapshotID, nil, root, nil)}
 }
 
 func (m *SnapshotManager) Current() *Snapshot {
@@ -124,7 +128,8 @@ func (m *SnapshotManager) IsCurrent(snapshot *Snapshot) bool {
 }
 
 func nextSingleFileSnapshot(old *Snapshot, file SourceFile) *Snapshot {
-	return newSingleFileSnapshot(old.ID+1, file)
+	id := nextSnapshotID(old.ID)
+	return newSingleFileSnapshot(id, file)
 }
 
 func nextBuildSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]SourceFile)) *Snapshot {
@@ -135,7 +140,11 @@ func nextBuildSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]Sourc
 	if update != nil {
 		update(files)
 	}
-	return newBuildSnapshot(old.ID+1, old, old.Root, files)
+	id := nextSnapshotID(old.ID)
+	if id == initialSnapshotID {
+		return newBuildSnapshot(id, nil, old.Root, files)
+	}
+	return newBuildSnapshot(id, old, old.Root, files)
 }
 
 func newSingleFileSnapshot(id int64, file SourceFile) *Snapshot {
@@ -333,6 +342,13 @@ func registerFiles(env *context.CompilerEnvironment, files map[protocol.Document
 
 func newCompilerEnvironment() *context.CompilerEnvironment {
 	return context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
+}
+
+func nextSnapshotID(id int64) int64 {
+	if id >= maxIncrementalSnapshotID {
+		return initialSnapshotID
+	}
+	return id + 1
 }
 
 func sourceFileFingerprint(file SourceFile) string {
