@@ -298,7 +298,7 @@ func (ctx *functionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 type moduleInitNode struct {
 	sym  model.SymbolRef
 	expr ast.BLangExpression // nil if the declaration has no initializer
-	name *ast.BLangIdentifier
+	name ast.IdentifierNode
 }
 
 func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
@@ -637,7 +637,7 @@ func createLifeCycleHooks(pkgCtx *packageContext, pkg *ast.BLangPackage, moduleL
 
 	buildLifecycleFn := func(fnName string) *ast.BLangFunction {
 		fn := &ast.BLangFunction{}
-		fn.Name = ast.BLangIdentifier{Value: fnName}
+		fn.Name = &ast.BLangIdentifier{Value: fnName}
 		fn.Name.SetDeterminedType(semtypes.NEVER)
 		fn.SetDeterminedType(semtypes.NEVER)
 		fn.SetPosition(initPos)
@@ -758,7 +758,7 @@ func widenInitReturnTypeToErrorOptional(compilerCtx *context.CompilerContext, in
 
 func createInitFunction(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, initPos diagnostics.Location) {
 	pkg.InitFunction = &ast.BLangFunction{}
-	pkg.InitFunction.Name = ast.BLangIdentifier{Value: "init"}
+	pkg.InitFunction.Name = &ast.BLangIdentifier{Value: "init"}
 	pkg.InitFunction.Name.SetDeterminedType(semtypes.NEVER)
 	body := &ast.BLangBlockFunctionBody{}
 	body.SetDeterminedType(semtypes.NEVER)
@@ -1059,7 +1059,7 @@ func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *a
 	body.SetDeterminedType(semtypes.NEVER)
 
 	fn := &ast.BLangFunction{}
-	fn.Name = ast.BLangIdentifier{Value: name}
+	fn.Name = &ast.BLangIdentifier{Value: name}
 	fn.Name.SetDeterminedType(semtypes.NEVER)
 	fn.Body = body
 	fn.SetDeterminedType(semtypes.NEVER)
@@ -1144,7 +1144,7 @@ func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*
 		symbolMapping := make(map[model.SymbolRef]model.SymbolRef)
 		for k := range fn.RequiredParams[:j] {
 			precedingParam := fn.RequiredParams[k]
-			paramName := precedingParam.Name.Value
+			paramName := precedingParam.Name.GetValue()
 			paramTy := ctx.symbolType(precedingParam.Symbol())
 			newParam := newSimpleVariable(paramName, paramTy)
 			newParam.SetRequiredParam()
@@ -1324,7 +1324,7 @@ func desugarServiceDefinition(pkgCtx *packageContext, svc *ast.BLangService) {
 func synthesizeDefaultInitFunction(pkgCtx *packageContext, classScope model.Scope, pos diagnostics.Location) *ast.BLangFunction {
 	fn := ast.BLangFunction{}
 	fn.SetAttached()
-	fn.Name = ast.BLangIdentifier{Value: "init"}
+	fn.Name = &ast.BLangIdentifier{Value: "init"}
 	body := &ast.BLangBlockFunctionBody{}
 	body.SetPosition(pos)
 	fn.Body = body
@@ -1370,7 +1370,7 @@ func desugarClassBodyInit(pkgCtx *packageContext, classScope model.Scope, fields
 		selfVarRef.SetDeterminedType(classType)
 
 		fieldAccess := &ast.BLangFieldBaseAccess{
-			Field: ast.BLangIdentifier{Value: field.GetName().GetValue()},
+			Field: &ast.BLangIdentifier{Value: field.GetName().GetValue()},
 		}
 		fieldAccess.Field.SetDeterminedType(semtypes.NEVER)
 		fieldAccess.Expr = selfVarRef
