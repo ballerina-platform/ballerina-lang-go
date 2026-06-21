@@ -78,7 +78,12 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 	}
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind != completionKindImportedSymbol {
-		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=unsupported-context", snapshot.ID, module.Name)
+		result.Items = s.generalCompletionItems(snapshot, module, source, cu, completionCtx, offset)
+		if len(result.Items) == 0 {
+			logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=unsupported-context", snapshot.ID, module.Name)
+		} else {
+			logCompletionItems(snapshot.Root, snapshot.ID, module.Name, "", result.Items)
+		}
 		return result
 	}
 
@@ -179,11 +184,62 @@ func recoveringCompilationUnit(cx *context.CompilerContext, module *Module, sour
 	return compilationUnit
 }
 
+func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
+	badKind := badCompletionKindAtOffset(recoveredCU, offset)
+	itemsByLabel := make(map[string]protocol.CompletionItem)
+	labels := make([]string, 0)
+	addItem := func(item protocol.CompletionItem) {
+		if item.Label == "" || !strings.HasPrefix(item.Label, completionCtx.prefix) {
+			return
+		}
+		if _, ok := itemsByLabel[item.Label]; ok {
+			return
+		}
+		itemsByLabel[item.Label] = item
+		labels = append(labels, item.Label)
+	}
+	if badKind != badCompletionKindStmt {
+		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
+			alias := importAlias(&imp)
+			if alias == "" {
+				continue
+			}
+			addItem(protocol.CompletionItem{Label: alias + ":", Kind: protocol.CompletionItemKindModule})
+		}
+	}
+
+	completionSnapshot, completionModule := snapshotWithRecoveredCU(snapshot, module, source.URI, recoveredCU)
+	cx := context.NewCompilerContext(completionSnapshot.Env)
+	_ = runModuleFrontend(cx, completionSnapshot, completionModule, FrontendStageLocalTypeResolved)
+	cu := completionModule.CompilationUnits[source.URI]
+	if cu == nil {
+		cu = recoveredCU
+	}
+	for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		addItem(item)
+	}
+	sort.Strings(labels)
+	items := make([]protocol.CompletionItem, len(labels))
+	for i, label := range labels {
+		items[i] = itemsByLabel[label]
+	}
+	return items
+}
+
 func completionContextFromAST(cu *ast.BLangCompilationUnit, offset int) completionContext {
 	finder := &completionContextFinder{offset: offset}
 	ast.Walk(finder, cu)
 	return finder.context
 }
+
+type badCompletionKind int
+
+const (
+	badCompletionKindNone badCompletionKind = iota
+	badCompletionKindStmt
+	badCompletionKindExprOrAction
+	badCompletionKindIdentifier
+)
 
 type completionContextFinder struct {
 	offset  int
@@ -203,6 +259,48 @@ func (f *completionContextFinder) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (f *completionContextFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
+}
+
+func badCompletionKindAtOffset(cu *ast.BLangCompilationUnit, offset int) badCompletionKind {
+	finder := &badCompletionNodeFinder{offset: offset}
+	ast.Walk(finder, cu)
+	return finder.kind
+}
+
+type badCompletionNodeFinder struct {
+	offset int
+	kind   badCompletionKind
+	span   int
+}
+
+func (f *badCompletionNodeFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return f
+	}
+	if locationHasUsableOffsets(node.GetPosition()) && !locationContains(node.GetPosition(), f.offset) {
+		return nil
+	}
+	kind := badCompletionKindNone
+	switch node.(type) {
+	case *ast.BLangBadStmt:
+		kind = badCompletionKindStmt
+	case *ast.BLangBadExprOrAction:
+		kind = badCompletionKindExprOrAction
+	case *ast.BLangBadIdentifier:
+		kind = badCompletionKindIdentifier
+	}
+	if kind != badCompletionKindNone {
+		span := locationSpan(node.GetPosition())
+		if f.span == 0 || span <= f.span {
+			f.kind = kind
+			f.span = span
+		}
+	}
+	return f
+}
+
+func (f *badCompletionNodeFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return f
 }
 
@@ -275,6 +373,14 @@ func completionContextAtOffset(content string, offset int) completionContext {
 	}
 }
 
+func locationHasOffsets(loc ast.Location) bool {
+	return loc.StartOffset() >= 0 && loc.EndOffset() >= 0
+}
+
+func locationHasUsableOffsets(loc ast.Location) bool {
+	return locationHasOffsets(loc) && !(loc.StartOffset() == 0 && loc.EndOffset() == 0)
+}
+
 func locationContains(loc ast.Location, offset int) bool {
 	start := loc.StartOffset()
 	end := loc.EndOffset()
@@ -307,6 +413,154 @@ func lineTextAt(content string, offset int) string {
 
 func isIdentifierRune(r rune) bool {
 	return r == '_' || r == '\'' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.DocumentURI, recoveredCU *ast.BLangCompilationUnit) (*Snapshot, *Module) {
+	modules := make(map[string]*Module, len(snapshot.Modules))
+	var completionModule *Module
+	for name, existing := range snapshot.Modules {
+		if existing == nil {
+			continue
+		}
+		moduleCopy := *existing
+		if existing.CompilationUnits != nil {
+			moduleCopy.CompilationUnits = make(map[protocol.DocumentURI]*ast.BLangCompilationUnit, len(existing.CompilationUnits))
+			for unitURI, unit := range existing.CompilationUnits {
+				moduleCopy.CompilationUnits[unitURI] = unit
+			}
+		} else {
+			moduleCopy.CompilationUnits = make(map[protocol.DocumentURI]*ast.BLangCompilationUnit)
+		}
+		if existing == module {
+			moduleCopy.CompilationUnits[uri] = recoveredCU
+			moduleCopy.Stage = FrontendStageNone
+			moduleCopy.Imports = nil
+			moduleCopy.ImportedByCU = nil
+			moduleCopy.ImportedSymbols = nil
+			moduleCopy.Package = nil
+			moduleCopy.Exported = model.ExportedSymbolSpace{}
+			moduleCopy.CFG = nil
+			completionModule = &moduleCopy
+		}
+		modules[name] = &moduleCopy
+	}
+	completionSnapshot := *snapshot
+	completionSnapshot.Modules = modules
+	completionSnapshot.TopoOrder = nil
+	if completionModule == nil {
+		completionModule = modules[module.Name]
+	}
+	return &completionSnapshot, completionModule
+}
+
+func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
+	var scope model.Scope
+	if pkg != nil {
+		scope = nearestScopeAtOffset(pkg, offset)
+	}
+	if scope == nil {
+		scope = nearestScopeAtOffset(cu, offset)
+	}
+	if scope == nil && cu != nil {
+		scope = cu.Scope
+	}
+	seen := make(map[string]protocol.CompletionItem)
+	labels := make([]string, 0)
+	addSymbol := func(ref model.SymbolRef) {
+		label := cx.SymbolName(ref)
+		if label == "" || !strings.HasPrefix(label, prefix) {
+			return
+		}
+		if _, ok := seen[label]; ok {
+			return
+		}
+		if loc := cx.SymbolLocation(ref); locationHasUsableOffsets(loc) && loc.StartOffset() > offset {
+			return
+		}
+		seen[label] = protocol.CompletionItem{Label: label, Kind: completionItemKind(cx.SymbolKind(ref))}
+		labels = append(labels, label)
+	}
+	seenSpaces := make(map[*model.SymbolSpace]bool)
+	for current := scope; current != nil; {
+		next := addScopeSymbols(current, seenSpaces, addSymbol)
+		current = next
+	}
+	if pkg != nil && pkg.Scope != nil {
+		addScopeSymbols(pkg.Scope, seenSpaces, addSymbol)
+	}
+	sort.Strings(labels)
+	items := make([]protocol.CompletionItem, len(labels))
+	for i, label := range labels {
+		items[i] = seen[label]
+	}
+	return items
+}
+
+func addScopeSymbols(scope model.Scope, seenSpaces map[*model.SymbolSpace]bool, addSymbol func(model.SymbolRef)) model.Scope {
+	switch s := scope.(type) {
+	case *model.BlockScope:
+		addSymbolSpace(s.Main, seenSpaces, addSymbol)
+		return s.Parent
+	case *model.FunctionScope:
+		addSymbolSpace(s.Main, seenSpaces, addSymbol)
+		return s.Parent
+	case *model.ModuleScope:
+		addSymbolSpace(s.Main, seenSpaces, addSymbol)
+		return nil
+	case *model.PackageScope:
+		for _, space := range s.MainSpaces {
+			addSymbolSpace(space, seenSpaces, addSymbol)
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+func addSymbolSpace(space *model.SymbolSpace, seenSpaces map[*model.SymbolSpace]bool, addSymbol func(model.SymbolRef)) {
+	if space == nil || seenSpaces[space] {
+		return
+	}
+	seenSpaces[space] = true
+	for i := range space.Symbols() {
+		addSymbol(space.RefAt(i))
+	}
+}
+
+func nearestScopeAtOffset(node ast.BLangNode, offset int) model.Scope {
+	if node == nil {
+		return nil
+	}
+	finder := &scopeAtOffsetFinder{offset: offset}
+	ast.Walk(finder, node)
+	return finder.scope
+}
+
+type scopeAtOffsetFinder struct {
+	offset int
+	scope  model.Scope
+	span   int
+}
+
+func (f *scopeAtOffsetFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return f
+	}
+	if locationHasUsableOffsets(node.GetPosition()) && !locationContains(node.GetPosition(), f.offset) {
+		return nil
+	}
+	if scoped, ok := node.(ast.NodeWithScope); ok && scoped.Scope() != nil {
+		span := locationSpan(node.GetPosition())
+		if f.span == 0 || span <= f.span {
+			f.scope = scoped.Scope()
+			f.span = span
+		}
+	}
+	return f
+}
+
+func (f *scopeAtOffsetFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
 }
 
 func byteOffsetFromPosition(content string, position protocol.Position) int {

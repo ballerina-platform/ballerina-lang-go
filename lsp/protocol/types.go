@@ -134,6 +134,7 @@ const (
 	CompletionItemKindFunction = 3
 	CompletionItemKindVariable = 6
 	CompletionItemKindClass    = 7
+	CompletionItemKindModule   = 9
 	CompletionItemKindConstant = 21
 )
 
