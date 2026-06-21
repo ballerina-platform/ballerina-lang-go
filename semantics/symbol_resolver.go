@@ -368,6 +368,7 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 		semanticError(resolver, msg, pos)
 		return false
 	}
+	symbol.SetLocation(pos)
 	resolver.AddSymbol(name, symbol)
 	ref, _, _ := resolver.GetSymbolFromCurrentScope(name)
 	resolver.packageSymbols[name] = ref
@@ -488,9 +489,35 @@ func returnTypeReferencesTypedescParam(node ast.BLangNode, typedescParams map[st
 }
 
 func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
+	symbol.SetLocation(symbolLocationForNode(node))
 	resolver.AddSymbol(name, symbol)
 	symRef, _, _ := resolver.GetSymbol(name)
 	node.SetSymbol(symRef)
+}
+
+func symbolLocationForNode(node ast.BLangNode) diagnostics.Location {
+	switch n := node.(type) {
+	case *ast.BLangFunction:
+		return locationOrNodePosition(n.Name, node)
+	case *ast.BLangResourceMethod:
+		return locationOrNodePosition(n.Name, node)
+	case *ast.BLangSimpleVariable:
+		return locationOrNodePosition(n.Name, node)
+	case *ast.BLangConstant:
+		return locationOrNodePosition(n.Name, node)
+	case *ast.BLangTypeDefinition:
+		return locationOrNodePosition(n.Name, node)
+	case *ast.BLangClassDefinition:
+		return locationOrNodePosition(n.Name, node)
+	}
+	return node.GetPosition()
+}
+
+func locationOrNodePosition(name ast.IdentifierNode, node ast.BLangNode) diagnostics.Location {
+	if name == nil || diagnostics.IsLocationEmpty(name.GetPosition()) {
+		return node.GetPosition()
+	}
+	return name.GetPosition()
 }
 
 func ResolveSymbols(cx *context.CompilerContext, pkgID model.PackageID, cuImportsList []CompilationUnitImports) (model.Scope, model.ExportedSymbolSpace) {
@@ -1044,6 +1071,14 @@ func (d *deferredMethodSymbol) SetType(semtypes.SemType) {
 	panic("method symbol has not been resolved yet")
 }
 
+func (d *deferredMethodSymbol) Location() diagnostics.Location {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) SetLocation(diagnostics.Location) {
+	panic("method symbol has not been resolved yet")
+}
+
 func (d *deferredMethodSymbol) IsPublic() bool {
 	panic("method symbol has not been resolved yet")
 }
@@ -1519,6 +1554,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 		}
 		isPublic := field.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		symbol.SetLocation(symbolLocationForNode(field.(ast.BLangNode)))
 		blockRes.AddSymbol(name, &symbol)
 	}
 
@@ -1530,6 +1566,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 		}
 		isPublic := m.method.IsPublic()
 		symbol := ms.allocateFunctionSymbolInner(m.method, m.name, isPublic)
+		symbol.SetLocation(symbolLocationForNode(m.method))
 		symbolName := methodSymbolName(m.name)
 		methodTargetScope.AddSymbol(symbolName, symbol)
 		symRef, _ := methodTargetScope.MainSpace().GetSymbol(symbolName)
@@ -1541,6 +1578,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 			continue
 		}
 		symbol := model.NewValueSymbol(m.name, m.isPublic, false, false)
+		symbol.SetLocation(diagnostics.NewBuiltinLocation())
 		blockRes.AddSymbol(m.name, &symbol)
 	}
 
@@ -1551,6 +1589,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 	}
 
 	selfSymbol := model.NewValueSymbol("self", false, false, false)
+	selfSymbol.SetLocation(diagnostics.NewBuiltinLocation())
 	blockRes.AddSymbol("self", &selfSymbol)
 
 	for _, field := range fields {
@@ -1608,6 +1647,7 @@ func allocateServiceResourceMethodSymbols(blockRes *blockSymbolResolver, resourc
 
 func allocateResourceMethodSymbol(targetScope methodSymbolTargetScope, rm *ast.BLangResourceMethod, symbolName string, isPublic bool) model.SymbolRef {
 	symbol := model.NewResourceMethodSymbol(symbolName, rm.Name.GetValue(), isPublic)
+	symbol.SetLocation(symbolLocationForNode(rm))
 	targetScope.AddSymbol(symbolName, symbol)
 	symRef, _ := targetScope.MainSpace().GetSymbol(symbolName)
 	rm.SetSymbol(symRef)
@@ -1646,6 +1686,7 @@ func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangR
 			continue
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol.SetLocation(seg.GetPosition())
 		functionResolver.AddSymbol(name, &symbol)
 	}
 	resolveFunctionInner(functionResolver, rm.RequiredParams, rm.RestParam, rm, rm.Body)
