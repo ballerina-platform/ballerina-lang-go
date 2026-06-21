@@ -118,6 +118,7 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			},
 			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":"}},
 			DefinitionProvider: true,
+			CodeActionProvider: true,
 		}}, 0, ""
 	case "textDocument/completion":
 		var p protocol.CompletionParams
@@ -131,6 +132,12 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			return nil, invalidParams, "invalid definition params"
 		}
 		return s.definition(p), 0, ""
+	case "textDocument/codeAction":
+		var p protocol.CodeActionParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid code action params"
+		}
+		return s.codeActions(p), 0, ""
 	case "shutdown":
 		s.shutdown = true
 		return nil, 0, ""

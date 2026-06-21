@@ -56,6 +56,7 @@ type ServerCapabilities struct {
 	TextDocumentSync   TextDocumentSyncOptions `json:"textDocumentSync"`
 	CompletionProvider *CompletionOptions      `json:"completionProvider,omitempty"`
 	DefinitionProvider bool                    `json:"definitionProvider,omitempty"`
+	CodeActionProvider bool                    `json:"codeActionProvider,omitempty"`
 }
 
 type CompletionOptions struct {
@@ -118,6 +119,32 @@ type CompletionParams struct {
 type DefinitionParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Position     Position               `json:"position"`
+}
+
+type CodeActionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Range        Range                  `json:"range"`
+	Context      CodeActionContext      `json:"context"`
+}
+
+type CodeActionContext struct {
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+type CodeAction struct {
+	Title       string        `json:"title"`
+	Kind        string        `json:"kind,omitempty"`
+	Diagnostics []Diagnostic  `json:"diagnostics,omitempty"`
+	Edit        WorkspaceEdit `json:"edit,omitempty"`
+}
+
+type WorkspaceEdit struct {
+	Changes map[DocumentURI][]TextEdit `json:"changes,omitempty"`
+}
+
+type TextEdit struct {
+	Range   Range  `json:"range"`
+	NewText string `json:"newText"`
 }
 
 type CompletionList struct {
