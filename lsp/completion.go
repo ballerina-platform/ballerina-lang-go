@@ -27,6 +27,8 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lsp/protocol"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/test_util/langlib"
 )
 
@@ -64,7 +66,16 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		return result
 	}
 	offset := byteOffsetFromPosition(source.Content, params.Position)
-	completionCtx := completionContextAt(source.Content, params.Position)
+	completionCx := context.NewCompilerContext(snapshot.Env)
+	cu := recoveringCompilationUnit(completionCx, module, source)
+	if cu == nil {
+		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=no-recovering-compilation-unit", snapshot.ID, module.Name)
+		return result
+	}
+	completionCtx := completionContextFromAST(cu, offset)
+	if completionCtx.kind == completionKindLocal {
+		completionCtx = completionContextAtOffset(source.Content, offset)
+	}
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind != completionKindImportedSymbol {
 		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=unsupported-context", snapshot.ID, module.Name)
@@ -72,13 +83,8 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 	}
 
 	cx := context.NewCompilerContext(snapshot.Env)
-	if !dispatchParseAll(cx, snapshot) || !dispatchTopoSort(cx, snapshot) || cx.HasDiagnostics() {
-		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s alias=%s items=0 reason=parse-or-toposort-failed", snapshot.ID, module.Name, completionCtx.alias)
-		return result
-	}
-	cu := module.CompilationUnits[source.URI]
-	if cu == nil {
-		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s alias=%s items=0 reason=no-compilation-unit", snapshot.ID, module.Name, completionCtx.alias)
+	if !dispatchTopoSort(cx, snapshot) {
+		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s alias=%s items=0 reason=toposort-failed", snapshot.ID, module.Name, completionCtx.alias)
 		return result
 	}
 	imp := importForAlias(cu, completionCtx.alias)
@@ -161,8 +167,79 @@ func importAliasesForLog(cu *ast.BLangCompilationUnit) string {
 	return strings.Join(aliases, ",")
 }
 
-func completionContextAt(content string, position protocol.Position) completionContext {
-	offset := byteOffsetFromPosition(content, position)
+func recoveringCompilationUnit(cx *context.CompilerContext, module *Module, source SourceFile) *ast.BLangCompilationUnit {
+	syntaxTree, err := parser.GetSyntaxTree(cx, source.File, source.Content)
+	if err != nil || syntaxTree == nil {
+		return nil
+	}
+	builder := ast.NewRecoveringNodeBuilder(cx)
+	builder.PackageID = module.PackageID
+	compilationUnit := builder.TransformModulePart(syntaxTree.RootNode.(*tree.ModulePart)).(*ast.BLangCompilationUnit)
+	compilationUnit.SetPackageID(module.PackageID)
+	return compilationUnit
+}
+
+func completionContextFromAST(cu *ast.BLangCompilationUnit, offset int) completionContext {
+	finder := &completionContextFinder{offset: offset}
+	ast.Walk(finder, cu)
+	return finder.context
+}
+
+type completionContextFinder struct {
+	offset  int
+	context completionContext
+	span    int
+}
+
+func (f *completionContextFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	if ctx, span, ok := importedSymbolContextFromNode(node, f.offset); ok && (f.span == 0 || span <= f.span) {
+		f.context = ctx
+		f.span = span
+	}
+	return f
+}
+
+func (f *completionContextFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
+}
+
+func importedSymbolContextFromNode(node ast.BLangNode, offset int) (completionContext, int, bool) {
+	switch n := node.(type) {
+	case *ast.BLangSimpleVarRef:
+		return importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset)
+	case *ast.BLangInvocation:
+		return importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset)
+	}
+	return completionContext{}, 0, false
+}
+
+func importedSymbolContextFromQualifiedName(alias ast.IdentifierNode, name ast.IdentifierNode, pos ast.Location, offset int) (completionContext, int, bool) {
+	if alias == nil || name == nil || alias.GetValue() == "" {
+		return completionContext{}, 0, false
+	}
+	if _, isBad := name.(*ast.BLangBadIdentifier); isBad {
+		if !locationContains(pos, offset) && !locationContains(name.GetPosition(), offset) {
+			return completionContext{}, 0, false
+		}
+		return completionContext{kind: completionKindImportedSymbol, alias: alias.GetValue()}, locationSpan(pos), true
+	}
+	namePos := name.GetPosition()
+	if !locationContains(namePos, offset) {
+		return completionContext{}, 0, false
+	}
+	return completionContext{kind: completionKindImportedSymbol, alias: alias.GetValue(), prefix: name.GetValue()}, locationSpan(pos), true
+}
+
+func completionContextAtOffset(content string, offset int) completionContext {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(content) {
+		offset = len(content)
+	}
 	prefixStart := offset
 	for prefixStart > 0 {
 		r, size := utf8.DecodeLastRuneInString(content[:prefixStart])
@@ -198,6 +275,21 @@ func completionContextAt(content string, position protocol.Position) completionC
 	}
 }
 
+func locationContains(loc ast.Location, offset int) bool {
+	start := loc.StartOffset()
+	end := loc.EndOffset()
+	return start >= 0 && end >= 0 && start <= offset && offset <= end
+}
+
+func locationSpan(loc ast.Location) int {
+	start := loc.StartOffset()
+	end := loc.EndOffset()
+	if start < 0 || end < start {
+		return 1
+	}
+	return end - start + 1
+}
+
 func lineTextAt(content string, offset int) string {
 	if offset < 0 {
 		offset = 0
@@ -211,6 +303,10 @@ func lineTextAt(content string, offset int) string {
 		end++
 	}
 	return content[start:end]
+}
+
+func isIdentifierRune(r rune) bool {
+	return r == '_' || r == '\'' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func byteOffsetFromPosition(content string, position protocol.Position) int {
@@ -259,10 +355,6 @@ func byteOffsetFromPosition(content string, position protocol.Position) int {
 		i += size
 	}
 	return len(content)
-}
-
-func isIdentifierRune(r rune) bool {
-	return r == '_' || r == '\'' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func importedProjectModuleForAlias(snapshot *Snapshot, cu *ast.BLangCompilationUnit, alias string) *Module {
