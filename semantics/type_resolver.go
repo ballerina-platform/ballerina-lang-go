@@ -1013,6 +1013,9 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 }
 
 func resolveStatementInner(t typeResolver, chain *binding, stmt ast.StatementNode) (statementEffect, bool) {
+	if _, ok := stmt.(*ast.BLangBadStmt); ok {
+		return defaultStmtEffect(chain), true
+	}
 	if scoped, ok := stmt.(ast.NodeWithScope); ok {
 		if scope := scoped.Scope(); scope != nil {
 			prev := t.currentScope()
@@ -1347,7 +1350,7 @@ func buildReturnTypeOp(t typeResolver, params map[string]param, node ast.BLangNo
 		}
 		return &model.BinaryTypeOp{Kind: model.TypeOpIntersection, Lhs: lhs, Rhs: rhs}, true
 	case *ast.BLangUserDefinedType:
-		if n.PkgAlias.Value == "" {
+		if n.PkgAlias.GetValue() == "" {
 			if p, ok := params[n.TypeName.Value]; ok && semtypes.IsSubtype(t.typeContext(), p.ty, semtypes.TYPEDESC) {
 				return &model.RefTypeOp{Index: p.index}, true
 			}
@@ -1757,7 +1760,7 @@ func classFieldDescriptor(t typeResolver, field *ast.BLangSimpleVariable) model.
 	if field.IsReadonly() {
 		flags |= model.FieldDescriptorReadonly
 	}
-	fd := model.NewFieldDescriptor(field.Name.Value, flags, field.IsPublic())
+	fd := model.NewFieldDescriptor(field.Name.GetValue(), flags, field.IsPublic())
 	fd.SetMemberType(t.symbolType(field.Symbol()))
 	return fd
 }
@@ -1951,7 +1954,7 @@ func buildObjectDirectMembers(t typeResolver, fields []ast.SimpleVariableNode, m
 			vis = semtypes.VisibilityPublic
 		}
 		directMembers = append(directMembers, directMember{
-			name:       field.Name.Value,
+			name:       field.Name.GetValue(),
 			valueTy:    fieldTy,
 			kind:       semtypes.MemberKindField,
 			visibility: vis,
@@ -2611,8 +2614,6 @@ func resolveActionOrExpression(t typeResolver, chain *binding, expr ast.BLangAct
 
 	ty, effect, ok := resolveExpressionInner(t, chain, expr, expectedType)
 	if !ok {
-		// Mark failed expressions so ast.Walk won't re-process them
-		setExpectedType(expr, semtypes.NEVER)
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
 	if singletonEffect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
@@ -2623,6 +2624,9 @@ func resolveActionOrExpression(t typeResolver, chain *binding, expr ast.BLangAct
 
 func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangActionOrExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	switch e := expr.(type) {
+	case *ast.BLangBadExprOrAction:
+		setExpectedType(e, semtypes.NEVER)
+		return semtypes.NEVER, defaultExpressionEffect(chain), true
 	case *ast.BLangLiteral:
 		if ok := resolveLiteral(t, e, expectedType); !ok {
 			return semtypes.SemType{}, expressionEffect{}, false
@@ -3670,7 +3674,7 @@ func appendQueryVariableInfo(
 	seen[symbol] = true
 	name := ""
 	if varDef.Var.Name != nil {
-		name = varDef.Var.Name.Value
+		name = varDef.Var.Name.GetValue()
 	}
 	return append(variables, queryVariableInfo{
 		name:   name,
@@ -3775,7 +3779,7 @@ func resolveQueryGroupByClause(
 				return nil, false
 			}
 			if groupingKey.VariableRef.VariableName != nil {
-				nonGroupingKeys.Remove(groupingKey.VariableRef.VariableName.Value)
+				nonGroupingKeys.Remove(groupingKey.VariableRef.VariableName.GetValue())
 			}
 		case groupingKey.VariableDef != nil:
 			keyTy, ok := resolveQueryGroupingKeyVarDef(t, chain, groupingKey.VariableDef)
@@ -3786,7 +3790,7 @@ func resolveQueryGroupByClause(
 				return nil, false
 			}
 			if groupingKey.VariableDef.Var.Name != nil {
-				nonGroupingKeys.Remove(groupingKey.VariableDef.Var.Name.Value)
+				nonGroupingKeys.Remove(groupingKey.VariableDef.Var.Name.GetValue())
 			}
 		default:
 			t.semanticError("group by clause requires a grouping key", groupingKey.GetPosition())
@@ -4927,7 +4931,7 @@ func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangField
 	if !ok {
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
-	key := expr.Field.Value
+	key := expr.Field.GetValue()
 	tyCtx := t.typeContext()
 
 	var memberTy semtypes.SemType
@@ -5493,7 +5497,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	for i, arg := range args {
 		switch a := arg.(type) {
 		case *ast.BLangNamedArgsExpression:
-			name := a.Name.Value
+			name := a.Name.GetValue()
 			if seen[name] {
 				t.semanticError(fmt.Sprintf("duplicate arguments for %s", name), a.GetPosition())
 				return nil, chain, false
@@ -5515,7 +5519,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				}
 				slots[idx] = &valueSlot{expr: a.Expr}
 				namedArgsByIndex[idx] = a
-				a.Name.DeterminedType = semtypes.NEVER
+				a.Name.SetDeterminedType(semtypes.NEVER)
 				continue
 			}
 
@@ -5542,7 +5546,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				case *mappingSlot:
 					s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
 				}
-				a.Name.DeterminedType = semtypes.NEVER
+				a.Name.SetDeterminedType(semtypes.NEVER)
 				continue
 			}
 
@@ -5749,7 +5753,7 @@ func rewriteCallArgsForIncludedRecords(inv invocable, origArgs []ast.BLangExpres
 		}
 		for _, field := range ms.fields {
 			for _, arg := range origArgs {
-				if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && named.Expr == field.expr && named.Name.Value == field.name {
+				if named, ok := arg.(*ast.BLangNamedArgsExpression); ok && named.Expr == field.expr && named.Name.GetValue() == field.name {
 					consumedFields[named] = true
 					break
 				}
@@ -5771,7 +5775,7 @@ func rewriteCallArgsForIncludedRecords(inv invocable, origArgs []ast.BLangExpres
 		}
 		mc := ms.synthesized
 		named := &ast.BLangNamedArgsExpression{
-			Name: ast.BLangIdentifier{Value: paramNames[i]},
+			Name: &ast.BLangIdentifier{Value: paramNames[i]},
 			Expr: mc,
 		}
 		named.SetPosition(mc.GetPosition())
@@ -5890,6 +5894,8 @@ func resolveTypeDataPair(t typeResolver, typeData *ast.TypeData, depth int) (sem
 
 func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {
 	switch ty := btype.(type) {
+	case *ast.BLangBadTypeNode:
+		return semtypes.NEVER, true
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
 		case ast.TypeKind_BOOLEAN:
@@ -5996,7 +6002,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		setOtherNodesAsNever(&ty.TypeName)
 		setOtherNodesAsNever(&ty.PkgAlias)
 		symbol := ty.Symbol()
-		if ty.PkgAlias.Value != "" {
+		if ty.PkgAlias.GetValue() != "" {
 			return t.symbolType(symbol), true
 		}
 		if !t.ensureResolved(symbol, depth) {
@@ -6782,7 +6788,7 @@ func containerArgExpr(args []ast.BLangExpression, paramName string) (ast.BLangEx
 		if !ok {
 			return arg, true
 		}
-		if named.Name.Value == paramName {
+		if named.Name.GetValue() == paramName {
 			return named.Expr, true
 		}
 	}

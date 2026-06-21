@@ -108,10 +108,10 @@ func selfFieldLockEntry(a analyzer, access *ast.BLangFieldBaseAccess) (string, m
 	if !cls.isolated {
 		return "", model.SymbolRef{}, false
 	}
-	fieldName := access.Field.Value
+	fieldName := access.Field.GetValue()
 	for _, f := range cls.fields {
 		field := f.(*ast.BLangSimpleVariable)
-		if field.Name.Value != fieldName {
+		if field.Name.GetValue() != fieldName {
 			continue
 		}
 		if isImmutableField(a.tyCtx(), field) {
@@ -315,7 +315,7 @@ func (v *lockBodyVisitor) containsTransferInRef(expr ast.BLangExpression) bool {
 		if !ok {
 			return true
 		}
-		if ref.VariableName.Value == "self" {
+		if ref.VariableName.GetValue() == "self" {
 			return true
 		}
 		unnarrowed := v.a.ctx().UnnarrowedSymbol(ref.Symbol())
@@ -757,7 +757,7 @@ func (visitor *isolatedFnVisitor) checkRead(ref *ast.BLangSimpleVarRef) {
 		visitor.a.semanticErr("access of mutable variable", ref.GetPosition())
 		return
 	}
-	if ref.VariableName.Value == "self" {
+	if ref.VariableName.GetValue() == "self" {
 		return
 	}
 }
@@ -775,10 +775,10 @@ func exprRef(enclosingFields []ast.SimpleVariableNode, expr ast.BLangExpression)
 		return expr.Symbol(), true
 	case *ast.BLangFieldBaseAccess:
 		if isSelfFieldAccess(expr) {
-			fieldName := expr.Field.Value
+			fieldName := expr.Field.GetValue()
 			for _, f := range enclosingFields {
 				field := f.(*ast.BLangSimpleVariable)
-				if field.Name.Value != fieldName {
+				if field.Name.GetValue() != fieldName {
 					continue
 				}
 				return field.Symbol(), true
