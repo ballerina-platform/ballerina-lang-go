@@ -35,8 +35,17 @@ type ResponseError struct {
 }
 
 type InitializeParams struct {
-	RootURI  string `json:"rootUri,omitempty"`
-	RootPath string `json:"rootPath,omitempty"`
+	RootURI      string             `json:"rootUri,omitempty"`
+	RootPath     string             `json:"rootPath,omitempty"`
+	Capabilities ClientCapabilities `json:"capabilities,omitempty"`
+}
+
+type ClientCapabilities struct {
+	Window *WindowClientCapabilities `json:"window,omitempty"`
+}
+
+type WindowClientCapabilities struct {
+	WorkDoneProgress bool `json:"workDoneProgress,omitempty"`
 }
 
 type InitializeResult struct {
@@ -155,4 +164,24 @@ type PublishDiagnosticsParams struct {
 	URI         DocumentURI  `json:"uri"`
 	Version     *int32       `json:"version,omitempty"`
 	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+type ProgressToken string
+
+type WorkDoneProgressCreateParams struct {
+	Token ProgressToken `json:"token"`
+}
+
+type ProgressParams struct {
+	Token ProgressToken `json:"token"`
+	Value any           `json:"value"`
+}
+
+type WorkDoneProgressBegin struct {
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+}
+
+type WorkDoneProgressEnd struct {
+	Kind string `json:"kind"`
 }

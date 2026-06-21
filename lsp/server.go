@@ -41,14 +41,19 @@ const (
 	methodNotFound = -32601
 	invalidParams  = -32602
 	internalError  = -32603
+
+	indexingProgressToken protocol.ProgressToken = "indexing"
 )
 
 type Server struct {
-	in        io.Reader
-	out       io.Writer
-	snapshots map[string]*SnapshotManager
-	root      string
-	shutdown  bool
+	in                  io.Reader
+	out                 io.Writer
+	snapshots           map[string]*SnapshotManager
+	root                string
+	shutdown            bool
+	workDoneProgress    bool
+	progressCreated     bool
+	nextServerRequestID int64
 }
 
 func NewServer(in io.Reader, out io.Writer) *Server {
@@ -138,6 +143,13 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 	logLS(s.root, "notification received method=%s", method)
 	switch method {
 	case "initialized":
+		if s.root == "" {
+			return
+		}
+		manager := s.snapshots[s.root]
+		if manager != nil && manager.Current().Kind == ProjectKindBuild {
+			s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: s.root})
+		}
 		return
 	case "exit":
 		if s.shutdown {
@@ -293,6 +305,8 @@ func resetModuleState(module *Module) {
 }
 
 func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile) {
+	s.beginIndexingProgress()
+	defer s.endIndexingProgress()
 	logLS(snapshot.Root, "diagnostics start snapshotID=%d kind=%s source=%s", snapshot.ID, projectKindString(snapshot.Kind), source.Path)
 	diagnosticsByURI := runDiagnostics(snapshot, source)
 	if !manager.IsCurrent(snapshot) {
@@ -319,11 +333,10 @@ func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
 		return
 	}
 	s.root = root
+	s.workDoneProgress = params.Capabilities.Window != nil && params.Capabilities.Window.WorkDoneProgress
 	logLS(root, "initialize root=%s build=%t", root, isBuildProjectRoot(root))
 	if isBuildProjectRoot(root) {
-		manager := NewBuildSnapshotManager(root)
-		s.snapshots[root] = manager
-		s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: root})
+		s.snapshots[root] = NewBuildSnapshotManager(root)
 	}
 }
 
@@ -485,6 +498,42 @@ func (s *Server) writeNotification(method string, params any) {
 		Method  string          `json:"method"`
 		Params  json.RawMessage `json:"params,omitempty"`
 	}{JSONRPC: "2.0", Method: method, Params: mustMarshal(params)})
+}
+
+func (s *Server) writeRequest(method string, params any) {
+	s.nextServerRequestID++
+	id := s.nextServerRequestID
+	logLS(s.root, "request sent method=%s id=%d", method, id)
+	s.writeMessage(struct {
+		JSONRPC string          `json:"jsonrpc"`
+		ID      int64           `json:"id"`
+		Method  string          `json:"method"`
+		Params  json.RawMessage `json:"params,omitempty"`
+	}{JSONRPC: "2.0", ID: id, Method: method, Params: mustMarshal(params)})
+}
+
+func (s *Server) beginIndexingProgress() {
+	if !s.workDoneProgress {
+		return
+	}
+	if !s.progressCreated {
+		s.writeRequest("window/workDoneProgress/create", protocol.WorkDoneProgressCreateParams{Token: indexingProgressToken})
+		s.progressCreated = true
+	}
+	s.writeNotification("$/progress", protocol.ProgressParams{
+		Token: indexingProgressToken,
+		Value: protocol.WorkDoneProgressBegin{Kind: "begin", Title: "indexing"},
+	})
+}
+
+func (s *Server) endIndexingProgress() {
+	if !s.workDoneProgress {
+		return
+	}
+	s.writeNotification("$/progress", protocol.ProgressParams{
+		Token: indexingProgressToken,
+		Value: protocol.WorkDoneProgressEnd{Kind: "end"},
+	})
 }
 
 func (s *Server) writeMessage(msg any) {
