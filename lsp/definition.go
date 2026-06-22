@@ -31,36 +31,60 @@ func (s *Server) definition(params protocol.DefinitionParams) (result *protocol.
 		}
 	}()
 
-	snapshot, source := s.snapshotForURI(params.TextDocument.URI)
-	if snapshot == nil || source.URI == "" {
+	target, ok := s.symbolAtPosition(params.TextDocument.URI, params.Position)
+	if !ok {
 		return nil
+	}
+	return &target.Definition
+}
+
+type symbolPositionTarget struct {
+	Snapshot   *Snapshot
+	Source     SourceFile
+	Module     *Module
+	Symbol     model.SymbolRef
+	Definition protocol.Location
+	DefLoc     diagnostics.Location
+}
+
+func (s *Server) symbolAtPosition(uri protocol.DocumentURI, position protocol.Position) (symbolPositionTarget, bool) {
+	snapshot, source := s.snapshotForURI(uri)
+	if snapshot == nil || source.URI == "" {
+		return symbolPositionTarget{}, false
 	}
 	module := moduleForSource(snapshot, source.URI)
 	if module == nil {
-		return nil
+		return symbolPositionTarget{}, false
 	}
 
 	cx := context.NewCompilerContext(snapshot.Env)
 	if !runModuleFrontend(cx, snapshot, module, FrontendStageSymbolResolved) || cx.HasErrors() {
-		return nil
+		return symbolPositionTarget{}, false
 	}
 
 	cu := module.CompilationUnits[source.URI]
 	if cu == nil {
-		return nil
+		return symbolPositionTarget{}, false
 	}
-	offset := byteOffsetFromPosition(source.Content, params.Position)
+	offset := byteOffsetFromPosition(source.Content, position)
 	symbol := symbolAtOffset(cu, offset)
 	if symbol.IsEmpty() {
-		return nil
+		return symbolPositionTarget{}, false
 	}
 
 	loc := cx.SymbolLocation(symbol)
 	defFile, ok := sourceFileForLocation(snapshot, loc)
 	if !ok {
-		return nil
+		return symbolPositionTarget{}, false
 	}
-	return &protocol.Location{URI: defFile.URI, Range: lspRange(defFile.Content, loc)}
+	return symbolPositionTarget{
+		Snapshot:   snapshot,
+		Source:     source,
+		Module:     module,
+		Symbol:     symbol,
+		Definition: protocol.Location{URI: defFile.URI, Range: lspRange(defFile.Content, loc)},
+		DefLoc:     loc,
+	}, true
 }
 
 func symbolAtOffset(cu *ast.BLangCompilationUnit, offset int) model.SymbolRef {

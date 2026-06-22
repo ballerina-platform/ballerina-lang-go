@@ -118,6 +118,7 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			},
 			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
 			DefinitionProvider: true,
+			ReferenceProvider:  true,
 			CodeActionProvider: true,
 		}}, 0, ""
 	case "textDocument/completion":
@@ -132,6 +133,12 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			return nil, invalidParams, "invalid definition params"
 		}
 		return s.definition(p), 0, ""
+	case "textDocument/references":
+		var p protocol.ReferenceParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid references params"
+		}
+		return s.references(p), 0, ""
 	case "textDocument/codeAction":
 		var p protocol.CodeActionParams
 		if err := decodeParams(params, &p); err != nil {

@@ -56,6 +56,7 @@ type ServerCapabilities struct {
 	TextDocumentSync   TextDocumentSyncOptions `json:"textDocumentSync"`
 	CompletionProvider *CompletionOptions      `json:"completionProvider,omitempty"`
 	DefinitionProvider bool                    `json:"definitionProvider,omitempty"`
+	ReferenceProvider  bool                    `json:"referencesProvider,omitempty"`
 	CodeActionProvider bool                    `json:"codeActionProvider,omitempty"`
 }
 
@@ -119,6 +120,16 @@ type CompletionParams struct {
 type DefinitionParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Position     Position               `json:"position"`
+}
+
+type ReferenceParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+	Context      ReferenceContext       `json:"context"`
+}
+
+type ReferenceContext struct {
+	IncludeDeclaration bool `json:"includeDeclaration"`
 }
 
 type CodeActionParams struct {
