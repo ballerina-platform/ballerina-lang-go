@@ -135,6 +135,7 @@ func initializingAction(rt *Runtime) {
 	rt.mu.Lock()
 	rt.state = StateInitializing
 	rt.mu.Unlock()
+	rt.env.TypeEnv.Freeze()
 	rt.setupSignalListeners()
 }
 

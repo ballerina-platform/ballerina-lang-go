@@ -42,8 +42,7 @@ class LifecycleListener {
     }
 }
 
-listener LifecycleListener l = new ();
-var _ = l;
+public listener LifecycleListener l = new ();
 
 public function main() {
     io:println("main"); // @output main
