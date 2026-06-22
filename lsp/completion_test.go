@@ -71,6 +71,68 @@ func TestCompletionAutoImportsLocalModule(t *testing.T) {
 	}
 }
 
+func TestCompletionCompletesRecordFields(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person record {|\n    string name;\n    int age?;\n|};\npublic function main() {\n    Person p = {name: \"Ann\"};\n    _ = p.$;\n}\n")
+
+	assertCompletionItem(t, items, "name")
+	assertCompletionItem(t, items, "age")
+	assertNoCompletionItem(t, items, "p")
+}
+
+func TestCompletionCompletesStandaloneMemberAccess(t *testing.T) {
+	items := completionItemsAtMarker(t, "type R record {|\n  int foo;\n|};\n\nfunction bar() {\n    R r = { foo: 1};\n    r.$\n}\n")
+
+	assertCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "r")
+}
+
+func TestCompletionCompletesStandaloneMemberAccessWithUnusedImport(t *testing.T) {
+	items := completionItemsAtMarker(t, "import ballerina/io;\ntype R record {|\n  int foo;\n|};\n\nfunction bar() {\n    R r = { foo: 1};\n    r.$\n}\n")
+
+	assertCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "r")
+	assertNoCompletionItem(t, items, "io:")
+}
+
+func TestCompletionFiltersMemberAccessPrefix(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person record {|\n    string name;\n    int age?;\n|};\npublic function main() {\n    Person p = {name: \"Ann\"};\n    _ = p.na$;\n}\n")
+
+	assertCompletionItem(t, items, "name")
+	assertNoCompletionItem(t, items, "age")
+}
+
+func TestCompletionCompletesMemberAccessInInvocation(t *testing.T) {
+	items := completionItemsAtMarker(t, "import ballerina/io;\ntype Person record {|\n    string name;\n    int age?;\n|};\n\npublic function main() {\n    Person p = {name: \"Ann\"};\n    io:println(p.$)\n}\n")
+
+	assertCompletionItem(t, items, "name")
+	assertCompletionItem(t, items, "age")
+}
+
+func TestCompletionCompletesMemberAccessInTypedInitializer(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person record {|\n    int age;\n|};\n\npublic function main() {\n    Person p = {age: 1};\n    int a = p.$\n}\n")
+
+	assertCompletionItem(t, items, "age")
+}
+
+func TestCompletionCompletesObjectFieldsAndNormalMethods(t *testing.T) {
+	items := completionItemsAtMarker(t, "client class Client {\n    string name = \"\";\n    function greet() {\n    }\n    remote function get() returns int {\n        return 1;\n    }\n}\npublic function main() {\n    Client c = new;\n    _ = c.$;\n}\n")
+
+	assertCompletionItem(t, items, "name")
+	method := requireCompletionItem(t, items, "greet")
+	if method.Kind != protocol.CompletionItemKindFunction {
+		t.Fatalf("method kind = %d, want function", method.Kind)
+	}
+	assertNoCompletionItem(t, items, "get")
+}
+
+func TestCompletionMemberAccessUnsupportedReceiverDoesNotFallback(t *testing.T) {
+	items := completionItemsAtMarker(t, "public function main() {\n    int x = 1;\n    _ = x.$;\n}\n")
+
+	if len(items) != 0 {
+		t.Fatalf("items = %+v, want empty", items)
+	}
+}
+
 func completionItemsAtMarker(t *testing.T, contentWithMarker string) []protocol.CompletionItem {
 	t.Helper()
 	offset := strings.Index(contentWithMarker, "$")

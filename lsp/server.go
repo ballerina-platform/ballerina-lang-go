@@ -116,7 +116,7 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 				Change:    1,
 				Save:      protocol.SaveOptions{IncludeText: true},
 			},
-			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":"}},
+			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
 			DefinitionProvider: true,
 			CodeActionProvider: true,
 		}}, 0, ""

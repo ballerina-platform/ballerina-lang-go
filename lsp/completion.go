@@ -29,6 +29,8 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util/langlib"
 )
 
@@ -77,6 +79,11 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		completionCtx = completionContextAtOffset(source.Content, offset)
 	}
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
+	if completionCtx.kind == completionKindMemberAccess {
+		result.Items = s.memberAccessCompletionItems(snapshot, module, source, cu, completionCtx, offset)
+		logCompletionItems(snapshot.Root, snapshot.ID, module.Name, "", result.Items)
+		return result
+	}
 	if completionCtx.kind != completionKindImportedSymbol {
 		result.Items = s.generalCompletionItems(snapshot, module, source, cu, completionCtx, offset)
 		if len(result.Items) == 0 {
@@ -222,6 +229,275 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	items := make([]protocol.CompletionItem, len(labels))
 	for i, label := range labels {
 		items[i] = itemsByLabel[label]
+	}
+	return items
+}
+
+func (s *Server) memberAccessCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, _ *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
+	prefix := memberAccessPrefixAtOffset(source.Content, offset)
+	if prefix == "" {
+		prefix = completionCtx.prefix
+	}
+	dotOffset := offset - len(prefix) - 1
+	if dotOffset < 0 || dotOffset >= len(source.Content) || source.Content[dotOffset] != '.' {
+		return nil
+	}
+	if items := s.memberAccessCompletionItemsFromReceiver(snapshot, module, source, prefix, dotOffset, false); items != nil {
+		return items
+	}
+	return s.memberAccessCompletionItemsFromReceiver(snapshot, module, source, prefix, dotOffset, true)
+}
+
+func (s *Server) memberAccessCompletionItemsFromReceiver(snapshot *Snapshot, module *Module, source SourceFile, prefix string, dotOffset int, wrapStatement bool) []protocol.CompletionItem {
+	completionSource := source
+	completionSource.Content = source.Content[:dotOffset] + source.Content[dotOffset+len(prefix)+1:]
+	receiverEndOffset := dotOffset
+	if wrapStatement {
+		stmtStart := statementLineStart(completionSource.Content, dotOffset)
+		completionSource.Content = completionSource.Content[:stmtStart] + "_ = " + completionSource.Content[stmtStart:]
+		receiverEndOffset += len("_ = ")
+	}
+	completionSource.Content = ensureLineSemicolon(completionSource.Content, receiverEndOffset)
+	recoveredCU := recoveringCompilationUnit(context.NewCompilerContext(snapshot.Env), module, completionSource)
+	if recoveredCU == nil {
+		return nil
+	}
+	completionSnapshot, completionModule := snapshotWithRecoveredCU(snapshot, module, source.URI, recoveredCU)
+	cx := context.NewCompilerContext(completionSnapshot.Env)
+	_ = runModuleFrontend(cx, completionSnapshot, completionModule, FrontendStageLocalTypeResolved)
+	resolveLocalTypesForCompletion(cx, completionModule)
+	cu := completionModule.CompilationUnits[source.URI]
+	if cu == nil {
+		cu = recoveredCU
+	}
+	receiverExpr := receiverExpressionEndingAtOffset(cu, receiverEndOffset)
+	if receiverExpr == nil {
+		return nil
+	}
+	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
+	receiverTy := completionReceiverType(cx, receiverExpr)
+	if semtypes.IsZero(receiverTy) {
+		return nil
+	}
+	if semtypes.IsSubtype(tyCtx, receiverTy, semtypes.MAPPING) {
+		return mappingMemberCompletionItems(tyCtx, receiverTy, prefix)
+	}
+	if semtypes.IsSubtype(tyCtx, receiverTy, semtypes.OBJECT) {
+		return objectMemberCompletionItems(tyCtx, receiverTy, prefix)
+	}
+	return nil
+}
+
+func resolveLocalTypesForCompletion(cx *context.CompilerContext, module *Module) {
+	if module == nil || module.Package == nil || module.Stage >= FrontendStageLocalTypeResolved {
+		return
+	}
+	defer func() { _ = recover() }()
+	semantics.ResolveTopLevelNodes(cx, module.Package, module.ImportedSymbols)
+	semantics.ResolveLocalNodes(cx, module.Package, module.ImportedSymbols)
+}
+
+func ensureLineSemicolon(content string, offset int) string {
+	end := offset
+	for end < len(content) && content[end] != '\r' && content[end] != '\n' {
+		end++
+	}
+	if strings.HasSuffix(strings.TrimSpace(content[offset:end]), ";") {
+		return content
+	}
+	return content[:end] + ";" + content[end:]
+}
+
+func statementLineStart(content string, offset int) int {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(content) {
+		offset = len(content)
+	}
+	start := strings.LastIndexAny(content[:offset], "\r\n") + 1
+	for start < len(content) && (content[start] == ' ' || content[start] == '\t') {
+		start++
+	}
+	return start
+}
+
+func memberAccessPrefixAtOffset(content string, offset int) string {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(content) {
+		offset = len(content)
+	}
+	prefixStart := offset
+	for prefixStart > 0 {
+		r, size := utf8.DecodeLastRuneInString(content[:prefixStart])
+		if r == utf8.RuneError && size == 0 || !isIdentifierRune(r) {
+			break
+		}
+		prefixStart -= size
+	}
+	return content[prefixStart:offset]
+}
+
+func receiverExpressionEndingAtOffset(cu *ast.BLangCompilationUnit, offset int) ast.BLangExpression {
+	finder := &receiverExpressionFinder{offset: offset}
+	ast.Walk(finder, cu)
+	if finder.expr != nil || offset <= 0 {
+		return finder.expr
+	}
+	finder = &receiverExpressionFinder{offset: offset - 1}
+	ast.Walk(finder, cu)
+	return finder.expr
+}
+
+type receiverExpressionFinder struct {
+	offset int
+	expr   ast.BLangExpression
+	span   int
+}
+
+func (f *receiverExpressionFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return f
+	}
+	pos := node.GetPosition()
+	if locationHasUsableOffsets(pos) && pos.EndOffset() < f.offset {
+		return nil
+	}
+	expr, ok := node.(ast.BLangExpression)
+	if ok && expressionEndsAtOffset(pos, f.offset) {
+		span := locationSpan(pos)
+		if f.span == 0 || span <= f.span {
+			f.expr = expr
+			f.span = span
+		}
+	}
+	return f
+}
+
+func (f *receiverExpressionFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
+}
+
+func expressionEndsAtOffset(loc ast.Location, offset int) bool {
+	end := loc.EndOffset()
+	return end == offset || end == offset-1
+}
+
+func completionReceiverType(cx *context.CompilerContext, expr ast.BLangExpression) semtypes.SemType {
+	ty := expr.GetDeterminedType()
+	if !semtypes.IsZero(ty) {
+		return ty
+	}
+	if varRef, ok := expr.(*ast.BLangSimpleVarRef); ok && !varRef.Symbol().IsEmpty() {
+		return cx.SymbolType(varRef.Symbol())
+	}
+	return semtypes.SemType{}
+}
+
+func fieldAccessAtOffset(cu *ast.BLangCompilationUnit, offset int) *ast.BLangFieldBaseAccess {
+	finder := &fieldAccessAtOffsetFinder{offset: offset}
+	ast.Walk(finder, cu)
+	if finder.node != nil || offset <= 0 {
+		return finder.node
+	}
+	finder = &fieldAccessAtOffsetFinder{offset: offset - 1}
+	ast.Walk(finder, cu)
+	return finder.node
+}
+
+type fieldAccessAtOffsetFinder struct {
+	offset int
+	node   *ast.BLangFieldBaseAccess
+	span   int
+}
+
+func (f *fieldAccessAtOffsetFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return f
+	}
+	if locationHasUsableOffsets(node.GetPosition()) && !locationContains(node.GetPosition(), f.offset) {
+		return nil
+	}
+	fieldAccess, ok := node.(*ast.BLangFieldBaseAccess)
+	if ok {
+		span := locationSpan(node.GetPosition())
+		if f.span == 0 || span <= f.span {
+			f.node = fieldAccess
+			f.span = span
+		}
+	}
+	return f
+}
+
+func (f *fieldAccessAtOffsetFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
+}
+
+func mappingMemberCompletionItems(tyCtx semtypes.Context, receiverTy semtypes.SemType, prefix string) []protocol.CompletionItem {
+	atomic := semtypes.ToMappingAtomicType(tyCtx, receiverTy)
+	if atomic == nil {
+		return nil
+	}
+	seen := make(map[string]protocol.CompletionItem)
+	labels := make([]string, 0)
+	for _, name := range atomic.Names {
+		addMemberCompletionItem(seen, &labels, name, protocol.CompletionItemKindVariable, prefix)
+	}
+	return sortedCompletionItems(seen, labels)
+}
+
+func objectMemberCompletionItems(tyCtx semtypes.Context, receiverTy semtypes.SemType, prefix string) []protocol.CompletionItem {
+	atomic := semtypes.ToObjectAtomicType(tyCtx, receiverTy)
+	if atomic == nil {
+		return nil
+	}
+	seen := make(map[string]protocol.CompletionItem)
+	labels := make([]string, 0)
+	for _, name := range atomic.Names {
+		if name == "$qualifiers" {
+			continue
+		}
+		kindTy := semtypes.ObjectMemberKind(tyCtx, semtypes.StringConst(name), receiverTy)
+		switch singleStringValue(kindTy) {
+		case "field":
+			addMemberCompletionItem(seen, &labels, name, protocol.CompletionItemKindVariable, prefix)
+		case "method":
+			addMemberCompletionItem(seen, &labels, name, protocol.CompletionItemKindFunction, prefix)
+		}
+	}
+	return sortedCompletionItems(seen, labels)
+}
+
+func singleStringValue(ty semtypes.SemType) string {
+	value := semtypes.SingleShape(ty)
+	if value.IsEmpty() {
+		return ""
+	}
+	str, ok := value.Get().Value.(string)
+	if !ok {
+		return ""
+	}
+	return str
+}
+
+func addMemberCompletionItem(seen map[string]protocol.CompletionItem, labels *[]string, label string, kind int, prefix string) {
+	if label == "" || !strings.HasPrefix(label, prefix) {
+		return
+	}
+	if _, ok := seen[label]; ok {
+		return
+	}
+	seen[label] = protocol.CompletionItem{Label: label, Kind: kind}
+	*labels = append(*labels, label)
+}
+
+func sortedCompletionItems(seen map[string]protocol.CompletionItem, labels []string) []protocol.CompletionItem {
+	sort.Strings(labels)
+	items := make([]protocol.CompletionItem, len(labels))
+	for i, label := range labels {
+		items[i] = seen[label]
 	}
 	return items
 }
