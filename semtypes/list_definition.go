@@ -95,7 +95,7 @@ func (l *ListDefinition) define(env Env, initial []SemType, fixedLength int, res
 		atom = rec
 		env.setRecListAtomType(*rec, &atomicType)
 	} else {
-		atom = new(env.listAtom(&atomicType))
+		atom = env.listAtom(&atomicType)
 	}
 	return l.createSemType(env, atom)
 }

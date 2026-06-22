@@ -93,7 +93,7 @@ func newBasicCellTypeVals(env Env, mut CellMutability) basicCellTypeVals {
 func createCellTypeVal(env Env, ty basicTypeBitSet, mut CellMutability) SemType {
 	atomicCell := cellAtomicTypeFrom(ty.semType(), mut)
 	atom := env.cellAtom(&atomicCell)
-	bdd := bddAtom(&atom)
+	bdd := bddAtom(atom)
 	return getBasicSubtype(BTCell, bdd)
 }
 

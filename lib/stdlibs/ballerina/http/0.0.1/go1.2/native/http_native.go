@@ -87,7 +87,8 @@ func init() {
 	runtime.RegisterModuleInitializer(initHttpModule)
 }
 
-// httpTypes holds the lazily-built semtypes used by the http runtime.
+// httpTypes holds the semtypes used by the http runtime. They are built once
+// in initHttpModule (single-threaded) and captured by the handler closures.
 type httpTypes struct {
 	byteArrTy  semtypes.SemType
 	strArrTy   semtypes.SemType
@@ -244,29 +245,21 @@ func compressionModeOf(self *values.Object) string {
 }
 
 func initHttpModule(rt *runtime.Runtime) {
-	var (
-		once  sync.Once
-		types httpTypes
-	)
-	ensureTypes := func() {
-		once.Do(func() {
-			env := rt.GetTypeEnv()
-			bld := semtypes.NewListDefinition()
-			types.byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-			sld := semtypes.NewListDefinition()
-			types.strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-			typCtx := semtypes.ContextFrom(env)
-			jsonTy := semtypes.CreateJSON(typCtx)
-			jmd := semtypes.NewMappingDefinition()
-			types.jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-			jld := semtypes.NewListDefinition()
-			types.jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-		})
+	env := rt.GetTypeEnv()
+	jsonTy := semtypes.CreateJSON(semtypes.ContextFrom(env))
+	byteArrLd := semtypes.NewListDefinition()
+	strArrLd := semtypes.NewListDefinition()
+	jsonMapMd := semtypes.NewMappingDefinition()
+	jsonListLd := semtypes.NewListDefinition()
+	types := httpTypes{
+		byteArrTy:  byteArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
+		strArrTy:   strArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING),
+		jsonMapTy:  jsonMapMd.DefineMappingTypeWrapped(env, nil, jsonTy),
+		jsonListTy: jsonListLd.DefineListTypeWrappedWithEnvSemType(env, jsonTy),
 	}
 
 	// msgToBody converts a Ballerina RequestMessage value to (io.Reader, contentLength, contentType).
 	msgToBody := func(tc semtypes.Context, msg values.BalValue) (io.Reader, int64, string) {
-		ensureTypes()
 		switch v := msg.(type) {
 		case string:
 			b := []byte(v)
@@ -1045,7 +1038,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			var body []byte
@@ -1069,7 +1061,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getBinaryPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
 			var raw []byte
@@ -1126,7 +1117,6 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getHeaderNames",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			self := args[0].(*values.Object)
 			keys := responseHeaders(self).Keys()
 			items := make([]values.BalValue, len(keys))
@@ -1295,7 +1285,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getHeaderNames",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self := args[0].(*values.Object)
 			hdrsVal, ok := self.Get("$headers")
 			if !ok {
@@ -1363,7 +1353,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("$body")
 			holder, _ := bodyVal.(*requestBodyHolder)
@@ -1385,7 +1375,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getBinaryPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("$body")
 			holder, _ := bodyVal.(*requestBodyHolder)
@@ -1454,7 +1444,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getQueryParams",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self := args[0].(*values.Object)
 			queryStrVal, _ := self.Get("$queryStr")
 			queryStr, _ := queryStrVal.(string)
@@ -1486,7 +1476,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getQueryParamValues",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self := args[0].(*values.Object)
 			key := args[1].(string)
 			queryStrVal, _ := self.Get("$queryStr")

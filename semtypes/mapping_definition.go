@@ -63,7 +63,7 @@ func (m *MappingDefinition) Define(env Env, fields []CellField, rest SemType) Se
 		a = rec
 		env.setRecMappingAtomType(*rec, &atomicType)
 	} else {
-		a = new(env.mappingAtom(&atomicType))
+		a = env.mappingAtom(&atomicType)
 	}
 	return m.createSemType(env, a)
 }
