@@ -94,14 +94,14 @@ public type CertValidation record {|
 //   sessionTimeout - TLS session timeout (accepted; not configurable in Go).
 //   serverName     - SNI override; defaults to hostname from the target URL.
 public type ClientSecureSocket record {|
-    boolean enable?;
+    boolean enable = true;
     string cert?;
     CertKey key?;
     ProtocolConfig? protocol?;
     CertValidation? certValidation?;
     string[] ciphers?;
-    boolean verifyHostName?;
-    boolean shareSession?;
+    boolean verifyHostName = true;
+    boolean shareSession = true;
     decimal handshakeTimeout?;
     decimal sessionTimeout?;
     string serverName?;
@@ -177,8 +177,9 @@ public type PoolConfiguration record {|
 |};
 
 // HTTP protocol version enum.
-// HTTP/1.0 is not supported — Go's HTTP client cannot send HTTP/1.0 requests.
+// HTTP/1.0 is accepted at compile time; at runtime a warning is printed and HTTP/1.1 is used instead.
 public enum HttpVersion {
+    HTTP_1_0 = "1.0",
     HTTP_1_1 = "1.1",
     HTTP_2_0 = "2.0"
 }
@@ -248,11 +249,17 @@ public const HeaderPosition TRAILING = "TRAILING";
 #
 # `Response` objects are created by the HTTP client after a successful request.
 # They can also be constructed explicitly using `new http:Response()` and populated
-# with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`,
-# and `setStatusCode` before being returned.
+# with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, and `setHeader`
+# before being returned.
 public class Response {
-    # The HTTP status code (e.g., 200, 404, 500). Initialised to 200 by `init`.
-    public int statusCode = 0;
+    # The HTTP status code (e.g., 200, 404, 500).
+    public int statusCode = 200;
+    # The response reason phrase (e.g., "OK").
+    public string reasonPhrase = "";
+    # The server header value.
+    public string server = "";
+    # The resolved URI after any redirects.
+    public string resolvedRequestedURI = "";
 
     # Initialises the response with status code 200 and empty headers and body.
     public isolated function init() {
@@ -263,18 +270,21 @@ public class Response {
 
     # Sets the response body to a plain string and Content-Type to `text/plain`.
     #
-    # + payload - The string payload
-    public isolated function setTextPayload(string payload) = external;
+    # + payload     - The string payload
+    # + contentType - Optional MIME type; defaults to `text/plain`
+    public isolated function setTextPayload(string payload, string? contentType = ()) = external;
 
     # Sets the response body to a JSON value and Content-Type to `application/json`.
     #
-    # + payload - The JSON payload
-    public isolated function setJsonPayload(json payload) = external;
+    # + payload     - The JSON payload
+    # + contentType - Optional MIME type; defaults to `application/json`
+    public isolated function setJsonPayload(json payload, string? contentType = ()) = external;
 
     # Sets the response body to a byte array and Content-Type to `application/octet-stream`.
     #
-    # + payload - The binary payload
-    public isolated function setBinaryPayload(byte[] payload) = external;
+    # + payload     - The binary payload
+    # + contentType - Optional MIME type; defaults to `application/octet-stream`
+    public isolated function setBinaryPayload(byte[] payload, string? contentType = ()) = external;
 
     # Sets or replaces a response header.
     #
@@ -282,10 +292,34 @@ public class Response {
     # + headerValue - The header value
     public isolated function setHeader(string headerName, string headerValue) = external;
 
-    # Sets the HTTP status code on this response object.
+    # Adds a value to the specified header without replacing existing values.
     #
-    # + statusCode - The HTTP status code to set
-    public isolated function setStatusCode(int statusCode) = external;
+    # + headerName  - The header name (case-insensitive)
+    # + headerValue - The header value to add
+    # + position    - Header position (`LEADING` or `TRAILING`); `TRAILING` is accepted but ignored
+    public isolated function addHeader(string headerName, string headerValue, HeaderPosition position = LEADING) = external;
+
+    # Removes the specified header from the response.
+    #
+    # + headerName - The header name (case-insensitive)
+    # + position   - Header position (`LEADING` or `TRAILING`); `TRAILING` is accepted but ignored
+    public isolated function removeHeader(string headerName, HeaderPosition position = LEADING) = external;
+
+    # Removes all headers from the response.
+    #
+    # + position - Header position (`LEADING` or `TRAILING`); `TRAILING` is accepted but ignored
+    public isolated function removeAllHeaders(HeaderPosition position = LEADING) = external;
+
+    # Sets the `Content-Type` header on the response.
+    #
+    # + contentType - The MIME type string
+    # + return - `()` on success, or an `error` if the content type is invalid
+    public isolated function setContentType(string contentType) returns error? = external;
+
+    # Returns the `Content-Type` header value of the response.
+    #
+    # + return - The content type string, or `""` if not set
+    public isolated function getContentType() returns string = external;
 
     # Returns the response body as a plain string.
     #
@@ -356,26 +390,64 @@ public class Request {
 
     private isolated function initNative() = external;
 
+    # The user agent value for the request.
+    public string userAgent = "";
+    # The extra path info for the request.
+    public string extraPathInfo = "";
+
     # Sets the request body as plain text with `Content-Type: text/plain`.
     #
-    # + payload - The text body to set
-    public isolated function setTextPayload(string payload) = external;
+    # + payload     - The text body to set
+    # + contentType - Optional MIME type; defaults to `text/plain`
+    public isolated function setTextPayload(string payload, string? contentType = ()) = external;
 
     # Sets the request body as JSON with `Content-Type: application/json`.
     #
-    # + payload - The JSON value to set
-    public isolated function setJsonPayload(json payload) = external;
+    # + payload     - The JSON value to set
+    # + contentType - Optional MIME type; defaults to `application/json`
+    public isolated function setJsonPayload(json payload, string? contentType = ()) = external;
 
     # Sets the request body as bytes with `Content-Type: application/octet-stream`.
     #
-    # + payload - The byte array to set
-    public isolated function setBinaryPayload(byte[] payload) = external;
+    # + payload     - The byte array to set
+    # + contentType - Optional MIME type; defaults to `application/octet-stream`
+    public isolated function setBinaryPayload(byte[] payload, string? contentType = ()) = external;
 
     # Sets a header on the request. Replaces any existing value for the header.
     #
     # + headerName  - The header name
     # + headerValue - The header value
     public isolated function setHeader(string headerName, string headerValue) = external;
+
+    # Adds a value to the specified header without replacing existing values.
+    #
+    # + headerName  - The header name (case-insensitive)
+    # + headerValue - The header value to add
+    public isolated function addHeader(string headerName, string headerValue) = external;
+
+    # Removes the specified header from the request.
+    #
+    # + headerName - The header name (case-insensitive)
+    public isolated function removeHeader(string headerName) = external;
+
+    # Removes all headers from the request.
+    public isolated function removeAllHeaders() = external;
+
+    # Returns the names of all request headers.
+    #
+    # + return - An array of all header names present in the request
+    public isolated function getHeaderNames() returns string[] = external;
+
+    # Sets the `Content-Type` header on the request.
+    #
+    # + contentType - The MIME type string
+    # + return - `()` on success, or an `error` if the content type is invalid
+    public isolated function setContentType(string contentType) returns error? = external;
+
+    # Returns the `Content-Type` header value of the request.
+    #
+    # + return - The content type string, or `""` if not set
+    public isolated function getContentType() returns string = external;
 
     # Returns the request body as a plain string.
     #
@@ -420,7 +492,18 @@ public class Request {
     # + paramName - The query parameter name
     # + return - The first value as a `string`, or `()` if the parameter is not present
     public isolated function getQueryParamValue(string paramName) returns string? = external;
+
+    # Returns all values for the specified query parameter.
+    #
+    # + key - The query parameter name
+    # + return - A `string[]` of all values, or `()` if the parameter is not present
+    public isolated function getQueryParamValues(string key) returns string[]? = external;
 }
+
+// Represents an HTTP outbound request entity. Accepts any JSON-compatible value or an
+// existing `Request` object. The `mime:Entity[]` and `stream` subtypes of jBallerina's
+// `RequestMessage` are not supported in this implementation.
+public type RequestMessage json|Request;
 
 // Represents HTTP methods.
 public enum Method {
@@ -445,10 +528,11 @@ public enum Method {
 # **Not supported:** `submit`/`getResponse`, HTTP/2 server push methods
 # (`hasPromise`, `getNextPromise`, etc.), and resource function syntax (`client->/path.get(...)`).
 #
-# **Message body:** The `message` parameter accepts `json`, which in Ballerina includes
-# `string`, `byte[]`, and all JSON-compatible values. The `Content-Type` is inferred:
+# **Message body:** The `message` parameter accepts `RequestMessage` (`json|Request`).
+# The `Content-Type` is inferred when not explicitly overridden via `mediaType`:
 # - `string` → `text/plain`
 # - `byte[]` → `application/octet-stream`
+# - `http:Request` → content type and body taken from the request
 # - everything else → serialised as `application/json`
 #
 # The `mediaType` parameter overrides the inferred `Content-Type` in all cases.
@@ -486,41 +570,41 @@ public isolated client class Client {
     # Creates a new resource or submits data to a resource for processing.
     #
     # + path - The request path (appended to the base URL)
-    # + message - The request body (`string`, `byte[]`, or any JSON-compatible value)
+    # + message - The request body (`string`, `byte[]`, JSON-compatible value, or `http:Request`)
     # + headers - Optional request headers as a `map<string|string[]>`
     # + mediaType - Optional `Content-Type` override; inferred from `message` if omitted
     # + return - The `http:Response` or an `error` if the request fails
-    remote isolated function post(string path, json message, map<string|string[]>? headers = (),
+    remote isolated function post(string path, RequestMessage message, map<string|string[]>? headers = (),
             string? mediaType = ()) returns Response|error = external;
 
     # Creates a new resource or replaces a representation of the specified resource.
     #
     # + path - The request path (appended to the base URL)
-    # + message - The request body (`string`, `byte[]`, or any JSON-compatible value)
+    # + message - The request body (`string`, `byte[]`, JSON-compatible value, or `http:Request`)
     # + headers - Optional request headers as a `map<string|string[]>`
     # + mediaType - Optional `Content-Type` override; inferred from `message` if omitted
     # + return - The `http:Response` or an `error` if the request fails
-    remote isolated function put(string path, json message, map<string|string[]>? headers = (),
+    remote isolated function put(string path, RequestMessage message, map<string|string[]>? headers = (),
             string? mediaType = ()) returns Response|error = external;
 
     # Applies a partial modification to the specified resource.
     #
     # + path - The request path (appended to the base URL)
-    # + message - The request body (`string`, `byte[]`, or any JSON-compatible value)
+    # + message - The request body (`string`, `byte[]`, JSON-compatible value, or `http:Request`)
     # + headers - Optional request headers as a `map<string|string[]>`
     # + mediaType - Optional `Content-Type` override; inferred from `message` if omitted
     # + return - The `http:Response` or an `error` if the request fails
-    remote isolated function patch(string path, json message, map<string|string[]>? headers = (),
+    remote isolated function patch(string path, RequestMessage message, map<string|string[]>? headers = (),
             string? mediaType = ()) returns Response|error = external;
 
     # Deletes the specified resource.
     #
     # + path - The request path (appended to the base URL)
-    # + message - Optional request body (`string`, `byte[]`, or any JSON-compatible value)
+    # + message - Optional request body (`string`, `byte[]`, JSON-compatible value, or `http:Request`)
     # + headers - Optional request headers as a `map<string|string[]>`
     # + mediaType - Optional `Content-Type` override; inferred from `message` if omitted
     # + return - The `http:Response` or an `error` if the request fails
-    remote isolated function delete(string path, json? message = (), map<string|string[]>? headers = (),
+    remote isolated function delete(string path, RequestMessage? message = (), map<string|string[]>? headers = (),
             string? mediaType = ()) returns Response|error = external;
 
     # Requests headers from the specified resource without fetching the response body.
@@ -543,11 +627,11 @@ public isolated client class Client {
     #
     # + httpVerb - The HTTP method to use (e.g., `"GET"`, `"POST"`, `"PUT"`)
     # + path - The request path (appended to the base URL)
-    # + message - The request body (`string`, `byte[]`, or any JSON-compatible value)
+    # + message - The request body (`string`, `byte[]`, JSON-compatible value, or `http:Request`)
     # + headers - Optional request headers as a `map<string|string[]>`
     # + mediaType - Optional `Content-Type` override; inferred from `message` if omitted
     # + return - The `http:Response` or an `error` if the request fails
-    remote isolated function execute(string httpVerb, string path, json message,
+    remote isolated function execute(string httpVerb, string path, RequestMessage message,
             map<string|string[]>? headers = (), string? mediaType = ()) returns Response|error = external;
 
     # Forwards the inbound `Request` to the specified path, preserving the original HTTP method,

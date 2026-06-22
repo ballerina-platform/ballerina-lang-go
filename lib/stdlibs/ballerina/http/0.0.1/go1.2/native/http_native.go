@@ -264,13 +264,36 @@ func initHttpModule(rt *runtime.Runtime) {
 		})
 	}
 
-	// msgToBody converts a Ballerina json value to (io.Reader, contentLength, contentType).
+	// msgToBody converts a Ballerina RequestMessage value to (io.Reader, contentLength, contentType).
 	msgToBody := func(tc semtypes.Context, msg values.BalValue) (io.Reader, int64, string) {
 		ensureTypes()
 		switch v := msg.(type) {
 		case string:
 			b := []byte(v)
 			return bytes.NewReader(b), int64(len(b)), "text/plain"
+		case *values.Object:
+			// http:Request object — extract body and content-type
+			ct := "application/octet-stream"
+			if hdrsVal, ok := v.Get("$headers"); ok {
+				if hdrs, ok := hdrsVal.(*values.Map); ok {
+					if cv, ok := hdrs.Get("content-type"); ok {
+						if list, ok := cv.(*values.List); ok && list.Len() > 0 {
+							if s, ok := list.Get(0).(string); ok {
+								ct = s
+							}
+						}
+					}
+				}
+			}
+			bodyVal, _ := v.Get("$body")
+			if holder, ok := bodyVal.(*requestBodyHolder); ok {
+				buf := holder.materialize()
+				if holder.readErr != nil {
+					return nil, 0, "json_error"
+				}
+				return bytes.NewReader(buf), int64(len(buf)), ct
+			}
+			return bytes.NewReader([]byte{}), 0, ct
 		case *values.List:
 			if !semtypes.IsZero(v.Type) && semtypes.IsSubtype(tc, v.Type, types.byteArrTy) {
 				if b, ok := listToBytes(v); ok {
@@ -420,6 +443,11 @@ func initHttpModule(rt *runtime.Runtime) {
 					if s, ok := v.(string); ok {
 						httpVersion = s
 					}
+				}
+				if httpVersion == "1.0" {
+					msg := "warning [ballerina/http]: HTTP/1.0 is not supported by the Go HTTP runtime; falling back to HTTP/1.1\n"
+					_, _ = rt.Platform().IO.Stderr([]byte(msg))
+					httpVersion = "1.1"
 				}
 				if ss, ok := cfg.Get("secureSocket"); ok {
 					if ssMap, ok := ss.(*values.Map); ok {
@@ -826,6 +854,12 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.getHeaderNames$default$0",
 		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.addHeader$default$2",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.removeHeader$default$1",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Response.removeAllHeaders$default$0",
+		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return leading, nil })
 
 	// Response class def — registers `new http:Response()` constructor support.
 	responseClassDef := &bir.BIRClassDef{
@@ -840,7 +874,11 @@ func initHttpModule(rt *runtime.Runtime) {
 			"setJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.setJsonPayload"},
 			"setBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.setBinaryPayload"},
 			"setHeader":        {FunctionLookupKey: "ballerina/http:Response.setHeader"},
-			"setStatusCode":    {FunctionLookupKey: "ballerina/http:Response.setStatusCode"},
+			"addHeader":        {FunctionLookupKey: "ballerina/http:Response.addHeader"},
+			"removeHeader":     {FunctionLookupKey: "ballerina/http:Response.removeHeader"},
+			"removeAllHeaders": {FunctionLookupKey: "ballerina/http:Response.removeAllHeaders"},
+			"setContentType":   {FunctionLookupKey: "ballerina/http:Response.setContentType"},
+			"getContentType":   {FunctionLookupKey: "ballerina/http:Response.getContentType"},
 			"getTextPayload":   {FunctionLookupKey: "ballerina/http:Response.getTextPayload"},
 			"getJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.getJsonPayload"},
 			"getBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.getBinaryPayload"},
@@ -866,6 +904,13 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			self.Put("body", &responseBodyHolder{buf: []byte(args[1].(string))})
+			ct := "text/plain"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			responseHeaders(self).Put(ctx.TypeCtx, "content-type", newListValue(ctx.TypeCtx, []values.BalValue{ct}))
 			return nil, nil
 		})
 
@@ -877,6 +922,13 @@ func initHttpModule(rt *runtime.Runtime) {
 				return values.NewErrorWithMessage("setJsonPayload: " + err.Error()), nil
 			}
 			self.Put("body", &responseBodyHolder{buf: b})
+			ct := "application/json"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			responseHeaders(self).Put(ctx.TypeCtx, "content-type", newListValue(ctx.TypeCtx, []values.BalValue{ct}))
 			return nil, nil
 		})
 
@@ -892,6 +944,13 @@ func initHttpModule(rt *runtime.Runtime) {
 				return values.NewErrorWithMessage("setBinaryPayload: invalid byte value"), nil
 			}
 			self.Put("body", &responseBodyHolder{buf: b})
+			ct := "application/octet-stream"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			responseHeaders(self).Put(ctx.TypeCtx, "content-type", newListValue(ctx.TypeCtx, []values.BalValue{ct}))
 			return nil, nil
 		})
 
@@ -905,11 +964,64 @@ func initHttpModule(rt *runtime.Runtime) {
 			return nil, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setStatusCode",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.addHeader",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			self.Put("statusCode", args[1].(int64))
+			name := strings.ToLower(args[1].(string))
+			val := args[2].(string)
+			// args[3] is position — always treat as LEADING
+			headers := responseHeaders(self)
+			existing, ok := headers.Get(name)
+			if ok {
+				existing.(*values.List).Append(ctx.TypeCtx, val)
+			} else {
+				headers.Put(ctx.TypeCtx, name, newListValue(ctx.TypeCtx, []values.BalValue{val}))
+			}
 			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.removeHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			// args[2] is position — always treat as LEADING
+			responseHeaders(self).Delete(ctx.TypeCtx, name)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.removeAllHeaders",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			// args[1] is position — always treat as LEADING
+			for _, k := range responseHeaders(self).Keys() {
+				responseHeaders(self).Delete(ctx.TypeCtx, k)
+			}
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setContentType",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			ct := args[1].(string)
+			responseHeaders(self).Put(ctx.TypeCtx, "content-type", newListValue(ctx.TypeCtx, []values.BalValue{ct}))
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getContentType",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			v, ok := responseHeaders(self).Get("content-type")
+			if !ok {
+				return "", nil
+			}
+			list := v.(*values.List)
+			if list.Len() == 0 {
+				return "", nil
+			}
+			if s, ok := list.Get(0).(string); ok {
+				return s, nil
+			}
+			return "", nil
 		})
 
 	// Response read methods.
@@ -1034,19 +1146,26 @@ func initHttpModule(rt *runtime.Runtime) {
 			{Name: "httpVersion", Ty: semtypes.STRING},
 		},
 		VTable: map[string]*bir.BIRFunction{
-			"initNative":         {FunctionLookupKey: "ballerina/http:Request.initNative"},
-			"setTextPayload":     {FunctionLookupKey: "ballerina/http:Request.setTextPayload"},
-			"setJsonPayload":     {FunctionLookupKey: "ballerina/http:Request.setJsonPayload"},
-			"setBinaryPayload":   {FunctionLookupKey: "ballerina/http:Request.setBinaryPayload"},
-			"setHeader":          {FunctionLookupKey: "ballerina/http:Request.setHeader"},
-			"getTextPayload":     {FunctionLookupKey: "ballerina/http:Request.getTextPayload"},
-			"getJsonPayload":     {FunctionLookupKey: "ballerina/http:Request.getJsonPayload"},
-			"getBinaryPayload":   {FunctionLookupKey: "ballerina/http:Request.getBinaryPayload"},
-			"getHeader":          {FunctionLookupKey: "ballerina/http:Request.getHeader"},
-			"getHeaders":         {FunctionLookupKey: "ballerina/http:Request.getHeaders"},
-			"hasHeader":          {FunctionLookupKey: "ballerina/http:Request.hasHeader"},
-			"getQueryParams":     {FunctionLookupKey: "ballerina/http:Request.getQueryParams"},
-			"getQueryParamValue": {FunctionLookupKey: "ballerina/http:Request.getQueryParamValue"},
+			"initNative":           {FunctionLookupKey: "ballerina/http:Request.initNative"},
+			"setTextPayload":       {FunctionLookupKey: "ballerina/http:Request.setTextPayload"},
+			"setJsonPayload":       {FunctionLookupKey: "ballerina/http:Request.setJsonPayload"},
+			"setBinaryPayload":     {FunctionLookupKey: "ballerina/http:Request.setBinaryPayload"},
+			"setHeader":            {FunctionLookupKey: "ballerina/http:Request.setHeader"},
+			"addHeader":            {FunctionLookupKey: "ballerina/http:Request.addHeader"},
+			"removeHeader":         {FunctionLookupKey: "ballerina/http:Request.removeHeader"},
+			"removeAllHeaders":     {FunctionLookupKey: "ballerina/http:Request.removeAllHeaders"},
+			"getHeaderNames":       {FunctionLookupKey: "ballerina/http:Request.getHeaderNames"},
+			"setContentType":       {FunctionLookupKey: "ballerina/http:Request.setContentType"},
+			"getContentType":       {FunctionLookupKey: "ballerina/http:Request.getContentType"},
+			"getTextPayload":       {FunctionLookupKey: "ballerina/http:Request.getTextPayload"},
+			"getJsonPayload":       {FunctionLookupKey: "ballerina/http:Request.getJsonPayload"},
+			"getBinaryPayload":     {FunctionLookupKey: "ballerina/http:Request.getBinaryPayload"},
+			"getHeader":            {FunctionLookupKey: "ballerina/http:Request.getHeader"},
+			"getHeaders":           {FunctionLookupKey: "ballerina/http:Request.getHeaders"},
+			"hasHeader":            {FunctionLookupKey: "ballerina/http:Request.hasHeader"},
+			"getQueryParams":       {FunctionLookupKey: "ballerina/http:Request.getQueryParams"},
+			"getQueryParamValue":   {FunctionLookupKey: "ballerina/http:Request.getQueryParamValue"},
+			"getQueryParamValues":  {FunctionLookupKey: "ballerina/http:Request.getQueryParamValues"},
 		},
 	}
 	runtime.RegisterExternClassDef(rt, requestClassDef)
@@ -1064,7 +1183,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			self := args[0].(*values.Object)
 			payload, _ := args[1].(string)
 			self.Put("$body", &requestBodyHolder{buf: []byte(payload)})
-			setRequestHeader(self, "content-type", "text/plain", ctx.TypeCtx)
+			ct := "text/plain"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			setRequestHeader(self, "content-type", ct, ctx.TypeCtx)
 			return nil, nil
 		})
 
@@ -1073,7 +1198,13 @@ func initHttpModule(rt *runtime.Runtime) {
 			self := args[0].(*values.Object)
 			b, _ := json.Marshal(balToGoJSON(args[1]))
 			self.Put("$body", &requestBodyHolder{buf: b})
-			setRequestHeader(self, "content-type", "application/json", ctx.TypeCtx)
+			ct := "application/json"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			setRequestHeader(self, "content-type", ct, ctx.TypeCtx)
 			return nil, nil
 		})
 
@@ -1091,7 +1222,13 @@ func initHttpModule(rt *runtime.Runtime) {
 				}
 			}
 			self.Put("$body", &requestBodyHolder{buf: raw})
-			setRequestHeader(self, "content-type", "application/octet-stream", ctx.TypeCtx)
+			ct := "application/octet-stream"
+			if len(args) > 2 {
+				if s, ok := args[2].(string); ok && s != "" {
+					ct = s
+				}
+			}
+			setRequestHeader(self, "content-type", ct, ctx.TypeCtx)
 			return nil, nil
 		})
 
@@ -1102,6 +1239,111 @@ func initHttpModule(rt *runtime.Runtime) {
 			val, _ := args[2].(string)
 			setRequestHeader(self, name, val, ctx.TypeCtx)
 			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.addHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			val, _ := args[2].(string)
+			hdrsVal, ok := self.Get("$headers")
+			var hdrs *values.Map
+			if ok {
+				hdrs, _ = hdrsVal.(*values.Map)
+			}
+			if hdrs == nil {
+				hdrs = newMappingValue(ctx.TypeCtx)
+				self.Put("$headers", hdrs)
+			}
+			existing, ok := hdrs.Get(name)
+			if ok {
+				existing.(*values.List).Append(ctx.TypeCtx, val)
+			} else {
+				hdrs.Put(ctx.TypeCtx, name, newListValue(ctx.TypeCtx, []values.BalValue{val}))
+			}
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.removeHeader",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			name := strings.ToLower(args[1].(string))
+			hdrsVal, ok := self.Get("$headers")
+			if !ok {
+				return nil, nil
+			}
+			if hdrs, ok := hdrsVal.(*values.Map); ok {
+				hdrs.Delete(ctx.TypeCtx, name)
+			}
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.removeAllHeaders",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			hdrsVal, ok := self.Get("$headers")
+			if !ok {
+				return nil, nil
+			}
+			if hdrs, ok := hdrsVal.(*values.Map); ok {
+				for _, k := range hdrs.Keys() {
+					hdrs.Delete(ctx.TypeCtx, k)
+				}
+			}
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getHeaderNames",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			self := args[0].(*values.Object)
+			hdrsVal, ok := self.Get("$headers")
+			if !ok {
+				return newTypedListValue(ctx.TypeCtx, types.strArrTy, nil), nil
+			}
+			hdrs, ok := hdrsVal.(*values.Map)
+			if !ok {
+				return newTypedListValue(ctx.TypeCtx, types.strArrTy, nil), nil
+			}
+			keys := hdrs.Keys()
+			items := make([]values.BalValue, len(keys))
+			for i, k := range keys {
+				items[i] = k
+			}
+			return newTypedListValue(ctx.TypeCtx, types.strArrTy, items), nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setContentType",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			ct := args[1].(string)
+			setRequestHeader(self, "content-type", ct, ctx.TypeCtx)
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getContentType",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			self := args[0].(*values.Object)
+			hdrsVal, ok := self.Get("$headers")
+			if !ok {
+				return "", nil
+			}
+			hdrs, ok := hdrsVal.(*values.Map)
+			if !ok {
+				return "", nil
+			}
+			v, ok := hdrs.Get("content-type")
+			if !ok {
+				return "", nil
+			}
+			list := v.(*values.List)
+			if list.Len() == 0 {
+				return "", nil
+			}
+			if s, ok := list.Get(0).(string); ok {
+				return s, nil
+			}
+			return "", nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getTextPayload",
@@ -1240,6 +1482,25 @@ func initHttpModule(rt *runtime.Runtime) {
 				return nil, nil
 			}
 			return vals[0], nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getQueryParamValues",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			ensureTypes()
+			self := args[0].(*values.Object)
+			key := args[1].(string)
+			queryStrVal, _ := self.Get("$queryStr")
+			queryStr, _ := queryStrVal.(string)
+			parsed, _ := url.ParseQuery(queryStr)
+			vals := parsed[key]
+			if len(vals) == 0 {
+				return nil, nil
+			}
+			items := make([]values.BalValue, len(vals))
+			for i, v := range vals {
+				items[i] = v
+			}
+			return newTypedListValue(ctx.TypeCtx, types.strArrTy, items), nil
 		})
 }
 
