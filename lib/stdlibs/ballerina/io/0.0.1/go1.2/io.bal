@@ -190,10 +190,10 @@ public isolated function fileReadXml(string path) returns xml|Error {
 # ```
 # + path - The XML file path
 # + content - XML content to write
-# + option - Whether to overwrite or append the given content (default: `OVERWRITE`)
+# + fileWriteOption - Whether to overwrite or append the given content (default: `OVERWRITE`)
 # + return - `()` when the write was successful or an `io:Error`
-public isolated function fileWriteXml(string path, xml content, FileWriteOption option = OVERWRITE) returns Error? {
-    return externFileWriteXml(path, content, option);
+public isolated function fileWriteXml(string path, xml content, FileWriteOption fileWriteOption = OVERWRITE) returns Error? {
+    return externFileWriteXml(path, content, fileWriteOption);
 }
 
 isolated function externFileReadString(string path) returns string|Error = external;

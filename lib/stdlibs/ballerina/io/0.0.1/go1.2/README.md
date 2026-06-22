@@ -71,7 +71,8 @@ Support Levels:
 | Print to standard output with a newline | Supported | |
 | Print to a specified output stream | Supported | |
 | Print to a specified output stream with a newline | Supported | |
-| String template support in print functions | Not Yet Supported | `PrintableRawTemplate` type is not yet defined; string templates cannot be passed directly to print functions. |
+| Console read | Not Yet Supported | `readln` (reads a line from stdin) is not implemented. |
+| String template support in print functions | Not Yet Supported | `PrintableRawTemplate` type is not yet defined; string templates cannot be passed directly to print functions. As a consequence, the `Printable` type in this implementation is `any\|error` rather than jBallerina's `any\|error\|PrintableRawTemplate`. |
 | File read — string | Supported | `fileReadString`. Line endings normalised to `\n`; trailing newline stripped. |
 | File read — lines | Supported | `fileReadLines`. Terminal carriage characters stripped; trailing empty line excluded. |
 | File read — bytes | Supported | `fileReadBytes`. Returns `byte[]`; jBallerina returns `readonly & byte[]` (`readonly &` intersection not yet supported). |
