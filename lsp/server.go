@@ -117,10 +117,12 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 				Change:    1,
 				Save:      protocol.SaveOptions{IncludeText: true},
 			},
-			CompletionProvider: &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
-			DefinitionProvider: true,
-			ReferenceProvider:  true,
-			CodeActionProvider: true,
+			CompletionProvider:      &protocol.CompletionOptions{TriggerCharacters: []string{":", "."}},
+			DefinitionProvider:      true,
+			ReferenceProvider:       true,
+			CodeActionProvider:      true,
+			DocumentSymbolProvider:  true,
+			WorkspaceSymbolProvider: true,
 		}}, 0, ""
 	case "textDocument/completion":
 		var p protocol.CompletionParams
@@ -146,6 +148,18 @@ func (s *Server) dispatchRequest(method string, params json.RawMessage) (any, in
 			return nil, invalidParams, "invalid code action params"
 		}
 		return s.codeActions(p), 0, ""
+	case "textDocument/documentSymbol":
+		var p protocol.DocumentSymbolParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid document symbol params"
+		}
+		return s.documentSymbols(p), 0, ""
+	case "workspace/symbol":
+		var p protocol.WorkspaceSymbolParams
+		if err := decodeParams(params, &p); err != nil {
+			return nil, invalidParams, "invalid workspace symbol params"
+		}
+		return s.workspaceSymbols(p), 0, ""
 	case "shutdown":
 		s.shutdown = true
 		return nil, 0, ""

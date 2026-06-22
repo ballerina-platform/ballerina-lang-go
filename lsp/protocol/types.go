@@ -62,11 +62,13 @@ type InitializeResult struct {
 }
 
 type ServerCapabilities struct {
-	TextDocumentSync   TextDocumentSyncOptions `json:"textDocumentSync"`
-	CompletionProvider *CompletionOptions      `json:"completionProvider,omitempty"`
-	DefinitionProvider bool                    `json:"definitionProvider,omitempty"`
-	ReferenceProvider  bool                    `json:"referencesProvider,omitempty"`
-	CodeActionProvider bool                    `json:"codeActionProvider,omitempty"`
+	TextDocumentSync        TextDocumentSyncOptions `json:"textDocumentSync"`
+	CompletionProvider      *CompletionOptions      `json:"completionProvider,omitempty"`
+	DefinitionProvider      bool                    `json:"definitionProvider,omitempty"`
+	ReferenceProvider       bool                    `json:"referencesProvider,omitempty"`
+	CodeActionProvider      bool                    `json:"codeActionProvider,omitempty"`
+	DocumentSymbolProvider  bool                    `json:"documentSymbolProvider,omitempty"`
+	WorkspaceSymbolProvider bool                    `json:"workspaceSymbolProvider,omitempty"`
 }
 
 type CompletionOptions struct {
@@ -120,6 +122,59 @@ type DidSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Text         *string                `json:"text,omitempty"`
 }
+
+type DocumentSymbolParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+type DocumentSymbol struct {
+	Name           string           `json:"name"`
+	Kind           SymbolKind       `json:"kind"`
+	Range          Range            `json:"range"`
+	SelectionRange Range            `json:"selectionRange"`
+	Children       []DocumentSymbol `json:"children,omitempty"`
+}
+
+type WorkspaceSymbolParams struct {
+	Query string `json:"query"`
+}
+
+type SymbolInformation struct {
+	Name     string     `json:"name"`
+	Kind     SymbolKind `json:"kind"`
+	Location Location   `json:"location"`
+}
+
+type SymbolKind int
+
+const (
+	SymbolKindFile SymbolKind = iota + 1
+	SymbolKindModule
+	SymbolKindNamespace
+	SymbolKindPackage
+	SymbolKindClass
+	SymbolKindMethod
+	SymbolKindProperty
+	SymbolKindField
+	SymbolKindConstructor
+	SymbolKindEnum
+	SymbolKindInterface
+	SymbolKindFunction
+	SymbolKindVariable
+	SymbolKindConstant
+	SymbolKindString
+	SymbolKindNumber
+	SymbolKindBoolean
+	SymbolKindArray
+	SymbolKindObject
+	SymbolKindKey
+	SymbolKindNull
+	SymbolKindEnumMember
+	SymbolKindStruct
+	SymbolKindEvent
+	SymbolKindOperator
+	SymbolKindTypeParameter
+)
 
 type DidChangeWatchedFilesParams struct {
 	Changes []FileEvent `json:"changes"`
