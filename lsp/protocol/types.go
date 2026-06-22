@@ -41,7 +41,16 @@ type InitializeParams struct {
 }
 
 type ClientCapabilities struct {
-	Window *WindowClientCapabilities `json:"window,omitempty"`
+	Window    *WindowClientCapabilities    `json:"window,omitempty"`
+	Workspace *WorkspaceClientCapabilities `json:"workspace,omitempty"`
+}
+
+type WorkspaceClientCapabilities struct {
+	DidChangeWatchedFiles *DidChangeWatchedFilesClientCapabilities `json:"didChangeWatchedFiles,omitempty"`
+}
+
+type DidChangeWatchedFilesClientCapabilities struct {
+	DynamicRegistration bool `json:"dynamicRegistration,omitempty"`
 }
 
 type WindowClientCapabilities struct {
@@ -110,6 +119,48 @@ type DidCloseTextDocumentParams struct {
 type DidSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Text         *string                `json:"text,omitempty"`
+}
+
+type DidChangeWatchedFilesParams struct {
+	Changes []FileEvent `json:"changes"`
+}
+
+type FileEvent struct {
+	URI  DocumentURI    `json:"uri"`
+	Type FileChangeType `json:"type"`
+}
+
+type FileChangeType int
+
+const (
+	FileChangeTypeCreated FileChangeType = 1
+	FileChangeTypeChanged FileChangeType = 2
+	FileChangeTypeDeleted FileChangeType = 3
+)
+
+type RenameFilesParams struct {
+	Files []FileRename `json:"files"`
+}
+
+type FileRename struct {
+	OldURI DocumentURI `json:"oldUri"`
+	NewURI DocumentURI `json:"newUri"`
+}
+
+type CreateFilesParams struct {
+	Files []FileCreate `json:"files"`
+}
+
+type FileCreate struct {
+	URI DocumentURI `json:"uri"`
+}
+
+type DeleteFilesParams struct {
+	Files []FileDelete `json:"files"`
+}
+
+type FileDelete struct {
+	URI DocumentURI `json:"uri"`
 }
 
 type CompletionParams struct {
@@ -209,6 +260,33 @@ type PublishDiagnosticsParams struct {
 }
 
 type ProgressToken string
+
+type RegistrationParams struct {
+	Registrations []Registration `json:"registrations"`
+}
+
+type Registration struct {
+	ID              string `json:"id"`
+	Method          string `json:"method"`
+	RegisterOptions any    `json:"registerOptions,omitempty"`
+}
+
+type DidChangeWatchedFilesRegistrationOptions struct {
+	Watchers []FileSystemWatcher `json:"watchers"`
+}
+
+type FileSystemWatcher struct {
+	GlobPattern string    `json:"globPattern"`
+	Kind        WatchKind `json:"kind,omitempty"`
+}
+
+type WatchKind int
+
+const (
+	WatchKindCreate WatchKind = 1
+	WatchKindChange WatchKind = 2
+	WatchKindDelete WatchKind = 4
+)
 
 type WorkDoneProgressCreateParams struct {
 	Token ProgressToken `json:"token"`

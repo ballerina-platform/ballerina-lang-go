@@ -133,10 +133,7 @@ func nextSingleFileSnapshot(old *Snapshot, file SourceFile) *Snapshot {
 }
 
 func nextBuildSnapshot(old *Snapshot, update func(map[protocol.DocumentURI]SourceFile)) *Snapshot {
-	files := make(map[protocol.DocumentURI]SourceFile, len(old.Files))
-	for uri, file := range old.Files {
-		files[uri] = file
-	}
+	files := openSnapshotFiles(old)
 	if update != nil {
 		update(files)
 	}
@@ -367,6 +364,19 @@ func fingerprintFiles(files map[protocol.DocumentURI]SourceFile) string {
 		_, _ = fmt.Fprintf(h, "%s\x00", sourceFileFingerprint(file))
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func openSnapshotFiles(snapshot *Snapshot) map[protocol.DocumentURI]SourceFile {
+	files := make(map[protocol.DocumentURI]SourceFile)
+	if snapshot == nil {
+		return files
+	}
+	for uri, file := range snapshot.Files {
+		if file.Open {
+			files[uri] = file
+		}
+	}
+	return files
 }
 
 func oldTopoOrder(snapshot *Snapshot) []string {

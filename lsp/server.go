@@ -46,14 +46,15 @@ const (
 )
 
 type Server struct {
-	in                  io.Reader
-	out                 io.Writer
-	snapshots           map[string]*SnapshotManager
-	root                string
-	shutdown            bool
-	workDoneProgress    bool
-	progressCreated     bool
-	nextServerRequestID int64
+	in                              io.Reader
+	out                             io.Writer
+	snapshots                       map[string]*SnapshotManager
+	root                            string
+	shutdown                        bool
+	workDoneProgress                bool
+	watchedFilesDynamicRegistration bool
+	progressCreated                 bool
+	nextServerRequestID             int64
 }
 
 func NewServer(in io.Reader, out io.Writer) *Server {
@@ -160,6 +161,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if s.root == "" {
 			return
 		}
+		s.registerWatchedFiles()
 		manager := s.snapshots[s.root]
 		if manager != nil && manager.Current().Kind == ProjectKindBuild {
 			s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: s.root})
@@ -177,7 +179,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		}
 		uri := p.TextDocument.URI
 		path := pathFromURI(uri)
-		file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text}
+		file := SourceFile{URI: uri, Path: path, File: path, Version: p.TextDocument.Version, Content: p.TextDocument.Text, Open: true}
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -195,6 +197,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		file.Version = p.TextDocument.Version
 		file.Content = p.ContentChanges[len(p.ContentChanges)-1].Text
 		file.File = file.Path
+		file.Open = true
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
@@ -204,6 +207,19 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		if decodeParams(params, &p) != nil {
 			return
 		}
+		uri := p.TextDocument.URI
+		file := s.sourceFile(uri)
+		if file.URI == "" || !file.Open {
+			return
+		}
+		file.Open = false
+		if content, err := os.ReadFile(file.Path); err == nil {
+			file.Content = string(content)
+		}
+		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
+			delete(files, uri)
+			return file
+		})
 		return
 	case "textDocument/didSave":
 		var p protocol.DidSaveTextDocumentParams
@@ -220,10 +236,35 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 			return
 		}
 		file.Content = string(content)
+		file.Open = true
 		s.updateSnapshot(file, func(files map[protocol.DocumentURI]SourceFile) SourceFile {
 			files[uri] = file
 			return file
 		})
+	case "workspace/didChangeWatchedFiles":
+		var p protocol.DidChangeWatchedFilesParams
+		if decodeParams(params, &p) != nil {
+			return
+		}
+		s.handleWatchedFileChanges(p)
+	case "workspace/didRenameFiles":
+		var p protocol.RenameFilesParams
+		if decodeParams(params, &p) != nil {
+			return
+		}
+		s.handleRenamedFiles(p)
+	case "workspace/didCreateFiles":
+		var p protocol.CreateFilesParams
+		if decodeParams(params, &p) != nil {
+			return
+		}
+		s.handleCreatedFiles(p)
+	case "workspace/didDeleteFiles":
+		var p protocol.DeleteFilesParams
+		if decodeParams(params, &p) != nil {
+			return
+		}
+		s.handleDeletedFiles(p)
 	}
 }
 
@@ -249,6 +290,141 @@ func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.Docu
 	manager.Publish(newSnapshot)
 	logLS(key, "snapshot update published key=%s kind=%s newID=%d modules=%d files=%d", key, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files))
 	s.publishDiagnostics(manager, newSnapshot, changed)
+}
+
+func (s *Server) handleWatchedFileChanges(params protocol.DidChangeWatchedFilesParams) {
+	for _, change := range params.Changes {
+		path := pathFromURI(change.URI)
+		root := s.projectRootForWatchedPath(path)
+		if root == "" || !isRelevantWatchedPath(root, path) {
+			continue
+		}
+		if change.Type == protocol.FileChangeTypeChanged && strings.HasSuffix(path, ".bal") {
+			s.refreshChangedBuildFile(root, change.URI)
+			continue
+		}
+		s.refreshBuildProject(root, true, SourceFile{URI: change.URI, Path: path, File: path})
+	}
+}
+
+func (s *Server) handleRenamedFiles(params protocol.RenameFilesParams) {
+	roots := make(map[string]SourceFile)
+	for _, file := range params.Files {
+		for _, uri := range []protocol.DocumentURI{file.OldURI, file.NewURI} {
+			path := pathFromURI(uri)
+			root := s.projectRootForWatchedPath(path)
+			if root == "" || !isRelevantWatchedPath(root, path) {
+				continue
+			}
+			roots[root] = SourceFile{URI: uri, Path: path, File: path}
+		}
+	}
+	for root, source := range roots {
+		s.refreshBuildProject(root, true, source)
+	}
+}
+
+func (s *Server) handleCreatedFiles(params protocol.CreateFilesParams) {
+	for _, file := range params.Files {
+		path := pathFromURI(file.URI)
+		root := s.projectRootForWatchedPath(path)
+		if root != "" && isRelevantWatchedPath(root, path) {
+			s.refreshBuildProject(root, true, SourceFile{URI: file.URI, Path: path, File: path})
+		}
+	}
+}
+
+func (s *Server) handleDeletedFiles(params protocol.DeleteFilesParams) {
+	for _, file := range params.Files {
+		path := pathFromURI(file.URI)
+		root := s.projectRootForWatchedPath(path)
+		if root != "" && isRelevantWatchedPath(root, path) {
+			s.refreshBuildProject(root, true, SourceFile{URI: file.URI, Path: path, File: path})
+		}
+	}
+}
+
+func (s *Server) refreshChangedBuildFile(root string, uri protocol.DocumentURI) {
+	manager := s.snapshots[root]
+	if manager == nil || manager.Current().Kind != ProjectKindBuild {
+		return
+	}
+	if file, ok := manager.Current().Files[uri]; ok && file.Open {
+		return
+	}
+	s.refreshBuildProject(root, false, SourceFile{URI: uri, Path: pathFromURI(uri), File: pathFromURI(uri)})
+}
+
+func (s *Server) refreshBuildProject(root string, clean bool, source SourceFile) {
+	manager := s.snapshots[root]
+	if manager == nil {
+		manager = NewBuildSnapshotManager(root)
+		s.snapshots[root] = manager
+	}
+	old := manager.Current()
+	if old.Kind != ProjectKindBuild {
+		return
+	}
+	openFiles := openSnapshotFiles(old)
+	id := nextSnapshotID(old.ID)
+	reuseFrom := old
+	if clean || id == initialSnapshotID {
+		reuseFrom = nil
+	}
+	newSnapshot := newBuildSnapshot(id, reuseFrom, root, openFiles)
+	if !clean {
+		invalidateChangedDependents(old, newSnapshot, source.URI)
+	}
+	manager.Publish(newSnapshot)
+	logLS(root, "snapshot refresh published key=%s kind=%s newID=%d modules=%d files=%d clean=%t", root, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files), clean)
+	s.publishDiagnostics(manager, newSnapshot, source)
+	s.publishRemovedFileDiagnostics(old, newSnapshot)
+}
+
+func (s *Server) publishRemovedFileDiagnostics(old *Snapshot, snapshot *Snapshot) {
+	for uri, file := range old.Files {
+		if _, ok := snapshot.Files[uri]; ok {
+			continue
+		}
+		version := file.Version
+		s.writeNotification("textDocument/publishDiagnostics", protocol.PublishDiagnosticsParams{
+			URI:         uri,
+			Version:     &version,
+			Diagnostics: []protocol.Diagnostic{},
+		})
+	}
+}
+
+func (s *Server) projectRootForWatchedPath(path string) string {
+	path = normalizePath(path)
+	if s.root == "" || !isUnder(path, s.root) {
+		return ""
+	}
+	best := ""
+	for root, manager := range s.snapshots {
+		if manager == nil || manager.Current().Kind != ProjectKindBuild || !isUnder(path, root) {
+			continue
+		}
+		if len(root) > len(best) {
+			best = root
+		}
+	}
+	if best != "" {
+		return best
+	}
+	return s.projectRootForFile(path)
+}
+
+func isRelevantWatchedPath(root string, path string) bool {
+	path = normalizePath(path)
+	if !isUnder(path, root) {
+		return false
+	}
+	if strings.HasSuffix(path, ".bal") || filepath.Base(path) == "Ballerina.toml" {
+		return true
+	}
+	modulesDir := filepath.Join(root, "modules")
+	return isUnder(path, modulesDir)
 }
 
 func invalidateChangedDependents(old *Snapshot, snapshot *Snapshot, changedURI protocol.DocumentURI) {
@@ -348,6 +524,9 @@ func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
 	}
 	s.root = root
 	s.workDoneProgress = params.Capabilities.Window != nil && params.Capabilities.Window.WorkDoneProgress
+	s.watchedFilesDynamicRegistration = params.Capabilities.Workspace != nil &&
+		params.Capabilities.Workspace.DidChangeWatchedFiles != nil &&
+		params.Capabilities.Workspace.DidChangeWatchedFiles.DynamicRegistration
 	logLS(root, "initialize root=%s build=%t", root, isBuildProjectRoot(root))
 	if isBuildProjectRoot(root) {
 		s.snapshots[root] = NewBuildSnapshotManager(root)
@@ -524,6 +703,25 @@ func (s *Server) writeRequest(method string, params any) {
 		Method  string          `json:"method"`
 		Params  json.RawMessage `json:"params,omitempty"`
 	}{JSONRPC: "2.0", ID: id, Method: method, Params: mustMarshal(params)})
+}
+
+func (s *Server) registerWatchedFiles() {
+	if !s.watchedFilesDynamicRegistration {
+		return
+	}
+	s.writeRequest("client/registerCapability", protocol.RegistrationParams{
+		Registrations: []protocol.Registration{{
+			ID:     "bal-workspace-file-watchers",
+			Method: "workspace/didChangeWatchedFiles",
+			RegisterOptions: protocol.DidChangeWatchedFilesRegistrationOptions{
+				Watchers: []protocol.FileSystemWatcher{
+					{GlobPattern: "**/*.bal", Kind: protocol.WatchKindCreate | protocol.WatchKindChange | protocol.WatchKindDelete},
+					{GlobPattern: "**/Ballerina.toml", Kind: protocol.WatchKindCreate | protocol.WatchKindChange | protocol.WatchKindDelete},
+					{GlobPattern: "**/modules/**", Kind: protocol.WatchKindCreate | protocol.WatchKindDelete},
+				},
+			},
+		}},
+	})
 }
 
 func (s *Server) beginIndexingProgress() {

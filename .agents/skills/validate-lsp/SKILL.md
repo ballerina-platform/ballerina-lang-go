@@ -1,3 +1,8 @@
+---
+name: validate-lsp
+description: Validating LSP implementation changes
+---
+
 # Validate LSP implementation
 
 Use this skill when changing or reviewing code under `lsp/` or the `lsp` CLI command.
