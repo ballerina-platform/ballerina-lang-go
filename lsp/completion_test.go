@@ -37,6 +37,40 @@ func TestCompletionKeepsImportedSymbolCompletion(t *testing.T) {
 	assertNoCompletionItem(t, items, "io:")
 }
 
+func TestCompletionAutoImportsBallerinaModule(t *testing.T) {
+	content := "public function main() {\n    io$\n}\n"
+	items := completionItemsAtMarker(t, content)
+	item := requireCompletionItem(t, items, "io:")
+	if item.InsertText != "io:" {
+		t.Fatalf("insertText = %q, want io:", item.InsertText)
+	}
+	if len(item.AdditionalTextEdits) != 1 {
+		t.Fatalf("additional edits len = %d, want 1", len(item.AdditionalTextEdits))
+	}
+	if item.AdditionalTextEdits[0].NewText != "import ballerina/io;\n" {
+		t.Fatalf("auto import edit = %q", item.AdditionalTextEdits[0].NewText)
+	}
+}
+
+func TestCompletionDoesNotAutoImportAlreadyImportedAlias(t *testing.T) {
+	items := completionItemsAtMarker(t, "import ballerina/io;\n\npublic function main() {\n    io$\n}\n")
+	item := requireCompletionItem(t, items, "io:")
+	if len(item.AdditionalTextEdits) != 0 {
+		t.Fatalf("additional edits len = %d, want 0", len(item.AdditionalTextEdits))
+	}
+}
+
+func TestCompletionAutoImportsLocalModule(t *testing.T) {
+	items := projectCompletionItemsAtMarker(t, "public function main() {\n    helper$\n}\n")
+	item := requireCompletionItem(t, items, "helper:")
+	if len(item.AdditionalTextEdits) != 1 {
+		t.Fatalf("additional edits len = %d, want 1", len(item.AdditionalTextEdits))
+	}
+	if item.AdditionalTextEdits[0].NewText != "import app.helper;\n" {
+		t.Fatalf("auto import edit = %q", item.AdditionalTextEdits[0].NewText)
+	}
+}
+
 func completionItemsAtMarker(t *testing.T, contentWithMarker string) []protocol.CompletionItem {
 	t.Helper()
 	offset := strings.Index(contentWithMarker, "$")
@@ -56,11 +90,44 @@ func completionItemsAtMarker(t *testing.T, contentWithMarker string) []protocol.
 	return result.Items
 }
 
+func projectCompletionItemsAtMarker(t *testing.T, contentWithMarker string) []protocol.CompletionItem {
+	t.Helper()
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "Ballerina.toml"), "[package]\norg = \"testorg\"\nname = \"app\"\nversion = \"0.1.0\"\n")
+	mainPath := filepath.Join(root, "main.bal")
+	offset := strings.Index(contentWithMarker, "$")
+	if offset < 0 {
+		t.Fatal("completion marker not found")
+	}
+	content := strings.Replace(contentWithMarker, "$", "", 1)
+	writeTestFile(t, mainPath, content)
+	writeTestFile(t, filepath.Join(root, "modules", "helper", "helper.bal"), "public function foo() {\n}\n")
+
+	uri := uriFromPath(mainPath)
+	server := NewServer(nil, nil)
+	server.root = root
+	server.snapshots[root] = NewBuildSnapshotManager(root)
+	result := server.completion(protocol.CompletionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+		Position:     lspPosition(content, offset),
+	})
+	return result.Items
+}
+
 func assertCompletionItem(t *testing.T, items []protocol.CompletionItem, label string) {
 	t.Helper()
-	if !hasCompletionItem(items, label) {
-		t.Fatalf("completion item %q not found in %+v", label, items)
+	_ = requireCompletionItem(t, items, label)
+}
+
+func requireCompletionItem(t *testing.T, items []protocol.CompletionItem, label string) protocol.CompletionItem {
+	t.Helper()
+	for _, item := range items {
+		if item.Label == label {
+			return item
+		}
 	}
+	t.Fatalf("completion item %q not found in %+v", label, items)
+	return protocol.CompletionItem{}
 }
 
 func assertNoCompletionItem(t *testing.T, items []protocol.CompletionItem, label string) {

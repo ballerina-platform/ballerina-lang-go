@@ -185,7 +185,6 @@ func recoveringCompilationUnit(cx *context.CompilerContext, module *Module, sour
 }
 
 func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
-	badKind := badCompletionKindAtOffset(recoveredCU, offset)
 	itemsByLabel := make(map[string]protocol.CompletionItem)
 	labels := make([]string, 0)
 	addItem := func(item protocol.CompletionItem) {
@@ -198,14 +197,15 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		itemsByLabel[item.Label] = item
 		labels = append(labels, item.Label)
 	}
-	if badKind != badCompletionKindStmt {
-		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
-			alias := importAlias(&imp)
-			if alias == "" {
-				continue
-			}
-			addItem(protocol.CompletionItem{Label: alias + ":", Kind: protocol.CompletionItemKindModule})
+	for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
+		alias := importAlias(&imp)
+		if alias == "" {
+			continue
 		}
+		addItem(protocol.CompletionItem{Label: alias + ":", Kind: protocol.CompletionItemKindModule})
+	}
+	for _, item := range autoImportModuleCompletionItems(snapshot, module, source, recoveredCU) {
+		addItem(item)
 	}
 
 	completionSnapshot, completionModule := snapshotWithRecoveredCU(snapshot, module, source.URI, recoveredCU)
@@ -224,6 +224,52 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		items[i] = itemsByLabel[label]
 	}
 	return items
+}
+
+func autoImportModuleCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, cu *ast.BLangCompilationUnit) []protocol.CompletionItem {
+	known := knownImportableModules(snapshot, module)
+	if len(known) == 0 {
+		return nil
+	}
+	imported := importedAliases(cu)
+	aliases := make([]string, 0, len(known))
+	for alias := range known {
+		if alias == "" || imported[alias] {
+			continue
+		}
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	items := make([]protocol.CompletionItem, 0, len(aliases))
+	for _, alias := range aliases {
+		module := known[alias]
+		edit, ok := importCompletionTextEdit(source, module.importPath)
+		if !ok {
+			continue
+		}
+		label := alias + ":"
+		items = append(items, protocol.CompletionItem{
+			Label:               label,
+			Kind:                protocol.CompletionItemKindModule,
+			Detail:              "Auto import " + module.importPath,
+			InsertText:          label,
+			AdditionalTextEdits: []protocol.TextEdit{edit},
+		})
+	}
+	return items
+}
+
+func importCompletionTextEdit(source SourceFile, importPath string) (protocol.TextEdit, bool) {
+	if importPath == "" {
+		return protocol.TextEdit{}, false
+	}
+	insertOffset := importInsertOffset(source.Content)
+	pos := lspPosition(source.Content, insertOffset)
+	newText := importInsertionText(source.Content, insertOffset, []string{importPath})
+	if newText == "" {
+		return protocol.TextEdit{}, false
+	}
+	return protocol.TextEdit{Range: protocol.Range{Start: pos, End: pos}, NewText: newText}, true
 }
 
 func completionContextFromAST(cu *ast.BLangCompilationUnit, offset int) completionContext {
