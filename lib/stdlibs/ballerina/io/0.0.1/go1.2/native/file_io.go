@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/runtime"
@@ -130,27 +129,22 @@ func goJSONToBalValue(tc semtypes.Context, v any, jsonListTy, jsonMapTy semtypes
 }
 
 func initFileIOModule(rt *runtime.Runtime) {
-	var (
-		once  sync.Once
-		types fileIOTypes
-	)
-	ensureTypes := func() {
-		once.Do(func() {
-			env := rt.GetTypeEnv()
-			sld := semtypes.NewListDefinition()
-			types.strArrTy = sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-			bld := semtypes.NewListDefinition()
-			types.byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-			typCtx := semtypes.ContextFrom(env)
-			jsonTy := semtypes.CreateJSON(typCtx)
-			jmd := semtypes.NewMappingDefinition()
-			types.jsonMapTy = jmd.DefineMappingTypeWrapped(env, nil, jsonTy)
-			jld := semtypes.NewListDefinition()
-			types.jsonListTy = jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy)
-			smd := semtypes.NewMappingDefinition()
-			types.stringMapTy = smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
-			types.stringMapAtomicTy = semtypes.ToMappingAtomicType(typCtx, types.stringMapTy)
-		})
+	env := rt.GetTypeEnv()
+	typCtx := semtypes.ContextFrom(env)
+	jsonTy := semtypes.CreateJSON(typCtx)
+	sld := semtypes.NewListDefinition()
+	bld := semtypes.NewListDefinition()
+	jmd := semtypes.NewMappingDefinition()
+	jld := semtypes.NewListDefinition()
+	smd := semtypes.NewMappingDefinition()
+	stringMapTy := smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
+	types := fileIOTypes{
+		strArrTy:          sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING),
+		byteArrTy:         bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
+		jsonMapTy:         jmd.DefineMappingTypeWrapped(env, nil, jsonTy),
+		jsonListTy:        jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy),
+		stringMapTy:       stringMapTy,
+		stringMapAtomicTy: semtypes.ToMappingAtomicType(typCtx, stringMapTy),
 	}
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadString",
@@ -165,7 +159,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadLines",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			path, _ := args[0].(string)
 			data, err := rt.Platform().FS.ReadFile(path)
 			if err != nil {
@@ -181,7 +175,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadBytes",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			path, _ := args[0].(string)
 			data, err := rt.Platform().FS.ReadFile(path)
 			if err != nil {
@@ -196,7 +190,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadJson",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			path, _ := args[0].(string)
 			data, err := rt.Platform().FS.ReadFile(path)
 			if err != nil {
@@ -296,7 +290,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadXml",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			path, _ := args[0].(string)
 			data, err := rt.Platform().FS.ReadFile(path)
 			if err != nil {

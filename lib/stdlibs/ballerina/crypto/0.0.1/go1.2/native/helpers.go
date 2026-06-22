@@ -27,6 +27,12 @@ const (
 	moduleName = "crypto"
 )
 
+type cryptoTypes struct {
+	byteArrTy semtypes.SemType
+	keyMapTy  semtypes.SemType
+	utcTy     semtypes.SemType
+}
+
 // cryptoError builds a Ballerina Error value with the given message.
 func cryptoError(msg string) *values.Error {
 	return values.NewErrorWithMessage(msg)
@@ -42,14 +48,12 @@ func listToBytes(list *values.List) []byte {
 }
 
 // bytesToList converts a Go []byte to a Ballerina byte[] (values.List).
-func bytesToList(ctx *extern.Context, data []byte) *values.List {
-	bld := semtypes.NewListDefinition()
-	ty := bld.DefineListTypeWrappedWithEnvSemType(ctx.Env.TypeEnv, semtypes.BYTE)
+func bytesToList(byteArrTy semtypes.SemType, ctx *extern.Context, data []byte) *values.List {
 	items := make([]values.BalValue, len(data))
 	for i, b := range data {
 		items[i] = int64(b)
 	}
-	return values.NewList(ty, semtypes.ToListAtomicType(ctx.TypeCtx, ty), false, nil, 0, items)
+	return values.NewList(byteArrTy, semtypes.ToListAtomicType(ctx.TypeCtx, byteArrTy), false, nil, 0, items)
 }
 
 // mapString reads a string field from a Ballerina Map.

@@ -18,7 +18,6 @@ import ballerina/http;
 
 public function main() returns error? {
     http:Client _ = check new ("https://example.com", {timeout: "wrong"});        // @error incompatible type
-    http:Client _ = check new ("https://example.com", {httpVersion: "1.0"});      // @error incompatible type
     http:Client _ = check new ("https://example.com", {httpVersion: "3.0"});      // @error incompatible type
     return;
 }

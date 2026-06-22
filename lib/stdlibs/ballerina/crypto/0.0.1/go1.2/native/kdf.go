@@ -28,7 +28,7 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
-func registerKdfFunctions(rt *runtime.Runtime) {
+func registerKdfFunctions(rt *runtime.Runtime, types cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hkdfSha256",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			input := listToBytes(args[0].(*values.List))
@@ -47,11 +47,11 @@ func registerKdfFunctions(rt *runtime.Runtime) {
 			if _, err := io.ReadFull(r, key); err != nil {
 				return cryptoError(fmt.Sprintf("Error occurred while HKDF: %s", err.Error())), nil
 			}
-			return bytesToList(ctx, key), nil
+			return bytesToList(types.byteArrTy, ctx, key), nil
 		})
 }
 
-func registerUtilFunctions(rt *runtime.Runtime) {
+func registerUtilFunctions(rt *runtime.Runtime, _ cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "equalConstantTime",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			a := hashValueToBytes(args[0])

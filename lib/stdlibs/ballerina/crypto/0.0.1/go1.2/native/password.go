@@ -44,7 +44,7 @@ var pbkdf2HashPattern = regexp.MustCompile(`^\$pbkdf2-(\w+)\$i=(\d+)\$([A-Za-z0-
 // Also matches without v= for compatibility.
 var argon2Pattern = regexp.MustCompile(`^\$argon2id(?:\$v=\d+)?\$m=(\d+),t=(\d+),p=(\d+)\$([A-Za-z0-9+/]+={0,2})\$([A-Za-z0-9+/]+={0,2})$`)
 
-func registerPasswordFunctions(rt *runtime.Runtime) {
+func registerPasswordFunctions(rt *runtime.Runtime, _ cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashBcrypt",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			password, _ := args[0].(string)

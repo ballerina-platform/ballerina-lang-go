@@ -18,17 +18,27 @@ package native
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semtypes"
 )
 
 func initCryptoModule(rt *runtime.Runtime) {
-	registerHashFunctions(rt)
-	registerHmacFunctions(rt)
-	registerPasswordFunctions(rt)
-	registerAesFunctions(rt)
-	registerKeyFunctions(rt)
-	registerRsaFunctions(rt)
-	registerKdfFunctions(rt)
-	registerUtilFunctions(rt)
+	env := rt.GetTypeEnv()
+	byteArrBld := semtypes.NewListDefinition()
+	keyMapBld := semtypes.NewMappingDefinition()
+	utcBld := semtypes.NewListDefinition()
+	types := cryptoTypes{
+		byteArrTy: byteArrBld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
+		keyMapTy:  keyMapBld.DefineMappingTypeWrapped(env, nil, semtypes.STRING),
+		utcTy:     utcBld.TupleTypeWrappedRo(env, semtypes.INT, semtypes.DECIMAL),
+	}
+	registerHashFunctions(rt, types)
+	registerHmacFunctions(rt, types)
+	registerPasswordFunctions(rt, types)
+	registerAesFunctions(rt, types)
+	registerKeyFunctions(rt, types)
+	registerRsaFunctions(rt, types)
+	registerKdfFunctions(rt, types)
+	registerUtilFunctions(rt, types)
 }
 
 func init() {

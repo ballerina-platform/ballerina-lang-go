@@ -68,7 +68,7 @@ func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *Mappi
 		atom = result
 	}
 	typeAtom := env.mappingAtom(atom)
-	ty := createBasicSemType(BTMapping, bddAtom(&typeAtom))
+	ty := createBasicSemType(BTMapping, bddAtom(typeAtom))
 	return ty, atom, true
 }
 

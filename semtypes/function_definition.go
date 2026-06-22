@@ -61,7 +61,7 @@ func (f *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicTy
 		a = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
-		a = new(env.functionAtom(&atomicType))
+		a = env.functionAtom(&atomicType)
 	}
 	return f.createSemType(a)
 }

@@ -17,8 +17,6 @@
 package native
 
 import (
-	"sync"
-
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/platform/pal"
@@ -67,20 +65,11 @@ func initOSModule(rt *runtime.Runtime) {
 		},
 	})
 
-	var (
-		once      sync.Once
-		byteArrTy semtypes.SemType
-		strMapTy  semtypes.SemType
-	)
-	ensureTypes := func() {
-		once.Do(func() {
-			env := rt.GetTypeEnv()
-			bld := semtypes.NewListDefinition()
-			byteArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
-			smd := semtypes.NewMappingDefinition()
-			strMapTy = smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
-		})
-	}
+	env := rt.GetTypeEnv()
+	bld := semtypes.NewListDefinition()
+	byteArrTy := bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE)
+	smd := semtypes.NewMappingDefinition()
+	strMapTy := smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "getEnv",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
@@ -119,7 +108,7 @@ func initOSModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "listEnv",
 		func(ctx *extern.Context, _ []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			envMap := rt.Platform().OS.ListEnv()
 			atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, strMapTy)
 			m := values.NewMap(strMapTy, atomic, false, nil)
@@ -183,7 +172,7 @@ func initOSModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Process.output",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
+
 			self, _ := args[0].(*values.Object)
 			stream, _ := args[1].(int64)
 			handle := getHandle(self)

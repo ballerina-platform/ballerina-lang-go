@@ -19,7 +19,7 @@ The Go Native Interpreter currently supports the **HTTP client subset only**: th
 - Set custom request headers and override the inferred Content-Type.
 - Read the response status code, text, JSON, or binary payload.
 - Inspect response headers by name or enumerate all header names.
-- Construct `Response` objects in resource functions and populate them with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`, and `setStatusCode`.
+- Construct `Response` objects in resource functions and populate them with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`, and direct field assignment (`response.statusCode = 404`).
 - Construct outbound `Request` objects and populate them for forwarding.
 - Parse structured header values (value + parameter map) with the header parsing utility.
 
@@ -82,7 +82,7 @@ Support Levels:
 | Custom HTTP verb execution | Supported | `execute` accepts any HTTP verb string. |
 | Request forwarding via incoming request | Supported | `forward(path, request)` forwards the method, headers, and body of an `http:Request` to the upstream service; hop-by-hop headers are stripped per RFC 7230. |
 | Request timeout | Supported | Configured via `timeout` in `ClientConfiguration` (decimal seconds, default 30). |
-| HTTP version selection | Supported | `HTTP_1_1` and `HTTP_2_0` (default) are supported; includes cleartext HTTP/2 (h2c). `"1.0"` is a compile error. |
+| HTTP version selection | Supported | `HTTP_1_0`, `HTTP_1_1`, and `HTTP_2_0` (default) are supported. Specifying `HTTP_1_0` at runtime prints a warning and falls back to HTTP/1.1, because Go's HTTP client cannot send HTTP/1.0 requests. |
 | Redirect following | Supported | Full `FollowRedirects` record supported: `enabled`, `maxCount` (default 5), `allowAuthHeaders`. |
 | Connection pooling | Supported | `PoolConfiguration` / `poolConfig` field in `ClientConfiguration`: `maxIdleConnections` (default 100), `maxActiveConnections` (-1 = unlimited), `waitTime` (default 30s). Defaults mirror jBallerina's pool config. |
 | Custom request headers | Supported | Accepted as `map<string\|string[]>` on every method. |
@@ -114,8 +114,8 @@ Support Levels:
 | Feature/API | Support Status | Comments / Limitations |
 |---|---|---|
 | Request object construction | Supported | `new http:Request()` creates an outbound request with `rawPath`, `method`, and `httpVersion` fields. |
-| Request write methods | Supported | `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, and `setHeader` populate the request for forwarding or other uses. |
-| Request read methods | Supported | `getTextPayload`, `getJsonPayload`, `getBinaryPayload`, `getHeader`, `getHeaders`, `hasHeader`, `getQueryParams`, and `getQueryParamValue` read from client-constructed or inbound requests. |
+| Request write methods | Supported | `setTextPayload`, `setJsonPayload`, `setBinaryPayload` (each with optional `contentType`), `setHeader`, `addHeader`, `removeHeader`, `removeAllHeaders`, and `setContentType` populate the request. |
+| Request read methods | Supported | `getTextPayload`, `getJsonPayload`, `getBinaryPayload`, `getHeader`, `getHeaders`, `hasHeader`, `getHeaderNames`, `getContentType`, `getQueryParams`, `getQueryParamValue`, and `getQueryParamValues` read from client-constructed or inbound requests. |
 | Path parameter binding | Not Yet Supported | Automatic extraction of URL path segments into resource function parameters is not implemented. |
 | Query parameter binding | Not Yet Supported | Automatic binding of URL query parameters to resource function parameters is not implemented. |
 | Inbound header binding | Not Yet Supported | Automatic binding of request headers to resource function parameters via `@http:Header` is not implemented. |
@@ -133,7 +133,7 @@ Support Levels:
 | Response payload as raw bytes | Supported | `getBinaryPayload()` returns `byte[]\|error`. |
 | Response header inspection | Supported | `hasHeader`, `getHeader`, `getHeaders`, and `getHeaderNames` operate on transport (leading) headers. Trailing header position is accepted at compile time but has no runtime effect. |
 | Response object construction | Supported | `new http:Response()` creates a response with status code 200; initialised via `init()`. |
-| Response write methods | Supported | `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`, and `setStatusCode` populate a constructed `Response`. |
+| Response write methods | Supported | `setTextPayload`, `setJsonPayload`, `setBinaryPayload` (each with optional `contentType`), `setHeader`, `addHeader`, `removeHeader`, `removeAllHeaders`, and `setContentType` populate a constructed `Response`. Status code is set by direct field assignment (`resp.statusCode = 404`). |
 | Streaming response body | Not Yet Supported | `getByteStream()` is not implemented. |
 | Server-Sent Events | Not Yet Supported | `getSseEventStream()` and consuming a `stream<SseEvent, error?>` response are not implemented. |
 | Response XML payload | Not Yet Supported | The `xml` type and related payload handling methods (`getXmlPayload()`, `setXmlPayload()`) are not implemented due to the lack of XML support in the Go runtime. |
@@ -171,14 +171,14 @@ Support Levels:
 | Feature/API | Support Status | Comments / Limitations |
 |---|---|---|
 | Header value parsing utility | Supported | `parseHeader()` parses comma-separated header values with parameters into `HeaderValue[]`. |
-| `HttpVersion` enum | Supported | `HTTP_1_1` and `HTTP_2_0` enum constants replace the bare string union. `"1.0"` is a compile error — use `HTTP_1_1` or `HTTP_2_0`. |
+| `HttpVersion` enum | Supported | `HTTP_1_0`, `HTTP_1_1`, and `HTTP_2_0` enum constants are present. `HTTP_1_0` prints a runtime warning and falls back to HTTP/1.1. |
 | Distinct HTTP error types | Not Yet Supported | All errors surface as the generic `error` type; `http:ClientError`, `http:HeaderNotFoundError`, and similar subtypes are not declared — `is http:ClientError` type checks will not work. |
 | Observability and metrics | Not Yet Supported | Metrics and tracing integration via `ballerina/observe` is not implemented. |
 | XML payloads | Not Yet Supported | The `xml` type and related payload handling methods (`getXmlPayload()`, `setXmlPayload()`) are not implemented due to the lack of XML support in the Go runtime. |
 
 ### Notable Behavioural Changes
 
-- **HTTP/1.0 is a compile error.** Specifying `httpVersion: "1.0"` (or any value not in the `HttpVersion` enum) in `ClientConfiguration` is rejected at compile time. Go's HTTP client cannot send HTTP/1.0 requests, so this is a permanent restriction.
+- **HTTP/1.0 falls back to HTTP/1.1 at runtime.** `HTTP_1_0` is present in the `HttpVersion` enum for jBallerina contract compatibility. When used, the Go runtime prints a warning to stderr and transparently upgrades the connection to HTTP/1.1, because Go's HTTP client cannot send HTTP/1.0 requests.
 - **Trailing headers are not modelled.** The `TRAILING` header position constant is accepted at compile time for API compatibility, but all header operations (`getHeader`, `getHeaders`, `hasHeader`, `getHeaderNames`) act on transport (leading) headers at runtime. HTTP trailers sent by the server are silently discarded.
 - **TLS protocol name has no effect.** The `protocol.name` field accepts `"SSL"`, `"TLS"`, and `"DTLS"` at compile time, but only TLS is supported at runtime. `"SSL"` and `"DTLS"` values are ignored because Go's standard TLS stack does not expose separate SSL or DTLS stacks.
 - **`poolConfig.waitTime` maps to `ResponseHeaderTimeout`.** jBallerina's `waitTime` limits how long a request waits for a connection. In the Go runtime this is approximated by `ResponseHeaderTimeout` (maximum time to wait for the first response byte). True connection-wait limiting is not available in Go's `net/http` transport.

@@ -29,29 +29,29 @@ import (
 	"ballerina-lang-go/values"
 )
 
-func registerHmacFunctions(rt *runtime.Runtime) {
+func registerHmacFunctions(rt *runtime.Runtime, types cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hmacMd5",
-		hmacFunc(func() hash.Hash { return md5.New() })) //nolint:gosec
+		hmacFunc(func() hash.Hash { return md5.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hmacSha1",
-		hmacFunc(func() hash.Hash { return sha1.New() })) //nolint:gosec
+		hmacFunc(func() hash.Hash { return sha1.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hmacSha256",
-		hmacFunc(func() hash.Hash { return sha256.New() }))
+		hmacFunc(func() hash.Hash { return sha256.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hmacSha384",
-		hmacFunc(func() hash.Hash { return sha512.New384() }))
+		hmacFunc(func() hash.Hash { return sha512.New384() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hmacSha512",
-		hmacFunc(func() hash.Hash { return sha512.New() }))
+		hmacFunc(func() hash.Hash { return sha512.New() }, types))
 }
 
-func hmacFunc(newHash func() hash.Hash) extern.NativeFunc {
+func hmacFunc(newHash func() hash.Hash, types cryptoTypes) extern.NativeFunc {
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		input := listToBytes(args[0].(*values.List))
 		key := listToBytes(args[1].(*values.List))
 		h := hmac.New(newHash, key)
 		h.Write(input)
-		return bytesToList(ctx, h.Sum(nil)), nil
+		return bytesToList(types.byteArrTy, ctx, h.Sum(nil)), nil
 	}
 }

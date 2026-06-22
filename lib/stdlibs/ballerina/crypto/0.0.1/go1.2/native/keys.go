@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/pkcs12"
 )
 
-func registerKeyFunctions(rt *runtime.Runtime) {
+func registerKeyFunctions(rt *runtime.Runtime, types cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPrivateKeyFromKeyStore",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			ks, _ := args[0].(*values.Map)
@@ -57,7 +57,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPrivateKeyMap(ctx, rsaKey, "RSA"), nil
+			return buildPrivateKeyMap(types, ctx,rsaKey, "RSA"), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPrivateKeyFromKeyStore",
@@ -82,7 +82,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid EC key"), nil
 			}
-			return buildPrivateKeyMap(ctx, ecKey, "RSA"), nil // algorithm reported as RSA for EC in jBallerina
+			return buildPrivateKeyMap(types, ctx,ecKey, "RSA"), nil // algorithm reported as RSA for EC in jBallerina
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPrivateKeyFromKeyFile",
@@ -104,7 +104,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPrivateKeyMap(ctx, rsaKey, "RSA"), nil
+			return buildPrivateKeyMap(types, ctx,rsaKey, "RSA"), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPrivateKeyFromContent",
@@ -122,7 +122,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPrivateKeyMap(ctx, rsaKey, "RSA"), nil
+			return buildPrivateKeyMap(types, ctx,rsaKey, "RSA"), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPrivateKeyFromKeyFile",
@@ -144,7 +144,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid EC key"), nil
 			}
-			return buildPrivateKeyMap(ctx, ecKey, "RSA"), nil
+			return buildPrivateKeyMap(types, ctx,ecKey, "RSA"), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPublicKeyFromTrustStore",
@@ -165,7 +165,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPublicKeyMap(ctx, rsaPub, "RSA", cert), nil
+			return buildPublicKeyMap(types, ctx,rsaPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPublicKeyFromTrustStore",
@@ -186,7 +186,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid EC key"), nil
 			}
-			return buildPublicKeyMap(ctx, ecPub, "RSA", cert), nil
+			return buildPublicKeyMap(types, ctx,ecPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPublicKeyFromCertFile",
@@ -204,7 +204,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPublicKeyMap(ctx, rsaPub, "RSA", cert), nil
+			return buildPublicKeyMap(types, ctx,rsaPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPublicKeyFromContent",
@@ -218,7 +218,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid RSA key"), nil
 			}
-			return buildPublicKeyMap(ctx, rsaPub, "RSA", cert), nil
+			return buildPublicKeyMap(types, ctx,rsaPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPublicKeyFromCertFile",
@@ -236,7 +236,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 			if !ok {
 				return cryptoError("Not a valid EC key"), nil
 			}
-			return buildPublicKeyMap(ctx, ecPub, "RSA", cert), nil
+			return buildPublicKeyMap(types, ctx,ecPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "buildRsaPublicKey",
@@ -249,7 +249,7 @@ func registerKeyFunctions(rt *runtime.Runtime) {
 				return cryptoError("Invalid RSA modulus or exponent hex string"), nil
 			}
 			pub := &rsa.PublicKey{N: modBytes, E: int(expBytes.Int64())}
-			return buildPublicKeyMap(ctx, pub, "RSA", nil), nil
+			return buildPublicKeyMap(types, ctx,pub, "RSA", nil), nil
 		})
 }
 
@@ -300,10 +300,8 @@ func parseCertificatePEM(data []byte) (*x509.Certificate, error) {
 
 // buildPrivateKeyMap constructs a Ballerina PrivateKey record, storing the Go
 // key via nativeData so sign/decrypt externs can retrieve it.
-func buildPrivateKeyMap(ctx *extern.Context, key any, algorithm string) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-	m := values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx, ty), false, []values.MapEntry{
+func buildPrivateKeyMap(types cryptoTypes, ctx *extern.Context, key any, algorithm string) *values.Map {
+	m := values.NewMap(types.keyMapTy, semtypes.ToMappingAtomicType(ctx.TypeCtx, types.keyMapTy), false, []values.MapEntry{
 		{Key: "algorithm", Value: algorithm},
 	})
 	m.SetNativeData(key)
@@ -311,45 +309,36 @@ func buildPrivateKeyMap(ctx *extern.Context, key any, algorithm string) *values.
 }
 
 // buildPublicKeyMap constructs a Ballerina PublicKey record with optional certificate.
-func buildPublicKeyMap(ctx *extern.Context, key any, algorithm string, cert *x509.Certificate) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
+func buildPublicKeyMap(types cryptoTypes, ctx *extern.Context, key any, algorithm string, cert *x509.Certificate) *values.Map {
 	entries := []values.MapEntry{{Key: "algorithm", Value: algorithm}}
 	if cert != nil {
-		entries = append(entries, values.MapEntry{Key: "certificate", Value: buildCertMap(ctx, cert)})
+		entries = append(entries, values.MapEntry{Key: "certificate", Value: buildCertMap(types, ctx, cert)})
 	}
-	m := values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx, ty), false, entries)
+	m := values.NewMap(types.keyMapTy, semtypes.ToMappingAtomicType(ctx.TypeCtx, types.keyMapTy), false, entries)
 	m.SetNativeData(key)
 	return m
 }
 
 // buildCertMap converts an x509.Certificate to a Ballerina Certificate record.
-func buildCertMap(ctx *extern.Context, cert *x509.Certificate) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-
-	sigBytes := bytesToList(ctx, cert.Signature)
-
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx, ty), false, []values.MapEntry{
+func buildCertMap(types cryptoTypes, ctx *extern.Context, cert *x509.Certificate) *values.Map {
+	sigBytes := bytesToList(types.byteArrTy, ctx, cert.Signature)
+	return values.NewMap(types.keyMapTy, semtypes.ToMappingAtomicType(ctx.TypeCtx, types.keyMapTy), false, []values.MapEntry{
 		{Key: "version", Value: int64(cert.Version)},
 		{Key: "serial", Value: cert.SerialNumber.Int64()},
 		{Key: "issuer", Value: cert.Issuer.String()},
 		{Key: "subject", Value: cert.Subject.String()},
-		{Key: "notBefore", Value: goTimeToUtc(ctx, cert.NotBefore)},
-		{Key: "notAfter", Value: goTimeToUtc(ctx, cert.NotAfter)},
+		{Key: "notBefore", Value: goTimeToUtc(types, ctx, cert.NotBefore)},
+		{Key: "notAfter", Value: goTimeToUtc(types, ctx, cert.NotAfter)},
 		{Key: "signature", Value: sigBytes},
 		{Key: "signingAlgorithm", Value: cert.SignatureAlgorithm.String()},
 	})
 }
 
 // goTimeToUtc converts a Go time.Time to a Ballerina time:Utc tuple [int, decimal].
-func goTimeToUtc(ctx *extern.Context, t time.Time) *values.List {
+func goTimeToUtc(types cryptoTypes, ctx *extern.Context, t time.Time) *values.List {
 	t = t.UTC()
 	nanos := decimal.FromInt64(int64(t.Nanosecond()))
 	nanosPerSec := decimal.FromInt64(1_000_000_000)
 	frac, _ := nanos.Quo(nanosPerSec)
-	bld := semtypes.NewListDefinition()
-	utcTy := bld.TupleTypeWrappedRo(ctx.Env.TypeEnv, semtypes.INT, semtypes.DECIMAL)
-	atomic := semtypes.ToListAtomicType(ctx.TypeCtx, utcTy)
-	return values.NewList(utcTy, atomic, true, nil, 2, []values.BalValue{t.Unix(), frac})
+	return values.NewList(types.utcTy, semtypes.ToListAtomicType(ctx.TypeCtx, types.utcTy), true, nil, 2, []values.BalValue{t.Unix(), frac})
 }
