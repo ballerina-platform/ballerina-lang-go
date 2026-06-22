@@ -80,6 +80,14 @@ func TestHttpServiceDuplicateBasePath(t *testing.T) {
 	runExtern(t, fileCase("http-svc-dup-path-p"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
+// TestHttpServiceStatusCode verifies that direct field assignment to
+// resp.statusCode is honoured by the server (201, 404) and that the
+// field default of 200 is used when no assignment is made.
+func TestHttpServiceStatusCode(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-svc-status-code-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
 // TestHttpServiceTLS exercises a TLS listener: the server loads its cert/key
 // from disk (realFS) and the client connects over https with verification
 // disabled for the self-signed cert.

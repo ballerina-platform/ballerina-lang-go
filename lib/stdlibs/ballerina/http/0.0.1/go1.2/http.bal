@@ -247,14 +247,15 @@ public const HeaderPosition TRAILING = "TRAILING";
 # Represents an HTTP response.
 #
 # `Response` objects are created by the HTTP client after a successful request.
-# They can also be constructed explicitly using `new http:Response()` and populated
-# with `setTextPayload`, `setJsonPayload`, `setBinaryPayload`, `setHeader`,
-# and `setStatusCode` before being returned.
+# They can also be constructed explicitly using `new http:Response()`. The
+# `statusCode` field defaults to 200 and can be set directly (e.g.,
+# `resp.statusCode = 201`). Use `setTextPayload`, `setJsonPayload`,
+# `setBinaryPayload`, and `setHeader` to populate the response before returning.
 public class Response {
-    # The HTTP status code (e.g., 200, 404, 500). Initialised to 200 by `init`.
-    public int statusCode = 0;
+    # The HTTP status code (e.g., 200, 404, 500). Defaults to 200.
+    public int statusCode = 200;
 
-    # Initialises the response with status code 200 and empty headers and body.
+    # Initialises the response with empty headers and body.
     public isolated function init() {
         self.initNative();
     }
@@ -281,11 +282,6 @@ public class Response {
     # + headerName  - The header name (case-insensitive)
     # + headerValue - The header value
     public isolated function setHeader(string headerName, string headerValue) = external;
-
-    # Sets the HTTP status code on this response object.
-    #
-    # + statusCode - The HTTP status code to set
-    public isolated function setStatusCode(int statusCode) = external;
 
     # Returns the response body as a plain string.
     #

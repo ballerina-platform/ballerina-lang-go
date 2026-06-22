@@ -840,7 +840,6 @@ func initHttpModule(rt *runtime.Runtime) {
 			"setJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.setJsonPayload"},
 			"setBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.setBinaryPayload"},
 			"setHeader":        {FunctionLookupKey: "ballerina/http:Response.setHeader"},
-			"setStatusCode":    {FunctionLookupKey: "ballerina/http:Response.setStatusCode"},
 			"getTextPayload":   {FunctionLookupKey: "ballerina/http:Response.getTextPayload"},
 			"getJsonPayload":   {FunctionLookupKey: "ballerina/http:Response.getJsonPayload"},
 			"getBinaryPayload": {FunctionLookupKey: "ballerina/http:Response.getBinaryPayload"},
@@ -853,10 +852,13 @@ func initHttpModule(rt *runtime.Runtime) {
 	runtime.RegisterExternClassDef(rt, responseClassDef)
 
 	// Response write methods.
+	// initNative initialises internal fields not covered by Ballerina field defaults:
+	// $headers and body. statusCode is initialised to 200 by the field default in
+	// http.bal and must not be overridden here — doing so would mask any value the
+	// caller stored via direct field assignment before initNative runs.
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.initNative",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			self.Put("statusCode", int64(200))
 			self.Put("$headers", newMappingValue(ctx.TypeCtx))
 			self.Put("body", &responseBodyHolder{buf: []byte{}})
 			return nil, nil
@@ -902,13 +904,6 @@ func initHttpModule(rt *runtime.Runtime) {
 			val := args[2].(string)
 			headers := responseHeaders(self)
 			headers.Put(ctx.TypeCtx, name, newListValue(ctx.TypeCtx, []values.BalValue{val}))
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.setStatusCode",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			self.Put("statusCode", args[1].(int64))
 			return nil, nil
 		})
 
