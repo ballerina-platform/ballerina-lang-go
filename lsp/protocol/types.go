@@ -274,8 +274,14 @@ type CompletionItem struct {
 	Kind                int        `json:"kind,omitempty"`
 	Detail              string     `json:"detail,omitempty"`
 	InsertText          string     `json:"insertText,omitempty"`
+	InsertTextFormat    int        `json:"insertTextFormat,omitempty"`
 	AdditionalTextEdits []TextEdit `json:"additionalTextEdits,omitempty"`
 }
+
+const (
+	InsertTextFormatPlainText = 1
+	InsertTextFormatSnippet   = 2
+)
 
 const (
 	CompletionItemKindFunction = 3

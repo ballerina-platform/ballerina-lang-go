@@ -36,18 +36,22 @@ func TestCompletionAtModuleVarDeclIncludesKeywordsAndTypesOnly(t *testing.T) {
 	assertCompletionItem(t, items, "Person")
 	assertNoCompletionItem(t, items, "foo")
 	assertNoCompletionItem(t, items, "io:")
-	assertNoCompletionItem(t, items, "const")
+	assertNoCompletionItem(t, items, "constant decl")
 	assertNoCompletionItem(t, items, "type")
-	assertNoCompletionItem(t, items, "var")
+	assertNoCompletionItem(t, items, "var decl")
+	assertNoCompletionItem(t, items, "variable decl")
 }
 
-func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationKeywords(t *testing.T) {
+func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\n\n$\n")
 
-	assertCompletionItem(t, items, "const")
+	assertSnippetCompletionItem(t, items, "constant decl", "const ${1:name} = ${2:value};")
 	assertCompletionItem(t, items, "type")
-	assertCompletionItem(t, items, "var")
+	assertSnippetCompletionItem(t, items, "var decl", "var ${1:name} = ${2:value};")
+	assertSnippetCompletionItem(t, items, "variable decl", "${1:type} ${2:name} = ${3:value};")
 	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "const")
+	assertNoCompletionItem(t, items, "var")
 	assertNoCompletionItem(t, items, "foo")
 }
 
@@ -200,6 +204,17 @@ func projectCompletionItemsAtMarker(t *testing.T, contentWithMarker string) []pr
 func assertCompletionItem(t *testing.T, items []protocol.CompletionItem, label string) {
 	t.Helper()
 	_ = requireCompletionItem(t, items, label)
+}
+
+func assertSnippetCompletionItem(t *testing.T, items []protocol.CompletionItem, label string, insertText string) {
+	t.Helper()
+	item := requireCompletionItem(t, items, label)
+	if item.InsertText != insertText {
+		t.Fatalf("completion item %q insertText = %q, want %q", label, item.InsertText, insertText)
+	}
+	if item.InsertTextFormat != protocol.InsertTextFormatSnippet {
+		t.Fatalf("completion item %q insertTextFormat = %d, want snippet", label, item.InsertTextFormat)
+	}
 }
 
 func requireCompletionItem(t *testing.T, items []protocol.CompletionItem, label string) protocol.CompletionItem {

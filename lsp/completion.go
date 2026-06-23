@@ -806,9 +806,14 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindType
 	})
-	for _, label := range []string{"const", "type", "var"} {
-		if strings.HasPrefix(label, prefix) {
-			items = append(items, protocol.CompletionItem{Label: label, Kind: protocol.CompletionItemKindKeyword})
+	for _, item := range []protocol.CompletionItem{
+		{Label: "constant decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "const ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "type", Kind: protocol.CompletionItemKindKeyword},
+		{Label: "var decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "var ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "variable decl", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name} = ${3:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+	} {
+		if strings.HasPrefix(item.Label, prefix) {
+			items = append(items, item)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
