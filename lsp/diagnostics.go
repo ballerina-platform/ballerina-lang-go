@@ -20,7 +20,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unicode/utf16"
 	"unicode/utf8"
 
 	"ballerina-lang-go/ast"
@@ -567,10 +566,7 @@ func sourceFileForLocation(snapshot *Snapshot, loc diagnostics.Location) (Source
 }
 
 func lspRange(content string, loc diagnostics.Location) protocol.Range {
-	return protocol.Range{
-		Start: lspPosition(content, loc.StartOffset()),
-		End:   lspPosition(content, loc.EndOffset()),
-	}
+	return newLSPPositionMapper(content).Range(loc)
 }
 
 func lspSeverity(severity diagnostics.DiagnosticSeverity) int {
@@ -586,44 +582,77 @@ func lspSeverity(severity diagnostics.DiagnosticSeverity) int {
 	}
 }
 
-func lspPosition(content string, byteOffset int) protocol.Position {
-	if byteOffset < 0 {
-		byteOffset = 0
-	}
-	if byteOffset > len(content) {
-		byteOffset = len(content)
-	}
+type lspPositionMapper struct {
+	content    string
+	lineStarts []int
+}
 
-	line := 0
-	character := 0
-	for i := 0; i < byteOffset; {
-		b := content[i]
-		if b == '\r' {
-			if i+1 < len(content) && content[i+1] == '\n' && i+1 < byteOffset {
+func newLSPPositionMapper(content string) lspPositionMapper {
+	lineStarts := []int{0}
+	for i := 0; i < len(content); {
+		switch content[i] {
+		case '\r':
+			if i+1 < len(content) && content[i+1] == '\n' {
 				i += 2
 			} else {
 				i++
 			}
-			line++
-			character = 0
-			continue
-		}
-		if b == '\n' {
+			lineStarts = append(lineStarts, i)
+		case '\n':
 			i++
-			line++
-			character = 0
-			continue
+			lineStarts = append(lineStarts, i)
+		default:
+			_, size := utf8.DecodeRuneInString(content[i:])
+			if size == 0 {
+				return lspPositionMapper{content: content, lineStarts: lineStarts}
+			}
+			i += size
 		}
+	}
+	return lspPositionMapper{content: content, lineStarts: lineStarts}
+}
 
-		r, size := utf8.DecodeRuneInString(content[i:])
+func (m lspPositionMapper) Range(loc diagnostics.Location) protocol.Range {
+	return protocol.Range{
+		Start: m.Position(loc.StartOffset()),
+		End:   m.Position(loc.EndOffset()),
+	}
+}
+
+func (m lspPositionMapper) Position(byteOffset int) protocol.Position {
+	if byteOffset < 0 {
+		byteOffset = 0
+	}
+	if byteOffset > len(m.content) {
+		byteOffset = len(m.content)
+	}
+
+	line := sort.Search(len(m.lineStarts), func(i int) bool {
+		return m.lineStarts[i] > byteOffset
+	}) - 1
+	if line < 0 {
+		line = 0
+	}
+	lineStart := m.lineStarts[line]
+	character := 0
+	for i := lineStart; i < byteOffset; {
+		r, size := utf8.DecodeRuneInString(m.content[i:])
 		if r == utf8.RuneError && size == 0 {
 			break
 		}
 		if i+size > byteOffset {
 			break
 		}
-		character += len(utf16.Encode([]rune{r}))
+		if r >= 0x10000 {
+			character += 2
+		} else {
+			character++
+		}
 		i += size
 	}
 	return protocol.Position{Line: line, Character: character}
+}
+
+func lspPosition(content string, byteOffset int) protocol.Position {
+	return newLSPPositionMapper(content).Position(byteOffset)
 }

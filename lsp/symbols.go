@@ -51,6 +51,7 @@ func (s *Server) documentSymbols(params protocol.DocumentSymbolParams) (result [
 		return result
 	}
 
+	positionMapper := newLSPPositionMapper(source.Content)
 	for _, symbol := range moduleTopLevelSymbols(module.Package) {
 		if symbol.IsEmpty() {
 			continue
@@ -63,7 +64,7 @@ func (s *Server) documentSymbols(params protocol.DocumentSymbolParams) (result [
 		if !ok || file.URI != source.URI {
 			continue
 		}
-		rng := lspRange(file.Content, loc)
+		rng := positionMapper.Range(loc)
 		result = append(result, protocol.DocumentSymbol{
 			Name:           cx.SymbolName(symbol),
 			Kind:           lspSymbolKind(cx.SymbolKind(symbol)),

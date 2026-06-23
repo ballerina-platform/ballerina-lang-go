@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"ballerina-lang-go/lsp/protocol"
 )
@@ -114,6 +115,35 @@ public function other() {
 	symbols := server.workspaceSymbols(protocol.WorkspaceSymbolParams{Query: "hp"})
 
 	assertWorkspaceSymbolNames(t, symbols, []string{"helperPrint"})
+}
+
+func TestDocumentSymbolsBench06CompletesWithinRequestBudget(t *testing.T) {
+	path := filepath.Join("..", "corpus", "bench", "06-bench", "3-v.bal")
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	uri := uriFromPath(absPath)
+	server := NewServer(nil, &bytes.Buffer{})
+	server.root = filepath.Dir(absPath)
+	server.snapshots[absPath] = NewSingleFileSnapshotManager(SourceFile{URI: uri, Path: absPath, File: absPath, Content: string(content)})
+
+	start := time.Now()
+	documentSymbols := server.documentSymbols(protocol.DocumentSymbolParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+	})
+	duration := time.Since(start)
+
+	if len(documentSymbols) != 4011 {
+		t.Fatalf("document symbols = %d, want 4011", len(documentSymbols))
+	}
+	if duration > 5*time.Second {
+		t.Fatalf("document symbols took %s, want under 5s", duration)
+	}
 }
 
 func TestSymbolCorpus(t *testing.T) {
