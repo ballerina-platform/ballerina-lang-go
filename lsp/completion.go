@@ -226,6 +226,10 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		}
 	}
 
+	if completionCtx.kind == completionKindModuleVarDecl {
+		recoveredCU = compilationUnitWithoutBadTopLevelNodes(recoveredCU)
+	}
+
 	completionSnapshot, completionModule := snapshotWithRecoveredCU(snapshot, module, source.URI, recoveredCU)
 	cx := context.NewCompilerContext(completionSnapshot.Env)
 	_ = runModuleFrontend(cx, completionSnapshot, completionModule, FrontendStageLocalTypeResolved)
@@ -254,7 +258,7 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	return items
 }
 
-func (s *Server) memberAccessCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, _ *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
+func (s *Server) memberAccessCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
 	prefix := memberAccessPrefixAtOffset(source.Content, offset)
 	if prefix == "" {
 		prefix = completionCtx.prefix
@@ -263,23 +267,10 @@ func (s *Server) memberAccessCompletionItems(snapshot *Snapshot, module *Module,
 	if dotOffset < 0 || dotOffset >= len(source.Content) || source.Content[dotOffset] != '.' {
 		return nil
 	}
-	if items := s.memberAccessCompletionItemsFromReceiver(snapshot, module, source, prefix, dotOffset, false); items != nil {
-		return items
-	}
-	return s.memberAccessCompletionItemsFromReceiver(snapshot, module, source, prefix, dotOffset, true)
+	return s.memberAccessCompletionItemsFromReceiver(snapshot, module, source, recoveredCU, prefix, offset, dotOffset)
 }
 
-func (s *Server) memberAccessCompletionItemsFromReceiver(snapshot *Snapshot, module *Module, source SourceFile, prefix string, dotOffset int, wrapStatement bool) []protocol.CompletionItem {
-	completionSource := source
-	completionSource.Content = source.Content[:dotOffset] + source.Content[dotOffset+len(prefix)+1:]
-	receiverEndOffset := dotOffset
-	if wrapStatement {
-		stmtStart := statementLineStart(completionSource.Content, dotOffset)
-		completionSource.Content = completionSource.Content[:stmtStart] + "_ = " + completionSource.Content[stmtStart:]
-		receiverEndOffset += len("_ = ")
-	}
-	completionSource.Content = ensureLineSemicolon(completionSource.Content, receiverEndOffset)
-	recoveredCU := recoveringCompilationUnit(context.NewCompilerContext(snapshot.Env), module, completionSource)
+func (s *Server) memberAccessCompletionItemsFromReceiver(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, prefix string, offset, dotOffset int) []protocol.CompletionItem {
 	if recoveredCU == nil {
 		return nil
 	}
@@ -291,10 +282,14 @@ func (s *Server) memberAccessCompletionItemsFromReceiver(snapshot *Snapshot, mod
 	if cu == nil {
 		cu = recoveredCU
 	}
-	receiverExpr := receiverExpressionEndingAtOffset(cu, receiverEndOffset)
-	if receiverExpr == nil {
+	fieldAccess := fieldAccessAtOffset(cu, offset)
+	if fieldAccess == nil {
+		fieldAccess = fieldAccessAtOffset(cu, dotOffset)
+	}
+	if fieldAccess == nil || fieldAccess.Expr == nil {
 		return nil
 	}
+	receiverExpr := fieldAccess.Expr
 	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
 	receiverTy := completionReceiverType(cx, receiverExpr)
 	if semtypes.IsZero(receiverTy) {
@@ -318,31 +313,6 @@ func resolveLocalTypesForCompletion(cx *context.CompilerContext, module *Module)
 	semantics.ResolveLocalNodes(cx, module.Package, module.ImportedSymbols)
 }
 
-func ensureLineSemicolon(content string, offset int) string {
-	end := offset
-	for end < len(content) && content[end] != '\r' && content[end] != '\n' {
-		end++
-	}
-	if strings.HasSuffix(strings.TrimSpace(content[offset:end]), ";") {
-		return content
-	}
-	return content[:end] + ";" + content[end:]
-}
-
-func statementLineStart(content string, offset int) int {
-	if offset < 0 {
-		offset = 0
-	}
-	if offset > len(content) {
-		offset = len(content)
-	}
-	start := strings.LastIndexAny(content[:offset], "\r\n") + 1
-	for start < len(content) && (content[start] == ' ' || content[start] == '\t') {
-		start++
-	}
-	return start
-}
-
 func memberAccessPrefixAtOffset(content string, offset int) string {
 	if offset < 0 {
 		offset = 0
@@ -359,51 +329,6 @@ func memberAccessPrefixAtOffset(content string, offset int) string {
 		prefixStart -= size
 	}
 	return content[prefixStart:offset]
-}
-
-func receiverExpressionEndingAtOffset(cu *ast.BLangCompilationUnit, offset int) ast.BLangExpression {
-	finder := &receiverExpressionFinder{offset: offset}
-	ast.Walk(finder, cu)
-	if finder.expr != nil || offset <= 0 {
-		return finder.expr
-	}
-	finder = &receiverExpressionFinder{offset: offset - 1}
-	ast.Walk(finder, cu)
-	return finder.expr
-}
-
-type receiverExpressionFinder struct {
-	offset int
-	expr   ast.BLangExpression
-	span   int
-}
-
-func (f *receiverExpressionFinder) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return f
-	}
-	pos := node.GetPosition()
-	if locationHasUsableOffsets(pos) && pos.EndOffset() < f.offset {
-		return nil
-	}
-	expr, ok := node.(ast.BLangExpression)
-	if ok && expressionEndsAtOffset(pos, f.offset) {
-		span := locationSpan(pos)
-		if f.span == 0 || span <= f.span {
-			f.expr = expr
-			f.span = span
-		}
-	}
-	return f
-}
-
-func (f *receiverExpressionFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
-	return f
-}
-
-func expressionEndsAtOffset(loc ast.Location, offset int) bool {
-	end := loc.EndOffset()
-	return end == offset || end == offset-1
 }
 
 func completionReceiverType(cx *context.CompilerContext, expr ast.BLangExpression) semtypes.SemType {
@@ -849,6 +774,33 @@ func lineTextAt(content string, offset int) string {
 
 func isIdentifierRune(r rune) bool {
 	return r == '_' || r == '\'' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func compilationUnitWithoutBadTopLevelNodes(cu *ast.BLangCompilationUnit) *ast.BLangCompilationUnit {
+	if cu == nil {
+		return nil
+	}
+	filtered := make([]ast.TopLevelNode, 0, len(cu.TopLevelNodes))
+	changed := false
+	for _, node := range cu.TopLevelNodes {
+		if _, ok := node.(*ast.BLangBadTopLevelNode); ok {
+			changed = true
+			continue
+		}
+		filtered = append(filtered, node)
+	}
+	if !changed {
+		return cu
+	}
+	result := &ast.BLangCompilationUnit{
+		TopLevelNodes: filtered,
+		Name:          cu.Name,
+		Scope:         cu.Scope,
+	}
+	result.SetPackageID(cu.GetPackageID())
+	result.SetPosition(cu.GetPosition())
+	result.SetDeterminedType(cu.GetDeterminedType())
+	return result
 }
 
 func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.DocumentURI, recoveredCU *ast.BLangCompilationUnit) (*Snapshot, *Module) {
