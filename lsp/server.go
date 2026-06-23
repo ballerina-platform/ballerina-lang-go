@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"ballerina-lang-go/lsp/protocol"
 	"ballerina-lang-go/model"
@@ -44,6 +45,7 @@ const (
 	internalError  = -32603
 
 	indexingProgressToken protocol.ProgressToken = "indexing"
+	diagnosticsDelay      time.Duration          = 500 * time.Millisecond
 )
 
 type Server struct {
@@ -56,13 +58,23 @@ type Server struct {
 	watchedFilesDynamicRegistration bool
 	progressCreated                 bool
 	nextServerRequestID             int64
-	pendingUpdates                  atomic.Int64
+	updateSequence                  atomic.Int64
+	diagnosticSequence              atomic.Int64
 	messages                        chan queuedMessage
 }
 
 type queuedMessage struct {
-	payload []byte
-	err     error
+	payload    []byte
+	err        error
+	diagnostic *diagnosticJob
+}
+
+type diagnosticJob struct {
+	seq       int64
+	updateSeq int64
+	manager   *SnapshotManager
+	snapshot  *Snapshot
+	source    SourceFile
 }
 
 func NewServer(in io.Reader, out io.Writer) *Server {
@@ -85,6 +97,10 @@ func (s *Server) Run() error {
 			}
 			return queued.err
 		}
+		if queued.diagnostic != nil {
+			s.handleDiagnosticJob(queued.diagnostic)
+			continue
+		}
 
 		var msg protocol.Message
 		if err := json.Unmarshal(queued.payload, &msg); err != nil {
@@ -95,9 +111,6 @@ func (s *Server) Run() error {
 			continue
 		}
 		if len(msg.ID) == 0 {
-			if isUpdateNotification(msg.Method) {
-				s.pendingUpdates.Add(-1)
-			}
 			s.handleNotification(msg.Method, msg.Params)
 			continue
 		}
@@ -117,7 +130,7 @@ func (s *Server) readMessages() {
 		}
 		var msg protocol.Message
 		if json.Unmarshal(payload, &msg) == nil && len(msg.ID) == 0 && isUpdateNotification(msg.Method) {
-			s.pendingUpdates.Add(1)
+			s.updateSequence.Add(1)
 		}
 		s.messages <- queuedMessage{payload: payload}
 	}
@@ -219,7 +232,7 @@ func (s *Server) handleNotification(method string, params json.RawMessage) {
 		s.registerWatchedFiles()
 		manager := s.snapshots[s.root]
 		if manager != nil && manager.Current().Kind == ProjectKindBuild {
-			s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: s.root})
+			s.publishDiagnostics(manager, manager.Current(), SourceFile{Path: s.root}, s.updateSequence.Load())
 		}
 		return
 	case "exit":
@@ -344,7 +357,7 @@ func (s *Server) updateSnapshot(source SourceFile, update func(map[protocol.Docu
 	}
 	manager.Publish(newSnapshot)
 	logLS(key, "snapshot update published key=%s kind=%s newID=%d modules=%d files=%d", key, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files))
-	s.publishDiagnostics(manager, newSnapshot, changed)
+	s.scheduleDiagnostics(manager, newSnapshot, changed, diagnosticsDelay)
 }
 
 func (s *Server) handleWatchedFileChanges(params protocol.DidChangeWatchedFilesParams) {
@@ -432,7 +445,7 @@ func (s *Server) refreshBuildProject(root string, clean bool, source SourceFile)
 	}
 	manager.Publish(newSnapshot)
 	logLS(root, "snapshot refresh published key=%s kind=%s newID=%d modules=%d files=%d clean=%t", root, projectKindString(newSnapshot.Kind), newSnapshot.ID, len(newSnapshot.Modules), len(newSnapshot.Files), clean)
-	s.publishDiagnostics(manager, newSnapshot, source)
+	s.scheduleDiagnostics(manager, newSnapshot, source, diagnosticsDelay)
 	s.publishRemovedFileDiagnostics(old, newSnapshot)
 }
 
@@ -549,12 +562,42 @@ func resetModuleState(module *Module) {
 	module.CFG = nil
 }
 
-func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile) {
+func (s *Server) scheduleDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile, delay time.Duration) {
+	if s.messages == nil {
+		return
+	}
+	job := &diagnosticJob{
+		seq:       s.diagnosticSequence.Add(1),
+		updateSeq: s.updateSequence.Load(),
+		manager:   manager,
+		snapshot:  snapshot,
+		source:    source,
+	}
+	go func() {
+		time.Sleep(delay)
+		defer func() {
+			_ = recover()
+		}()
+		s.messages <- queuedMessage{diagnostic: job}
+	}()
+}
+
+func (s *Server) handleDiagnosticJob(job *diagnosticJob) {
+	if job.seq != s.diagnosticSequence.Load() || job.updateSeq != s.updateSequence.Load() {
+		return
+	}
+	s.publishDiagnostics(job.manager, job.snapshot, job.source, job.updateSeq)
+}
+
+func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot, source SourceFile, updateSeq int64) {
+	if updateSeq != s.updateSequence.Load() {
+		return
+	}
 	s.beginIndexingProgress()
 	defer s.endIndexingProgress()
 	logLS(snapshot.Root, "diagnostics start snapshotID=%d kind=%s source=%s", snapshot.ID, projectKindString(snapshot.Kind), source.Path)
-	diagnosticsByURI, completed := runDiagnosticsWithAbort(snapshot, source, s.hasPendingUpdates)
-	if !completed || s.hasPendingUpdates() || !manager.IsCurrent(snapshot) {
+	diagnosticsByURI := runDiagnostics(snapshot, source)
+	if updateSeq != s.updateSequence.Load() || !manager.IsCurrent(snapshot) {
 		return
 	}
 	logLS(snapshot.Root, "diagnostics complete snapshotID=%d diagnosticFiles=%d", snapshot.ID, len(diagnosticsByURI))
@@ -570,10 +613,6 @@ func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot
 			Diagnostics: diagnostics,
 		})
 	}
-}
-
-func (s *Server) hasPendingUpdates() bool {
-	return s.pendingUpdates.Load() > 0
 }
 
 func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
