@@ -124,6 +124,29 @@ func TestCompletionAtStatementBlockIncludesStatementSnippets(t *testing.T) {
 	assertCompletionItem(t, items, "Person")
 }
 
+func TestCompletionAtStatementSnippetPrefixExpressionStmtIncludesMatchingSnippets(t *testing.T) {
+	cases := map[string]string{
+		"w":    "while",
+		"wh":   "while",
+		"f":    "foreach",
+		"fo":   "foreach",
+		"for":  "foreach",
+		"fore": "foreach",
+		"i":    "if",
+	}
+	for prefix, label := range cases {
+		items := completionItemsAtMarker(t, "function foo() {\n    "+prefix+"$\n}\n")
+		assertCompletionItem(t, items, label)
+	}
+}
+
+func TestCompletionAtStatementSnippetPrefixExpressionStmtKeepsImportSuggestions(t *testing.T) {
+	items := completionItemsAtMarker(t, "import ballerina/io;\nfunction foo() {\n    i$\n}\n")
+
+	assertCompletionItem(t, items, "if")
+	assertCompletionItem(t, items, "io:")
+}
+
 func TestCompletionAtStatementSnippetTypePlaceholderIncludesTypesOnly(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() {\n    Pe$ name = 1;\n}\n")
 

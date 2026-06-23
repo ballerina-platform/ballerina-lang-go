@@ -541,6 +541,10 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 		if typeNodeContainsOffset(n.TypeNode(), offset) {
 			return completionContext{kind: completionKindType, prefix: prefix}, true
 		}
+	case *ast.BLangExpressionStmt:
+		if isStatementSnippetPrefixExpressionStmt(n, prefix) {
+			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
+		}
 	case *ast.BLangSimpleVarRef:
 		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
 			return ctx, true
@@ -639,6 +643,20 @@ func isStatementBlockCompletionNode(next ast.BLangNode) bool {
 	}
 	_, ok := next.(*ast.BLangBadStmt)
 	return ok
+}
+
+func isStatementSnippetPrefixExpressionStmt(stmt *ast.BLangExpressionStmt, prefix string) bool {
+	if prefix == "" || len(statementBlockCompletionItems(prefix)) == 0 {
+		return false
+	}
+	varRef, ok := stmt.Expr.(*ast.BLangSimpleVarRef)
+	if !ok || varRef.VariableName == nil {
+		return false
+	}
+	if varRef.PkgAlias != nil && varRef.PkgAlias.GetValue() != "" {
+		return false
+	}
+	return varRef.VariableName.GetValue() == prefix
 }
 
 func typeNodeContainsOffset(typeNode ast.BType, offset int) bool {
