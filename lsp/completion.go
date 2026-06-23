@@ -495,39 +495,59 @@ func importCompletionTextEdit(source SourceFile, importPath string) (protocol.Te
 }
 
 func completionContextFromNodeChain(content string, offset int, chain []ast.BLangNode) completionContext {
-	if isModuleVarDeclCompletionNodeChain(chain) {
-		return completionContext{kind: completionKindModuleVarDecl, prefix: identifierPrefixAtOffset(content, offset)}
-	}
-	if isFunctionReturnTypeDescCompletionContext(content, offset, chain) {
-		return completionContext{kind: completionKindReturnTypeDesc}
-	}
-	if isFunctionReturnTypeCompletionContext(content, offset, chain) {
-		return completionContext{kind: completionKindType, prefix: identifierPrefixAtOffset(content, offset)}
-	}
+	prefix := identifierPrefixAtOffset(content, offset)
 	for i := len(chain) - 1; i >= 0; i-- {
-		switch n := chain[i].(type) {
-		case *ast.BLangFieldBaseAccess:
-			if n.Expr != nil {
-				exprPos := n.Expr.GetPosition()
-				if exprPos.EndOffset() < offset {
-					return completionContext{kind: completionKindMemberAccess}
-				}
-			}
-		case *ast.BLangSimpleVarRef:
-			if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
-				return ctx
-			}
-		case *ast.BLangInvocation:
-			if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset); ok {
-				return ctx
-			}
+		var next ast.BLangNode
+		if i+1 < len(chain) {
+			next = chain[i+1]
+		}
+		if ctx, ok := completionContextAtChainNode(content, offset, prefix, chain[i], next); ok {
+			return ctx
 		}
 	}
-	return completionContext{kind: completionKindLocal, prefix: identifierPrefixAtOffset(content, offset)}
+	return completionContext{kind: completionKindLocal, prefix: prefix}
 }
 
-func isFunctionReturnTypeDescCompletionContext(content string, offset int, chain []ast.BLangNode) bool {
-	fn := functionNodeFromChain(chain)
+func completionContextAtChainNode(content string, offset int, prefix string, node ast.BLangNode, next ast.BLangNode) (completionContext, bool) {
+	switch n := node.(type) {
+	case *ast.BLangCompilationUnit:
+		if isModuleVarDeclCompletionNode(next) {
+			return completionContext{kind: completionKindModuleVarDecl, prefix: prefix}, true
+		}
+	case *ast.BLangFunction:
+		return invokableCompletionContext(content, offset, prefix, n)
+	case *ast.BLangResourceMethod:
+		return invokableCompletionContext(content, offset, prefix, n)
+	case *ast.BLangFieldBaseAccess:
+		if n.Expr != nil {
+			exprPos := n.Expr.GetPosition()
+			if exprPos.EndOffset() < offset {
+				return completionContext{kind: completionKindMemberAccess}, true
+			}
+		}
+	case *ast.BLangSimpleVarRef:
+		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
+			return ctx, true
+		}
+	case *ast.BLangInvocation:
+		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset); ok {
+			return ctx, true
+		}
+	}
+	return completionContext{}, false
+}
+
+func invokableCompletionContext(content string, offset int, prefix string, fn ast.InvokableNode) (completionContext, bool) {
+	if isFunctionReturnTypeDescCompletionContext(content, offset, fn) {
+		return completionContext{kind: completionKindReturnTypeDesc}, true
+	}
+	if isFunctionReturnTypeCompletionContext(content, offset, fn) {
+		return completionContext{kind: completionKindType, prefix: prefix}, true
+	}
+	return completionContext{}, false
+}
+
+func isFunctionReturnTypeDescCompletionContext(content string, offset int, fn ast.InvokableNode) bool {
 	if fn == nil || fn.GetReturnTypeDescriptor() == nil {
 		return false
 	}
@@ -559,8 +579,7 @@ func isFunctionReturnTypeDescCompletionContext(content string, offset int, chain
 	return false
 }
 
-func isFunctionReturnTypeCompletionContext(content string, offset int, chain []ast.BLangNode) bool {
-	fn := functionNodeFromChain(chain)
+func isFunctionReturnTypeCompletionContext(content string, offset int, fn ast.InvokableNode) bool {
 	if fn == nil {
 		return false
 	}
@@ -582,31 +601,12 @@ func isFunctionReturnTypeCompletionContext(content string, offset int, chain []a
 	return between == "returns"
 }
 
-func functionNodeFromChain(chain []ast.BLangNode) ast.InvokableNode {
-	for i := len(chain) - 1; i >= 0; i-- {
-		switch n := chain[i].(type) {
-		case *ast.BLangFunction:
-			return n
-		case *ast.BLangResourceMethod:
-			return n
-		}
+func isModuleVarDeclCompletionNode(next ast.BLangNode) bool {
+	if next == nil {
+		return true
 	}
-	return nil
-}
-
-func isModuleVarDeclCompletionNodeChain(chain []ast.BLangNode) bool {
-	if len(chain) == 1 {
-		_, ok := chain[0].(*ast.BLangCompilationUnit)
-		return ok
-	}
-	if len(chain) == 2 {
-		if _, ok := chain[0].(*ast.BLangCompilationUnit); !ok {
-			return false
-		}
-		_, ok := chain[1].(*ast.BLangBadTopLevelNode)
-		return ok
-	}
-	return false
+	_, ok := next.(*ast.BLangBadTopLevelNode)
+	return ok
 }
 
 func nodeChainAtOffset(cu *ast.BLangCompilationUnit, offset int) []ast.BLangNode {
