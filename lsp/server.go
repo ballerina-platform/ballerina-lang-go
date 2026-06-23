@@ -30,6 +30,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"ballerina-lang-go/lsp/protocol"
 	"ballerina-lang-go/model"
@@ -55,6 +56,13 @@ type Server struct {
 	watchedFilesDynamicRegistration bool
 	progressCreated                 bool
 	nextServerRequestID             int64
+	pendingUpdates                  atomic.Int64
+	messages                        chan queuedMessage
+}
+
+type queuedMessage struct {
+	payload []byte
+	err     error
 }
 
 func NewServer(in io.Reader, out io.Writer) *Server {
@@ -66,18 +74,20 @@ func NewServer(in io.Reader, out io.Writer) *Server {
 }
 
 func (s *Server) Run() error {
-	reader := bufio.NewReader(s.in)
-	for {
-		payload, err := readMessage(reader)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+	if s.messages == nil {
+		s.messages = make(chan queuedMessage, 128)
+	}
+	go s.readMessages()
+	for queued := range s.messages {
+		if queued.err != nil {
+			if errors.Is(queued.err, io.EOF) {
 				return nil
 			}
-			return err
+			return queued.err
 		}
 
 		var msg protocol.Message
-		if err := json.Unmarshal(payload, &msg); err != nil {
+		if err := json.Unmarshal(queued.payload, &msg); err != nil {
 			s.writeError(nil, parseError, "parse error")
 			continue
 		}
@@ -85,10 +95,41 @@ func (s *Server) Run() error {
 			continue
 		}
 		if len(msg.ID) == 0 {
+			if isUpdateNotification(msg.Method) {
+				s.pendingUpdates.Add(-1)
+			}
 			s.handleNotification(msg.Method, msg.Params)
 			continue
 		}
 		s.handleRequest(msg)
+	}
+	return nil
+}
+
+func (s *Server) readMessages() {
+	reader := bufio.NewReader(s.in)
+	for {
+		payload, err := readMessage(reader)
+		if err != nil {
+			s.messages <- queuedMessage{err: err}
+			close(s.messages)
+			return
+		}
+		var msg protocol.Message
+		if json.Unmarshal(payload, &msg) == nil && len(msg.ID) == 0 && isUpdateNotification(msg.Method) {
+			s.pendingUpdates.Add(1)
+		}
+		s.messages <- queuedMessage{payload: payload}
+	}
+}
+
+func isUpdateNotification(method string) bool {
+	switch method {
+	case "textDocument/didOpen", "textDocument/didChange", "textDocument/didClose", "textDocument/didSave",
+		"workspace/didChangeWatchedFiles", "workspace/didRenameFiles", "workspace/didCreateFiles", "workspace/didDeleteFiles":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -512,8 +553,8 @@ func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot
 	s.beginIndexingProgress()
 	defer s.endIndexingProgress()
 	logLS(snapshot.Root, "diagnostics start snapshotID=%d kind=%s source=%s", snapshot.ID, projectKindString(snapshot.Kind), source.Path)
-	diagnosticsByURI := runDiagnostics(snapshot, source)
-	if !manager.IsCurrent(snapshot) {
+	diagnosticsByURI, completed := runDiagnosticsWithAbort(snapshot, source, s.hasPendingUpdates)
+	if !completed || s.hasPendingUpdates() || !manager.IsCurrent(snapshot) {
 		return
 	}
 	logLS(snapshot.Root, "diagnostics complete snapshotID=%d diagnosticFiles=%d", snapshot.ID, len(diagnosticsByURI))
@@ -529,6 +570,10 @@ func (s *Server) publishDiagnostics(manager *SnapshotManager, snapshot *Snapshot
 			Diagnostics: diagnostics,
 		})
 	}
+}
+
+func (s *Server) hasPendingUpdates() bool {
+	return s.pendingUpdates.Load() > 0
 }
 
 func (s *Server) initializeSnapshots(params protocol.InitializeParams) {
