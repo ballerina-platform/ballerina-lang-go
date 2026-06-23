@@ -52,7 +52,7 @@ func registerRsaFunctions(rt *runtime.Runtime, types cryptoTypes) {
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
 				}
-				return bytesToList(types.byteArrTy, ctx,out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			case *rsa.PrivateKey:
 				pub := &k.PublicKey
 				var out []byte
@@ -65,7 +65,7 @@ func registerRsaFunctions(rt *runtime.Runtime, types cryptoTypes) {
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
 				}
-				return bytesToList(types.byteArrTy, ctx,out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			default:
 				return cryptoError("Uninitialized public key"), nil
 			}
@@ -89,7 +89,7 @@ func registerRsaFunctions(rt *runtime.Runtime, types cryptoTypes) {
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA decrypt: %s", err.Error())), nil
 				}
-				return bytesToList(types.byteArrTy, ctx,out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			default:
 				return cryptoError("Uninitialized private key"), nil
 			}
@@ -125,7 +125,7 @@ func registerRsaFunctions(rt *runtime.Runtime, types cryptoTypes) {
 			if err != nil {
 				return cryptoError(fmt.Sprintf("Error occurred while calculating signature: %s", err.Error())), nil
 			}
-			return bytesToList(types.byteArrTy, ctx,sig), nil
+			return bytesToList(types.byteArrTy, ctx, sig), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signSha256withEcdsa",
