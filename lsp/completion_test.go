@@ -71,6 +71,7 @@ func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T)
 	assertSnippetCompletionItem(t, items, "var decl", "var ${1:name} = ${2:value};")
 	assertSnippetCompletionItem(t, items, "variable decl", "${1:type} ${2:name} = ${3:value};")
 	assertCompletionItem(t, items, "Person")
+	assertCompletionItem(t, items, "int")
 	assertNoCompletionItem(t, items, "const")
 	assertNoCompletionItem(t, items, "var")
 	assertNoCompletionItem(t, items, "foo")
@@ -94,6 +95,8 @@ func TestCompletionAtEmptyFunctionReturnTypeIncludesTypesOnly(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() returns $ {\n}\n")
 
 	assertCompletionItem(t, items, "Person")
+	assertBuiltinTypeCompletionItems(t, items)
+	assertCompletionItemBefore(t, items, "Person", "any")
 	assertNoCompletionItem(t, items, "foo")
 	assertNoCompletionItem(t, items, "returns")
 }
@@ -102,28 +105,34 @@ func TestCompletionAtFunctionReturnTypeIncludesTypesOnly(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() returns Pe$ {\n}\n")
 
 	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "int")
 	assertNoCompletionItem(t, items, "foo")
 	assertNoCompletionItem(t, items, "returns")
 }
 
 func TestCompletionAtFunctionParameterTypeUsesDefaultContext(t *testing.T) {
-	items := completionItemsAtMarker(t, "type Person int;\nfunction foo(Pe$ p) {\n}\n")
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo(i$ p) {\n}\n")
 
-	assertCompletionItem(t, items, "Person")
+	assertCompletionItem(t, items, "int")
+	item := requireCompletionItem(t, items, "int")
+	if item.Kind != protocol.CompletionItemKindClass {
+		t.Fatalf("builtin type kind = %d, want type", item.Kind)
+	}
 	assertNoCompletionItem(t, items, "returns")
 }
 
-func TestCompletionAtStatementBeginIncludesVisibleVariablesFunctionsAndControlSnippets(t *testing.T) {
+func TestCompletionAtStatementBeginIncludesVisibleVariablesFunctionsTypesAndControlSnippets(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction helper() {\n}\nfunction foo() {\n    int x = 1;\n    $\n}\n")
 
 	assertCompletionItem(t, items, "x")
 	assertCompletionItem(t, items, "helper")
+	assertCompletionItem(t, items, "Person")
+	assertCompletionItem(t, items, "int")
 	assertSnippetCompletionItem(t, items, "foreach", "foreach ${1:type} ${2:var} in ${3:collection} {\n\t${4:body}\n}")
 	assertSnippetCompletionItem(t, items, "while", "while ${1:cond} {\n\t${2:body}\n}")
 	assertSnippetCompletionItem(t, items, "if", "if ${1:cond} {\n\t${2:body}\n}")
 	assertNoCompletionItem(t, items, "assignment")
 	assertNoCompletionItem(t, items, "variable decl")
-	assertNoCompletionItem(t, items, "Person")
 }
 
 func TestCompletionAtStatementSnippetPrefixExpressionStmtIncludesMatchingSnippets(t *testing.T) {
@@ -383,6 +392,34 @@ func hasCompletionItem(items []protocol.CompletionItem, label string) bool {
 		}
 	}
 	return false
+}
+
+func assertBuiltinTypeCompletionItems(t *testing.T, items []protocol.CompletionItem) {
+	t.Helper()
+	for _, label := range []string{"int", "float", "decimal", "string", "boolean", "byte", "json", "xml", "any", "anydata", "error", "never", "nil"} {
+		assertCompletionItem(t, items, label)
+	}
+}
+
+func assertCompletionItemBefore(t *testing.T, items []protocol.CompletionItem, before string, after string) {
+	t.Helper()
+	beforeIndex := completionItemIndex(items, before)
+	afterIndex := completionItemIndex(items, after)
+	if beforeIndex < 0 || afterIndex < 0 {
+		t.Fatalf("completion items %q/%q not found in %+v", before, after, items)
+	}
+	if beforeIndex >= afterIndex {
+		t.Fatalf("completion item %q index = %d, want before %q index = %d in %+v", before, beforeIndex, after, afterIndex, items)
+	}
+}
+
+func completionItemIndex(items []protocol.CompletionItem, label string) int {
+	for i, item := range items {
+		if item.Label == label {
+			return i
+		}
+	}
+	return -1
 }
 
 func hasString(values []string, target string) bool {

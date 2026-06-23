@@ -255,11 +255,12 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 			addItem(item)
 		}
 	} else if completionCtx.kind == completionKindType {
-		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
-			addItem(item)
-		}
+		return typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix)
 	} else if completionCtx.kind == completionKindStatementBegin {
 		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+			addItem(item)
+		}
+		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 		for _, item := range statementBeginCompletionItems(completionCtx.prefix) {
@@ -970,6 +971,10 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindType
 	})
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		seen[item.Label] = true
+	}
 	for _, item := range []protocol.CompletionItem{
 		{Label: "constant decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "const ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "function", Kind: protocol.CompletionItemKindFunction, InsertText: "function ${1:name}(${2:params}) ${3:retTy} {\n\t${4:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
@@ -977,13 +982,12 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 		{Label: "var decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "var ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "variable decl", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name} = ${3:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
 	} {
-		if strings.HasPrefix(item.Label, prefix) {
+		if strings.HasPrefix(item.Label, prefix) && !seen[item.Label] {
 			items = append(items, item)
+			seen[item.Label] = true
 		}
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Label < items[j].Label
-	})
+	items = append(items, builtinTypeCompletionItems(prefix, seen)...)
 	return items
 }
 
@@ -1001,9 +1005,56 @@ func visibleVariableAndFunctionCompletionItems(cx *context.CompilerContext, cu *
 }
 
 func typeCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
-	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindType
 	})
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		seen[item.Label] = true
+	}
+	return append(items, builtinTypeCompletionItems(prefix, seen)...)
+}
+
+func builtinTypeCompletionItems(prefix string, seen map[string]bool) []protocol.CompletionItem {
+	labels := make([]string, 0, len(builtinTypeCompletionLabels))
+	for _, label := range builtinTypeCompletionLabels {
+		if seen[label] || !strings.HasPrefix(label, prefix) {
+			continue
+		}
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	items := make([]protocol.CompletionItem, len(labels))
+	for i, label := range labels {
+		items[i] = protocol.CompletionItem{Label: label, Kind: completionItemKind(model.SymbolKindType)}
+	}
+	return items
+}
+
+var builtinTypeCompletionLabels = []string{
+	"any",
+	"anydata",
+	"boolean",
+	"byte",
+	"decimal",
+	"error",
+	"float",
+	"function",
+	"future",
+	"handle",
+	"int",
+	"json",
+	"map",
+	"never",
+	"nil",
+	"object",
+	"readonly",
+	"regexp",
+	"stream",
+	"string",
+	"table",
+	"typedesc",
+	"xml",
 }
 
 func visibleSymbolCompletionItemsWithFilter(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string, include func(model.SymbolKind) bool) []protocol.CompletionItem {
