@@ -282,6 +282,7 @@ const (
 	CompletionItemKindVariable = 6
 	CompletionItemKindClass    = 7
 	CompletionItemKindModule   = 9
+	CompletionItemKindKeyword  = 14
 	CompletionItemKindConstant = 21
 )
 

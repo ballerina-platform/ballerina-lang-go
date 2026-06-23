@@ -38,6 +38,7 @@ type completionKind int
 
 const (
 	completionKindLocal completionKind = iota
+	completionKindModuleVarDecl
 	completionKindImportedSymbol
 	completionKindMemberAccess
 )
@@ -149,6 +150,8 @@ func moduleForSource(snapshot *Snapshot, uri protocol.DocumentURI) *Module {
 
 func completionKindString(kind completionKind) string {
 	switch kind {
+	case completionKindModuleVarDecl:
+		return "module-var-decl"
 	case completionKindImportedSymbol:
 		return "imported-symbol"
 	case completionKindMemberAccess:
@@ -201,15 +204,17 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		itemsByLabel[item.Label] = item
 		labels = append(labels, item.Label)
 	}
-	for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
-		alias := importAlias(&imp)
-		if alias == "" {
-			continue
+	if completionCtx.kind != completionKindModuleVarDecl {
+		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
+			alias := importAlias(&imp)
+			if alias == "" {
+				continue
+			}
+			addItem(protocol.CompletionItem{Label: alias + ":", Kind: protocol.CompletionItemKindModule})
 		}
-		addItem(protocol.CompletionItem{Label: alias + ":", Kind: protocol.CompletionItemKindModule})
-	}
-	for _, item := range autoImportModuleCompletionItems(snapshot, module, source, recoveredCU) {
-		addItem(item)
+		for _, item := range autoImportModuleCompletionItems(snapshot, module, source, recoveredCU) {
+			addItem(item)
+		}
 	}
 
 	completionSnapshot, completionModule := snapshotWithRecoveredCU(snapshot, module, source.URI, recoveredCU)
@@ -219,8 +224,14 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	if cu == nil {
 		cu = recoveredCU
 	}
-	for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
-		addItem(item)
+	if completionCtx.kind == completionKindModuleVarDecl {
+		for _, item := range moduleVarDeclCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+			addItem(item)
+		}
+	} else {
+		for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+			addItem(item)
+		}
 	}
 	sort.Strings(labels)
 	items := make([]protocol.CompletionItem, len(labels))
@@ -546,6 +557,9 @@ func importCompletionTextEdit(source SourceFile, importPath string) (protocol.Te
 }
 
 func completionContextFromNodeChain(content string, offset int, chain []ast.BLangNode) completionContext {
+	if isModuleVarDeclCompletionNodeChain(chain) {
+		return completionContext{kind: completionKindModuleVarDecl, prefix: identifierPrefixAtOffset(content, offset)}
+	}
 	for i := len(chain) - 1; i >= 0; i-- {
 		switch n := chain[i].(type) {
 		case *ast.BLangFieldBaseAccess:
@@ -566,6 +580,21 @@ func completionContextFromNodeChain(content string, offset int, chain []ast.BLan
 		}
 	}
 	return completionContext{kind: completionKindLocal, prefix: identifierPrefixAtOffset(content, offset)}
+}
+
+func isModuleVarDeclCompletionNodeChain(chain []ast.BLangNode) bool {
+	if len(chain) == 1 {
+		_, ok := chain[0].(*ast.BLangCompilationUnit)
+		return ok
+	}
+	if len(chain) == 2 {
+		if _, ok := chain[0].(*ast.BLangCompilationUnit); !ok {
+			return false
+		}
+		_, ok := chain[1].(*ast.BLangBadTopLevelNode)
+		return ok
+	}
+	return false
 }
 
 func nodeChainAtOffset(cu *ast.BLangCompilationUnit, offset int) []ast.BLangNode {
@@ -773,7 +802,28 @@ func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.Do
 	return &completionSnapshot, completionModule
 }
 
+func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
+	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+		return kind == model.SymbolKindType
+	})
+	for _, label := range []string{"const", "type", "var"} {
+		if strings.HasPrefix(label, prefix) {
+			items = append(items, protocol.CompletionItem{Label: label, Kind: protocol.CompletionItemKindKeyword})
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Label < items[j].Label
+	})
+	return items
+}
+
 func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
+	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+		return true
+	})
+}
+
+func visibleSymbolCompletionItemsWithFilter(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string, include func(model.SymbolKind) bool) []protocol.CompletionItem {
 	var scope model.Scope
 	if pkg != nil {
 		scope = nearestScopeAtOffset(pkg, offset)
@@ -787,6 +837,10 @@ func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	seen := make(map[string]protocol.CompletionItem)
 	labels := make([]string, 0)
 	addSymbol := func(ref model.SymbolRef) {
+		kind := cx.SymbolKind(ref)
+		if !include(kind) {
+			return
+		}
 		label := cx.SymbolName(ref)
 		if label == "" || !strings.HasPrefix(label, prefix) {
 			return
@@ -797,7 +851,7 @@ func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 		if loc := cx.SymbolLocation(ref); locationHasUsableOffsets(loc) && loc.StartOffset() > offset {
 			return
 		}
-		seen[label] = protocol.CompletionItem{Label: label, Kind: completionItemKind(cx.SymbolKind(ref))}
+		seen[label] = protocol.CompletionItem{Label: label, Kind: completionItemKind(kind)}
 		labels = append(labels, label)
 	}
 	seenSpaces := make(map[*model.SymbolSpace]bool)

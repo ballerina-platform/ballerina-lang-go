@@ -30,6 +30,27 @@ func TestCompletionDefaultsToVisibleSymbols(t *testing.T) {
 	assertCompletionItem(t, items, "io:")
 }
 
+func TestCompletionAtModuleVarDeclIncludesKeywordsAndTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "import ballerina/io;\n\ntype Person int;\nfunction foo() {\n}\n\nPe$\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "io:")
+	assertNoCompletionItem(t, items, "const")
+	assertNoCompletionItem(t, items, "type")
+	assertNoCompletionItem(t, items, "var")
+}
+
+func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationKeywords(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\n\n$\n")
+
+	assertCompletionItem(t, items, "const")
+	assertCompletionItem(t, items, "type")
+	assertCompletionItem(t, items, "var")
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+}
+
 func TestCompletionKeepsImportedSymbolCompletion(t *testing.T) {
 	items := completionItemsAtMarker(t, "import ballerina/io;\npublic function main() {\n    io:$\n}\n")
 
