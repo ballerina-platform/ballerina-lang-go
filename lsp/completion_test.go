@@ -42,11 +42,12 @@ func TestCompletionProviderTriggersIncludeStatementBlockCharacters(t *testing.T)
 	}
 }
 
-func TestCompletionDefaultsToVisibleSymbols(t *testing.T) {
+func TestCompletionWithoutValidContextReturnsNoItems(t *testing.T) {
 	items := completionItemsAtMarker(t, "import ballerina/io;\npublic function main() {\n    int x = 1;\n    io:println($);\n}\n")
 
-	assertCompletionItem(t, items, "x")
-	assertCompletionItem(t, items, "io:")
+	if len(items) != 0 {
+		t.Fatalf("completion items = %+v, want none", items)
+	}
 }
 
 func TestCompletionAtModuleVarDeclIncludesKeywordsAndTypesOnly(t *testing.T) {
@@ -154,6 +155,14 @@ func TestCompletionAtStatementSnippetTypePlaceholderIncludesTypesOnly(t *testing
 	assertCompletionItem(t, items, "Person")
 	assertNoCompletionItem(t, items, "foo")
 	assertNoCompletionItem(t, items, "assignment")
+}
+
+func TestCompletionAtExpressionInitializerReturnsNoItems(t *testing.T) {
+	items := completionItemsAtMarker(t, "public function main() {\n  int foo = $\n}\n")
+
+	if len(items) != 0 {
+		t.Fatalf("completion items = %+v, want none", items)
+	}
 }
 
 func TestCompletionAtVariableDeclarationNameDoesNotIncludeDeclarationOrAssignmentSnippets(t *testing.T) {

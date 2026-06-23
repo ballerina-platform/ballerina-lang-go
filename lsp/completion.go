@@ -37,13 +37,14 @@ import (
 type completionKind int
 
 const (
-	completionKindLocal completionKind = iota
+	completionKindNone completionKind = iota
 	completionKindModuleVarDecl
 	completionKindImportedSymbol
 	completionKindMemberAccess
 	completionKindReturnTypeDesc
 	completionKindType
 	completionKindStatementBegin
+	completionKindExpression
 )
 
 type completionContext struct {
@@ -169,8 +170,10 @@ func completionKindString(kind completionKind) string {
 		return "type"
 	case completionKindStatementBegin:
 		return "statement-begin"
+	case completionKindExpression:
+		return "expression"
 	default:
-		return "local"
+		return "none"
 	}
 }
 
@@ -217,10 +220,13 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		itemsByLabel[item.Label] = item
 		labels = append(labels, item.Label)
 	}
+	if completionCtx.kind == completionKindNone {
+		return nil
+	}
 	if completionCtx.kind == completionKindReturnTypeDesc {
 		return []protocol.CompletionItem{{Label: "returns", Kind: protocol.CompletionItemKindKeyword, InsertText: "returns ${1:Ty}", InsertTextFormat: protocol.InsertTextFormatSnippet}}
 	}
-	if completionCtx.kind != completionKindModuleVarDecl && completionCtx.kind != completionKindType {
+	if completionCtx.kind != completionKindModuleVarDecl && completionCtx.kind != completionKindType && completionCtx.kind != completionKindExpression {
 		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
 			alias := importAlias(&imp)
 			if alias == "" {
@@ -257,6 +263,10 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 			addItem(item)
 		}
 		for _, item := range statementBeginCompletionItems(completionCtx.prefix) {
+			addItem(item)
+		}
+	} else if completionCtx.kind == completionKindExpression {
+		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 	} else {
@@ -519,7 +529,7 @@ func completionContextFromNodeChain(content string, offset int, chain []ast.BLan
 			return ctx
 		}
 	}
-	return completionContext{kind: completionKindLocal, prefix: prefix}
+	return completionContext{kind: completionKindNone, prefix: prefix}
 }
 
 func completionContextAtChainNode(content string, offset int, prefix string, node ast.BLangNode, next ast.BLangNode) (completionContext, bool) {
@@ -542,6 +552,9 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 	case *ast.BLangSimpleVariable:
 		if typeNodeContainsOffset(n.TypeNode(), offset) {
 			return completionContext{kind: completionKindType, prefix: prefix}, true
+		}
+		if initialExpressionContainsOffset(n, offset) && prefix != "" {
+			return completionContext{kind: completionKindExpression, prefix: prefix}, true
 		}
 	case *ast.BLangExpressionStmt:
 		if isStatementBeginPrefixExpressionStmt(n, prefix) {
@@ -568,6 +581,9 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 }
 
 func invokableCompletionContext(content string, offset int, prefix string, fn ast.InvokableNode) (completionContext, bool) {
+	if isFunctionParameterTypeCompletionContext(offset, fn) {
+		return completionContext{kind: completionKindType, prefix: prefix}, true
+	}
 	if isFunctionReturnTypeDescCompletionContext(content, offset, fn) {
 		return completionContext{kind: completionKindReturnTypeDesc}, true
 	}
@@ -575,6 +591,26 @@ func invokableCompletionContext(content string, offset int, prefix string, fn as
 		return completionContext{kind: completionKindType, prefix: prefix}, true
 	}
 	return completionContext{}, false
+}
+
+func isFunctionParameterTypeCompletionContext(offset int, fn ast.InvokableNode) bool {
+	if fn == nil {
+		return false
+	}
+	for _, param := range fn.GetParameters() {
+		if simpleVariableTypeNodeContainsOffset(param, offset) {
+			return true
+		}
+	}
+	return simpleVariableTypeNodeContainsOffset(fn.GetRestParam(), offset)
+}
+
+func simpleVariableTypeNodeContainsOffset(variable ast.SimpleVariableNode, offset int) bool {
+	if variable == nil {
+		return false
+	}
+	simpleVar, ok := variable.(*ast.BLangSimpleVariable)
+	return ok && typeNodeContainsOffset(simpleVar.TypeNode(), offset)
 }
 
 func isFunctionReturnTypeDescCompletionContext(content string, offset int, fn ast.InvokableNode) bool {
@@ -652,7 +688,22 @@ func isStatementBeginPrefixExpressionStmt(stmt *ast.BLangExpressionStmt, prefix 
 		return false
 	}
 	varRef, ok := stmt.Expr.(*ast.BLangSimpleVarRef)
-	if !ok || varRef.VariableName == nil {
+	if !ok {
+		return false
+	}
+	return isUnqualifiedVarRefWithPrefix(varRef, prefix)
+}
+
+func initialExpressionContainsOffset(variable *ast.BLangSimpleVariable, offset int) bool {
+	if variable == nil || variable.GetInitialExpression() == nil {
+		return false
+	}
+	expr, ok := variable.GetInitialExpression().(ast.BLangNode)
+	return ok && locationContains(expr.GetPosition(), offset)
+}
+
+func isUnqualifiedVarRefWithPrefix(varRef *ast.BLangSimpleVarRef, prefix string) bool {
+	if varRef == nil || varRef.VariableName == nil {
 		return false
 	}
 	if varRef.PkgAlias != nil && varRef.PkgAlias.GetValue() != "" {
