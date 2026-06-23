@@ -74,10 +74,7 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=no-recovering-compilation-unit", snapshot.ID, module.Name)
 		return result
 	}
-	completionCtx := completionContextFromAST(cu, offset)
-	if completionCtx.kind == completionKindLocal {
-		completionCtx = completionContextAtOffset(source.Content, offset)
-	}
+	completionCtx := completionContextFromNodeChain(source.Content, offset, nodeChainAtOffset(cu, offset))
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind == completionKindMemberAccess {
 		result.Items = s.memberAccessCompletionItems(snapshot, module, source, cu, completionCtx, offset)
@@ -548,10 +545,58 @@ func importCompletionTextEdit(source SourceFile, importPath string) (protocol.Te
 	return protocol.TextEdit{Range: protocol.Range{Start: pos, End: pos}, NewText: newText}, true
 }
 
-func completionContextFromAST(cu *ast.BLangCompilationUnit, offset int) completionContext {
-	finder := &completionContextFinder{offset: offset}
+func completionContextFromNodeChain(content string, offset int, chain []ast.BLangNode) completionContext {
+	for i := len(chain) - 1; i >= 0; i-- {
+		switch n := chain[i].(type) {
+		case *ast.BLangFieldBaseAccess:
+			if n.Expr != nil {
+				exprPos := n.Expr.GetPosition()
+				if exprPos.EndOffset() < offset {
+					return completionContext{kind: completionKindMemberAccess}
+				}
+			}
+		case *ast.BLangSimpleVarRef:
+			if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
+				return ctx
+			}
+		case *ast.BLangInvocation:
+			if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset); ok {
+				return ctx
+			}
+		}
+	}
+	return completionContext{kind: completionKindLocal, prefix: identifierPrefixAtOffset(content, offset)}
+}
+
+func nodeChainAtOffset(cu *ast.BLangCompilationUnit, offset int) []ast.BLangNode {
+	finder := &nodeChainAtOffsetFinder{offset: offset}
 	ast.Walk(finder, cu)
-	return finder.context
+	return finder.chain
+}
+
+type nodeChainAtOffsetFinder struct {
+	offset int
+	stack  []ast.BLangNode
+	chain  []ast.BLangNode
+}
+
+func (f *nodeChainAtOffsetFinder) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		if len(f.stack) > 0 {
+			f.stack = f.stack[:len(f.stack)-1]
+		}
+		return f
+	}
+	if locationHasUsableOffsets(node.GetPosition()) && !locationContains(node.GetPosition(), f.offset) {
+		return nil
+	}
+	f.stack = append(f.stack, node)
+	f.chain = append(f.chain[:0], f.stack...)
+	return f
+}
+
+func (f *nodeChainAtOffsetFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
+	return f
 }
 
 type badCompletionKind int
@@ -562,27 +607,6 @@ const (
 	badCompletionKindExprOrAction
 	badCompletionKindIdentifier
 )
-
-type completionContextFinder struct {
-	offset  int
-	context completionContext
-	span    int
-}
-
-func (f *completionContextFinder) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return nil
-	}
-	if ctx, span, ok := importedSymbolContextFromNode(node, f.offset); ok && (f.span == 0 || span <= f.span) {
-		f.context = ctx
-		f.span = span
-	}
-	return f
-}
-
-func (f *completionContextFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
-	return f
-}
 
 func badCompletionKindAtOffset(cu *ast.BLangCompilationUnit, offset int) badCompletionKind {
 	finder := &badCompletionNodeFinder{offset: offset}
@@ -626,16 +650,6 @@ func (f *badCompletionNodeFinder) VisitTypeData(typeData *ast.TypeData) ast.Visi
 	return f
 }
 
-func importedSymbolContextFromNode(node ast.BLangNode, offset int) (completionContext, int, bool) {
-	switch n := node.(type) {
-	case *ast.BLangSimpleVarRef:
-		return importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset)
-	case *ast.BLangInvocation:
-		return importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset)
-	}
-	return completionContext{}, 0, false
-}
-
 func importedSymbolContextFromQualifiedName(alias ast.IdentifierNode, name ast.IdentifierNode, pos ast.Location, offset int) (completionContext, int, bool) {
 	if alias == nil || name == nil || alias.GetValue() == "" {
 		return completionContext{}, 0, false
@@ -646,53 +660,14 @@ func importedSymbolContextFromQualifiedName(alias ast.IdentifierNode, name ast.I
 		}
 		return completionContext{kind: completionKindImportedSymbol, alias: alias.GetValue()}, locationSpan(pos), true
 	}
+	if name.GetValue() == "" && locationContains(pos, offset) {
+		return completionContext{kind: completionKindImportedSymbol, alias: alias.GetValue()}, locationSpan(pos), true
+	}
 	namePos := name.GetPosition()
 	if !locationContains(namePos, offset) {
 		return completionContext{}, 0, false
 	}
 	return completionContext{kind: completionKindImportedSymbol, alias: alias.GetValue(), prefix: name.GetValue()}, locationSpan(pos), true
-}
-
-func completionContextAtOffset(content string, offset int) completionContext {
-	if offset < 0 {
-		offset = 0
-	}
-	if offset > len(content) {
-		offset = len(content)
-	}
-	prefixStart := offset
-	for prefixStart > 0 {
-		r, size := utf8.DecodeLastRuneInString(content[:prefixStart])
-		if r == utf8.RuneError && size == 0 || !isIdentifierRune(r) {
-			break
-		}
-		prefixStart -= size
-	}
-	prefix := content[prefixStart:offset]
-	if prefixStart == 0 {
-		return completionContext{kind: completionKindLocal}
-	}
-	delimiter, delimiterSize := utf8.DecodeLastRuneInString(content[:prefixStart])
-	switch delimiter {
-	case '.':
-		return completionContext{kind: completionKindMemberAccess}
-	case ':':
-		aliasEnd := prefixStart - delimiterSize
-		aliasStart := aliasEnd
-		for aliasStart > 0 {
-			r, size := utf8.DecodeLastRuneInString(content[:aliasStart])
-			if r == utf8.RuneError && size == 0 || !isIdentifierRune(r) {
-				break
-			}
-			aliasStart -= size
-		}
-		if aliasStart == aliasEnd {
-			return completionContext{kind: completionKindLocal}
-		}
-		return completionContext{kind: completionKindImportedSymbol, alias: content[aliasStart:aliasEnd], prefix: prefix}
-	default:
-		return completionContext{kind: completionKindLocal}
-	}
 }
 
 func locationHasOffsets(loc ast.Location) bool {
@@ -716,6 +691,29 @@ func locationSpan(loc ast.Location) int {
 		return 1
 	}
 	return end - start + 1
+}
+
+func identifierPrefixAtOffset(content string, offset int) string {
+	_, prefix := identifierPrefixStartAndValueAtOffset(content, offset)
+	return prefix
+}
+
+func identifierPrefixStartAndValueAtOffset(content string, offset int) (int, string) {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(content) {
+		offset = len(content)
+	}
+	prefixStart := offset
+	for prefixStart > 0 {
+		r, size := utf8.DecodeLastRuneInString(content[:prefixStart])
+		if r == utf8.RuneError && size == 0 || !isIdentifierRune(r) {
+			break
+		}
+		prefixStart -= size
+	}
+	return prefixStart, content[prefixStart:offset]
 }
 
 func lineTextAt(content string, offset int) string {
