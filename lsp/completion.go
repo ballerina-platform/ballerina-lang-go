@@ -43,7 +43,7 @@ const (
 	completionKindMemberAccess
 	completionKindReturnTypeDesc
 	completionKindType
-	completionKindStatementBlock
+	completionKindStatementBegin
 )
 
 type completionContext struct {
@@ -167,8 +167,8 @@ func completionKindString(kind completionKind) string {
 		return "return-type-desc"
 	case completionKindType:
 		return "type"
-	case completionKindStatementBlock:
-		return "statement-block"
+	case completionKindStatementBegin:
+		return "statement-begin"
 	default:
 		return "local"
 	}
@@ -252,14 +252,16 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
 		}
+	} else if completionCtx.kind == completionKindStatementBegin {
+		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+			addItem(item)
+		}
+		for _, item := range statementBeginCompletionItems(completionCtx.prefix) {
+			addItem(item)
+		}
 	} else {
 		for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
-		}
-		if completionCtx.kind == completionKindStatementBlock {
-			for _, item := range statementBlockCompletionItems(completionCtx.prefix) {
-				addItem(item)
-			}
 		}
 	}
 	sort.Strings(labels)
@@ -542,8 +544,8 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 			return completionContext{kind: completionKindType, prefix: prefix}, true
 		}
 	case *ast.BLangExpressionStmt:
-		if isStatementSnippetPrefixExpressionStmt(n, prefix) {
-			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
+		if isStatementBeginPrefixExpressionStmt(n, prefix) {
+			return completionContext{kind: completionKindStatementBegin, prefix: prefix}, true
 		}
 	case *ast.BLangSimpleVarRef:
 		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
@@ -555,11 +557,11 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 		}
 	case *ast.BLangBlockFunctionBody:
 		if isStatementBlockCompletionNode(next) {
-			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
+			return completionContext{kind: completionKindStatementBegin, prefix: prefix}, true
 		}
 	case *ast.BLangBlockStmt:
 		if isStatementBlockCompletionNode(next) {
-			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
+			return completionContext{kind: completionKindStatementBegin, prefix: prefix}, true
 		}
 	}
 	return completionContext{}, false
@@ -645,8 +647,8 @@ func isStatementBlockCompletionNode(next ast.BLangNode) bool {
 	return ok
 }
 
-func isStatementSnippetPrefixExpressionStmt(stmt *ast.BLangExpressionStmt, prefix string) bool {
-	if prefix == "" || len(statementBlockCompletionItems(prefix)) == 0 {
+func isStatementBeginPrefixExpressionStmt(stmt *ast.BLangExpressionStmt, prefix string) bool {
+	if prefix == "" {
 		return false
 	}
 	varRef, ok := stmt.Expr.(*ast.BLangSimpleVarRef)
@@ -899,11 +901,9 @@ func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.Do
 	return &completionSnapshot, completionModule
 }
 
-func statementBlockCompletionItems(prefix string) []protocol.CompletionItem {
-	items := make([]protocol.CompletionItem, 0, 5)
+func statementBeginCompletionItems(prefix string) []protocol.CompletionItem {
+	items := make([]protocol.CompletionItem, 0, 3)
 	for _, item := range []protocol.CompletionItem{
-		{Label: "assignment", Kind: protocol.CompletionItemKindKeyword, InsertText: "${1:varRef} = ${2:expr};", InsertTextFormat: protocol.InsertTextFormatSnippet},
-		{Label: "variable decl", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name} = ${3:expr};", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "foreach", Kind: protocol.CompletionItemKindKeyword, InsertText: "foreach ${1:type} ${2:var} in ${3:collection} {\n\t${4:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "while", Kind: protocol.CompletionItemKindKeyword, InsertText: "while ${1:cond} {\n\t${2:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "if", Kind: protocol.CompletionItemKindKeyword, InsertText: "if ${1:cond} {\n\t${2:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
@@ -936,9 +936,16 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	return items
 }
 
+// @cleanup this should simply reuse the chain instead of revisiting the ast
 func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
 	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
 		return true
+	})
+}
+
+func visibleVariableAndFunctionCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
+	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+		return kind == model.SymbolKindVariable || kind == model.SymbolKindParemeter || kind == model.SymbolKindFunction
 	})
 }
 

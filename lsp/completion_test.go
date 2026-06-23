@@ -112,16 +112,17 @@ func TestCompletionAtFunctionParameterTypeUsesDefaultContext(t *testing.T) {
 	assertNoCompletionItem(t, items, "returns")
 }
 
-func TestCompletionAtStatementBlockIncludesStatementSnippets(t *testing.T) {
-	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n    int x = 1;\n    $\n}\n")
+func TestCompletionAtStatementBeginIncludesVisibleVariablesFunctionsAndControlSnippets(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction helper() {\n}\nfunction foo() {\n    int x = 1;\n    $\n}\n")
 
-	assertSnippetCompletionItem(t, items, "assignment", "${1:varRef} = ${2:expr};")
-	assertSnippetCompletionItem(t, items, "variable decl", "${1:type} ${2:name} = ${3:expr};")
+	assertCompletionItem(t, items, "x")
+	assertCompletionItem(t, items, "helper")
 	assertSnippetCompletionItem(t, items, "foreach", "foreach ${1:type} ${2:var} in ${3:collection} {\n\t${4:body}\n}")
 	assertSnippetCompletionItem(t, items, "while", "while ${1:cond} {\n\t${2:body}\n}")
 	assertSnippetCompletionItem(t, items, "if", "if ${1:cond} {\n\t${2:body}\n}")
-	assertCompletionItem(t, items, "x")
-	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "assignment")
+	assertNoCompletionItem(t, items, "variable decl")
+	assertNoCompletionItem(t, items, "Person")
 }
 
 func TestCompletionAtStatementSnippetPrefixExpressionStmtIncludesMatchingSnippets(t *testing.T) {
@@ -140,7 +141,7 @@ func TestCompletionAtStatementSnippetPrefixExpressionStmtIncludesMatchingSnippet
 	}
 }
 
-func TestCompletionAtStatementSnippetPrefixExpressionStmtKeepsImportSuggestions(t *testing.T) {
+func TestCompletionAtStatementBeginPrefixExpressionStmtKeepsImportSuggestions(t *testing.T) {
 	items := completionItemsAtMarker(t, "import ballerina/io;\nfunction foo() {\n    i$\n}\n")
 
 	assertCompletionItem(t, items, "if")
@@ -155,6 +156,21 @@ func TestCompletionAtStatementSnippetTypePlaceholderIncludesTypesOnly(t *testing
 	assertNoCompletionItem(t, items, "assignment")
 }
 
+func TestCompletionAtVariableDeclarationNameDoesNotIncludeDeclarationOrAssignmentSnippets(t *testing.T) {
+	for _, source := range []string{
+		"type Foo int;\nfunction foo() {\n    Foo a$\n}\n",
+		"function foo() {\n    int a$\n}\n",
+		"function foo() {\n    int count$\n}\n",
+	} {
+		items := completionItemsAtMarker(t, source)
+
+		assertNoCompletionItem(t, items, "assignment")
+		assertNoCompletionItem(t, items, "variable decl")
+		assertNoCompletionItem(t, items, "a = expr")
+		assertNoCompletionItem(t, items, "count = expr")
+	}
+}
+
 func TestCompletionAtForeachSnippetTypePlaceholderIncludesTypesOnly(t *testing.T) {
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() {\n    foreach Pe$ p in people {\n    }\n}\n")
 
@@ -163,12 +179,12 @@ func TestCompletionAtForeachSnippetTypePlaceholderIncludesTypesOnly(t *testing.T
 	assertNoCompletionItem(t, items, "foreach")
 }
 
-func TestCompletionAtStatementSnippetBodyPlaceholderIncludesStatementSnippets(t *testing.T) {
+func TestCompletionAtStatementSnippetBodyPlaceholderIncludesStatementBeginCompletions(t *testing.T) {
 	items := completionItemsAtMarker(t, "function foo() {\n    if cond {\n        $\n    }\n}\n")
 
-	assertCompletionItem(t, items, "assignment")
-	assertCompletionItem(t, items, "variable decl")
 	assertCompletionItem(t, items, "if")
+	assertNoCompletionItem(t, items, "assignment")
+	assertNoCompletionItem(t, items, "variable decl")
 }
 
 func TestCompletionKeepsImportedSymbolCompletion(t *testing.T) {
