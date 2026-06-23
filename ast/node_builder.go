@@ -635,6 +635,19 @@ func getPosition(de *diagnostics.DiagnosticEnv, node tree.Node) diagnostics.Loca
 	return diagnostics.NewLocation(de, fileName, textRange.StartOffset, textRange.EndOffset)
 }
 
+func getPositionWithMinutiae(de *diagnostics.DiagnosticEnv, node tree.Node) diagnostics.Location {
+	textRange := node.TextRangeWithMinutiae()
+	fileName := getFileName(node)
+	return diagnostics.NewLocation(de, fileName, textRange.StartOffset, textRange.EndOffset)
+}
+
+func (n *NodeBuilder) getStatementPosition(node tree.Node) diagnostics.Location {
+	if n.recovering() {
+		return getPositionWithMinutiae(n.de(), node)
+	}
+	return getPosition(n.de(), node)
+}
+
 func getPositionRange(de *diagnostics.DiagnosticEnv, startNode tree.Node, endNode tree.Node) diagnostics.Location {
 	startRange := startNode.TextRange()
 	endRange := endNode.TextRange()
@@ -1937,7 +1950,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 		lhsExpr.IsLexpr = true
 	}
 	bLAssignment.SetActionOrExpression(n.createActionOrExpression(assignmentStatementNode.Expression()))
-	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
+	bLAssignment.pos = n.getStatementPosition(assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr.(LExpr)
 	return bLAssignment
 }
@@ -1955,14 +1968,14 @@ func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStm
 		lhsExpr.IsCompoundAssignmentLValue = true
 	}
 	bLCompAssignment.SetVariable(lhsExpr.(LExpr))
-	BLangNode(bLCompAssignment).SetPosition(getPosition(n.de(), compoundAssignmentStmtNode))
+	BLangNode(bLCompAssignment).SetPosition(n.getStatementPosition(compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
 	return bLCompAssignment
 }
 
 func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree.VariableDeclarationNode) BLangNode {
 	varNode := n.createBLangVarDef(
-		getPosition(n.de(), variableDeclarationNode),
+		n.getStatementPosition(variableDeclarationNode),
 		variableDeclarationNode.TypedBindingPattern(),
 		variableDeclarationNode.Initializer(),
 		variableDeclarationNode.FinalKeyword(),
@@ -2034,7 +2047,7 @@ func (n *NodeBuilder) TransformBlockStatement(blockStatementNode *tree.BlockStat
 	n.isInLocalContext = true
 	bLBlockStmt.Stmts = n.generateBLangStatements(blockStatementNode.Statements(), blockStatementNode)
 	n.isInLocalContext = false
-	bLBlockStmt.pos = getPosition(n.de(), blockStatementNode)
+	bLBlockStmt.pos = n.getStatementPosition(blockStatementNode)
 	return &bLBlockStmt
 }
 
@@ -2117,7 +2130,7 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 
 func (n *NodeBuilder) TransformBreakStatement(breakStatementNode *tree.BreakStatementNode) BLangNode {
 	bLBreak := &BLangBreak{}
-	bLBreak.pos = getPosition(n.de(), breakStatementNode)
+	bLBreak.pos = n.getStatementPosition(breakStatementNode)
 	return bLBreak
 }
 
@@ -2128,7 +2141,7 @@ func (n *NodeBuilder) TransformFailStatement(failStatementNode *tree.FailStateme
 func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.ExpressionStatementNode) BLangNode {
 	bLExpressionStmt := BLangExpressionStmt{}
 	bLExpressionStmt.Expr = n.createActionOrExpression(expressionStatement.Expression())
-	bLExpressionStmt.pos = getPosition(n.de(), expressionStatement)
+	bLExpressionStmt.pos = n.getStatementPosition(expressionStatement)
 	return &bLExpressionStmt
 }
 
@@ -2251,7 +2264,7 @@ func (n *NodeBuilder) createActionOrExpressionInner(actionOrExpression tree.Node
 
 func (n *NodeBuilder) TransformContinueStatement(continueStatementNode *tree.ContinueStatementNode) BLangNode {
 	blContinue := &BLangContinue{}
-	blContinue.pos = getPosition(n.de(), continueStatementNode)
+	blContinue.pos = n.getStatementPosition(continueStatementNode)
 	return blContinue
 }
 
@@ -2263,7 +2276,7 @@ func (n *NodeBuilder) TransformExternalFunctionBody(externalFunctionBodyNode *tr
 
 func (n *NodeBuilder) TransformIfElseStatement(ifElseStatementNode *tree.IfElseStatementNode) BLangNode {
 	bLIf := BLangIf{}
-	bLIf.pos = getPosition(n.de(), ifElseStatementNode)
+	bLIf.pos = n.getStatementPosition(ifElseStatementNode)
 	bLIf.SetCondition(n.createExpression(ifElseStatementNode.Condition()))
 	bLIf.SetBody(n.TransformBlockStatement(ifElseStatementNode.IfBody()).(*BLangBlockStmt))
 	if ifElseStatementNode.ElseBody() != nil {
@@ -2280,10 +2293,10 @@ func (n *NodeBuilder) TransformElseBlock(elseBlockNode *tree.ElseBlockNode) BLan
 func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStatementNode) BLangNode {
 	bLWhile := &BLangWhile{}
 	bLWhile.SetCondition(n.createExpression(whileStatementNode.Condition()))
-	bLWhile.pos = getPosition(n.de(), whileStatementNode)
+	bLWhile.pos = n.getStatementPosition(whileStatementNode)
 
 	bLBlockStmt := n.TransformBlockStatement(whileStatementNode.WhileBody()).(*BLangBlockStmt)
-	bLBlockStmt.pos = getPosition(n.de(), whileStatementNode.WhileBody())
+	bLBlockStmt.pos = n.getStatementPosition(whileStatementNode.WhileBody())
 	bLWhile.SetBody(bLBlockStmt)
 	if whileStatementNode.OnFailClause() != nil {
 		onFailClauseNode := whileStatementNode.OnFailClause()
@@ -2296,14 +2309,14 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 
 func (n *NodeBuilder) TransformPanicStatement(panicStatementNode *tree.PanicStatementNode) BLangNode {
 	bLPanic := &BLangPanic{}
-	bLPanic.pos = getPosition(n.de(), panicStatementNode)
+	bLPanic.pos = n.getStatementPosition(panicStatementNode)
 	bLPanic.Expr = n.createExpression(panicStatementNode.Expression())
 	return bLPanic
 }
 
 func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnStatementNode) BLangNode {
 	bLReturn := &BLangReturn{}
-	bLReturn.pos = getPosition(n.de(), returnStatementNode)
+	bLReturn.pos = n.getStatementPosition(returnStatementNode)
 	if returnStatementNode.Expression() != nil {
 		bLReturn.SetActionOrExpression(n.createActionOrExpression(returnStatementNode.Expression()))
 	} else {
@@ -2326,9 +2339,9 @@ func (n *NodeBuilder) TransformLockStatement(lockStatementNode *tree.LockStateme
 		n.cx.Unimplemented("on-fail clause on lock is not yet supported", getPosition(n.de(), lockStatementNode.OnFailClause()))
 	}
 	bLLock := &BLangLock{}
-	bLLock.pos = getPosition(n.de(), lockStatementNode)
+	bLLock.pos = n.getStatementPosition(lockStatementNode)
 	bLBlockStmt := n.TransformBlockStatement(lockStatementNode.BlockStatement()).(*BLangBlockStmt)
-	bLBlockStmt.pos = getPosition(n.de(), lockStatementNode.BlockStatement())
+	bLBlockStmt.pos = n.getStatementPosition(lockStatementNode.BlockStatement())
 	bLLock.Body = *bLBlockStmt
 	return bLLock
 }
@@ -2339,7 +2352,7 @@ func (n *NodeBuilder) TransformForkStatement(forkStatementNode *tree.ForkStateme
 
 func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEachStatementNode) BLangNode {
 	bLForeach := &BLangForeach{}
-	bLForeach.pos = getPosition(n.de(), forEachStatementNode)
+	bLForeach.pos = n.getStatementPosition(forEachStatementNode)
 
 	varDef := n.createBLangVarDef(
 		getPosition(n.de(), forEachStatementNode.TypedBindingPattern()),
@@ -2353,7 +2366,7 @@ func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEa
 	bLForeach.Collection = n.createExpression(forEachStatementNode.ActionOrExpressionNode())
 
 	body := n.TransformBlockStatement(forEachStatementNode.BlockStatement()).(*BLangBlockStmt)
-	body.pos = getPosition(n.de(), forEachStatementNode.BlockStatement())
+	body.pos = n.getStatementPosition(forEachStatementNode.BlockStatement())
 	bLForeach.Body = *body
 
 	if forEachStatementNode.OnFailClause() != nil {
@@ -4761,7 +4774,7 @@ func (n *NodeBuilder) TransformMatchStatement(matchStatementNode *tree.MatchStat
 		matchStatement.MatchClauses = append(matchStatement.MatchClauses, *bLangMatchClause)
 	}
 
-	matchStatement.pos = getPosition(n.de(), matchStatementNode)
+	matchStatement.pos = n.getStatementPosition(matchStatementNode)
 	return matchStatement
 }
 
@@ -5742,7 +5755,7 @@ func (n *NodeBuilder) badTopLevel(node tree.Node) *BLangBadTopLevelNode {
 
 func (n *NodeBuilder) badStmt(node tree.Node) *BLangBadStmt {
 	bad := &BLangBadStmt{}
-	bad.SetPosition(getPosition(n.de(), node))
+	bad.SetPosition(n.getStatementPosition(node))
 	return bad
 }
 
