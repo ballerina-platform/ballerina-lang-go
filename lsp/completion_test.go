@@ -46,6 +46,7 @@ func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T)
 	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\n\n$\n")
 
 	assertSnippetCompletionItem(t, items, "constant decl", "const ${1:name} = ${2:value};")
+	assertSnippetCompletionItem(t, items, "function", "function ${1:name}(${2:params}) ${3:retTy} {\n\t${4:body}\n}")
 	assertCompletionItem(t, items, "type")
 	assertSnippetCompletionItem(t, items, "var decl", "var ${1:name} = ${2:value};")
 	assertSnippetCompletionItem(t, items, "variable decl", "${1:type} ${2:name} = ${3:value};")
@@ -53,6 +54,43 @@ func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T)
 	assertNoCompletionItem(t, items, "const")
 	assertNoCompletionItem(t, items, "var")
 	assertNoCompletionItem(t, items, "foo")
+}
+
+func TestCompletionAtFunctionReturnTypeDescIncludesReturnsSnippet(t *testing.T) {
+	items := completionItemsAtMarker(t, "function foo() $ {\n}\n")
+
+	assertSnippetCompletionItem(t, items, "returns", "returns ${1:Ty}")
+	assertNoCompletionItem(t, items, "int")
+}
+
+func TestCompletionAtFunctionSnippetReturnTypePlaceholderIncludesReturnsSnippet(t *testing.T) {
+	items := completionItemsAtMarker(t, "function foo() retTy$ {\n}\n")
+
+	assertSnippetCompletionItem(t, items, "returns", "returns ${1:Ty}")
+	assertNoCompletionItem(t, items, "retTy")
+}
+
+func TestCompletionAtEmptyFunctionReturnTypeIncludesTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() returns $ {\n}\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "returns")
+}
+
+func TestCompletionAtFunctionReturnTypeIncludesTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() returns Pe$ {\n}\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "returns")
+}
+
+func TestCompletionAtFunctionParameterTypeUsesDefaultContext(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo(Pe$ p) {\n}\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "returns")
 }
 
 func TestCompletionKeepsImportedSymbolCompletion(t *testing.T) {

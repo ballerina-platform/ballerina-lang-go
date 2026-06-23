@@ -41,6 +41,8 @@ const (
 	completionKindModuleVarDecl
 	completionKindImportedSymbol
 	completionKindMemberAccess
+	completionKindReturnTypeDesc
+	completionKindType
 )
 
 type completionContext struct {
@@ -156,6 +158,10 @@ func completionKindString(kind completionKind) string {
 		return "imported-symbol"
 	case completionKindMemberAccess:
 		return "member-access"
+	case completionKindReturnTypeDesc:
+		return "return-type-desc"
+	case completionKindType:
+		return "type"
 	default:
 		return "local"
 	}
@@ -204,7 +210,10 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		itemsByLabel[item.Label] = item
 		labels = append(labels, item.Label)
 	}
-	if completionCtx.kind != completionKindModuleVarDecl {
+	if completionCtx.kind == completionKindReturnTypeDesc {
+		return []protocol.CompletionItem{{Label: "returns", Kind: protocol.CompletionItemKindKeyword, InsertText: "returns ${1:Ty}", InsertTextFormat: protocol.InsertTextFormatSnippet}}
+	}
+	if completionCtx.kind != completionKindModuleVarDecl && completionCtx.kind != completionKindType {
 		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
 			alias := importAlias(&imp)
 			if alias == "" {
@@ -226,6 +235,10 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	}
 	if completionCtx.kind == completionKindModuleVarDecl {
 		for _, item := range moduleVarDeclCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+			addItem(item)
+		}
+	} else if completionCtx.kind == completionKindType {
+		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 	} else {
@@ -560,6 +573,12 @@ func completionContextFromNodeChain(content string, offset int, chain []ast.BLan
 	if isModuleVarDeclCompletionNodeChain(chain) {
 		return completionContext{kind: completionKindModuleVarDecl, prefix: identifierPrefixAtOffset(content, offset)}
 	}
+	if isFunctionReturnTypeDescCompletionContext(content, offset, chain) {
+		return completionContext{kind: completionKindReturnTypeDesc}
+	}
+	if isFunctionReturnTypeCompletionContext(content, offset, chain) {
+		return completionContext{kind: completionKindType, prefix: identifierPrefixAtOffset(content, offset)}
+	}
 	for i := len(chain) - 1; i >= 0; i-- {
 		switch n := chain[i].(type) {
 		case *ast.BLangFieldBaseAccess:
@@ -580,6 +599,74 @@ func completionContextFromNodeChain(content string, offset int, chain []ast.BLan
 		}
 	}
 	return completionContext{kind: completionKindLocal, prefix: identifierPrefixAtOffset(content, offset)}
+}
+
+func isFunctionReturnTypeDescCompletionContext(content string, offset int, chain []ast.BLangNode) bool {
+	fn := functionNodeFromChain(chain)
+	if fn == nil || fn.GetReturnTypeDescriptor() == nil {
+		return false
+	}
+	fnPos := fn.GetPosition()
+	if !locationContains(fnPos, offset) {
+		return false
+	}
+	closeParen := strings.LastIndex(content[fnPos.StartOffset():offset], ")")
+	if closeParen < 0 {
+		return false
+	}
+	if fn.GetReturnTypeDescriptor() != nil {
+		retType := fn.GetReturnTypeDescriptor().(ast.BLangNode)
+		retTypePos := retType.GetPosition()
+		if locationHasUsableOffsets(retTypePos) && locationContains(retTypePos, offset) {
+			return strings.TrimSpace(content[fnPos.StartOffset()+closeParen+1:retTypePos.StartOffset()]) == ""
+		}
+	}
+	between := strings.TrimSpace(content[fnPos.StartOffset()+closeParen+1 : offset])
+	if between != "" {
+		return false
+	}
+	for next := offset; next < fnPos.EndOffset() && next < len(content); next++ {
+		if unicode.IsSpace(rune(content[next])) {
+			continue
+		}
+		return content[next] == '{' || strings.HasPrefix(content[next:], "= external")
+	}
+	return false
+}
+
+func isFunctionReturnTypeCompletionContext(content string, offset int, chain []ast.BLangNode) bool {
+	fn := functionNodeFromChain(chain)
+	if fn == nil {
+		return false
+	}
+	if fn.GetReturnTypeDescriptor() != nil {
+		retType := fn.GetReturnTypeDescriptor().(ast.BLangNode)
+		if locationHasUsableOffsets(retType.GetPosition()) && locationContains(retType.GetPosition(), offset) {
+			return true
+		}
+	}
+	fnPos := fn.GetPosition()
+	if !locationContains(fnPos, offset) {
+		return false
+	}
+	closeParen := strings.LastIndex(content[fnPos.StartOffset():offset], ")")
+	if closeParen < 0 {
+		return false
+	}
+	between := strings.TrimSpace(content[fnPos.StartOffset()+closeParen+1 : offset])
+	return between == "returns"
+}
+
+func functionNodeFromChain(chain []ast.BLangNode) ast.InvokableNode {
+	for i := len(chain) - 1; i >= 0; i-- {
+		switch n := chain[i].(type) {
+		case *ast.BLangFunction:
+			return n
+		case *ast.BLangResourceMethod:
+			return n
+		}
+	}
+	return nil
 }
 
 func isModuleVarDeclCompletionNodeChain(chain []ast.BLangNode) bool {
@@ -808,6 +895,7 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	})
 	for _, item := range []protocol.CompletionItem{
 		{Label: "constant decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "const ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "function", Kind: protocol.CompletionItemKindFunction, InsertText: "function ${1:name}(${2:params}) ${3:retTy} {\n\t${4:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "type", Kind: protocol.CompletionItemKindKeyword},
 		{Label: "var decl", Kind: protocol.CompletionItemKindKeyword, InsertText: "var ${1:name} = ${2:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
 		{Label: "variable decl", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name} = ${3:value};", InsertTextFormat: protocol.InsertTextFormatSnippet},
@@ -825,6 +913,12 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
 	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
 		return true
+	})
+}
+
+func typeCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
+	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+		return kind == model.SymbolKindType
 	})
 }
 
