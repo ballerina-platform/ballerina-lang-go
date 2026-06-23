@@ -43,12 +43,17 @@ const (
 	completionKindMemberAccess
 	completionKindReturnTypeDesc
 	completionKindType
+	completionKindStatementBlock
 )
 
 type completionContext struct {
 	kind   completionKind
 	alias  string
 	prefix string
+}
+
+func completionTriggerCharacters() []string {
+	return []string{":", ".", "{", "\n", " "}
 }
 
 func (s *Server) completion(params protocol.CompletionParams) (result protocol.CompletionList) {
@@ -162,6 +167,8 @@ func completionKindString(kind completionKind) string {
 		return "return-type-desc"
 	case completionKindType:
 		return "type"
+	case completionKindStatementBlock:
+		return "statement-block"
 	default:
 		return "local"
 	}
@@ -248,6 +255,11 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	} else {
 		for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
 			addItem(item)
+		}
+		if completionCtx.kind == completionKindStatementBlock {
+			for _, item := range statementBlockCompletionItems(completionCtx.prefix) {
+				addItem(item)
+			}
 		}
 	}
 	sort.Strings(labels)
@@ -525,6 +537,10 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 				return completionContext{kind: completionKindMemberAccess}, true
 			}
 		}
+	case *ast.BLangSimpleVariable:
+		if typeNodeContainsOffset(n.TypeNode(), offset) {
+			return completionContext{kind: completionKindType, prefix: prefix}, true
+		}
 	case *ast.BLangSimpleVarRef:
 		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.VariableName, n.GetPosition(), offset); ok {
 			return ctx, true
@@ -532,6 +548,14 @@ func completionContextAtChainNode(content string, offset int, prefix string, nod
 	case *ast.BLangInvocation:
 		if ctx, _, ok := importedSymbolContextFromQualifiedName(n.PkgAlias, n.Name, n.GetPosition(), offset); ok {
 			return ctx, true
+		}
+	case *ast.BLangBlockFunctionBody:
+		if isStatementBlockCompletionNode(next) {
+			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
+		}
+	case *ast.BLangBlockStmt:
+		if isStatementBlockCompletionNode(next) {
+			return completionContext{kind: completionKindStatementBlock, prefix: prefix}, true
 		}
 	}
 	return completionContext{}, false
@@ -607,6 +631,22 @@ func isModuleVarDeclCompletionNode(next ast.BLangNode) bool {
 	}
 	_, ok := next.(*ast.BLangBadTopLevelNode)
 	return ok
+}
+
+func isStatementBlockCompletionNode(next ast.BLangNode) bool {
+	if next == nil {
+		return true
+	}
+	_, ok := next.(*ast.BLangBadStmt)
+	return ok
+}
+
+func typeNodeContainsOffset(typeNode ast.BType, offset int) bool {
+	if typeNode == nil {
+		return false
+	}
+	node, ok := typeNode.(ast.BLangNode)
+	return ok && locationContains(node.GetPosition(), offset)
 }
 
 func nodeChainAtOffset(cu *ast.BLangCompilationUnit, offset int) []ast.BLangNode {
@@ -839,6 +879,22 @@ func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.Do
 		completionModule = modules[module.Name]
 	}
 	return &completionSnapshot, completionModule
+}
+
+func statementBlockCompletionItems(prefix string) []protocol.CompletionItem {
+	items := make([]protocol.CompletionItem, 0, 5)
+	for _, item := range []protocol.CompletionItem{
+		{Label: "assignment", Kind: protocol.CompletionItemKindKeyword, InsertText: "${1:varRef} = ${2:expr};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "variable decl", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name} = ${3:expr};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "foreach", Kind: protocol.CompletionItemKindKeyword, InsertText: "foreach ${1:type} ${2:var} in ${3:collection} {\n\t${4:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "while", Kind: protocol.CompletionItemKindKeyword, InsertText: "while ${1:cond} {\n\t${2:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "if", Kind: protocol.CompletionItemKindKeyword, InsertText: "if ${1:cond} {\n\t${2:body}\n}", InsertTextFormat: protocol.InsertTextFormatSnippet},
+	} {
+		if strings.HasPrefix(item.Label, prefix) {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {

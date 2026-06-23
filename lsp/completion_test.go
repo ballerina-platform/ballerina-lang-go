@@ -16,12 +16,31 @@
 package lsp
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"ballerina-lang-go/lsp/protocol"
 )
+
+func TestCompletionProviderTriggersIncludeStatementBlockCharacters(t *testing.T) {
+	server := NewServer(nil, nil)
+	result, errCode, errMessage := server.dispatchRequest("initialize", json.RawMessage(`{}`))
+	if errCode != 0 {
+		t.Fatalf("initialize error code=%d message=%s", errCode, errMessage)
+	}
+	initializeResult, ok := result.(protocol.InitializeResult)
+	if !ok {
+		t.Fatalf("initialize result type = %T, want protocol.InitializeResult", result)
+	}
+	triggers := initializeResult.Capabilities.CompletionProvider.TriggerCharacters
+	for _, trigger := range []string{":", ".", "{", "\n", " "} {
+		if !hasString(triggers, trigger) {
+			t.Fatalf("trigger %q not found in %+v", trigger, triggers)
+		}
+	}
+}
 
 func TestCompletionDefaultsToVisibleSymbols(t *testing.T) {
 	items := completionItemsAtMarker(t, "import ballerina/io;\npublic function main() {\n    int x = 1;\n    io:println($);\n}\n")
@@ -91,6 +110,42 @@ func TestCompletionAtFunctionParameterTypeUsesDefaultContext(t *testing.T) {
 
 	assertCompletionItem(t, items, "Person")
 	assertNoCompletionItem(t, items, "returns")
+}
+
+func TestCompletionAtStatementBlockIncludesStatementSnippets(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n    int x = 1;\n    $\n}\n")
+
+	assertSnippetCompletionItem(t, items, "assignment", "${1:varRef} = ${2:expr};")
+	assertSnippetCompletionItem(t, items, "variable decl", "${1:type} ${2:name} = ${3:expr};")
+	assertSnippetCompletionItem(t, items, "foreach", "foreach ${1:type} ${2:var} in ${3:collection} {\n\t${4:body}\n}")
+	assertSnippetCompletionItem(t, items, "while", "while ${1:cond} {\n\t${2:body}\n}")
+	assertSnippetCompletionItem(t, items, "if", "if ${1:cond} {\n\t${2:body}\n}")
+	assertCompletionItem(t, items, "x")
+	assertCompletionItem(t, items, "Person")
+}
+
+func TestCompletionAtStatementSnippetTypePlaceholderIncludesTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() {\n    Pe$ name = 1;\n}\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "assignment")
+}
+
+func TestCompletionAtForeachSnippetTypePlaceholderIncludesTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person int;\nfunction foo() {\n}\nfunction bar() {\n    foreach Pe$ p in people {\n    }\n}\n")
+
+	assertCompletionItem(t, items, "Person")
+	assertNoCompletionItem(t, items, "foo")
+	assertNoCompletionItem(t, items, "foreach")
+}
+
+func TestCompletionAtStatementSnippetBodyPlaceholderIncludesStatementSnippets(t *testing.T) {
+	items := completionItemsAtMarker(t, "function foo() {\n    if cond {\n        $\n    }\n}\n")
+
+	assertCompletionItem(t, items, "assignment")
+	assertCompletionItem(t, items, "variable decl")
+	assertCompletionItem(t, items, "if")
 }
 
 func TestCompletionKeepsImportedSymbolCompletion(t *testing.T) {
@@ -276,6 +331,15 @@ func assertNoCompletionItem(t *testing.T, items []protocol.CompletionItem, label
 func hasCompletionItem(items []protocol.CompletionItem, label string) bool {
 	for _, item := range items {
 		if item.Label == label {
+			return true
+		}
+	}
+	return false
+}
+
+func hasString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
 			return true
 		}
 	}
