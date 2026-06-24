@@ -25,7 +25,7 @@
           (simple-var-ref utc))))
       (var-def
         (variable $desugar$2 (expr
-          (invocation $default$1 (
+          (invocation $default$2 (
             (simple-var-ref $desugar$1))))))
       (var-def
         (variable emailStr (type

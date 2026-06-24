@@ -1,6 +1,4 @@
 module $anon.. v 0.0.0;
-import ballerina.io v 0.0.0;
-import ballerina.io v 0.0.0;
 main() -> nil|error{
   bb0 {
     %1 = ConstantLoad 2024-06-15T10:30:45.00Z
@@ -20,7 +18,7 @@ main() -> nil|error{
   bb3 {
     utc = $desugar$0;
     $desugar$1 = utc;
-    %7 = $default$1($desugar$1) -> bb4;
+    %7 = $default$2($desugar$1) -> bb4;
   }
   bb4 {
     $desugar$2 = %7;

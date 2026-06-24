@@ -585,8 +585,14 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 			if mat != nil {
 				t.setMappingAtomSymRef(mat, ref)
 			}
-			if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
-				t.setClassAtomSymbol(oat, ref)
+			// Only real class symbols may back a `new` expression. Mapping any
+			// type alias whose semtype merely contains an object atom (e.g. a
+			// union like `RequestMessage = json|Request`) would clobber the
+			// genuine class's atom mapping, so restrict this to ClassSymbols.
+			if _, isClass := sym.(model.ClassSymbol); isClass {
+				if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
+					t.setClassAtomSymbol(oat, ref)
+				}
 			}
 		}
 	}
