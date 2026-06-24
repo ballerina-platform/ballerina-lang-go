@@ -20,10 +20,15 @@ import "testing"
 
 // The crypto module is exercised end-to-end from corpus/bal/library/subset2/crypto-*.bal
 // (hashing, HMAC, KDF, password, AES, RSA/EC sign-verify-encrypt, PKCS#8) and from the
-// corpus/extern crypto-keystore test (PKCS#12 keystore/trust-store, which needs a binary
-// fixture). This unit test is the one exception: RC2 is only ever *decrypted* through
-// Ballerina (PKCS#12-PBE key recovery), so its Encrypt method is a cipher.Block
-// interface-contract path the interpreter never triggers and has no corpus equivalent.
+// corpus/extern crypto-keystore test (PKCS#12 keystore/trust-store).
+//
+// rc2New is a verbatim copy of golang.org/x/crypto/pkcs12/internal/rc2 (an internal
+// package we cannot import). Ballerina exposes no RC2 encryption — RC2 is used only to
+// *decrypt* PKCS#12-PBE-protected keys via cipher.NewCBCDecrypter, which exercises
+// Decrypt (covered by crypto-keys-enc-v.bal). The Encrypt method is required by the
+// cipher.Block interface but never reached from Ballerina, so this is the one place it
+// is covered. Encrypt cannot simply be deleted: NewCBCDecrypter takes a cipher.Block,
+// which mandates an Encrypt method.
 func TestRC2Cipher(t *testing.T) {
 	block, err := rc2New([]byte{1, 2, 3, 4, 5}, 40)
 	if err != nil {
