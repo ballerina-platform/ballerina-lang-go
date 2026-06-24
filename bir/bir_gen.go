@@ -386,16 +386,10 @@ func GenBir(ctx *compilerctx.CompilerContext, ast *ast.BLangPackage) *BIRPackage
 	for _, globalVar := range ast.GlobalVars {
 		addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
-	for _, constant := range ast.Constants {
-		// Constants folded to a serializable value are inlined at their use
-		// sites during desugar, so they are dropped from the BIR package
-		// entirely. Only non-foldable constants (e.g. casts that panic at
-		// runtime) remain as globals evaluated by the init function.
-		if constantFoldedToSymbolValue(genCtx.CompilerContext.GetSymbol(constant.Symbol())) {
-			continue
-		}
-		addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
-	}
+	// Constants are never added to the BIR package: a const-expr is evaluated at
+	// compile time, so a foldable constant is inlined at its use sites during
+	// desugar, and a constant that cannot be folded is a compile-time error
+	// (see resolveConstant). Either way no constant survives to BIR generation.
 	for i := range ast.ClassDefinitions {
 		transformClassDefinition(genCtx, &ast.ClassDefinitions[i], birPkg)
 	}
@@ -437,31 +431,6 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
 	dcl.Flags = ast.Flags()
-	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
-	return dcl
-}
-
-func constantFoldedToSymbolValue(sym model.Symbol) bool {
-	constSym, ok := sym.(*model.ConstantValueSymbol)
-	if !ok {
-		return false
-	}
-	value, known := constSym.ConstantValue()
-	return known && values.IsSerializableConstValue(value)
-}
-
-// transformConstantAsGlobal lowers a non-foldable constant to a BIR global
-// variable. Foldable constants never reach here — they are inlined during
-// desugar — so the declaration has no initial value and is initialized by the
-// init function (where its expression may panic at runtime).
-func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVariableDcl {
-	name := model.Name(c.GetName().GetValue())
-	dcl := BIRGlobalVariableDcl{}
-	dcl.Pos = birLoc(ctx.CompilerContext.DiagnosticEnv(), c.GetPosition())
-	dcl.Name = name
-	dcl.PkgId = ctx.packageID
-	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
-	dcl.Flags = c.Flags()
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }

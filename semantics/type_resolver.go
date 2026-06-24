@@ -6896,10 +6896,17 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 		return false
 	}
 	value, err := evaluateConstantExpression(t, expr, newConstantEvaluationCache())
-	if err == nil {
-		if sym, ok := t.getSymbol(constant.Symbol()).(*model.ConstantValueSymbol); ok {
-			sym.SetConstantValue(value)
+	if err != nil {
+		// A const-expr is evaluated at compile time (spec §6.4). A genuine
+		// evaluation failure — e.g. a cast that cannot be performed such as
+		// <int>(1.0/0.0) — is therefore a compile-time error, not a deferred
+		// runtime panic. Structural non-constness surfaces as
+		// errNotConstantExpression and is reported by validateConstantExpr.
+		if !errors.Is(err, errNotConstantExpression) {
+			t.semanticError("expression is not a constant expression", expr.GetPosition())
 		}
+	} else if sym, ok := t.getSymbol(constant.Symbol()).(*model.ConstantValueSymbol); ok {
+		sym.SetConstantValue(value)
 	}
 
 	// TODO: I am not sure if this is strictly correct given expression type would have changed based on the contextually expected type in things like structure constructor expressions.

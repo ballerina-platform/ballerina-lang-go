@@ -302,8 +302,12 @@ type moduleInitNode struct {
 	name *ast.BLangIdentifier
 }
 
-func collectModuleInitNodes(pkgCtx *packageContext, pkg *ast.BLangPackage) []moduleInitNode {
-	nodes := make([]moduleInitNode, 0, len(pkg.GlobalVars)+len(pkg.Constants))
+// collectModuleInitNodes gathers module-level global variables for the synthetic
+// init function. Constants are not included: a foldable constant is inlined at
+// its use sites and an unfoldable one is a compile-time error, so no constant
+// needs runtime initialization.
+func collectModuleInitNodes(pkg *ast.BLangPackage) []moduleInitNode {
+	nodes := make([]moduleInitNode, 0, len(pkg.GlobalVars))
 	for i := range pkg.GlobalVars {
 		gv := &pkg.GlobalVars[i]
 		var expr ast.BLangExpression
@@ -316,34 +320,7 @@ func collectModuleInitNodes(pkgCtx *packageContext, pkg *ast.BLangPackage) []mod
 			name: gv.Name,
 		})
 	}
-	for i := range pkg.Constants {
-		c := &pkg.Constants[i]
-		if constantFoldedToSymbolValue(pkgCtx.getSymbol(c.Symbol())) {
-			continue
-		}
-		var expr ast.BLangExpression
-		if c.Expr != nil {
-			expr = c.Expr.(ast.BLangExpression)
-		}
-		nodes = append(nodes, moduleInitNode{
-			sym:  c.Symbol(),
-			expr: expr,
-			name: c.Name,
-		})
-	}
 	return nodes
-}
-
-// constantFoldedToSymbolValue reports whether the constant was folded at compile
-// time to a serializable value held on its symbol. Such constants are inlined at
-// their use sites during desugar and never reach BIR, so they are skipped here.
-func constantFoldedToSymbolValue(sym model.Symbol) bool {
-	constSym, ok := sym.(*model.ConstantValueSymbol)
-	if !ok {
-		return false
-	}
-	value, known := constSym.ConstantValue()
-	return known && values.IsSerializableConstValue(value)
 }
 
 // We desugar module initializers into the init function, so they should no longer be there.
@@ -534,7 +511,7 @@ func serviceInitResultType(pkgCtx *packageContext, svc *ast.BLangService, svcTy 
 }
 
 func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
-	nodes := collectModuleInitNodes(pkgCtx, pkg)
+	nodes := collectModuleInitNodes(pkg)
 	order, ok := toplogicallySortInits(compilerCtx, nodes)
 	if !ok {
 		pkgCtx.internalError("module init dependency ordering failed")
