@@ -35,13 +35,9 @@ type ExternFunction struct {
 func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) (*BIRModule, error) {
 	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
 	for key, gv := range pkg.GlobalVars {
-		if gv.HasInitialValue {
-			globals[key] = values.DeepClone(gv.InitialValue)
-		} else {
-			v, ok := safeFillerValue(ctx, gv)
-			if ok {
-				globals[key] = v
-			}
+		v, ok := safeFillerValue(ctx, gv)
+		if ok {
+			globals[key] = v
 		}
 	}
 	return &BIRModule{

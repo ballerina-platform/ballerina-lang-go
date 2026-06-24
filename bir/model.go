@@ -112,8 +112,6 @@ type (
 		Flags              model.Flag
 		PkgId              *model.PackageID
 		GlobalVarLookupKey string
-		InitialValue       any
-		HasInitialValue    bool
 	}
 
 	BIRFunction struct {

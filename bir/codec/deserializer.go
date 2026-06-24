@@ -224,19 +224,11 @@ func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGl
 		flags := br.readFlags()
 
 		ty := br.readType()
-		var hasInitialValue bool
-		br.read(&hasInitialValue)
-		var initialValue any
-		if hasInitialValue {
-			initialValue = br.readConstValue()
-		}
 
 		lookupKey := pkgID.OrgName.Value() + "/" + pkgID.PkgName.Value() + ":" + name.Value()
 		gv := bir.BIRGlobalVariableDcl{
 			Flags:              flags,
 			GlobalVarLookupKey: lookupKey,
-			InitialValue:       initialValue,
-			HasInitialValue:    hasInitialValue,
 		}
 		gv.Pos = pos
 		gv.Name = name

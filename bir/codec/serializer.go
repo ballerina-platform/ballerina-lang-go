@@ -31,7 +31,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 81
+	BIR_VERSION = 82
 )
 
 type birWriter struct {
@@ -105,10 +105,6 @@ func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 		bw.writeStringCPEntry(buf, name.Value())
 		bw.writeFlags(buf, gv.Flags)
 		bw.writeType(buf, gv.GetType())
-		write(buf, gv.HasInitialValue)
-		if gv.HasInitialValue {
-			bw.writeConstValue(buf, gv.InitialValue)
-		}
 	}
 }
 
