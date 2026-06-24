@@ -14,18 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
-
-import (
-	_ "ballerina-lang-go/lib/langinternal/runtime"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.array"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.boolean"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.error"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.int"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.map"
-	_ "ballerina-lang-go/lib/langlibs/go/lang.string"
-
-	// standard libraries
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/http/0.0.1/go1.2/native"
-	_ "ballerina-lang-go/lib/stdlibs/ballerina/io/0.0.1/go1.2/native"
-)
+# Converts a string to a boolean.
+#
+# + s - string representing a boolean value
+# + return - boolean that `s` represents, or an error if there is no such boolean
+public isolated function fromString(string s) returns boolean|error = external;
