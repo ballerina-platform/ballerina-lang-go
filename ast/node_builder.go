@@ -1493,6 +1493,13 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 }
 
 func (n *NodeBuilder) populateFuncSignatureOnBase(bLFunction *bLangInvokableNodeBase, funcSignature *tree.FunctionSignatureNode) {
+	bLFunction.ParamListPos = diagnostics.NewBuiltinLocation()
+	openParen := funcSignature.OpenParenToken()
+	closeParen := funcSignature.CloseParenToken()
+	if openParen != nil && closeParen != nil && !openParen.IsMissing() && !closeParen.IsMissing() {
+		bLFunction.ParamListPos = getPositionRange(n.de(), openParen, closeParen)
+	}
+
 	// Set Parameters
 	parameters := funcSignature.Parameters()
 	for param := range parameters.Iterator() {
@@ -1512,6 +1519,11 @@ func (n *NodeBuilder) populateFuncSignatureOnBase(bLFunction *bLangInvokableNode
 	// Set Return Type
 	retTypeDescNode := funcSignature.ReturnTypeDesc()
 	if retTypeDescNode != nil {
+		returnsKeyword := retTypeDescNode.ReturnsKeyword()
+		if returnsKeyword != nil && !returnsKeyword.IsMissing() {
+			bLFunction.SetExplicitReturnTypeDescriptor()
+		}
+
 		// Get the type child from the return type descriptor
 		typeNode := retTypeDescNode.Type()
 

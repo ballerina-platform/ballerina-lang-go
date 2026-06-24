@@ -245,6 +245,7 @@ type (
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       SimpleVariableNode
 		returnTypeDescriptor            TypeDescriptor
+		ParamListPos                    Location // range from ( to ) inclusive
 		Body                            FunctionBodyNode
 		flags                           model.Flag
 		scope                           model.Scope
@@ -1075,6 +1076,14 @@ func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor TypeDesc
 		return
 	}
 	b.returnTypeDescriptor = typeDescriptor.(BType)
+}
+
+func (b *bLangInvokableNodeBase) HasExplicitReturnTypeDescriptor() bool {
+	return b.flags.Has(model.FlagExplicitReturnTypeDescriptor)
+}
+
+func (b *bLangInvokableNodeBase) SetExplicitReturnTypeDescriptor() {
+	b.flags |= model.FlagExplicitReturnTypeDescriptor
 }
 
 func (b *bLangInvokableNodeBase) GetBody() FunctionBodyNode {
