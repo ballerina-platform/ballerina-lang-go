@@ -17,6 +17,8 @@
 package extern_test
 
 import (
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -142,6 +144,86 @@ func TestHttpClientMethods(t *testing.T) {
 	}))
 	defer server.Close()
 	runExtern(t, fileCase("http-client-methods-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
+// TestHttpClientJsonLocal exercises JSON request serialization (balToGoJSON) and
+// JSON response parsing (goToBalValue) against a local echo server, with no network.
+func TestHttpClientJsonLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/echo" && r.Method == http.MethodPost:
+			body, _ := io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			_, _ = w.Write(body)
+		case r.URL.Path == "/json-array":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			_, _ = fmt.Fprint(w, `[1, 2.5, "three", true, null, [10, 20], {"k": "v"}]`)
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-json-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
+// TestHttpClientBinaryLocal exercises byte[] request bodies (listToBytes) and
+// binary response payloads (getBinaryPayload) against a local server.
+func TestHttpClientBinaryLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/echo-bytes" && r.Method == http.MethodPost:
+			body, _ := io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(200)
+			_, _ = w.Write(body)
+		case r.URL.Path == "/bytes":
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte{1, 2, 3, 4})
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-binary-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
+// TestHttpClientCompressionLocal exercises transparent gzip/deflate response
+// decompression (decompressResponseBody + the gzip/deflate ReadClosers). The
+// client factory disables Go's automatic decompression so the compressed body
+// and Content-Encoding header reach the Ballerina layer untouched.
+func TestHttpClientCompressionLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/gzip":
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(200)
+			gz := gzip.NewWriter(w)
+			_, _ = gz.Write([]byte("hello gzipped world"))
+			_ = gz.Close()
+		case "/deflate":
+			w.Header().Set("Content-Encoding", "deflate")
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(200)
+			fl, _ := flate.NewWriter(w, flate.DefaultCompression)
+			_, _ = fl.Write([]byte("hello deflated world"))
+			_ = fl.Close()
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+
+	noAutoDecompress := func(cfg pal.ClientConfig) pal.HTTPClient {
+		return &rewritingHTTPClient{
+			serverURL: server.URL,
+			client:    &http.Client{Timeout: cfg.Timeout, Transport: &http.Transport{DisableCompression: true}},
+		}
+	}
+	runExtern(t, fileCase("http-client-compression-local-v"), newHTTPPal(noAutoDecompress), nil)
 }
 
 // TestHttpClientTLSInsecure: A client without InsecureSkipVerify would fail

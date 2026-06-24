@@ -19,6 +19,8 @@ package native
 import (
 	"testing"
 
+	"golang.org/x/text/transform"
+
 	"ballerina-lang-go/values"
 )
 
@@ -232,6 +234,15 @@ func TestDecodeExtern(t *testing.T) {
 		// Literal non-ASCII chars must pass through unchanged, not be re-interpreted
 		// through the charset decoder (e.g. ISO-8859-1 would corrupt UTF-8 bytes).
 		{[]values.BalValue{"caf\xc3\xa9", "ISO-8859-1"}, "caf\xc3\xa9", false, "ISO-8859-1: literal non-ASCII not charset-decoded"},
+		// Lone '%' at end of input is treated as a literal byte (decodeWithCharset
+		// incomplete-%XX path), not an error.
+		{[]values.BalValue{"a%", "UTF-8"}, "a%", false, "trailing lone percent is literal"},
+		// A %XX escape that decodes to a non-ASCII byte fails under the US-ASCII
+		// charset decoder (decodeWithCharset enc.NewDecoder error path).
+		{[]values.BalValue{"%FF", "US-ASCII"}, "", true, "non-ASCII escaped byte invalid under US-ASCII"},
+		// Pending escaped bytes that are invalid under the charset, flushed when a
+		// literal non-ASCII byte is hit (decodeWithCharset mid-loop flush error path).
+		{[]values.BalValue{"%FF\xc3\xa9", "US-ASCII"}, "", true, "flush of invalid US-ASCII bytes errors mid-loop"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -249,6 +260,22 @@ func TestDecodeExtern(t *testing.T) {
 				t.Errorf("decodeExtern(%v) = %q, want %q", tc.args, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestAsciiTransformerShortDst(t *testing.T) {
+	t.Parallel()
+	// Destination smaller than the ASCII source forces ErrShortDst once dst fills.
+	dst := make([]byte, 2)
+	nDst, nSrc, err := asciiTransformer{}.Transform(dst, []byte("abcdef"), false)
+	if err != transform.ErrShortDst {
+		t.Fatalf("Transform short dst: err = %v, want ErrShortDst", err)
+	}
+	if nDst != 2 || nSrc != 2 {
+		t.Errorf("Transform short dst: nDst=%d nSrc=%d, want 2 and 2", nDst, nSrc)
+	}
+	if string(dst) != "ab" {
+		t.Errorf("Transform short dst: dst = %q, want %q", dst, "ab")
 	}
 }
 

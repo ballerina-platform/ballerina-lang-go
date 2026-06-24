@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"ballerina-lang-go/decimal"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 func TestRoundingUnit(t *testing.T) {
@@ -244,6 +246,14 @@ func TestIsNumericOffset(t *testing.T) {
 		{"", false, "empty string"},
 		{"ab", false, "no sign"},
 		{"+abc", false, "non-digit after sign"},
+		{"+a5:30", false, "non-digit at position 1"},
+		{"+1a:30", false, "non-digit at position 2"},
+		{"+12-30", false, "missing colon in HH:MM form"},
+		{"+12:a0", false, "non-digit minute tens (colon form)"},
+		{"+12:3a", false, "non-digit minute units (colon form)"},
+		{"+1230", true, "valid HHMM no-colon form"},
+		{"+12a0", false, "non-digit in HHMM form"},
+		{"+123a", false, "non-digit minute units (HHMM form)"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -270,6 +280,10 @@ func TestParseNumericOffset(t *testing.T) {
 		{"-05:45", -(5*3600 + 45*60), false, "negative with minutes"},
 		{"+0530", 5*3600 + 30*60, false, "no-colon format HHMM"},
 		{"-0800", -(8 * 3600), false, "no-colon negative"},
+		{"+25:00", 0, true, "hours out of range"},
+		{"+12:99", 0, true, "minutes out of range"},
+		{"+2400", 0, true, "hours out of range (HHMM)"},
+		{"-99:00", 0, true, "negative hours out of range"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -440,5 +454,89 @@ func TestParseEmailDateRoundtrip(t *testing.T) {
 	}
 	if !parsed.Equal(original) {
 		t.Errorf("roundtrip: got %v, want %v", parsed, original)
+	}
+}
+
+func TestDecimalToNanos(t *testing.T) {
+	t.Parallel()
+	if got := decimalToNanos(nil); got != 0 {
+		t.Errorf("decimalToNanos(nil) = %d, want 0", got)
+	}
+	if got := decimalToNanos(decimal.FromInt64(2)); got != 2_000_000_000 {
+		t.Errorf("decimalToNanos(2) = %d, want 2000000000", got)
+	}
+	if d, err := decimal.FromString("0.5"); err == nil {
+		if got := decimalToNanos(d); got != 500_000_000 {
+			t.Errorf("decimalToNanos(0.5) = %d, want 500000000", got)
+		}
+	}
+}
+
+func TestGetInt64Arg(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		args []values.BalValue
+		idx  int
+		want int64
+		desc string
+	}{
+		{[]values.BalValue{int64(7)}, 0, 7, "valid int64 at index"},
+		{[]values.BalValue{}, 0, 0, "index out of range"},
+		{[]values.BalValue{int64(1)}, 5, 0, "index beyond length"},
+		{[]values.BalValue{"not-an-int"}, 0, 0, "wrong type falls back to 0"},
+		{[]values.BalValue{nil}, 0, 0, "nil value falls back to 0"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			if got := getInt64Arg(tc.args, tc.idx); got != tc.want {
+				t.Errorf("getInt64Arg(%v, %d) = %d, want %d", tc.args, tc.idx, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGetStringArg(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		args []values.BalValue
+		idx  int
+		want string
+		desc string
+	}{
+		{[]values.BalValue{"hello"}, 0, "hello", "valid string at index"},
+		{[]values.BalValue{}, 0, "", "index out of range"},
+		{[]values.BalValue{"x"}, 3, "", "index beyond length"},
+		{[]values.BalValue{int64(9)}, 0, "", "wrong type falls back to empty"},
+		{[]values.BalValue{nil}, 0, "", "nil value falls back to empty"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			if got := getStringArg(tc.args, tc.idx); got != tc.want {
+				t.Errorf("getStringArg(%v, %d) = %q, want %q", tc.args, tc.idx, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGetStoredLocation(t *testing.T) {
+	t.Parallel()
+
+	// No "$location" field: falls back to UTC.
+	empty := values.NewObject(semtypes.OBJECT, nil, nil, nil)
+	if loc := getStoredLocation(empty); loc != time.UTC {
+		t.Errorf("getStoredLocation(empty) = %v, want UTC", loc)
+	}
+
+	// "$location" holding a wrong type: falls back to UTC.
+	wrongType := values.NewObject(semtypes.OBJECT, map[string]values.BalValue{"$location": "not-a-location"}, nil, nil)
+	if loc := getStoredLocation(wrongType); loc != time.UTC {
+		t.Errorf("getStoredLocation(wrongType) = %v, want UTC", loc)
+	}
+
+	// "$location" holding a real location: returns it.
+	colombo := time.FixedZone("+05:30", 5*3600+30*60)
+	withLoc := values.NewObject(semtypes.OBJECT, map[string]values.BalValue{"$location": colombo}, nil, nil)
+	if loc := getStoredLocation(withLoc); loc != colombo {
+		t.Errorf("getStoredLocation(withLoc) = %v, want %v", loc, colombo)
 	}
 }
