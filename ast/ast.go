@@ -158,6 +158,7 @@ type (
 		bLangNodeBase
 		TopLevelNodes []TopLevelNode
 		Name          string
+		Scope         model.Scope
 		packageID     *model.PackageID
 		sourceKind    SourceKind
 	}
@@ -1438,10 +1439,20 @@ func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree
 	return compilationUnit.(*BLangCompilationUnit)
 }
 
-// TODO: get rid of this once we have a proper project api. This just remaps compilation unit to a BLangPackage.
-func ToPackage(cx *context.CompilerContext, compilationUnit *BLangCompilationUnit) *BLangPackage {
+func ToPackageFromCompilationUnits(compilationUnits []*BLangCompilationUnit) *BLangPackage {
 	p := BLangPackage{}
-	p.PackageID = compilationUnit.packageID
+	for _, compilationUnit := range compilationUnits {
+		if p.PackageID == nil {
+			p.PackageID = compilationUnit.packageID
+		} else if compilationUnit.packageID != nil && p.PackageID != compilationUnit.packageID {
+			panic("compilation units have different package IDs")
+		}
+		addCompilationUnitNodesToPackage(&p, compilationUnit)
+	}
+	return &p
+}
+
+func addCompilationUnitNodesToPackage(p *BLangPackage, compilationUnit *BLangCompilationUnit) {
 	for _, node := range compilationUnit.TopLevelNodes {
 		switch node := node.(type) {
 		case *BLangImportPackage:
@@ -1467,8 +1478,7 @@ func ToPackage(cx *context.CompilerContext, compilationUnit *BLangCompilationUni
 		case *BLangClassDefinition:
 			p.ClassDefinitions = append(p.ClassDefinitions, *node)
 		default:
-			cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
+			panic(fmt.Sprintf("unexpected top-level node type: %T", node))
 		}
 	}
-	return &p
 }

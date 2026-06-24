@@ -114,9 +114,8 @@ func (ctx *packageContext) addSymbolToSameSpace(ref model.SymbolRef, name string
 }
 
 func (ctx *packageContext) addModuleSymbol(name string, symbol model.Symbol) model.SymbolRef {
-	ms := ctx.pkg.Scope.(*model.ModuleScope)
-	ms.AddSymbol(name, symbol)
-	ref, _ := ms.GetSymbol(name)
+	ctx.pkg.Scope.AddSymbol(name, symbol)
+	ref, _ := ctx.pkg.Scope.GetSymbol(name)
 	return ref
 }
 
