@@ -77,6 +77,33 @@ func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T)
 	assertNoCompletionItem(t, items, "foo")
 }
 
+func TestCompletionAtRecordTypeDescriptorIncludesRecordSnippets(t *testing.T) {
+	for _, source := range []string{
+		"type Person rec$\n",
+		"public type Person rec$\n",
+		"type Person record$\n",
+	} {
+		items := completionItemsAtMarker(t, source)
+
+		assertSnippetCompletionItem(t, items, "inclusive record", "record {\n\t${1:fields}\n};")
+		assertSnippetCompletionItem(t, items, "exclusive record", "record {|\n\t${1:fields}\n|};")
+	}
+}
+
+func TestCompletionInRecordBodyIncludesFieldSnippets(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Person record {|\n    $\n|};\n")
+
+	assertSnippetCompletionItem(t, items, "required field", "${1:type} ${2:name};")
+	assertSnippetCompletionItem(t, items, "optional field", "${1:type} ${2:name}?;")
+}
+
+func TestCompletionAtRecordFieldTypeIncludesTypesOnly(t *testing.T) {
+	items := completionItemsAtMarker(t, "type Age int;\ntype Person record {|\n    Ag$ age;\n|};\n")
+
+	assertCompletionItem(t, items, "Age")
+	assertNoCompletionItem(t, items, "required field")
+}
+
 func TestCompletionAtFunctionReturnTypeDescIncludesReturnsSnippet(t *testing.T) {
 	tests := []string{
 		"function foo() $ {\n}\n",

@@ -43,6 +43,8 @@ const (
 	completionKindMemberAccess
 	completionKindReturnTypeDesc
 	completionKindType
+	completionKindRecordTypeDesc
+	completionKindRecordField
 	completionKindStatementBegin
 	completionKindExpression
 )
@@ -86,6 +88,9 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 	prefix := identifierPrefixAtOffset(source.Content, offset)
 	chain := nodeChainAtOffset(cu, offset)
 	completionCtx := completionContextFromNodeChain(offset, prefix, chain)
+	if completionCtx.kind == completionKindModuleVarDecl && isRecordTypeDescriptorLine(source.Content, offset, prefix) {
+		completionCtx = completionContext{kind: completionKindRecordTypeDesc, prefix: prefix}
+	}
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind == completionKindMemberAccess {
 		result.Items = s.memberAccessCompletionItems(snapshot, module, source, cu, completionCtx, offset)
@@ -170,6 +175,10 @@ func completionKindString(kind completionKind) string {
 		return "return-type-desc"
 	case completionKindType:
 		return "type"
+	case completionKindRecordTypeDesc:
+		return "record-type-desc"
+	case completionKindRecordField:
+		return "record-field"
 	case completionKindStatementBegin:
 		return "statement-begin"
 	case completionKindExpression:
@@ -227,6 +236,12 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 	}
 	if completionCtx.kind == completionKindReturnTypeDesc {
 		return []protocol.CompletionItem{{Label: "returns", Kind: protocol.CompletionItemKindKeyword, InsertText: "returns ${1:Ty}", InsertTextFormat: protocol.InsertTextFormatSnippet}}
+	}
+	if completionCtx.kind == completionKindRecordTypeDesc {
+		return recordTypeDescriptorCompletionItems(completionCtx.prefix)
+	}
+	if completionCtx.kind == completionKindRecordField {
+		return recordFieldCompletionItems(completionCtx.prefix)
 	}
 	if completionCtx.kind != completionKindModuleVarDecl && completionCtx.kind != completionKindType && completionCtx.kind != completionKindExpression {
 		for _, imp := range compilationUnitImportsForCompletion(recoveredCU) {
@@ -575,6 +590,12 @@ func completionContextAtChainNode(offset int, prefix string, node ast.BLangNode,
 		return functionTypeCompletionContext(offset, prefix, n)
 	case *ast.BMethodDecl:
 		return functionTypeCompletionContext(offset, prefix, &n.BLangFunctionType)
+	case *ast.BLangTypeDefinition:
+		if isRecordTypeDescriptorCompletionContext(offset, prefix, n) {
+			return completionContext{kind: completionKindRecordTypeDesc, prefix: prefix}, true
+		}
+	case *ast.BLangRecordType:
+		return recordTypeCompletionContext(offset, prefix, n)
 	case *ast.BLangFieldBaseAccess:
 		if n.Expr != nil {
 			exprPos := n.Expr.GetPosition()
@@ -634,6 +655,26 @@ func functionTypeCompletionContext(offset int, prefix string, fn *ast.BLangFunct
 		return completionContext{kind: completionKindType, prefix: prefix}, true
 	}
 	return completionContext{}, false
+}
+
+func isRecordTypeDescriptorCompletionContext(offset int, prefix string, typeDef *ast.BLangTypeDefinition) bool {
+	if typeDef == nil || prefix == "" || !strings.HasPrefix("record", prefix) {
+		return false
+	}
+	typeDesc, ok := typeDef.GetTypeData().TypeDescriptor.(ast.BLangNode)
+	return ok && locationContains(typeDesc.GetPosition(), offset)
+}
+
+func recordTypeCompletionContext(offset int, prefix string, recordType *ast.BLangRecordType) (completionContext, bool) {
+	if recordType == nil || !locationContains(recordType.GetPosition(), offset) {
+		return completionContext{}, false
+	}
+	for _, field := range recordType.FieldPtrs() {
+		if typeNodeContainsOffset(field.Type, offset) {
+			return completionContext{kind: completionKindType, prefix: prefix}, true
+		}
+	}
+	return completionContext{kind: completionKindRecordField, prefix: prefix}, true
 }
 
 func isFunctionParameterTypeCompletionContext(offset int, fn ast.InvokableNode) bool {
@@ -946,6 +987,42 @@ func identifierPrefixStartAndValueAtOffset(content string, offset int) (int, str
 	return prefixStart, content[prefixStart:offset]
 }
 
+func isRecordTypeDescriptorLine(content string, offset int, prefix string) bool {
+	if prefix == "" || !strings.HasPrefix("record", prefix) {
+		return false
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(content) {
+		offset = len(content)
+	}
+	lineStart := strings.LastIndexAny(content[:offset], "\r\n") + 1
+	line := lineTextAt(content, offset)
+	cursorInLine := offset - lineStart
+	if cursorInLine < 0 || cursorInLine > len(line) {
+		return false
+	}
+	beforeCursor := strings.TrimSpace(line[:cursorInLine])
+	fields := strings.Fields(beforeCursor)
+	if len(fields) == 3 {
+		return fields[0] == "type" && isIdentifierText(fields[1]) && fields[2] == prefix
+	}
+	return len(fields) == 4 && fields[0] == "public" && fields[1] == "type" && isIdentifierText(fields[2]) && fields[3] == prefix
+}
+
+func isIdentifierText(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if !isIdentifierRune(r) {
+			return false
+		}
+	}
+	return true
+}
+
 func lineTextAt(content string, offset int) string {
 	if offset < 0 {
 		offset = 0
@@ -1028,6 +1105,30 @@ func snapshotWithRecoveredCU(snapshot *Snapshot, module *Module, uri protocol.Do
 		completionModule = modules[module.Name]
 	}
 	return &completionSnapshot, completionModule
+}
+
+func recordTypeDescriptorCompletionItems(prefix string) []protocol.CompletionItem {
+	return snippetCompletionItems(prefix, []protocol.CompletionItem{
+		{Label: "inclusive record", Kind: protocol.CompletionItemKindKeyword, InsertText: "record {\n\t${1:fields}\n};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "exclusive record", Kind: protocol.CompletionItemKindKeyword, InsertText: "record {|\n\t${1:fields}\n|};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+	})
+}
+
+func recordFieldCompletionItems(prefix string) []protocol.CompletionItem {
+	return snippetCompletionItems(prefix, []protocol.CompletionItem{
+		{Label: "required field", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name};", InsertTextFormat: protocol.InsertTextFormatSnippet},
+		{Label: "optional field", Kind: protocol.CompletionItemKindVariable, InsertText: "${1:type} ${2:name}?;", InsertTextFormat: protocol.InsertTextFormatSnippet},
+	})
+}
+
+func snippetCompletionItems(prefix string, candidates []protocol.CompletionItem) []protocol.CompletionItem {
+	items := make([]protocol.CompletionItem, 0, len(candidates))
+	for _, item := range candidates {
+		if strings.HasPrefix(item.Label, prefix) || strings.HasPrefix(item.InsertText, prefix) {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func statementBeginCompletionItems(prefix string) []protocol.CompletionItem {
