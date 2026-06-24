@@ -32,7 +32,7 @@ type ExternFunction struct {
 	Impl extern.NativeFunc
 }
 
-func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) (*BIRModule, error) {
+func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) *BIRModule {
 	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
 	for key, gv := range pkg.GlobalVars {
 		v, ok := safeFillerValue(ctx, gv)
@@ -43,7 +43,7 @@ func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) (*BIRModule, error) 
 	return &BIRModule{
 		Pkg:     pkg,
 		Globals: globals,
-	}, nil
+	}
 }
 
 func safeFillerValue(ctx *extern.Context, gv bir.BIRGlobalVariableDcl) (value values.BalValue, ok bool) {
