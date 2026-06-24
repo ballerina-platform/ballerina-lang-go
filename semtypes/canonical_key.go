@@ -18,7 +18,11 @@ package semtypes
 
 import "sync"
 
-type atomKey int
+type atomKey struct {
+	index int
+	gen   uint64
+	rec   bool
+}
 
 type bddKey int
 
@@ -48,12 +52,12 @@ var bddKeyInterner = struct {
 	keys: make(map[bddNodeKey]bddKey),
 }
 
-func typeAtomKey(index int) atomKey {
-	return atomKey(index << 1)
+func typeAtomKey(index int, gen uint64) atomKey {
+	return atomKey{index: index, gen: gen}
 }
 
 func recAtomKey(index int) atomKey {
-	return atomKey(index<<1 | 1)
+	return atomKey{index: index, rec: true}
 }
 
 func internBddNodeKey(key bddNodeKey) bddKey {

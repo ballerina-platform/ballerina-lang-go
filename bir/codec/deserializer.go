@@ -73,7 +73,6 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 	br.read(&pkgIdx)
 
 	pkgID := br.getPackageFromCP(int(pkgIdx))
-	imports := br.readImports()
 	globalVars := br.readGlobalVars(pkgID)
 	classDefs := br.readClassDefs()
 
@@ -94,13 +93,12 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 	functions := br.readFunctions()
 
 	pkg = &bir.BIRPackage{
-		PackageID:     pkgID,
-		ImportModules: imports,
-		GlobalVars:    globalVars,
-		ClassDefs:     classDefs,
-		Functions:     functions,
-		InitFunction:  initFunction,
-		MainFunction:  mainFunction,
+		PackageID:    pkgID,
+		GlobalVars:   globalVars,
+		ClassDefs:    classDefs,
+		Functions:    functions,
+		InitFunction: initFunction,
+		MainFunction: mainFunction,
 	}
 	rebindLifecycleFunctions(pkg)
 	return pkg, nil
@@ -214,23 +212,6 @@ func (br *birReader) getStringFromCP(index int) string {
 func (br *birReader) getPackageFromCP(index int) *model.PackageID {
 	v := br.getFromCP(index)
 	return v.(*model.PackageID)
-}
-
-func (br *birReader) readImports() []bir.BIRImportModule {
-	count := br.readLength()
-	imports := make([]bir.BIRImportModule, count)
-	for i := 0; i < int(count); i++ {
-		org := br.readStringCPEntry()
-		pkgName := br.readStringCPEntry()
-		_ = br.readStringCPEntry()
-		version := br.readStringCPEntry()
-
-		nameComps := model.CreateNameComps(pkgName)
-		imports[i] = bir.BIRImportModule{
-			PackageID: br.ctx.NewPackageID(org, nameComps, version),
-		}
-	}
-	return imports
 }
 
 func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGlobalVariableDcl {

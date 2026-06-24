@@ -20,7 +20,6 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/extern"
-	"ballerina-lang-go/semtypes"
 )
 
 type Registry struct {
@@ -29,7 +28,6 @@ type Registry struct {
 	nativeFunctions map[string]*ExternFunction
 	runtimeBuiltins map[string]extern.NativeFunc
 	modules         map[string]*BIRModule
-	typeEnv         semtypes.Env
 }
 
 func NewRegistry(builtins map[string]extern.NativeFunc) *Registry {
@@ -84,14 +82,6 @@ func (r *Registry) GetModule(pkgId *model.PackageID) *BIRModule {
 
 func (r *Registry) GetModuleByName(orgName, moduleName string) *BIRModule {
 	return r.modules[orgName+"/"+moduleName]
-}
-
-func (r *Registry) SetTypeEnv(env semtypes.Env) {
-	r.typeEnv = env
-}
-
-func (r *Registry) GetTypeEnv() semtypes.Env {
-	return r.typeEnv
 }
 
 func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl extern.NativeFunc) {

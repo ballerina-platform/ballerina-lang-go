@@ -135,6 +135,7 @@ func initializingAction(rt *Runtime) {
 	rt.mu.Lock()
 	rt.state = StateInitializing
 	rt.mu.Unlock()
+	rt.env.TypeEnv.Freeze()
 	rt.setupSignalListeners()
 }
 
@@ -143,7 +144,9 @@ func abortAction(_ *Runtime) {
 }
 
 func (rt *Runtime) stopAfterInitFailure() {
+	rt.mu.Lock()
 	rt.exitCode = 1
+	rt.mu.Unlock()
 	rt.transition(StateGracefulStopping)
 }
 
@@ -240,15 +243,15 @@ func (rt *Runtime) gracefulStopFnSeq() iter.Seq[*exec.InvokableHandle] {
 // immediateStopAction call immediateStop on all module listeners in the reverse order
 // they got registered. should any of those functions return an error runtime will panic
 func immediateStopAction(rt *Runtime) {
-	if rt.exitCode == 0 {
-		rt.exitCode = 131 // 128  + SIGQUIT
-	}
 	onError := func(reason string) {
 		rt.mu.Unlock()
 		writeStderr(rt.env, fmt.Sprintf("panic: immediate stop failed due to %s\n", reason))
 		rt.transition(StateStopped)
 	}
 	rt.mu.Lock()
+	if rt.exitCode == 0 {
+		rt.exitCode = 131 // 128  + SIGQUIT
+	}
 	rt.state = StateImmediateStopping
 	for i := len(rt.immediateStopFns) - 1; i >= 0; i-- {
 		fn := rt.immediateStopFns[i]
@@ -268,13 +271,15 @@ func immediateStopAction(rt *Runtime) {
 }
 
 func stoppedAction(rt *Runtime) {
+	rt.mu.Lock()
 	if rt.state == StateStopped {
+		rt.mu.Unlock()
 		return
 	}
-	rt.mu.Lock()
 	rt.state = StateStopped
+	exitCode := rt.exitCode
 	rt.mu.Unlock()
-	rt.exitCodeChan <- rt.exitCode
+	rt.exitCodeChan <- exitCode
 	close(rt.exitCodeChan)
 }
 
@@ -289,7 +294,13 @@ func (rt *Runtime) setupSignalListeners() {
 		panic("no signal channel in PAL")
 	}
 	go func(ch <-chan pal.Signal) {
-		for rt.state != StateStopped {
+		for {
+			rt.mu.Lock()
+			stopped := rt.state == StateStopped
+			rt.mu.Unlock()
+			if stopped {
+				return
+			}
 			sig, ok := <-ch
 			if !ok {
 				return

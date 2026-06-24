@@ -31,7 +31,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 80
+	BIR_VERSION = 81
 )
 
 type birWriter struct {
@@ -59,7 +59,6 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 
 	birbuf := &bytes.Buffer{}
 	bw.writePackageCPEntry(birbuf, pkg.PackageID)
-	bw.writeImportModuleDecls(birbuf, pkg)
 	bw.writeGlobalVars(birbuf, pkg)
 	bw.writeClassDefs(birbuf, pkg)
 	bw.writeFunctions(birbuf, pkg)
@@ -95,16 +94,6 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func (bw *birWriter) writeImportModuleDecls(buf *bytes.Buffer, pkg *bir.BIRPackage) {
-	bw.writeLength(buf, len(pkg.ImportModules))
-	for _, imp := range pkg.ImportModules {
-		bw.writeStringCPEntry(buf, imp.PackageID.OrgName.Value())
-		bw.writeStringCPEntry(buf, imp.PackageID.PkgName.Value())
-		bw.writeStringCPEntry(buf, imp.PackageID.Name.Value())
-		bw.writeStringCPEntry(buf, imp.PackageID.Version.Value())
-	}
 }
 
 func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {

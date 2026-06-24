@@ -56,8 +56,6 @@
   (variable l (type
     (user-defined-type LifecycleListener)) (expr
     (new ())))
-  (variable _ (expr
-    (simple-var-ref l)))
   (function main () (
     (value-type null))
     (block-function-body

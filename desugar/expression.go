@@ -507,7 +507,7 @@ func walkXMLTemplateExpr(cx *functionContext, expr *ast.BLangXMLTemplateExpr) de
 		}
 		expr.Insertions[i] = insert
 	}
-	expr.Strings = spliceXMLTemplateNamespaces(expr.Strings, expr.NamespaceInsertions)
+	expr.Strings = spliceXMLTemplateNamespaces(cx, expr.Strings, expr.NamespaceInsertions)
 	plain := &ast.BLangTemplateExpr{Kind: ast.TemplateExprKindXML, Strings: expr.Strings, Insertions: expr.Insertions}
 	plain.SetPosition(expr.GetPosition())
 	plain.SetDeterminedType(expr.GetDeterminedType())
@@ -534,7 +534,31 @@ func escapeXMLTemplateInsertion(cx *functionContext, insert ast.BLangExpression,
 	}
 }
 
-func spliceXMLTemplateNamespaces(parts []string, insertions [][]ast.XMLTemplateNamespaceInsertion) []string {
+type xmlNamespaceDecl struct {
+	key string
+	uri string
+}
+
+func xmlTemplateNamespaceDecls(cx *functionContext, refs []model.SymbolRef) []xmlNamespaceDecl {
+	decls := make([]xmlNamespaceDecl, 0, len(refs))
+	for _, ref := range refs {
+		symbol := cx.getSymbol(ref)
+		key, err := model.XMLNamespaceDeclKey(symbol)
+		if err != nil {
+			cx.internalError(err.Error())
+			continue
+		}
+		uri, err := model.XMLNamespaceURI(symbol)
+		if err != nil {
+			cx.internalError(err.Error())
+			continue
+		}
+		decls = append(decls, xmlNamespaceDecl{key: key, uri: uri})
+	}
+	return decls
+}
+
+func spliceXMLTemplateNamespaces(cx *functionContext, parts []string, insertions [][]ast.XMLTemplateNamespaceInsertion) []string {
 	if len(insertions) == 0 || len(parts) == 0 {
 		return parts
 	}
@@ -555,18 +579,19 @@ func spliceXMLTemplateNamespaces(parts []string, insertions [][]ast.XMLTemplateN
 			if insn.Offset < 0 || insn.Offset > len(part) {
 				continue
 			}
-			keys := make([]string, 0, len(insn.Namespaces))
-			for k := range insn.Namespaces {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
+
+			namespaces := xmlTemplateNamespaceDecls(cx, insn.Namespaces)
+			sort.SliceStable(namespaces, func(i, j int) bool {
+				return namespaces[i].key < namespaces[j].key
+			})
+
 			var b strings.Builder
 			b.WriteString(part[:insn.Offset])
-			for _, k := range keys {
+			for _, ns := range namespaces {
 				b.WriteByte(' ')
-				b.WriteString(k)
+				b.WriteString(ns.key)
 				b.WriteString("=\"")
-				b.WriteString(values.EscapeXMLAttribute(insn.Namespaces[k]))
+				b.WriteString(values.EscapeXMLAttribute(ns.uri))
 				b.WriteByte('"')
 			}
 			b.WriteString(part[insn.Offset:])

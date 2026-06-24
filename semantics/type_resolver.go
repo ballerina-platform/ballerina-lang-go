@@ -489,9 +489,8 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 	}
 
 	for _, importedSpace := range t.importedSymbols {
-		for i, sym := range importedSpace.Main.Symbols() {
+		for ref, sym := range importedSpace.PublicMainSymbols() {
 			if _, ok := sym.(model.ClassSymbol); ok {
-				ref := importedSpace.Main.RefAt(i)
 				if ty := sym.Type(); !semtypes.IsZero(ty) {
 					t.classSymbolByType[t.semtypeInterner.Intern(ty)] = ref
 				}

@@ -61,9 +61,7 @@ type (
 
 	BIRPackage struct {
 		BIRNodeBase
-		PackageID *model.PackageID
-		// TODO: avoid duplicates here
-		ImportModules         []BIRImportModule
+		PackageID             *model.PackageID
 		GlobalVars            map[string]BIRGlobalVariableDcl
 		Functions             []BIRFunction
 		InitFunction          *BIRFunction
@@ -97,11 +95,6 @@ type (
 		// Ty is a singleton string type for literal path segments
 		// and the parameter type for path-parameter segments.
 		Ty semtypes.SemType
-	}
-
-	BIRImportModule struct {
-		BIRNodeBase
-		PackageID *model.PackageID
 	}
 
 	birVariableDclBase struct {
