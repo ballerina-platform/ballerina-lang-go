@@ -248,11 +248,10 @@ type (
 		Name                            BLangIdentifier
 		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
-		ReturnTypeAnnAttachments        []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       SimpleVariableNode
-		returnTypeDescriptor            TypeDescriptor
+		returnTypeDescriptor            *BLangReturnTypeDescriptor
 		Body                            FunctionBodyNode
 		flags                           model.Flag
 		scope                           model.Scope
@@ -1064,42 +1063,46 @@ func (b *bLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 	}
 }
 
-// ReturnTypeAnnotatable wraps the return-type annotation slice of an invokable
-// node and exposes it as an AnnotatableNode so the type resolver can process
-// return-type annotations uniformly.
-type ReturnTypeAnnotatable struct {
-	base *bLangInvokableNodeBase
+// BLangReturnTypeDescriptor is the return type descriptor of an invokable node.
+// It holds the return type and its annotation attachments as real AST data, so a
+// single node serves as both a type-descriptor holder and an AnnotatableNode.
+// This replaces the former ReturnTypeAnnotatable view, keeping the AST pure data
+// rather than synthesizing an annotatable adaptor on demand.
+type BLangReturnTypeDescriptor struct {
+	bLangNodeBase
+	TypeDescriptor TypeDescriptor
+	AnnAttachments []BLangAnnotationAttachment
 }
 
-func (r *ReturnTypeAnnotatable) GetPosition() diagnostics.Location { return r.base.GetPosition() }
-func (r *ReturnTypeAnnotatable) GetDeterminedType() semtypes.SemType {
-	return r.base.GetDeterminedType()
-}
-func (r *ReturnTypeAnnotatable) IsPublic() bool { return false }
+func (r *BLangReturnTypeDescriptor) IsPublic() bool { return false }
 
-func (r *ReturnTypeAnnotatable) AddAnnotationAttachment(ann AnnotationAttachmentNode) {
-	r.base.ReturnTypeAnnAttachments = append(r.base.ReturnTypeAnnAttachments, *ann.(*BLangAnnotationAttachment))
+func (r *BLangReturnTypeDescriptor) AddAnnotationAttachment(ann AnnotationAttachmentNode) {
+	r.AnnAttachments = append(r.AnnAttachments, *ann.(*BLangAnnotationAttachment))
 }
 
-func (r *ReturnTypeAnnotatable) GetAnnotationAttachments() []AnnotationAttachmentNode {
-	result := make([]AnnotationAttachmentNode, len(r.base.ReturnTypeAnnAttachments))
-	for i := range r.base.ReturnTypeAnnAttachments {
-		result[i] = &r.base.ReturnTypeAnnAttachments[i]
+func (r *BLangReturnTypeDescriptor) GetAnnotationAttachments() []AnnotationAttachmentNode {
+	result := make([]AnnotationAttachmentNode, len(r.AnnAttachments))
+	for i := range r.AnnAttachments {
+		result[i] = &r.AnnAttachments[i]
 	}
 	return result
 }
 
-// ReturnTypeAnnotatableOf returns a view of the given invokable node that
-// exposes its return-type annotation attachments as an AnnotatableNode.
+// ReturnTypeAnnotatableOf returns the invokable node's return type descriptor as
+// an AnnotatableNode (it carries the return type's annotation attachments), or
+// nil if the node has no return type descriptor.
 func ReturnTypeAnnotatableOf(fn InvokableNode) AnnotatableNode {
 	switch n := fn.(type) {
 	case *BLangFunction:
-		return &ReturnTypeAnnotatable{base: &n.bLangInvokableNodeBase}
+		if n.returnTypeDescriptor != nil {
+			return n.returnTypeDescriptor
+		}
 	case *BLangResourceMethod:
-		return &ReturnTypeAnnotatable{base: &n.bLangInvokableNodeBase}
-	default:
-		return nil
+		if n.returnTypeDescriptor != nil {
+			return n.returnTypeDescriptor
+		}
 	}
+	return nil
 }
 
 func (b *bLangInvokableNodeBase) GetParameters() []SimpleVariableNode {
@@ -1160,15 +1163,29 @@ func (b *bLangInvokableNodeBase) HasBody() bool {
 }
 
 func (b *bLangInvokableNodeBase) GetReturnTypeDescriptor() TypeDescriptor {
-	return b.returnTypeDescriptor
+	if b.returnTypeDescriptor == nil {
+		return nil
+	}
+	return b.returnTypeDescriptor.TypeDescriptor
 }
 
 func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor TypeDescriptor) {
 	if typeDescriptor == nil {
-		b.returnTypeDescriptor = nil
+		if b.returnTypeDescriptor != nil {
+			b.returnTypeDescriptor.TypeDescriptor = nil
+		}
 		return
 	}
-	b.returnTypeDescriptor = typeDescriptor.(BType)
+	if b.returnTypeDescriptor == nil {
+		b.returnTypeDescriptor = &BLangReturnTypeDescriptor{}
+	}
+	b.returnTypeDescriptor.TypeDescriptor = typeDescriptor.(BType)
+}
+
+// ReturnTypeDescriptorNode returns the return type descriptor node, which carries
+// the return type's annotation attachments, or nil if there is none.
+func (b *bLangInvokableNodeBase) ReturnTypeDescriptorNode() *BLangReturnTypeDescriptor {
+	return b.returnTypeDescriptor
 }
 
 func (b *bLangInvokableNodeBase) GetBody() FunctionBodyNode {

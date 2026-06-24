@@ -1451,7 +1451,7 @@ func (n *NodeBuilder) populateFuncSignatureOnBase(bLFunction *bLangInvokableNode
 		// Pop "return" from the stack
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 		annots := retTypeDescNode.Annotations()
-		n.addAnnotationAttachments(annots, &ReturnTypeAnnotatable{base: bLFunction})
+		n.addAnnotationAttachments(annots, bLFunction.ReturnTypeDescriptorNode())
 	} else {
 		// Default return type is nil when not specified
 		nilReturnType := &BLangValueType{TypeKind: TypeKind_NIL}

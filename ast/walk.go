@@ -217,11 +217,13 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		for i := range node.ReturnTypeAnnAttachments {
-			Walk(v, &node.ReturnTypeAnnAttachments[i])
-		}
 		if node.returnTypeDescriptor != nil {
-			walkTypeDescriptor(v, node.returnTypeDescriptor)
+			for i := range node.returnTypeDescriptor.AnnAttachments {
+				Walk(v, &node.returnTypeDescriptor.AnnAttachments[i])
+			}
+			if node.returnTypeDescriptor.TypeDescriptor != nil {
+				walkTypeDescriptor(v, node.returnTypeDescriptor.TypeDescriptor)
+			}
 		}
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
@@ -243,11 +245,13 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		for i := range node.ReturnTypeAnnAttachments {
-			Walk(v, &node.ReturnTypeAnnAttachments[i])
-		}
 		if node.returnTypeDescriptor != nil {
-			walkTypeDescriptor(v, node.returnTypeDescriptor)
+			for i := range node.returnTypeDescriptor.AnnAttachments {
+				Walk(v, &node.returnTypeDescriptor.AnnAttachments[i])
+			}
+			if node.returnTypeDescriptor.TypeDescriptor != nil {
+				walkTypeDescriptor(v, node.returnTypeDescriptor.TypeDescriptor)
+			}
 		}
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
