@@ -40,12 +40,12 @@
               (simple-var-ref missing)))
             (user-defined-type io Error)))))
       (var-def
-        (variable dir (type
+        (variable noParent (type
           (value-type string)) (expr
-          (literal /tmp))))
+          (literal /bal_io_no_such_dir_xyz/file.txt))))
       (var-def
         (variable $desugar$0 (expr
-          (simple-var-ref dir))))
+          (simple-var-ref noParent))))
       (var-def
         (variable $desugar$1 (expr
           (literal x))))
@@ -64,7 +64,7 @@
             (user-defined-type io Error)))))
       (var-def
         (variable $desugar$3 (expr
-          (simple-var-ref dir))))
+          (simple-var-ref noParent))))
       (var-def
         (variable $desugar$4 (expr
           (list-constructor-expr
@@ -84,7 +84,7 @@
             (user-defined-type io Error)))))
       (var-def
         (variable $desugar$6 (expr
-          (simple-var-ref dir))))
+          (simple-var-ref noParent))))
       (var-def
         (variable $desugar$7 (expr
           (list-constructor-expr
@@ -107,7 +107,7 @@
         (invocation io println (
           (type-test-expr is
             (invocation io fileWriteJson (
-              (simple-var-ref dir)
+              (simple-var-ref noParent)
               (mapping-constructor-expr
                 (key-value
                   (literal k)
@@ -115,7 +115,7 @@
             (user-defined-type io Error)))))
       (var-def
         (variable $desugar$9 (expr
-          (simple-var-ref dir))))
+          (simple-var-ref noParent))))
       (var-def
         (variable $desugar$10 (expr
           (xml-element-literal a))))

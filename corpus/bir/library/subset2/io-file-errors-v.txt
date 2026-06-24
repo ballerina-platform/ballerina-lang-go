@@ -43,9 +43,9 @@ main() -> nil|error{
     %22 = println(%21) -> bb10;
   }
   bb10 {
-    %23 = ConstantLoad /tmp
-    dir = %23;
-    $desugar$0 = dir;
+    %23 = ConstantLoad /bal_io_no_such_dir_xyz/file.txt
+    noParent = %23;
+    $desugar$0 = noParent;
     %26 = ConstantLoad x
     $desugar$1 = %26;
     %28 = $default$0($desugar$0,$desugar$1) -> bb11;
@@ -60,7 +60,7 @@ main() -> nil|error{
     %33 = println(%32) -> bb13;
   }
   bb13 {
-    $desugar$3 = dir;
+    $desugar$3 = noParent;
     %35 = ConstantLoad x
     %36 = ConstantLoad 1
     %37 = newArray [string...][%36]{%35}
@@ -77,7 +77,7 @@ main() -> nil|error{
     %44 = println(%43) -> bb16;
   }
   bb16 {
-    $desugar$6 = dir;
+    $desugar$6 = noParent;
     %46 = ConstantLoad 1
     %47 = ConstantLoad 2
     %48 = ConstantLoad 2
@@ -98,7 +98,7 @@ main() -> nil|error{
     %57 = ConstantLoad k
     %58 = ConstantLoad v
     %59 = newMap {| nil|boolean|int|float|decimal|string|...|...... |}{%57=%58}
-    %60 = fileWriteJson(dir,%59) -> bb20;
+    %60 = fileWriteJson(noParent,%59) -> bb20;
   }
   bb20 {
     %61 = %60 is error
@@ -106,7 +106,7 @@ main() -> nil|error{
     %63 = println(%62) -> bb21;
   }
   bb21 {
-    $desugar$9 = dir;
+    $desugar$9 = noParent;
     %65 = ConstantLoad a
     %66 = newXMLElement(%65, ())
     $desugar$10 = %66;
