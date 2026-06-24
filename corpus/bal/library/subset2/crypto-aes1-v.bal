@@ -48,4 +48,12 @@ public function main() returns error? {
     io:println(ecbErr is crypto:Error);                                  // @output true
     byte[]|crypto:Error gcmErr = crypto:encryptAesGcm(plaintext, badKey, iv12);
     io:println(gcmErr is crypto:Error);                                  // @output true
+
+    // Decrypting a block with invalid PKCS7 padding fails (pkcs7Unpad).
+    byte[] zeros = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    byte[]|crypto:Error padErr = crypto:decryptAesCbc(zeros, key, iv);
+    io:println(padErr is crypto:Error);                                  // @output true
+    // Ciphertext whose length is not a multiple of the block size fails.
+    byte[]|crypto:Error sizeErr = crypto:decryptAesCbc([1, 2, 3], key, iv);
+    io:println(sizeErr is crypto:Error);                                 // @output true
 }

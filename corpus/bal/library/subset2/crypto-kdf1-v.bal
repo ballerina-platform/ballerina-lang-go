@@ -36,4 +36,8 @@ public function main() returns error? {
     io:println(crypto:equalConstantTime(d1, d2)); // @output true
     byte[] other = check crypto:hkdfSha256(input, 64, info, salt);
     io:println(crypto:equalConstantTime(d1, other)); // @output false
+
+    // equalConstantTime over string HashValues (the string branch of hashValueToBytes).
+    io:println(crypto:equalConstantTime("abc123", "abc123")); // @output true
+    io:println(crypto:equalConstantTime("abc123", "def456")); // @output false
 }

@@ -1,0 +1,43 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+import ballerina/crypto;
+import ballerina/io;
+
+public function main() returns error? {
+    crypto:KeyStore ks = {path: "testdata/crypto-keystore.p12", password: "secret"};
+
+    // Recover the RSA private key from the PKCS#12 keystore and use it to sign.
+    crypto:PrivateKey pk = check crypto:decodeRsaPrivateKeyFromKeyStore(ks, "ballerina", "secret");
+    byte[] sig = check crypto:signRsaSha256([1, 2, 3, 4], pk);
+    io:println(sig.length() > 0); // @output true
+
+    // Recover the public key from the same file used as a trust store.
+    crypto:TrustStore ts = {path: "testdata/crypto-keystore.p12", password: "secret"};
+    crypto:PublicKey pub = check crypto:decodeRsaPublicKeyFromTrustStore(ts, "ballerina");
+    byte[] ct = check crypto:encryptRsaEcb([1, 2, 3, 4], pub);
+    io:println(ct.length() > 0); // @output true
+
+    // A wrong keystore password fails key recovery.
+    crypto:KeyStore badKs = {path: "testdata/crypto-keystore.p12", password: "wrong"};
+    crypto:PrivateKey|crypto:Error badKey = crypto:decodeRsaPrivateKeyFromKeyStore(badKs, "ballerina", "wrong");
+    io:println(badKey is crypto:Error); // @output true
+
+    // A missing keystore file fails.
+    crypto:TrustStore missing = {path: "testdata/does-not-exist.p12", password: "secret"};
+    crypto:PublicKey|crypto:Error missingErr = crypto:decodeRsaPublicKeyFromTrustStore(missing, "ballerina");
+    io:println(missingErr is crypto:Error); // @output true
+}

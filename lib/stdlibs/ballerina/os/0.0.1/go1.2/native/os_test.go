@@ -27,8 +27,14 @@ import (
 	"ballerina-lang-go/values"
 )
 
+// os env/username/home are covered end-to-end from corpus/bal/library/subset2/os-*.bal.
+// The exec/Process path below is the exception: os:exec spawns a real subprocess, which
+// a corpus -v test could run on Unix but not on the Windows CI runner (no portable
+// command, and the corpus skip list is global, not per-OS). So the exec glue is driven
+// with a fake pal.ProcessHandle here — deterministic and cross-platform.
+//
 // fakeProcess is a controllable pal.ProcessHandle for exercising the exec path
-// without spawning a real subprocess (keeps the test cross-platform).
+// without spawning a real subprocess.
 type fakeProcess struct {
 	code    int
 	stdout  []byte

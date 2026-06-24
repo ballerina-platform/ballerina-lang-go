@@ -435,4 +435,90 @@
         (invocation io println (
           (type-test-expr is
             (simple-var-ref gcmErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable zeros (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)))))
+      (var-def
+        (variable $desugar$44 (expr
+          (simple-var-ref zeros))))
+      (var-def
+        (variable $desugar$45 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$46 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$47 (expr
+          (invocation $default$23 (
+            (simple-var-ref $desugar$44)
+            (simple-var-ref $desugar$45)
+            (simple-var-ref $desugar$46))))))
+      (var-def
+        (variable padErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto decryptAesCbc (
+            (simple-var-ref $desugar$44)
+            (simple-var-ref $desugar$45)
+            (simple-var-ref $desugar$46)
+            (simple-var-ref $desugar$47))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref padErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable $desugar$48 (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)))))
+      (var-def
+        (variable $desugar$49 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$50 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$51 (expr
+          (invocation $default$23 (
+            (simple-var-ref $desugar$48)
+            (simple-var-ref $desugar$49)
+            (simple-var-ref $desugar$50))))))
+      (var-def
+        (variable sizeErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto decryptAesCbc (
+            (simple-var-ref $desugar$48)
+            (simple-var-ref $desugar$49)
+            (simple-var-ref $desugar$50)
+            (simple-var-ref $desugar$51))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref sizeErr)
             (user-defined-type crypto Error))))))))

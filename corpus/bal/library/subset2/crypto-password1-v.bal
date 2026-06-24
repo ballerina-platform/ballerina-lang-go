@@ -40,4 +40,7 @@ public function main() returns error? {
 
     string pbkdf2Sha512 = check crypto:hashPbkdf2(password, 10000, crypto:SHA512);
     io:println(check crypto:verifyPbkdf2(password, pbkdf2Sha512));  // @output true
+
+    string pbkdf2Sha1 = check crypto:hashPbkdf2(password, 10000, crypto:SHA1);
+    io:println(check crypto:verifyPbkdf2(password, pbkdf2Sha1));    // @output true
 }

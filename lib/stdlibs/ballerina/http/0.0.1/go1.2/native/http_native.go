@@ -152,13 +152,6 @@ type responseBodyHolder struct {
 	readErr error // set if the stream returned an error during materialization
 }
 
-func newResponseBodyHolder(stream io.ReadCloser) *responseBodyHolder {
-	if stream == nil {
-		return &responseBodyHolder{buf: []byte{}}
-	}
-	return &responseBodyHolder{stream: stream}
-}
-
 func (h *responseBodyHolder) materialize() ([]byte, error) {
 	h.once.Do(func() {
 		if h.stream != nil {

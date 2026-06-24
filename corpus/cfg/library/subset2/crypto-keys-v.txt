@@ -190,6 +190,24 @@
               (simple-var-ref rsaPk))))
           (simple-var-ref data)))))
     (var-def
+      (variable oaepMd5 (type
+        (array-type
+          (value-type byte) dimensions: 1 ([]))) (expr
+        (checked-expr
+          (invocation crypto encryptRsaEcb (
+            (simple-var-ref data)
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPwithMD5andMGF1)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (checked-expr
+            (invocation crypto decryptRsaEcb (
+              (simple-var-ref oaepMd5)
+              (simple-var-ref rsaPk)
+              (simple-var-ref crypto OAEPwithMD5andMGF1))))
+          (simple-var-ref data)))))
+    (var-def
       (variable oaep1 (type
         (array-type
           (value-type byte) dimensions: 1 ([]))) (expr
@@ -224,6 +242,42 @@
               (simple-var-ref oaep256)
               (simple-var-ref rsaPk)
               (simple-var-ref crypto OAEPWithSHA256AndMGF1))))
+          (simple-var-ref data)))))
+    (var-def
+      (variable oaep384 (type
+        (array-type
+          (value-type byte) dimensions: 1 ([]))) (expr
+        (checked-expr
+          (invocation crypto encryptRsaEcb (
+            (simple-var-ref data)
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPwithSHA384andMGF1)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (checked-expr
+            (invocation crypto decryptRsaEcb (
+              (simple-var-ref oaep384)
+              (simple-var-ref rsaPk)
+              (simple-var-ref crypto OAEPwithSHA384andMGF1))))
+          (simple-var-ref data)))))
+    (var-def
+      (variable oaep512 (type
+        (array-type
+          (value-type byte) dimensions: 1 ([]))) (expr
+        (checked-expr
+          (invocation crypto encryptRsaEcb (
+            (simple-var-ref data)
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPwithSHA512andMGF1)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (checked-expr
+            (invocation crypto decryptRsaEcb (
+              (simple-var-ref oaep512)
+              (simple-var-ref rsaPk)
+              (simple-var-ref crypto OAEPwithSHA512andMGF1))))
           (simple-var-ref data)))))
     (var-def
       (variable ecPk (type

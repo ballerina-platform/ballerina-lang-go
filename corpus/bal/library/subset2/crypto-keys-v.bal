@@ -123,11 +123,17 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
     byte[] ct = check crypto:encryptRsaEcb(data, rsaPub);
     io:println(check crypto:decryptRsaEcb(ct, rsaPk) == data); // @output true
 
-    // --- RSA OAEP padding variants ---
+    // --- RSA OAEP padding variants (each MGF1 hash) ---
+    byte[] oaepMd5 = check crypto:encryptRsaEcb(data, rsaPub, crypto:OAEPwithMD5andMGF1);
+    io:println(check crypto:decryptRsaEcb(oaepMd5, rsaPk, crypto:OAEPwithMD5andMGF1) == data); // @output true
     byte[] oaep1 = check crypto:encryptRsaEcb(data, rsaPub, crypto:OAEPWithSHA1AndMGF1);
     io:println(check crypto:decryptRsaEcb(oaep1, rsaPk, crypto:OAEPWithSHA1AndMGF1) == data); // @output true
     byte[] oaep256 = check crypto:encryptRsaEcb(data, rsaPub, crypto:OAEPWithSHA256AndMGF1);
     io:println(check crypto:decryptRsaEcb(oaep256, rsaPk, crypto:OAEPWithSHA256AndMGF1) == data); // @output true
+    byte[] oaep384 = check crypto:encryptRsaEcb(data, rsaPub, crypto:OAEPwithSHA384andMGF1);
+    io:println(check crypto:decryptRsaEcb(oaep384, rsaPk, crypto:OAEPwithSHA384andMGF1) == data); // @output true
+    byte[] oaep512 = check crypto:encryptRsaEcb(data, rsaPub, crypto:OAEPwithSHA512andMGF1);
+    io:println(check crypto:decryptRsaEcb(oaep512, rsaPk, crypto:OAEPwithSHA512andMGF1) == data); // @output true
 
     // --- EC key/cert decoding + ECDSA sign/verify ---
     crypto:PrivateKey ecPk = check crypto:decodeEcPrivateKeyFromKeyFile("/tmp/bal_ec_key.pem");

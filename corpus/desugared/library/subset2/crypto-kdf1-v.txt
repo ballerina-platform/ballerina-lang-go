@@ -142,4 +142,14 @@
         (invocation io println (
           (invocation crypto equalConstantTime (
             (simple-var-ref d1)
-            (simple-var-ref other)))))))))
+            (simple-var-ref other))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation crypto equalConstantTime (
+            (literal abc123)
+            (literal abc123))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation crypto equalConstantTime (
+            (literal abc123)
+            (literal def456)))))))))

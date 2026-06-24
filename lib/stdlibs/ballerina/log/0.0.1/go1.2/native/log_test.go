@@ -26,6 +26,13 @@ import (
 	"ballerina-lang-go/values"
 )
 
+// The log module writes its records to stderr. A corpus -v.bal test cannot
+// validate that: the integration harness fatals on any -v test that produces
+// non-empty stderr, and there is no corpus category for "valid program that
+// writes to stderr". So the level filter, the LOGFMT formatter, and the emit
+// path are unit-tested here against a capturing test PAL — they have no corpus
+// equivalent.
+
 func TestIsLevelEnabled(t *testing.T) {
 	t.Parallel()
 	if isLevelEnabled("DEBUG") {

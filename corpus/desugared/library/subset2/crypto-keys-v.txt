@@ -512,7 +512,7 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (invocation crypto encryptRsaEcb (
             (simple-var-ref data)
             (simple-var-ref rsaPub)
-            (simple-var-ref crypto OAEPWithSHA1AndMGF1))))))
+            (simple-var-ref crypto OAEPwithMD5andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$41))
@@ -520,16 +520,16 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (return
             (simple-var-ref $desugar$41))) ())
       (var-def
-        (variable oaep1 (type
+        (variable oaepMd5 (type
           (array-type
             (value-type byte) dimensions: 1 ([]))) (expr
           (simple-var-ref $desugar$41))))
       (var-def
         (variable $desugar$42 (expr
           (invocation crypto decryptRsaEcb (
-            (simple-var-ref oaep1)
+            (simple-var-ref oaepMd5)
             (simple-var-ref rsaPk)
-            (simple-var-ref crypto OAEPWithSHA1AndMGF1))))))
+            (simple-var-ref crypto OAEPwithMD5andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$42))
@@ -546,7 +546,7 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (invocation crypto encryptRsaEcb (
             (simple-var-ref data)
             (simple-var-ref rsaPub)
-            (simple-var-ref crypto OAEPWithSHA256AndMGF1))))))
+            (simple-var-ref crypto OAEPWithSHA1AndMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$43))
@@ -554,16 +554,16 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (return
             (simple-var-ref $desugar$43))) ())
       (var-def
-        (variable oaep256 (type
+        (variable oaep1 (type
           (array-type
             (value-type byte) dimensions: 1 ([]))) (expr
           (simple-var-ref $desugar$43))))
       (var-def
         (variable $desugar$44 (expr
           (invocation crypto decryptRsaEcb (
-            (simple-var-ref oaep256)
+            (simple-var-ref oaep1)
             (simple-var-ref rsaPk)
-            (simple-var-ref crypto OAEPWithSHA256AndMGF1))))))
+            (simple-var-ref crypto OAEPWithSHA1AndMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$44))
@@ -577,16 +577,44 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
             (simple-var-ref data)))))
       (var-def
         (variable $desugar$45 (expr
-          (literal /tmp/bal_ec_key.pem))))
+          (invocation crypto encryptRsaEcb (
+            (simple-var-ref data)
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPWithSHA256AndMGF1))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$45))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$45))) ())
+      (var-def
+        (variable oaep256 (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$45))))
       (var-def
         (variable $desugar$46 (expr
-          (invocation $default$2 (
-            (simple-var-ref $desugar$45))))))
+          (invocation crypto decryptRsaEcb (
+            (simple-var-ref oaep256)
+            (simple-var-ref rsaPk)
+            (simple-var-ref crypto OAEPWithSHA256AndMGF1))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$46))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$46))) ())
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$46)
+            (simple-var-ref data)))))
       (var-def
         (variable $desugar$47 (expr
-          (invocation crypto decodeEcPrivateKeyFromKeyFile (
-            (simple-var-ref $desugar$45)
-            (simple-var-ref $desugar$46))))))
+          (invocation crypto encryptRsaEcb (
+            (simple-var-ref data)
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPwithSHA384andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$47))
@@ -594,28 +622,33 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (return
             (simple-var-ref $desugar$47))) ())
       (var-def
-        (variable ecPk (type
-          (user-defined-type crypto PrivateKey)) (expr
+        (variable oaep384 (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
           (simple-var-ref $desugar$47))))
       (var-def
         (variable $desugar$48 (expr
-          (invocation crypto decodeEcPublicKeyFromCertFile (
-            (literal /tmp/bal_ec_cert.pem))))))
+          (invocation crypto decryptRsaEcb (
+            (simple-var-ref oaep384)
+            (simple-var-ref rsaPk)
+            (simple-var-ref crypto OAEPwithSHA384andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$48))
         (block-stmt
           (return
             (simple-var-ref $desugar$48))) ())
-      (var-def
-        (variable ecPub (type
-          (user-defined-type crypto PublicKey)) (expr
-          (simple-var-ref $desugar$48))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$48)
+            (simple-var-ref data)))))
       (var-def
         (variable $desugar$49 (expr
-          (invocation crypto signSha256withEcdsa (
+          (invocation crypto encryptRsaEcb (
             (simple-var-ref data)
-            (simple-var-ref ecPk))))))
+            (simple-var-ref rsaPub)
+            (simple-var-ref crypto OAEPwithSHA512andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$49))
@@ -623,16 +656,16 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
           (return
             (simple-var-ref $desugar$49))) ())
       (var-def
-        (variable e256 (type
+        (variable oaep512 (type
           (array-type
             (value-type byte) dimensions: 1 ([]))) (expr
           (simple-var-ref $desugar$49))))
       (var-def
         (variable $desugar$50 (expr
-          (invocation crypto verifySha256withEcdsaSignature (
-            (simple-var-ref data)
-            (simple-var-ref e256)
-            (simple-var-ref ecPub))))))
+          (invocation crypto decryptRsaEcb (
+            (simple-var-ref oaep512)
+            (simple-var-ref rsaPk)
+            (simple-var-ref crypto OAEPwithSHA512andMGF1))))))
       (if
         (type-test-expr is
           (simple-var-ref $desugar$50))
@@ -641,35 +674,104 @@ j8SfkAvXrHcCIDBDbfZxrJtPWany9a7fCZBKyWG8nNy2HkzSxYeJ2GHh
             (simple-var-ref $desugar$50))) ())
       (expression-stmt
         (invocation io println (
-          (simple-var-ref $desugar$50))))
+          (binary-expr ==
+            (simple-var-ref $desugar$50)
+            (simple-var-ref data)))))
       (var-def
         (variable $desugar$51 (expr
+          (literal /tmp/bal_ec_key.pem))))
+      (var-def
+        (variable $desugar$52 (expr
+          (invocation $default$2 (
+            (simple-var-ref $desugar$51))))))
+      (var-def
+        (variable $desugar$53 (expr
+          (invocation crypto decodeEcPrivateKeyFromKeyFile (
+            (simple-var-ref $desugar$51)
+            (simple-var-ref $desugar$52))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$53))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$53))) ())
+      (var-def
+        (variable ecPk (type
+          (user-defined-type crypto PrivateKey)) (expr
+          (simple-var-ref $desugar$53))))
+      (var-def
+        (variable $desugar$54 (expr
+          (invocation crypto decodeEcPublicKeyFromCertFile (
+            (literal /tmp/bal_ec_cert.pem))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$54))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$54))) ())
+      (var-def
+        (variable ecPub (type
+          (user-defined-type crypto PublicKey)) (expr
+          (simple-var-ref $desugar$54))))
+      (var-def
+        (variable $desugar$55 (expr
+          (invocation crypto signSha256withEcdsa (
+            (simple-var-ref data)
+            (simple-var-ref ecPk))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$55))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$55))) ())
+      (var-def
+        (variable e256 (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$55))))
+      (var-def
+        (variable $desugar$56 (expr
+          (invocation crypto verifySha256withEcdsaSignature (
+            (simple-var-ref data)
+            (simple-var-ref e256)
+            (simple-var-ref ecPub))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$56))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$56))) ())
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref $desugar$56))))
+      (var-def
+        (variable $desugar$57 (expr
           (invocation crypto signSha384withEcdsa (
             (simple-var-ref data)
             (simple-var-ref ecPk))))))
       (if
         (type-test-expr is
-          (simple-var-ref $desugar$51))
+          (simple-var-ref $desugar$57))
         (block-stmt
           (return
-            (simple-var-ref $desugar$51))) ())
+            (simple-var-ref $desugar$57))) ())
       (var-def
         (variable e384 (type
           (array-type
             (value-type byte) dimensions: 1 ([]))) (expr
-          (simple-var-ref $desugar$51))))
+          (simple-var-ref $desugar$57))))
       (var-def
-        (variable $desugar$52 (expr
+        (variable $desugar$58 (expr
           (invocation crypto verifySha384withEcdsaSignature (
             (simple-var-ref data)
             (simple-var-ref e384)
             (simple-var-ref ecPub))))))
       (if
         (type-test-expr is
-          (simple-var-ref $desugar$52))
+          (simple-var-ref $desugar$58))
         (block-stmt
           (return
-            (simple-var-ref $desugar$52))) ())
+            (simple-var-ref $desugar$58))) ())
       (expression-stmt
         (invocation io println (
-          (simple-var-ref $desugar$52)))))))
+          (simple-var-ref $desugar$58)))))))

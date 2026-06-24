@@ -135,6 +135,24 @@ main() -> nil|error{
     %68 = println(%67) -> bb23;
   }
   bb23 {
+    %69 = ConstantLoad abc123
+    %70 = ConstantLoad abc123
+    %71 = equalConstantTime(%69,%70) -> bb24;
+  }
+  bb24 {
+    %72 = %71;
+    %73 = println(%72) -> bb25;
+  }
+  bb25 {
+    %74 = ConstantLoad abc123
+    %75 = ConstantLoad def456
+    %76 = equalConstantTime(%74,%75) -> bb26;
+  }
+  bb26 {
+    %77 = %76;
+    %78 = println(%77) -> bb27;
+  }
+  bb27 {
     return;
   }
 }

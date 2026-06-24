@@ -39,7 +39,25 @@ func registerKeyFunctions(rt *runtime.Runtime, types cryptoTypes) {
 			ks, _ := args[0].(*values.Map)
 			alias, _ := args[1].(string)
 			keyPwd, _ := args[2].(string)
-			return decodeKeyStoreKeyFromPath(rt, types, ctx, ks, alias, keyPwd, "RSA"), nil
+			path := mapString(ks, "path")
+			ksPwd := mapString(ks, "password")
+			data, err := rt.Platform().FS.ReadFile(path)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path)), nil
+			}
+			key, _, err := pkcs12.Decode(data, ksPwd)
+			if err != nil {
+				// Try with key password if store password failed
+				key, _, err = pkcs12.Decode(data, keyPwd)
+				if err != nil {
+					return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias)), nil
+				}
+			}
+			rsaKey, ok := key.(*rsa.PrivateKey)
+			if !ok {
+				return cryptoError("Not a valid RSA key"), nil
+			}
+			return buildPrivateKeyMap(types, ctx, rsaKey, "RSA"), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPrivateKeyFromKeyStore",
@@ -47,7 +65,24 @@ func registerKeyFunctions(rt *runtime.Runtime, types cryptoTypes) {
 			ks, _ := args[0].(*values.Map)
 			alias, _ := args[1].(string)
 			keyPwd, _ := args[2].(string)
-			return decodeKeyStoreKeyFromPath(rt, types, ctx, ks, alias, keyPwd, "EC"), nil
+			path := mapString(ks, "path")
+			ksPwd := mapString(ks, "password")
+			data, err := rt.Platform().FS.ReadFile(path)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path)), nil
+			}
+			key, _, err := pkcs12.Decode(data, ksPwd)
+			if err != nil {
+				key, _, err = pkcs12.Decode(data, keyPwd)
+				if err != nil {
+					return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias)), nil
+				}
+			}
+			ecKey, ok := key.(*ecdsa.PrivateKey)
+			if !ok {
+				return cryptoError("Not a valid EC key"), nil
+			}
+			return buildPrivateKeyMap(types, ctx, ecKey, "RSA"), nil // algorithm reported as RSA for EC in jBallerina
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPrivateKeyFromKeyFile",
@@ -116,14 +151,42 @@ func registerKeyFunctions(rt *runtime.Runtime, types cryptoTypes) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			ts, _ := args[0].(*values.Map)
 			alias, _ := args[1].(string)
-			return decodeTrustStoreKeyFromPath(rt, types, ctx, ts, alias, "RSA"), nil
+			path := mapString(ts, "path")
+			tsPwd := mapString(ts, "password")
+			data, err := rt.Platform().FS.ReadFile(path)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path)), nil
+			}
+			cert, err := decodeCertFromTrustStore(data, tsPwd, alias)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias)), nil
+			}
+			rsaPub, ok := cert.PublicKey.(*rsa.PublicKey)
+			if !ok {
+				return cryptoError("Not a valid RSA key"), nil
+			}
+			return buildPublicKeyMap(types, ctx, rsaPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeEcPublicKeyFromTrustStore",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			ts, _ := args[0].(*values.Map)
 			alias, _ := args[1].(string)
-			return decodeTrustStoreKeyFromPath(rt, types, ctx, ts, alias, "EC"), nil
+			path := mapString(ts, "path")
+			tsPwd := mapString(ts, "password")
+			data, err := rt.Platform().FS.ReadFile(path)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path)), nil
+			}
+			cert, err := decodeCertFromTrustStore(data, tsPwd, alias)
+			if err != nil {
+				return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias)), nil
+			}
+			ecPub, ok := cert.PublicKey.(*ecdsa.PublicKey)
+			if !ok {
+				return cryptoError("Not a valid EC key"), nil
+			}
+			return buildPublicKeyMap(types, ctx, ecPub, "RSA", cert), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "decodeRsaPublicKeyFromCertFile",
@@ -188,78 +251,6 @@ func registerKeyFunctions(rt *runtime.Runtime, types cryptoTypes) {
 			pub := &rsa.PublicKey{N: modBytes, E: int(expBytes.Int64())}
 			return buildPublicKeyMap(types, ctx, pub, "RSA", nil), nil
 		})
-}
-
-// decodeKeyStoreKeyFromPath reads a PKCS#12 keystore from the path in ks and
-// recovers the private key. Carries the keystore extern-closure body so the
-// full read-and-dispatch path is unit-testable with a PAL that serves a fixture.
-func decodeKeyStoreKeyFromPath(rt *runtime.Runtime, types cryptoTypes, ctx *extern.Context, ks *values.Map, alias, keyPwd, algorithm string) values.BalValue {
-	path := mapString(ks, "path")
-	ksPwd := mapString(ks, "password")
-	data, err := rt.Platform().FS.ReadFile(path)
-	if err != nil {
-		return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path))
-	}
-	return decodeKeyStorePrivateKey(types, ctx, data, ksPwd, keyPwd, alias, algorithm)
-}
-
-// decodeTrustStoreKeyFromPath reads a PKCS#12 trust store from the path in ts
-// and recovers the public key for alias.
-func decodeTrustStoreKeyFromPath(rt *runtime.Runtime, types cryptoTypes, ctx *extern.Context, ts *values.Map, alias, algorithm string) values.BalValue {
-	path := mapString(ts, "path")
-	tsPwd := mapString(ts, "password")
-	data, err := rt.Platform().FS.ReadFile(path)
-	if err != nil {
-		return cryptoError(fmt.Sprintf("PKCS12 KeyStore not found at: %s", path))
-	}
-	return decodeTrustStorePublicKey(types, ctx, data, alias, tsPwd, algorithm)
-}
-
-// decodeKeyStorePrivateKey recovers a private key from PKCS#12 keystore bytes,
-// trying the store password and then the key password. Extracted from the
-// extern closures so the keystore path is unit-testable without a PAL file.
-func decodeKeyStorePrivateKey(types cryptoTypes, ctx *extern.Context, data []byte, ksPwd, keyPwd, alias, algorithm string) values.BalValue {
-	key, _, err := pkcs12.Decode(data, ksPwd)
-	if err != nil {
-		key, _, err = pkcs12.Decode(data, keyPwd)
-		if err != nil {
-			return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias))
-		}
-	}
-	if algorithm == "RSA" {
-		rsaKey, ok := key.(*rsa.PrivateKey)
-		if !ok {
-			return cryptoError("Not a valid RSA key")
-		}
-		return buildPrivateKeyMap(types, ctx, rsaKey, "RSA")
-	}
-	ecKey, ok := key.(*ecdsa.PrivateKey)
-	if !ok {
-		return cryptoError("Not a valid EC key")
-	}
-	return buildPrivateKeyMap(types, ctx, ecKey, "RSA")
-}
-
-// decodeTrustStorePublicKey extracts the certificate for alias from PKCS#12
-// trust-store bytes and returns its public key. Extracted from the extern
-// closures so the trust-store path is unit-testable without a PAL file.
-func decodeTrustStorePublicKey(types cryptoTypes, ctx *extern.Context, data []byte, alias, pwd, algorithm string) values.BalValue {
-	cert, err := decodeCertFromTrustStore(data, pwd, alias)
-	if err != nil {
-		return cryptoError(fmt.Sprintf("Key cannot be recovered by using given key alias: %s", alias))
-	}
-	if algorithm == "RSA" {
-		rsaPub, ok := cert.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return cryptoError("Not a valid RSA key")
-		}
-		return buildPublicKeyMap(types, ctx, rsaPub, "RSA", cert)
-	}
-	ecPub, ok := cert.PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return cryptoError("Not a valid EC key")
-	}
-	return buildPublicKeyMap(types, ctx, ecPub, "RSA", cert)
 }
 
 // parsePrivateKeyPEM parses a PEM-encoded private key (PKCS8, PKCS8-encrypted, PKCS1, EC).
