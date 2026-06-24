@@ -107,11 +107,13 @@ Failing to update `TestPal` causes nil-pointer dereferences in corpus tests even
 
 Add corpus tests under the existing `corpus/bal/subset8/<NN>-<name>/` directory for this stdlib. If no directory exists for this stdlib yet, pick the next free `<NN>` prefix. Suffixes per `AGENTS.md`: `*-v.bal` (valid), `*-e.bal` (compile errors), `*-p.bal` (panics). No leading zeros in numeric parts.
 
+Cover the new behaviour from `.bal` — a corpus test exercises the full compiler → BIR → interpreter pipeline and is measured by the native-coverage harness (`-coverpkg=./lib/stdlibs/...` over `./corpus/...`). Add a Go unit test only for branches genuinely unreachable from Ballerina (defensive type/arity guards, nil guards, interface-contract paths), kept minimal with a comment explaining why. Don't write wrong-type extern arg guards — the type checker rejects wrong types at compile time. See the **`manage-corpus-tests`** "Test philosophy" section. If you find existing native code that can never execute through Ballerina, remove it rather than testing it.
+
 Regenerate goldens via the **`update-corpus-tests`** skill:
 ```shell
 go test ./corpus --update
 ```
-Review `git diff corpus/` before committing.
+Review `git diff corpus/` before committing, and revert any unrelated golden drift `--update` introduces (some stages have non-deterministic ordering).
 
 ### Documentation
 

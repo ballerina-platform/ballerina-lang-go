@@ -275,13 +275,15 @@ func init() {
 
 Add corpus tests under `corpus/bal/subset8/<NN>-<name>/`, where `<NN>` is the next free 2-digit prefix in that directory. Targeting **≥80% coverage** of the new Go code under `native/`.
 
+**Drive coverage from `.bal`, not Go unit tests.** The coverage harness runs `./corpus/...` under `-coverpkg=./lib/stdlibs/...`, so a corpus test that calls your extern functions exercises and measures the native Go through the full compiler → BIR → interpreter pipeline. Reach for a Go unit test (`native/<name>_test.go`) **only** for branches genuinely unreachable from Ballerina — defensive type/arity guards, nil guards, interface-contract paths — and keep them minimal with a comment stating why they cannot be hit from `.bal`. Do not add a wrong-type extern arg guard at all (the type checker rejects wrong types at compile time; use `x, _ := args[i].(T)`). See the **`manage-corpus-tests`** skill's "Test philosophy" section.
+
 - Suffixes per `AGENTS.md`: `*-v.bal` (valid, end-to-end with `@output` markers), `*-e.bal` (compile-time errors, `@error` markers), `*-p.bal` (runtime panics, `@panic` markers), `*-f{v|e|p}.bal` (future, scope-deferred).
 - Name files **without leading zeros** in numeric parts (e.g. `print1-v.bal`, not `print01-v.bal`).
 - Hand off golden-file regeneration to the **`update-corpus-tests`** skill:
   ```shell
   go test ./corpus --update
   ```
-  Then review `git diff corpus/` before committing.
+  Then review `git diff corpus/` before committing (and revert any unrelated golden drift `--update` introduces — see `manage-corpus-tests`).
 
 ## 9. README
 
