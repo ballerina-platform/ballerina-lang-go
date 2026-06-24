@@ -1,6 +1,4 @@
 module $anon.. v 0.0.0;
-import ballerina.io v 0.0.0;
-import ballerina.io v 0.0.0;
 main() -> nil|error{
   bb0 {
     %1 = ConstantLoad 2021-04-12T23:20:50.520+05:30[Asia/Colombo]
