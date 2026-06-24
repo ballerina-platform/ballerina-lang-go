@@ -23,7 +23,6 @@ import (
 	"io"
 	"strings"
 
-	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
@@ -63,69 +62,6 @@ func toByteSlice(list *values.List) ([]byte, bool) {
 		b[i] = byte(n)
 	}
 	return b, true
-}
-
-func balValueToGoJSON(v values.BalValue) any {
-	switch t := v.(type) {
-	case nil:
-		return nil
-	case bool:
-		return t
-	case int64:
-		return t
-	case float64:
-		return t
-	case *decimal.Decimal:
-		return json.RawMessage(t.String())
-	case string:
-		return t
-	case *values.Map:
-		m := make(map[string]any, t.Len())
-		for _, k := range t.Keys() {
-			val, _ := t.Get(k)
-			m[k] = balValueToGoJSON(val)
-		}
-		return m
-	case *values.List:
-		s := make([]any, t.Len())
-		for i := range t.Len() {
-			s[i] = balValueToGoJSON(t.Get(i))
-		}
-		return s
-	default:
-		return nil
-	}
-}
-
-func goJSONToBalValue(tc semtypes.Context, v any, jsonListTy, jsonMapTy semtypes.SemType) values.BalValue {
-	switch v := v.(type) {
-	case nil:
-		return nil
-	case bool:
-		return v
-	case json.Number:
-		if i, err := v.Int64(); err == nil {
-			return i
-		}
-		f, _ := v.Float64()
-		return f
-	case string:
-		return v
-	case []any:
-		items := make([]values.BalValue, len(v))
-		for i, elem := range v {
-			items[i] = goJSONToBalValue(tc, elem, jsonListTy, jsonMapTy)
-		}
-		return values.NewList(jsonListTy, semtypes.ToListAtomicType(tc, jsonListTy), false, nil, 0, items)
-	case map[string]any:
-		m := values.NewMap(jsonMapTy, semtypes.ToMappingAtomicType(tc, jsonMapTy), false, nil)
-		for k, val := range v {
-			m.Put(tc, k, goJSONToBalValue(tc, val, jsonListTy, jsonMapTy))
-		}
-		return m
-	default:
-		return nil
-	}
 }
 
 func initFileIOModule(rt *runtime.Runtime) {
@@ -209,7 +145,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 				}
 				return fileIOError(fmt.Sprintf("error reading trailing content in file '%s': %s", path, err.Error())), nil
 			}
-			return goJSONToBalValue(ctx.TypeCtx, raw, types.jsonListTy, types.jsonMapTy), nil
+			return values.GoToBalValue(ctx.TypeCtx, raw, types.jsonListTy, types.jsonMapTy), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileWriteString",
@@ -278,7 +214,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileWriteJson",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			path, _ := args[0].(string)
-			data, err := json.Marshal(balValueToGoJSON(args[1]))
+			data, err := json.Marshal(values.BalToGoJSON(args[1]))
 			if err != nil {
 				return fileIOError(fmt.Sprintf("error while serializing JSON for file '%s': %s", path, err.Error())), nil
 			}
@@ -296,7 +232,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 			if err != nil {
 				return fileIOError(fmt.Sprintf("error while reading file '%s': %s", path, err.Error())), nil
 			}
-			xmlVal, parseErr := parseXMLFromBytes(data, types.stringMapTy, types.stringMapAtomicTy)
+			xmlVal, parseErr := values.ParseXMLFromBytes(data, types.stringMapTy, types.stringMapAtomicTy)
 			if parseErr != nil {
 				return fileIOError(fmt.Sprintf("error while parsing XML from file '%s': %s", path, parseErr.Error())), nil
 			}

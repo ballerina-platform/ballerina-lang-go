@@ -1056,7 +1056,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err := dec.Decode(&v); err != nil {
 				return values.NewErrorWithMessage("failed to parse JSON payload: " + err.Error()), nil
 			}
-			return goToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
+			return values.GoToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.getBinaryPayload",
@@ -1186,7 +1186,7 @@ func initHttpModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			b, _ := json.Marshal(balToGoJSON(args[1]))
+			b, _ := json.Marshal(values.BalToGoJSON(args[1]))
 			self.Put("$body", &requestBodyHolder{buf: b})
 			ct := "application/json"
 			if len(args) > 2 {
@@ -1370,7 +1370,7 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err := dec.Decode(&v); err != nil {
 				return values.NewErrorWithMessage("getJsonPayload: " + err.Error()), nil
 			}
-			return goToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
+			return values.GoToBalValue(ctx.TypeCtx, v, types.jsonListTy, types.jsonMapTy), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.getBinaryPayload",
@@ -1716,72 +1716,7 @@ func listToBytes(list *values.List) ([]byte, bool) {
 	return b, true
 }
 
-// balToGoJSON converts a Ballerina value to a Go value suitable for json.Marshal.
-func balToGoJSON(v values.BalValue) any {
-	switch t := v.(type) {
-	case nil:
-		return nil
-	case bool:
-		return t
-	case int64:
-		return t
-	case float64:
-		return t
-	case *decimal.Decimal:
-		return json.RawMessage(t.String())
-	case string:
-		return t
-	case *values.Map:
-		m := make(map[string]any, t.Len())
-		for _, k := range t.Keys() {
-			val, _ := t.Get(k)
-			m[k] = balToGoJSON(val)
-		}
-		return m
-	case *values.List:
-		s := make([]any, t.Len())
-		for i := range t.Len() {
-			s[i] = balToGoJSON(t.Get(i))
-		}
-		return s
-	default:
-		return nil
-	}
-}
-
 // toJSONBytes serializes a Ballerina value to JSON bytes.
 func toJSONBytes(v values.BalValue) ([]byte, error) {
-	return json.Marshal(balToGoJSON(v))
-}
-
-// goToBalValue converts a Go value (from json.Decoder with UseNumber) to a Ballerina BalValue.
-func goToBalValue(tc semtypes.Context, v interface{}, jsonListTy, jsonMapTy semtypes.SemType) values.BalValue {
-	switch v := v.(type) {
-	case nil:
-		return nil
-	case bool:
-		return v
-	case json.Number:
-		if i, err := v.Int64(); err == nil {
-			return i
-		}
-		f, _ := v.Float64()
-		return f
-	case string:
-		return v
-	case []interface{}:
-		items := make([]values.BalValue, len(v))
-		for i, elem := range v {
-			items[i] = goToBalValue(tc, elem, jsonListTy, jsonMapTy)
-		}
-		return newTypedListValue(tc, jsonListTy, items)
-	case map[string]interface{}:
-		m := values.NewMap(jsonMapTy, semtypes.ToMappingAtomicType(tc, jsonMapTy), false, nil)
-		for k, val := range v {
-			m.Put(tc, k, goToBalValue(tc, val, jsonListTy, jsonMapTy))
-		}
-		return m
-	default:
-		return nil
-	}
+	return json.Marshal(values.BalToGoJSON(v))
 }

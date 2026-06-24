@@ -19,12 +19,15 @@ import ballerina/io;
 
 public function main() returns error? {
     http:Client c = check new http:Client("http://testserver", {});
-    http:Request req = new;
-    req.method = "POST";
-    req.setTextPayload("hello body");
-    req.setHeader("X-Forwarded-From", "test");
-    http:Response r = check c->forward("/echo", req);
-    io:println(r.statusCode);         // @output 200
-    io:println(r.getTextPayload());   // @output forwarded ok
+
+    // gzip-encoded response -> decompressResponseBody wraps the body in a
+    // gzipReadCloser and strips the Content-Encoding header before the payload
+    // is read transparently as text.
+    http:Response gz = check c->get("/gzip");
+    io:println(gz.getTextPayload()); // @output hello gzipped world
+
+    // deflate-encoded response -> decompressResponseBody + deflateReadCloser.
+    http:Response df = check c->get("/deflate");
+    io:println(df.getTextPayload()); // @output hello deflated world
     return;
 }

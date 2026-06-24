@@ -19,12 +19,20 @@ import ballerina/io;
 
 public function main() returns error? {
     http:Client c = check new http:Client("http://testserver", {});
-    http:Request req = new;
-    req.method = "POST";
-    req.setTextPayload("hello body");
-    req.setHeader("X-Forwarded-From", "test");
-    http:Response r = check c->forward("/echo", req);
-    io:println(r.statusCode);         // @output 200
-    io:println(r.getTextPayload());   // @output forwarded ok
+
+    // POST a byte[] body -> exercises listToBytes converting the Ballerina list
+    // to raw octets. The server echoes the bytes back.
+    byte[] payload = [72, 101, 108, 108, 111]; // "Hello"
+    http:Response r = check c->post("/echo-bytes", payload);
+    byte[] echoed = check r.getBinaryPayload();
+    io:println(echoed.length()); // @output 5
+    io:println(echoed[0]);       // @output 72
+    io:println(echoed[4]);       // @output 111
+
+    // GET a raw octet-stream response -> getBinaryPayload over a binary body.
+    http:Response r2 = check c->get("/bytes");
+    byte[] b = check r2.getBinaryPayload();
+    io:println(b.length()); // @output 4
+    io:println(b[0]);       // @output 1
     return;
 }

@@ -111,38 +111,6 @@ func encodeBytes(raw []byte) string {
 	return buf.String()
 }
 
-// percentDecodeToBytes decodes a percent-encoded string to raw bytes.
-// Treats '+' as space. Incomplete '%' sequences (lone '%' or '%X') are passed
-// through as literal bytes rather than returning an error.
-func percentDecodeToBytes(s string) ([]byte, error) {
-	buf := make([]byte, 0, len(s))
-	for i := 0; i < len(s); {
-		switch s[i] {
-		case '+':
-			buf = append(buf, ' ')
-			i++
-		case '%':
-			if i+2 >= len(s) {
-				// Not enough chars for a full %XX sequence: pass through as literal.
-				buf = append(buf, s[i])
-				i++
-				continue
-			}
-			hi, ok1 := fromHex(s[i+1])
-			lo, ok2 := fromHex(s[i+2])
-			if !ok1 || !ok2 {
-				return nil, fmt.Errorf("invalid percent-encoding at position %d", i)
-			}
-			buf = append(buf, byte(hi<<4|lo))
-			i += 3
-		default:
-			buf = append(buf, s[i])
-			i++
-		}
-	}
-	return buf, nil
-}
-
 func fromHex(c byte) (byte, bool) {
 	switch {
 	case c >= '0' && c <= '9':
@@ -239,14 +207,8 @@ func decodeWithCharset(s string, enc encoding.Encoding) (string, error) {
 // bytes, then those bytes are percent-encoded.
 func encodeExtern() extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		value, ok := args[0].(string)
-		if !ok {
-			return values.NewErrorWithMessage("Error occurred while encoding. invalid string argument"), nil
-		}
-		charset, ok := args[1].(string)
-		if !ok {
-			return values.NewErrorWithMessage("Error occurred while encoding. invalid charset argument"), nil
-		}
+		value, _ := args[0].(string)
+		charset, _ := args[1].(string)
 		enc := resolveEncoding(charset)
 		if enc == nil {
 			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while encoding. %s", charset)), nil
@@ -271,14 +233,8 @@ func encodeExtern() extern.NativeFunc {
 // charset decoder; literal (un-encoded) characters are preserved as-is.
 func decodeExtern() extern.NativeFunc {
 	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		value, ok := args[0].(string)
-		if !ok {
-			return values.NewErrorWithMessage("Error occurred while decoding. invalid string argument"), nil
-		}
-		charset, ok := args[1].(string)
-		if !ok {
-			return values.NewErrorWithMessage("Error occurred while decoding. invalid charset argument"), nil
-		}
+		value, _ := args[0].(string)
+		charset, _ := args[1].(string)
 		enc := resolveEncoding(charset)
 		if enc == nil {
 			return values.NewErrorWithMessage(fmt.Sprintf("Error occurred while decoding. %s", charset)), nil
