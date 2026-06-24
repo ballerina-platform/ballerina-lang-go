@@ -84,7 +84,8 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		return result
 	}
 	prefix := identifierPrefixAtOffset(source.Content, offset)
-	completionCtx := completionContextFromNodeChain(offset, prefix, nodeChainAtOffset(cu, offset))
+	chain := nodeChainAtOffset(cu, offset)
+	completionCtx := completionContextFromNodeChain(offset, prefix, chain)
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind == completionKindMemberAccess {
 		result.Items = s.memberAccessCompletionItems(snapshot, module, source, cu, completionCtx, offset)
@@ -92,7 +93,7 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		return result
 	}
 	if completionCtx.kind != completionKindImportedSymbol {
-		result.Items = s.generalCompletionItems(snapshot, module, source, cu, completionCtx, offset)
+		result.Items = s.generalCompletionItems(snapshot, module, source, cu, chain, completionCtx, offset)
 		if len(result.Items) == 0 {
 			logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=unsupported-context", snapshot.ID, module.Name)
 		} else {
@@ -208,7 +209,7 @@ func recoveringCompilationUnit(cx *context.CompilerContext, module *Module, sour
 	return compilationUnit
 }
 
-func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, completionCtx completionContext, offset int) []protocol.CompletionItem {
+func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, source SourceFile, recoveredCU *ast.BLangCompilationUnit, chain []ast.BLangNode, completionCtx completionContext, offset int) []protocol.CompletionItem {
 	itemsByLabel := make(map[string]protocol.CompletionItem)
 	labels := make([]string, 0)
 	addItem := func(item protocol.CompletionItem) {
@@ -252,27 +253,27 @@ func (s *Server) generalCompletionItems(snapshot *Snapshot, module *Module, sour
 		cu = recoveredCU
 	}
 	if completionCtx.kind == completionKindModuleVarDecl {
-		for _, item := range moduleVarDeclCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		for _, item := range moduleVarDeclCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 	} else if completionCtx.kind == completionKindType {
-		return typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix)
+		return typeCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix)
 	} else if completionCtx.kind == completionKindStatementBegin {
-		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix) {
 			addItem(item)
 		}
-		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		for _, item := range typeCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 		for _, item := range statementBeginCompletionItems(completionCtx.prefix) {
 			addItem(item)
 		}
 	} else if completionCtx.kind == completionKindExpression {
-		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		for _, item := range visibleVariableAndFunctionCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 	} else {
-		for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, offset, completionCtx.prefix) {
+		for _, item := range visibleSymbolCompletionItems(cx, cu, completionModule.Package, chain, offset, completionCtx.prefix) {
 			addItem(item)
 		}
 	}
@@ -1043,8 +1044,8 @@ func statementBeginCompletionItems(prefix string) []protocol.CompletionItem {
 	return items
 }
 
-func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
-	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, chain []ast.BLangNode, offset int, prefix string) []protocol.CompletionItem {
+	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, chain, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindType
 	})
 	seen := make(map[string]bool, len(items))
@@ -1067,21 +1068,20 @@ func moduleVarDeclCompletionItems(cx *context.CompilerContext, cu *ast.BLangComp
 	return items
 }
 
-// @cleanup this should simply reuse the chain instead of revisiting the ast
-func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
-	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+func visibleSymbolCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, chain []ast.BLangNode, offset int, prefix string) []protocol.CompletionItem {
+	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, chain, offset, prefix, func(kind model.SymbolKind) bool {
 		return true
 	})
 }
 
-func visibleVariableAndFunctionCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
-	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+func visibleVariableAndFunctionCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, chain []ast.BLangNode, offset int, prefix string) []protocol.CompletionItem {
+	return visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, chain, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindVariable || kind == model.SymbolKindParemeter || kind == model.SymbolKindFunction
 	})
 }
 
-func typeCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string) []protocol.CompletionItem {
-	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, offset, prefix, func(kind model.SymbolKind) bool {
+func typeCompletionItems(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, chain []ast.BLangNode, offset int, prefix string) []protocol.CompletionItem {
+	items := visibleSymbolCompletionItemsWithFilter(cx, cu, pkg, chain, offset, prefix, func(kind model.SymbolKind) bool {
 		return kind == model.SymbolKindType
 	})
 	seen := make(map[string]bool, len(items))
@@ -1133,14 +1133,8 @@ var builtinTypeCompletionLabels = []string{
 	"xml",
 }
 
-func visibleSymbolCompletionItemsWithFilter(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, offset int, prefix string, include func(model.SymbolKind) bool) []protocol.CompletionItem {
-	var scope model.Scope
-	if pkg != nil {
-		scope = nearestScopeAtOffset(pkg, offset)
-	}
-	if scope == nil {
-		scope = nearestScopeAtOffset(cu, offset)
-	}
+func visibleSymbolCompletionItemsWithFilter(cx *context.CompilerContext, cu *ast.BLangCompilationUnit, pkg *ast.BLangPackage, chain []ast.BLangNode, offset int, prefix string, include func(model.SymbolKind) bool) []protocol.CompletionItem {
+	scope := nearestScopeInNodeChain(chain)
 	if scope == nil && cu != nil {
 		scope = cu.Scope
 	}
@@ -1211,40 +1205,13 @@ func addSymbolSpace(space *model.SymbolSpace, seenSpaces map[*model.SymbolSpace]
 	}
 }
 
-func nearestScopeAtOffset(node ast.BLangNode, offset int) model.Scope {
-	if node == nil {
-		return nil
-	}
-	finder := &scopeAtOffsetFinder{offset: offset}
-	ast.Walk(finder, node)
-	return finder.scope
-}
-
-type scopeAtOffsetFinder struct {
-	offset int
-	scope  model.Scope
-	span   int
-}
-
-func (f *scopeAtOffsetFinder) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return f
-	}
-	if locationHasUsableOffsets(node.GetPosition()) && !locationContains(node.GetPosition(), f.offset) {
-		return nil
-	}
-	if scoped, ok := node.(ast.NodeWithScope); ok && scoped.Scope() != nil {
-		span := locationSpan(node.GetPosition())
-		if f.span == 0 || span <= f.span {
-			f.scope = scoped.Scope()
-			f.span = span
+func nearestScopeInNodeChain(chain []ast.BLangNode) model.Scope {
+	for i := len(chain) - 1; i >= 0; i-- {
+		if scoped, ok := chain[i].(ast.NodeWithScope); ok && scoped.Scope() != nil {
+			return scoped.Scope()
 		}
 	}
-	return f
-}
-
-func (f *scopeAtOffsetFinder) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
-	return f
+	return nil
 }
 
 func byteOffsetFromPosition(content string, position protocol.Position) int {
