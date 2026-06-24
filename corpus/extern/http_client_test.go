@@ -226,6 +226,27 @@ func TestHttpClientCompressionLocal(t *testing.T) {
 	runExtern(t, fileCase("http-client-compression-local-v"), newHTTPPal(noAutoDecompress), nil)
 }
 
+// TestHttpClientHeadersLocal exercises request-header handling: forwarding a
+// materialised request with a hop-by-hop header (removeHopByHopHeaders /
+// takeStream / materialize), mixed string/list headers (extractHeaders), and
+// the ALWAYS/NEVER compression modes (applyCompressionHeaders).
+func TestHttpClientHeadersLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A hop-by-hop Connection header must not have been forwarded.
+		if r.URL.Path == "/fwd" && r.Header.Get("Connection") != "" {
+			w.WriteHeader(400)
+			return
+		}
+		if r.URL.Path == "/empty" {
+			w.WriteHeader(204)
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-headers-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
 // TestHttpClientTLSInsecure: A client without InsecureSkipVerify would fail
 // the handshake against a self-signed httptest TLS server. This verifies
 // secureSocket: {enable: false} propagates InsecureSkipVerify through PAL.

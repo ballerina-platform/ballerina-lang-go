@@ -53,6 +53,87 @@ func osError(msg string) values.BalValue {
 	return values.NewErrorWithMessage(msg)
 }
 
+// execCommand launches a subprocess described by the Command record (and
+// optional environment overrides) and returns a Process object wrapping the
+// handle. Extracted from the extern closure so the exec path is unit-testable.
+func execCommand(rt *runtime.Runtime, args []values.BalValue) (values.BalValue, error) {
+	cmdMap, _ := args[0].(*values.Map)
+	cmdVal, _ := cmdMap.Get("value")
+	command, _ := cmdVal.(string)
+
+	var cmdArgs []string
+	if argList, ok := cmdMap.Get("arguments"); ok {
+		if list, ok := argList.(*values.List); ok {
+			for i := 0; i < list.Len(); i++ {
+				if s, ok := list.Get(i).(string); ok {
+					cmdArgs = append(cmdArgs, s)
+				}
+			}
+		}
+	}
+
+	envOverride := make(map[string]string)
+	if len(args) > 1 {
+		if envMap, ok := args[1].(*values.Map); ok {
+			for _, k := range envMap.Keys() {
+				if v, ok := envMap.Get(k); ok {
+					if sv, ok := v.(string); ok {
+						envOverride[k] = sv
+					}
+				}
+			}
+		}
+	}
+
+	handle, err := rt.Platform().OS.Exec(command, cmdArgs, envOverride)
+	if err != nil {
+		return osError("Failed to retrieve the process object: " + err.Error()), nil
+	}
+	return newProcessObject(handle), nil
+}
+
+// processWaitForExit blocks until the process exits and returns its exit code.
+func processWaitForExit(args []values.BalValue) (values.BalValue, error) {
+	self, _ := args[0].(*values.Object)
+	code, err := getHandle(self).WaitForExit()
+	if err != nil {
+		return osError("Failed to wait for process to exit: " + err.Error()), nil
+	}
+	return int64(code), nil
+}
+
+// processOutput reads the requested stream (stdout=1, otherwise stderr) of the
+// process and returns it as a byte[].
+func processOutput(tc semtypes.Context, byteArrTy semtypes.SemType, args []values.BalValue) (values.BalValue, error) {
+	self, _ := args[0].(*values.Object)
+	stream, _ := args[1].(int64)
+	handle := getHandle(self)
+	var (
+		data []byte
+		err  error
+	)
+	if stream == 1 {
+		data, err = handle.ReadStdout()
+	} else {
+		data, err = handle.ReadStderr()
+	}
+	if err != nil {
+		return osError("Failed to read the output of the process: " + err.Error()), nil
+	}
+	items := make([]values.BalValue, len(data))
+	for i, b := range data {
+		items[i] = int64(b)
+	}
+	return values.NewList(byteArrTy, semtypes.ToListAtomicType(tc, byteArrTy), false, nil, 0, items), nil
+}
+
+// processExit terminates the process.
+func processExit(args []values.BalValue) (values.BalValue, error) {
+	self, _ := args[0].(*values.Object)
+	getHandle(self).Kill()
+	return nil, nil
+}
+
 func initOSModule(rt *runtime.Runtime) {
 	runtime.RegisterExternClassDef(rt, &bir.BIRClassDef{
 		Name:      model.Name("Process"),
@@ -120,49 +201,12 @@ func initOSModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "exec",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			cmdMap, _ := args[0].(*values.Map)
-			cmdVal, _ := cmdMap.Get("value")
-			command, _ := cmdVal.(string)
-
-			var cmdArgs []string
-			if argList, ok := cmdMap.Get("arguments"); ok {
-				if list, ok := argList.(*values.List); ok {
-					for i := 0; i < list.Len(); i++ {
-						if s, ok := list.Get(i).(string); ok {
-							cmdArgs = append(cmdArgs, s)
-						}
-					}
-				}
-			}
-
-			envOverride := make(map[string]string)
-			if len(args) > 1 {
-				if envMap, ok := args[1].(*values.Map); ok {
-					for _, k := range envMap.Keys() {
-						if v, ok := envMap.Get(k); ok {
-							if sv, ok := v.(string); ok {
-								envOverride[k] = sv
-							}
-						}
-					}
-				}
-			}
-
-			handle, err := rt.Platform().OS.Exec(command, cmdArgs, envOverride)
-			if err != nil {
-				return osError("Failed to retrieve the process object: " + err.Error()), nil
-			}
-			return newProcessObject(handle), nil
+			return execCommand(rt, args)
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Process.waitForExit",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self, _ := args[0].(*values.Object)
-			code, err := getHandle(self).WaitForExit()
-			if err != nil {
-				return osError("Failed to wait for process to exit: " + err.Error()), nil
-			}
-			return int64(code), nil
+			return processWaitForExit(args)
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Process.output$default$0",
@@ -172,34 +216,12 @@ func initOSModule(rt *runtime.Runtime) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Process.output",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-
-			self, _ := args[0].(*values.Object)
-			stream, _ := args[1].(int64)
-			handle := getHandle(self)
-			var (
-				data []byte
-				err  error
-			)
-			if stream == 1 {
-				data, err = handle.ReadStdout()
-			} else {
-				data, err = handle.ReadStderr()
-			}
-			if err != nil {
-				return osError("Failed to read the output of the process: " + err.Error()), nil
-			}
-			items := make([]values.BalValue, len(data))
-			for i, b := range data {
-				items[i] = int64(b)
-			}
-			return values.NewList(byteArrTy, semtypes.ToListAtomicType(ctx.TypeCtx, byteArrTy), false, nil, 0, items), nil
+			return processOutput(ctx.TypeCtx, byteArrTy, args)
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Process.exit",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self, _ := args[0].(*values.Object)
-			getHandle(self).Kill()
-			return nil, nil
+			return processExit(args)
 		})
 }
 

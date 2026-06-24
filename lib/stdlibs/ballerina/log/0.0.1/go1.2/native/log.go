@@ -97,33 +97,40 @@ func formatLogfmt(level, timeStr, msg string, errVal *values.Error, kvMap *value
 	return b.String()
 }
 
+// printLog formats and emits a single log record to stderr, honouring the
+// active level filter. It carries the body of the externPrintLog extern so the
+// emit path is unit-testable without going through the interpreter.
+func printLog(rt *runtime.Runtime, args []values.BalValue) (values.BalValue, error) {
+	level, _ := args[0].(string)
+	msg, _ := args[1].(string)
+
+	if !isLevelEnabled(level) {
+		return nil, nil
+	}
+
+	var errVal *values.Error
+	if args[2] != nil {
+		errVal, _ = args[2].(*values.Error)
+	}
+
+	var kvMap *values.Map
+	if args[3] != nil {
+		kvMap, _ = args[3].(*values.Map)
+	}
+
+	now := rt.Platform().Time.Now()
+	timeStr := now.Format("2006-01-02T15:04:05.000Z07:00")
+
+	output := formatLogfmt(level, timeStr, msg, errVal, kvMap)
+	_, _ = rt.Platform().IO.Stderr([]byte(output + "\n"))
+
+	return nil, nil
+}
+
 func initLogModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externPrintLog",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			level, _ := args[0].(string)
-			msg, _ := args[1].(string)
-
-			if !isLevelEnabled(level) {
-				return nil, nil
-			}
-
-			var errVal *values.Error
-			if args[2] != nil {
-				errVal, _ = args[2].(*values.Error)
-			}
-
-			var kvMap *values.Map
-			if args[3] != nil {
-				kvMap, _ = args[3].(*values.Map)
-			}
-
-			now := rt.Platform().Time.Now()
-			timeStr := now.Format("2006-01-02T15:04:05.000Z07:00")
-
-			output := formatLogfmt(level, timeStr, msg, errVal, kvMap)
-			_, _ = rt.Platform().IO.Stderr([]byte(output + "\n"))
-
-			return nil, nil
+			return printLog(rt, args)
 		})
 }
 
