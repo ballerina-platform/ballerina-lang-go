@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -859,12 +858,11 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	// annotation declarations, types, and constants are all resolved above
 	// (constants fold out of order via resolveConstant/ensureResolved), so an
 	// inline pass would read fully-resolved symbols. The dedicated pass exists
-	// because the work is naturally batched:
+	// because the work benefits from being batched:
 	//
 	//  1. Attachment values are constant expressions, and evaluateAnnotationTasks
-	//     folds the whole batch in parallel across workers sharing one
-	//     constant-evaluation cache. A module that uses annotations tends to have
-	//     many, so this batching matters.
+	//     folds the whole batch sequentially with one shared constant-evaluation
+	//     cache, avoiding repeated evaluation of referenced constants.
 	//  2. Repeated annotations on the same symbol are aggregated into a single
 	//     list value, which needs every attachment of that symbol collected
 	//     before the final value can be produced.
@@ -1054,9 +1052,9 @@ func resolveTopLevelAnnotationAttachments(t typeResolver, pkg *ast.BLangPackage)
 		collectAnnotationEvaluationTasks(t, &pkg.GlobalVars[i], ast.Point_VAR, model.SymbolRef{}, &tasks)
 	}
 	// Collection performs attachment validation and records source order first.
-	// Evaluation then uses one shared constant cache and commits values after
-	// workers finish, avoiding concurrent mutation of type annotation maps while
-	// still preserving repeated-annotation order.
+	// Evaluation then uses one shared constant cache and commits values in source
+	// order, preserving repeated-annotation order without concurrent mutation of
+	// type annotation maps.
 	evaluateAnnotationTasks(t, tasks)
 	if initialGlobalCount < len(pkg.GlobalVars) {
 		globals := make([]ast.BLangSimpleVariable, 0, len(pkg.GlobalVars))
@@ -1227,24 +1225,9 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 		return
 	}
 	results := make([]annotationEvaluationResult, len(tasks))
-	workerCount := annotationEvaluationWorkerCount(tasks)
-	cache := newConstantEvaluationCache(workerCount > 1)
-	if workerCount == 1 {
-		for i := range tasks {
-			results[i] = evaluateAnnotationTask(t, cache, tasks[i])
-		}
-	} else {
-		var wg sync.WaitGroup
-		for worker := range workerCount {
-			wg.Add(1)
-			go func(start int) {
-				defer wg.Done()
-				for idx := start; idx < len(tasks); idx += workerCount {
-					results[idx] = evaluateAnnotationTask(t, cache, tasks[idx])
-				}
-			}(worker)
-		}
-		wg.Wait()
+	cache := newConstantEvaluationCache()
+	for i := range tasks {
+		results[i] = evaluateAnnotationTask(t, cache, tasks[i])
 	}
 
 	repeatedValues := make(map[repeatedAnnotationKey]*repeatedAnnotationValue)
@@ -1363,36 +1346,6 @@ func createRuntimeAnnotationGlobal(t typeResolver, expr ast.BLangExpression) *va
 		Module:       resolver.pkg.PackageID.PkgName.Value(),
 		GlobalName:   name,
 	}
-}
-
-func annotationEvaluationWorkerCount(tasks []annotationEvaluationTask) int {
-	const minParallelAnnotationCost = 4096
-	taskCount := len(tasks)
-	if taskCount < 2 || annotationEvaluationCost(tasks, minParallelAnnotationCost) < minParallelAnnotationCost {
-		return 1
-	}
-	workers := runtime.GOMAXPROCS(0)
-	if workers < 1 {
-		return 1
-	}
-	if taskCount < workers {
-		return taskCount
-	}
-	return workers
-}
-
-func annotationEvaluationCost(tasks []annotationEvaluationTask, limit int) int {
-	cost := 0
-	for _, task := range tasks {
-		if cost >= limit {
-			return limit
-		}
-		cost += constantExpressionCost(task.ann.Expr, limit-cost)
-	}
-	if cost > limit {
-		return limit
-	}
-	return cost
 }
 
 func evaluateAnnotationTask(t typeResolver, cache *constantEvaluationCache, task annotationEvaluationTask) (result annotationEvaluationResult) {
@@ -6943,7 +6896,7 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 	if !ok {
 		return false
 	}
-	value, err := evaluateConstantExpression(t, expr, newConstantEvaluationCache(false))
+	value, err := evaluateConstantExpression(t, expr, newConstantEvaluationCache())
 	if err == nil {
 		if sym, ok := t.getSymbol(constant.Symbol()).(*model.ConstantValueSymbol); ok {
 			sym.SetConstantValue(value)

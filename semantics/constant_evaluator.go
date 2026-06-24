@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/decimal"
@@ -57,15 +56,12 @@ type constantEvaluationResult struct {
 }
 
 type constantEvaluationCache struct {
-	concurrent bool
-	mu         sync.RWMutex
-	results    map[model.SymbolRef]constantEvaluationResult
+	results map[model.SymbolRef]constantEvaluationResult
 }
 
-func newConstantEvaluationCache(concurrent bool) *constantEvaluationCache {
+func newConstantEvaluationCache() *constantEvaluationCache {
 	return &constantEvaluationCache{
-		concurrent: concurrent,
-		results:    make(map[model.SymbolRef]constantEvaluationResult),
+		results: make(map[model.SymbolRef]constantEvaluationResult),
 	}
 }
 
@@ -73,12 +69,6 @@ func (c *constantEvaluationCache) get(ref model.SymbolRef) (constantEvaluationRe
 	if c == nil {
 		return constantEvaluationResult{}, false
 	}
-	if !c.concurrent {
-		result, ok := c.results[ref]
-		return result, ok
-	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 	result, ok := c.results[ref]
 	return result, ok
 }
@@ -87,89 +77,11 @@ func (c *constantEvaluationCache) set(ref model.SymbolRef, result constantEvalua
 	if c == nil {
 		return result
 	}
-	if !c.concurrent {
-		if existing, ok := c.results[ref]; ok {
-			return existing
-		}
-		c.results[ref] = result
-		return result
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	if existing, ok := c.results[ref]; ok {
 		return existing
 	}
 	c.results[ref] = result
 	return result
-}
-
-func constantExpressionCost(expr ast.BLangExpression, limit int) int {
-	if expr == nil || limit <= 0 {
-		return 0
-	}
-
-	cost := 1
-	add := func(child ast.BLangExpression) {
-		if cost >= limit {
-			return
-		}
-		cost += constantExpressionCost(child, limit-cost)
-		if cost > limit {
-			cost = limit
-		}
-	}
-
-	switch expr := expr.(type) {
-	case *ast.BLangLiteral, *ast.BLangNumericLiteral:
-	case *ast.BLangSimpleVarRef, *ast.BLangConstRef:
-		cost += 2
-	case *ast.BLangGroupExpr:
-		add(expr.Expression)
-	case *ast.BLangUnaryExpr:
-		add(expr.Expr)
-	case *ast.BLangBinaryExpr:
-		add(expr.LhsExpr)
-		add(expr.RhsExpr)
-	case *ast.BLangTypeConversionExpr:
-		cost += 2
-		add(expr.Expression)
-	case *ast.BLangMappingConstructorExpr:
-		for _, field := range expr.Fields {
-			cost++
-			if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
-				add(kv.ValueExpr)
-			}
-			if cost >= limit {
-				break
-			}
-		}
-	case *ast.BLangListConstructorExpr:
-		for i, member := range expr.Exprs {
-			if expr.IsSpreadMember(i) {
-				cost++
-			}
-			add(member)
-			if cost >= limit {
-				break
-			}
-		}
-		if fillerCount := expr.AtomicType.Members.FixedLength - len(expr.Exprs); fillerCount > 0 {
-			cost += min(fillerCount, limit-cost)
-		}
-	case *ast.BLangTemplateExpr:
-		cost += len(expr.Strings)
-		for _, insertion := range expr.Insertions {
-			add(insertion)
-			if cost >= limit {
-				break
-			}
-		}
-	}
-
-	if cost > limit {
-		return limit
-	}
-	return cost
 }
 
 func (e *constantExpressionEvaluator) evaluate(expr ast.BLangExpression) (values.BalValue, error) {
