@@ -569,6 +569,10 @@ func lspRange(content string, loc diagnostics.Location) protocol.Range {
 	return newLSPPositionMapper(content).Range(loc)
 }
 
+func lspRanges(content string, locs []diagnostics.Location) []protocol.Range {
+	return lspPositionMapper{content: content}.Ranges(locs)
+}
+
 func lspSeverity(severity diagnostics.DiagnosticSeverity) int {
 	switch severity {
 	case diagnostics.Warning:
@@ -617,6 +621,90 @@ func (m lspPositionMapper) Range(loc diagnostics.Location) protocol.Range {
 		Start: m.Position(loc.StartOffset()),
 		End:   m.Position(loc.EndOffset()),
 	}
+}
+
+func (m lspPositionMapper) Ranges(locs []diagnostics.Location) []protocol.Range {
+	ranges := make([]protocol.Range, len(locs))
+	if len(locs) == 0 {
+		return ranges
+	}
+
+	offsets := make([]int, 0, len(locs)*2)
+	for _, loc := range locs {
+		offsets = append(offsets, loc.StartOffset(), loc.EndOffset())
+	}
+	positions := m.Positions(offsets)
+	for i := range locs {
+		ranges[i] = protocol.Range{Start: positions[i*2], End: positions[i*2+1]}
+	}
+	return ranges
+}
+
+func (m lspPositionMapper) Positions(byteOffsets []int) []protocol.Position {
+	positions := make([]protocol.Position, len(byteOffsets))
+	if len(byteOffsets) == 0 {
+		return positions
+	}
+
+	indices := make([]int, len(byteOffsets))
+	for i := range indices {
+		indices[i] = i
+	}
+	sort.SliceStable(indices, func(i, j int) bool {
+		return normalizedOffset(byteOffsets[indices[i]], len(m.content)) < normalizedOffset(byteOffsets[indices[j]], len(m.content))
+	})
+
+	line := 0
+	character := 0
+	contentOffset := 0
+	for _, index := range indices {
+		byteOffset := normalizedOffset(byteOffsets[index], len(m.content))
+		for contentOffset < byteOffset {
+			if m.content[contentOffset] == '\r' && contentOffset+1 < len(m.content) && m.content[contentOffset+1] == '\n' {
+				if byteOffset < contentOffset+2 {
+					break
+				}
+				line++
+				character = 0
+				contentOffset += 2
+				continue
+			}
+			if m.content[contentOffset] == '\r' || m.content[contentOffset] == '\n' {
+				line++
+				character = 0
+				contentOffset++
+				continue
+			}
+
+			r, size := utf8.DecodeRuneInString(m.content[contentOffset:])
+			if size == 0 || contentOffset+size > byteOffset {
+				break
+			}
+			if r >= 0x10000 {
+				character += 2
+			} else {
+				character++
+			}
+			contentOffset += size
+		}
+
+		positionCharacter := character
+		if contentOffset < byteOffset && m.content[contentOffset] == '\r' && contentOffset+1 < len(m.content) && m.content[contentOffset+1] == '\n' {
+			positionCharacter++
+		}
+		positions[index] = protocol.Position{Line: line, Character: positionCharacter}
+	}
+	return positions
+}
+
+func normalizedOffset(byteOffset int, contentLength int) int {
+	if byteOffset < 0 {
+		return 0
+	}
+	if byteOffset > contentLength {
+		return contentLength
+	}
+	return byteOffset
 }
 
 func (m lspPositionMapper) Position(byteOffset int) protocol.Position {

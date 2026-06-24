@@ -51,7 +51,12 @@ func (s *Server) documentSymbols(params protocol.DocumentSymbolParams) (result [
 		return result
 	}
 
-	positionMapper := newLSPPositionMapper(source.Content)
+	type documentSymbolInfo struct {
+		name string
+		kind protocol.SymbolKind
+		loc  diagnostics.Location
+	}
+	infos := []documentSymbolInfo{}
 	for _, symbol := range moduleTopLevelSymbols(module.Package) {
 		if symbol.IsEmpty() {
 			continue
@@ -64,10 +69,23 @@ func (s *Server) documentSymbols(params protocol.DocumentSymbolParams) (result [
 		if !ok || file.URI != source.URI {
 			continue
 		}
-		rng := positionMapper.Range(loc)
+		infos = append(infos, documentSymbolInfo{
+			name: cx.SymbolName(symbol),
+			kind: lspSymbolKind(cx.SymbolKind(symbol)),
+			loc:  loc,
+		})
+	}
+
+	locs := make([]diagnostics.Location, len(infos))
+	for i, info := range infos {
+		locs[i] = info.loc
+	}
+	ranges := lspRanges(source.Content, locs)
+	for i, info := range infos {
+		rng := ranges[i]
 		result = append(result, protocol.DocumentSymbol{
-			Name:           cx.SymbolName(symbol),
-			Kind:           lspSymbolKind(cx.SymbolKind(symbol)),
+			Name:           info.name,
+			Kind:           info.kind,
 			Range:          rng,
 			SelectionRange: rng,
 		})
