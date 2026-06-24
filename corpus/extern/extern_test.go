@@ -566,16 +566,22 @@ func compileSingleFileModule(
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}
 	cu := ast.GetCompilationUnit(cx, st)
-	pkg := ast.ToPackage(cx, cu)
-	pkg.PackageID = cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
+	pkgID := cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
+	cu.SetPackageID(pkgID)
+	compilationUnits := []*ast.BLangCompilationUnit{cu}
 
 	langlibs, err := langlib.Build(cx, publicSymbols)
 	if err != nil {
 		t.Fatalf("loading lang libraries failed: %v", err)
 	}
-	importedSymbols := semantics.ResolveImports(cx, pkg, langlibs.ImplicitImports, langlibs.PublicSymbols, defaultOrg)
-	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	importedByCU := semantics.ResolveCompilationUnitImports(cx, compilationUnits, langlibs.ImplicitImports, langlibs.PublicSymbols, defaultOrg)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedByCU)
 	assertNoDiagnostics(t, cx, "ResolveSymbols")
+	pkg := ast.ToPackageFromCompilationUnits(compilationUnits)
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	pkg.Imports = nil
+	importedSymbols := importedByCU[0].Imports
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveTopLevelNodes")
 	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)

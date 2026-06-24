@@ -120,22 +120,27 @@ func loadBuiltinPublicSymbols(env *context.CompilerEnvironment) map[semantics.Pa
 		if cu == nil || cx.HasDiagnostics() {
 			continue
 		}
-		pkg := ast.ToPackage(cx, cu)
-		pkg.PackageID = cx.NewPackageID(
+		pkgID := cx.NewPackageID(
 			model.Name(entry.org),
 			[]model.Name{model.Name(entry.name)},
 			model.DEFAULT_VERSION,
 		)
+		cu.SetPackageID(pkgID)
+		compilationUnits := []*ast.BLangCompilationUnit{cu}
 
 		// Pass accumulated stdlib symbols so packages that import other stdlibs (e.g. os→io, crypto→time) resolve correctly.
-		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+		importedByCU := semantics.ResolveCompilationUnitImports(cx, compilationUnits, semantics.GetImplicitImports(cx),
 			result, entry.org)
-		exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+		pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedByCU)
 		if cx.HasErrors() {
 			continue
 		}
+		pkg := ast.ToPackageFromCompilationUnits(compilationUnits)
+		pkg.PackageID = pkgID
+		pkg.Scope = pkgScope
+		pkg.Imports = nil
 
-		semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
+		semantics.ResolveTopLevelNodes(cx, pkg, importedByCU[0].Imports)
 		if cx.HasErrors() {
 			continue
 		}
@@ -187,8 +192,8 @@ func RunPipelineWithContent(env *context.CompilerEnvironment, cx *context.Compil
 	if result.CompilationUnit == nil || cx.HasDiagnostics() {
 		return nil, fmt.Errorf("AST generation failed: compilation unit is nil")
 	}
-	result.Package = ast.ToPackage(cx, result.CompilationUnit)
 	if phase == PhaseAST {
+		result.Package = ast.ToPackageFromCompilationUnits([]*ast.BLangCompilationUnit{result.CompilationUnit})
 		return result, nil
 	}
 
@@ -200,8 +205,15 @@ func RunPipelineWithContent(env *context.CompilerEnvironment, cx *context.Compil
 			return nil, err
 		}
 	}
-	importedSymbols := semantics.ResolveImports(cx, result.Package, langlibs.ImplicitImports, langlibs.PublicSymbols, "")
-	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
+	pkgID := result.CompilationUnit.GetPackageID()
+	result.CompilationUnit.SetPackageID(pkgID)
+	compilationUnits := []*ast.BLangCompilationUnit{result.CompilationUnit}
+	importedByCU := semantics.ResolveCompilationUnitImports(cx, compilationUnits, langlibs.ImplicitImports, langlibs.PublicSymbols, "")
+	pkgScope, _ := semantics.ResolveSymbols(cx, *pkgID, importedByCU)
+	result.Package = ast.ToPackageFromCompilationUnits(compilationUnits)
+	result.Package.PackageID = pkgID
+	result.Package.Scope = pkgScope
+	importedSymbols := importedByCU[0].Imports
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil
 	}

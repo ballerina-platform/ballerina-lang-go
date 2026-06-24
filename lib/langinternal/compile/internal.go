@@ -51,7 +51,7 @@ func GetInternalSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace 
 		ParamTypes: []semtypes.SemType{templateInsertionAllowedTypes},
 		ReturnType: semtypes.STRING,
 	})
-	return model.NewExportedSymbolSpace(space, nil)
+	return model.NewExportedSymbolSpaces([]*model.SymbolSpace{space}, nil)
 }
 
 func addInternalFunction(ctx *context.CompilerContext, space *model.SymbolSpace, name string, sig model.FunctionSignature) {

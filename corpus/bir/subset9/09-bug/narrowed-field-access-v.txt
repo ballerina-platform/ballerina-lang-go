@@ -1,5 +1,4 @@
 module $anon.. v 0.0.0;
-import ballerina.io v 0.0.0;
 foo([string...]|{| a: string, b: string, never... |}) -> nil{
   bb0 {
     %2 = input is [string...]

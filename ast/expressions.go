@@ -415,7 +415,7 @@ type (
 		Offset         int // this is the offest in the string where we need to insert the namespace declarations when we desugar to BLangTemplateExpr
 		UsedPrefixes   map[string]struct{}
 		NeedsDefaultNS bool
-		Namespaces     map[string]string
+		Namespaces     []model.SymbolRef // Namespaces referred from this node
 	}
 
 	BLangXMLTemplateExpr struct {
@@ -426,15 +426,10 @@ type (
 
 	BLangXMLElementLiteral struct {
 		bLangExpressionBase
-		Name    string
-		Attrs   []BLangXMLAttribute
-		Content BLangExpression
-		// Namespaces holds XML namespace declarations to emit on this element.
-		// Keys are stored in already-printable form: "xmlns" for the default
-		// namespace, "xmlns:<prefix>" otherwise. Values are URIs.
-		// Populated by the symbol resolver from inline xmlns attributes and
-		// from outer-scope xmlns declarations referenced inside this literal.
-		Namespaces map[string]string
+		Name       string
+		Attrs      []BLangXMLAttribute
+		Content    BLangExpression
+		Namespaces []model.SymbolRef // Namespaces referred from this node
 	}
 
 	BLangXMLAttribute struct {

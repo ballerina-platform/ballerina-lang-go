@@ -50,12 +50,22 @@ func (c *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.S
 	return space
 }
 
+func (c *CompilerEnvironment) NewModuleScope(pkg model.PackageID, prefixes map[string]model.ExportedSymbolSpace) *model.ModuleScope {
+	if prefixes == nil {
+		prefixes = make(map[string]model.ExportedSymbolSpace)
+	}
+	return &model.ModuleScope{
+		Main:       c.NewSymbolSpace(pkg),
+		Prefix:     prefixes,
+		Annotation: c.NewSymbolSpace(pkg),
+	}
+}
+
 func (c *CompilerEnvironment) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
 	return &model.FunctionScope{
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
 			Main:   c.NewSymbolSpace(pkg),
-			XMLNS:  map[string]string{},
 		},
 	}
 }
@@ -65,7 +75,6 @@ func (c *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Packag
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
 			Main:   c.NewSymbolSpace(pkg),
-			XMLNS:  map[string]string{},
 		},
 	}
 }

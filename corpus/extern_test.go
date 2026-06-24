@@ -19,6 +19,7 @@ package corpus
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -815,13 +816,22 @@ func compileBuiltinInEnv(env *context.CompilerEnvironment, org, name, version st
 	if cu == nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
 	}
-	pkg := ast.ToPackage(cx, cu)
-	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+	pkgID := cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
+	cu.SetPackageID(pkgID)
+	cus := []*ast.BLangCompilationUnit{cu}
+	importedSymbolsByCU := semantics.ResolveCompilationUnitImports(cx, cus, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
-	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedSymbolsByCU)
 	if cx.HasErrors() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, false
+	}
+	pkg := ast.ToPackageFromCompilationUnits(cus)
+	pkg.Imports = nil
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	importedSymbols := make(map[string]model.ExportedSymbolSpace)
+	for _, cuImports := range importedSymbolsByCU {
+		maps.Copy(importedSymbols, cuImports.Imports)
 	}
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
 	if cx.HasErrors() {
@@ -850,13 +860,22 @@ func compileBuiltinWithBIR(env *context.CompilerEnvironment, org, name, version 
 	if cu == nil || cx.HasDiagnostics() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
 	}
-	pkg := ast.ToPackage(cx, cu)
-	pkg.PackageID = cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+	pkgID := cx.NewPackageID(model.Name(org), []model.Name{model.Name(name)}, model.Name(version))
+	cu.SetPackageID(pkgID)
+	cus := []*ast.BLangCompilationUnit{cu}
+	importedSymbolsByCU := semantics.ResolveCompilationUnitImports(cx, cus, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), org)
-	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedSymbolsByCU)
 	if cx.HasErrors() {
 		return semantics.PackageIdentifier{}, model.ExportedSymbolSpace{}, nil, false
+	}
+	pkg := ast.ToPackageFromCompilationUnits(cus)
+	pkg.Imports = nil
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	importedSymbols := make(map[string]model.ExportedSymbolSpace)
+	for _, cuImports := range importedSymbolsByCU {
+		maps.Copy(importedSymbols, cuImports.Imports)
 	}
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
 	if cx.HasErrors() {
@@ -910,16 +929,25 @@ func compileSingleFileModule(
 		t.Fatalf("parsing %s: %v", balPath, err)
 	}
 	cu := ast.GetCompilationUnit(cx, st)
-	pkg := ast.ToPackage(cx, cu)
-	pkg.PackageID = cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
+	pkgID := cx.NewPackageID(orgName, nameComps, model.DEFAULT_VERSION)
+	cu.SetPackageID(pkgID)
+	cus := []*ast.BLangCompilationUnit{cu}
 
 	langlibs, err := langlib.Build(cx, publicSymbols)
 	if err != nil {
 		t.Fatalf("loading lang libraries failed: %v", err)
 	}
-	importedSymbols := semantics.ResolveImports(cx, pkg, langlibs.ImplicitImports, langlibs.PublicSymbols, defaultOrg)
-	exported := semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	importedSymbolsByCU := semantics.ResolveCompilationUnitImports(cx, cus, langlibs.ImplicitImports, langlibs.PublicSymbols, defaultOrg)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedSymbolsByCU)
 	assertNoDiagnostics(t, cx, "ResolveSymbols")
+	pkg := ast.ToPackageFromCompilationUnits(cus)
+	pkg.Imports = nil
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	importedSymbols := make(map[string]model.ExportedSymbolSpace)
+	for _, cuImports := range importedSymbolsByCU {
+		maps.Copy(importedSymbols, cuImports.Imports)
+	}
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveTopLevelNodes")
 	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
