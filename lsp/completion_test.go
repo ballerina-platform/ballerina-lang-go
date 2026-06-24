@@ -78,10 +78,20 @@ func TestCompletionAtEmptyModuleVarDeclIncludesDeclarationSnippets(t *testing.T)
 }
 
 func TestCompletionAtFunctionReturnTypeDescIncludesReturnsSnippet(t *testing.T) {
-	items := completionItemsAtMarker(t, "function foo() $ {\n}\n")
+	tests := []string{
+		"function foo() $ {\n}\n",
+		"function foo() $",
+		"type Obj object {\n    function foo() $;\n};\n",
+		"type Fn function () $;\n",
+	}
+	for _, source := range tests {
+		t.Run(source, func(t *testing.T) {
+			items := completionItemsAtMarker(t, source)
 
-	assertSnippetCompletionItem(t, items, "returns", "returns ${1:Ty}")
-	assertNoCompletionItem(t, items, "int")
+			assertSnippetCompletionItem(t, items, "returns", "returns ${1:Ty}")
+			assertNoCompletionItem(t, items, "int")
+		})
+	}
 }
 
 func TestCompletionAtFunctionSnippetReturnTypePlaceholderIncludesReturnsSnippet(t *testing.T) {

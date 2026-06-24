@@ -83,7 +83,8 @@ func (s *Server) completion(params protocol.CompletionParams) (result protocol.C
 		logLS(snapshot.Root, "completion complete snapshotID=%d module=%s items=0 reason=no-recovering-compilation-unit", snapshot.ID, module.Name)
 		return result
 	}
-	completionCtx := completionContextFromNodeChain(source.Content, offset, nodeChainAtOffset(cu, offset))
+	prefix := identifierPrefixAtOffset(source.Content, offset)
+	completionCtx := completionContextFromNodeChain(offset, prefix, nodeChainAtOffset(cu, offset))
 	logLS(snapshot.Root, "completion context snapshotID=%d module=%s kind=%s alias=%s prefix=%s offset=%d lineText=%q", snapshot.ID, module.Name, completionKindString(completionCtx.kind), completionCtx.alias, completionCtx.prefix, offset, lineTextAt(source.Content, offset))
 	if completionCtx.kind == completionKindMemberAccess {
 		result.Items = s.memberAccessCompletionItems(snapshot, module, source, cu, completionCtx, offset)
@@ -519,8 +520,10 @@ func importCompletionTextEdit(source SourceFile, importPath string) (protocol.Te
 	return protocol.TextEdit{Range: protocol.Range{Start: pos, End: pos}, NewText: newText}, true
 }
 
-func completionContextFromNodeChain(content string, offset int, chain []ast.BLangNode) completionContext {
-	prefix := identifierPrefixAtOffset(content, offset)
+func completionContextFromNodeChain(offset int, prefix string, chain []ast.BLangNode) completionContext {
+	if ctx, ok := signatureCompletionContextFromNodeChain(offset, prefix, chain); ok {
+		return ctx
+	}
 	for i := len(chain) - 1; i >= 0; i-- {
 		var next ast.BLangNode
 		if i+1 < len(chain) {
@@ -533,6 +536,30 @@ func completionContextFromNodeChain(content string, offset int, chain []ast.BLan
 	return completionContext{kind: completionKindNone, prefix: prefix}
 }
 
+func signatureCompletionContextFromNodeChain(offset int, prefix string, chain []ast.BLangNode) (completionContext, bool) {
+	for i := len(chain) - 1; i >= 0; i-- {
+		switch n := chain[i].(type) {
+		case *ast.BLangFunction:
+			if ctx, ok := invokableCompletionContext(offset, prefix, n); ok {
+				return ctx, true
+			}
+		case *ast.BLangResourceMethod:
+			if ctx, ok := invokableCompletionContext(offset, prefix, n); ok {
+				return ctx, true
+			}
+		case *ast.BLangFunctionType:
+			if ctx, ok := functionTypeCompletionContext(offset, prefix, n); ok {
+				return ctx, true
+			}
+		case *ast.BMethodDecl:
+			if ctx, ok := functionTypeCompletionContext(offset, prefix, &n.BLangFunctionType); ok {
+				return ctx, true
+			}
+		}
+	}
+	return completionContext{}, false
+}
+
 func completionContextAtChainNode(offset int, prefix string, node ast.BLangNode, next ast.BLangNode) (completionContext, bool) {
 	switch n := node.(type) {
 	case *ast.BLangCompilationUnit:
@@ -543,6 +570,10 @@ func completionContextAtChainNode(offset int, prefix string, node ast.BLangNode,
 		return invokableCompletionContext(offset, prefix, n)
 	case *ast.BLangResourceMethod:
 		return invokableCompletionContext(offset, prefix, n)
+	case *ast.BLangFunctionType:
+		return functionTypeCompletionContext(offset, prefix, n)
+	case *ast.BMethodDecl:
+		return functionTypeCompletionContext(offset, prefix, &n.BLangFunctionType)
 	case *ast.BLangFieldBaseAccess:
 		if n.Expr != nil {
 			exprPos := n.Expr.GetPosition()
@@ -594,6 +625,16 @@ func invokableCompletionContext(offset int, prefix string, fn ast.InvokableNode)
 	return completionContext{}, false
 }
 
+func functionTypeCompletionContext(offset int, prefix string, fn *ast.BLangFunctionType) (completionContext, bool) {
+	if isFunctionTypeReturnTypeDescCompletionContext(offset, fn) {
+		return completionContext{kind: completionKindReturnTypeDesc}, true
+	}
+	if isFunctionTypeReturnTypeCompletionContext(offset, fn) {
+		return completionContext{kind: completionKindType, prefix: prefix}, true
+	}
+	return completionContext{}, false
+}
+
 func isFunctionParameterTypeCompletionContext(offset int, fn ast.InvokableNode) bool {
 	if fn == nil {
 		return false
@@ -615,7 +656,7 @@ func simpleVariableTypeNodeContainsOffset(variable ast.SimpleVariableNode, offse
 }
 
 func isFunctionReturnTypeDescCompletionContext(offset int, fn ast.InvokableNode) bool {
-	if fn == nil || fn.HasExplicitReturnTypeDescriptor() || !locationContains(fn.GetPosition(), offset) {
+	if fn == nil || fn.HasExplicitReturnTypeDescriptor() {
 		return false
 	}
 	if paramListEndOffset := invokableParamListEndOffset(fn); paramListEndOffset < 0 || offset < paramListEndOffset {
@@ -625,7 +666,7 @@ func isFunctionReturnTypeDescCompletionContext(offset int, fn ast.InvokableNode)
 }
 
 func isFunctionReturnTypeCompletionContext(offset int, fn ast.InvokableNode) bool {
-	if fn == nil || !fn.HasExplicitReturnTypeDescriptor() || !locationContains(fn.GetPosition(), offset) {
+	if fn == nil || !fn.HasExplicitReturnTypeDescriptor() {
 		return false
 	}
 	if paramListEndOffset := invokableParamListEndOffset(fn); paramListEndOffset < 0 || offset < paramListEndOffset {
@@ -666,7 +707,7 @@ func invokableBodyStartOffset(fn ast.InvokableNode) int {
 	}
 	fnPos := fn.GetPosition()
 	if fn.GetBody() == nil {
-		return fnPos.EndOffset()
+		return int(^uint(0) >> 1)
 	}
 	body, ok := fn.GetBody().(ast.BLangNode)
 	if !ok || !locationHasOffsets(body.GetPosition()) {
@@ -674,6 +715,33 @@ func invokableBodyStartOffset(fn ast.InvokableNode) int {
 	}
 	bodyPos := body.GetPosition()
 	return bodyPos.StartOffset()
+}
+
+func isFunctionTypeReturnTypeDescCompletionContext(offset int, fn *ast.BLangFunctionType) bool {
+	if fn == nil || fn.HasExplicitReturnTypeDescriptor() {
+		return false
+	}
+	if !locationHasOffsets(fn.ParamListPos) || offset < fn.ParamListPos.EndOffset() {
+		return false
+	}
+	return true
+}
+
+func isFunctionTypeReturnTypeCompletionContext(offset int, fn *ast.BLangFunctionType) bool {
+	if fn == nil || !fn.HasExplicitReturnTypeDescriptor() {
+		return false
+	}
+	if !locationHasOffsets(fn.ParamListPos) || offset < fn.ParamListPos.EndOffset() {
+		return false
+	}
+	if fn.ReturnTypeDescriptor != nil {
+		retType := fn.ReturnTypeDescriptor.(ast.BLangNode)
+		retTypePos := retType.GetPosition()
+		if locationHasUsableOffsets(retTypePos) && (locationContains(retTypePos, offset) || offset <= retTypePos.EndOffset()) {
+			return true
+		}
+	}
+	return true
 }
 
 func isModuleVarDeclCompletionNode(next ast.BLangNode) bool {
