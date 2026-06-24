@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -103,12 +104,6 @@ var (
 		"import-main-v",
 		"import-type6-v",
 	}
-
-	// Skip project tests for the BIR serialization roundtrip stage. These
-	// projects compile and run correctly, but recompilation from the
-	// serialized BIR fails. Add the project name (basename of the project
-	// directory) here.
-	skipProjectSerializationRoundtripTests = []string{}
 )
 
 func TestMain(m *testing.M) {
@@ -860,41 +855,6 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 		syntaxTrees = append(syntaxTrees, cu)
 	}
 
-	// Build package from compilation units
-	var pkg *ast.BLangPackage
-	if len(syntaxTrees) == 1 {
-		pkg = ast.ToPackage(cx, syntaxTrees[0])
-	} else {
-		pkg = &ast.BLangPackage{}
-		for _, cu := range syntaxTrees {
-			if pkg.PackageID == nil {
-				pkg.PackageID = cu.GetPackageID()
-			}
-			for _, node := range cu.GetTopLevelNodes() {
-				switch n := node.(type) {
-				case *ast.BLangImportPackage:
-					pkg.Imports = append(pkg.Imports, *n)
-				case *ast.BLangConstant:
-					pkg.Constants = append(pkg.Constants, *n)
-				case *ast.BLangService:
-					pkg.Services = append(pkg.Services, *n)
-				case *ast.BLangFunction:
-					pkg.Functions = append(pkg.Functions, *n)
-				case *ast.BLangTypeDefinition:
-					pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
-				case *ast.BLangAnnotation:
-					pkg.Annotations = append(pkg.Annotations, *n)
-				case *ast.BLangClassDefinition:
-					pkg.ClassDefinitions = append(pkg.ClassDefinitions, *n)
-				case *ast.BLangXMLNS:
-					pkg.XmlnsList = append(pkg.XmlnsList, *n)
-				default:
-					cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
-				}
-			}
-		}
-	}
-
 	// Set the package ID to match the module descriptor
 	desc := module.Descriptor()
 	orgName := model.Name(desc.Org().Value())
@@ -907,17 +867,28 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	if version == "" {
 		version = model.DEFAULT_VERSION
 	}
-	pkg.PackageID = cx.NewPackageID(orgName, nameComps, version)
+	pkgID := cx.NewPackageID(orgName, nameComps, version)
+	for _, cu := range syntaxTrees {
+		cu.SetPackageID(pkgID)
+	}
 
 	// Run compilation pipeline
 	implicitImports, err := langlib.ImplicitImports(cx)
 	if err != nil {
 		return nil, fmt.Errorf("loading lang libraries failed: %w", err)
 	}
-	importedSymbols := semantics.ResolveImports(cx, pkg, implicitImports, publicSymbols, defaultOrg)
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
+	importedSymbolsByCU := semantics.ResolveCompilationUnitImports(cx, syntaxTrees, implicitImports, publicSymbols, defaultOrg)
+	pkgScope, _ := semantics.ResolveSymbols(cx, *pkgID, importedSymbolsByCU)
 	if cx.HasDiagnostics() {
 		return nil, fmt.Errorf("symbol resolution failed")
+	}
+	pkg := ast.ToPackageFromCompilationUnits(syntaxTrees)
+	pkg.Imports = nil
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	importedSymbols := make(map[string]model.ExportedSymbolSpace)
+	for _, cuImports := range importedSymbolsByCU {
+		maps.Copy(importedSymbols, cuImports.Imports)
 	}
 
 	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)

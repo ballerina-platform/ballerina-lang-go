@@ -3507,7 +3507,6 @@ func (n *NodeBuilder) reportXMLTemplateDiagnostic(diag *xmlTemplateDiagnostic) {
 func (n *NodeBuilder) collectXMLTemplateNamespaceInsertion(node tree.Node) XMLTemplateNamespaceInsertion {
 	insn := XMLTemplateNamespaceInsertion{
 		UsedPrefixes: map[string]struct{}{},
-		Namespaces:   map[string]string{},
 	}
 	n.collectXMLTemplateNamespaceRefs(node, nil, &insn)
 	return insn
@@ -3695,7 +3694,7 @@ func (n *NodeBuilder) xmlAttributes(attrs tree.NodeList[*tree.XMLAttributeNode])
 }
 
 func (n *NodeBuilder) TransformXMLElement(xMLElementNode *tree.XMLElementNode) BLangNode {
-	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
+	elem := &BLangXMLElementLiteral{}
 	elem.pos = getPosition(n.de(), xMLElementNode)
 	if start := xMLElementNode.StartTag(); start != nil {
 		elem.Name = n.xmlNameToString(start.Name())
@@ -3745,7 +3744,7 @@ func (n *NodeBuilder) TransformXMLQualifiedName(xMLQualifiedNameNode *tree.XMLQu
 }
 
 func (n *NodeBuilder) TransformXMLEmptyElement(xMLEmptyElementNode *tree.XMLEmptyElementNode) BLangNode {
-	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
+	elem := &BLangXMLElementLiteral{}
 	elem.pos = getPosition(n.de(), xMLEmptyElementNode)
 	elem.Name = n.xmlNameToString(xMLEmptyElementNode.Name())
 	elem.Attrs = n.xmlAttributes(xMLEmptyElementNode.Attributes())

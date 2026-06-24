@@ -211,19 +211,24 @@ func compileBundledLib(cx *context.CompilerContext, cache map[string]model.Expor
 	if cu == nil {
 		return model.ExportedSymbolSpace{}, fmt.Errorf("langlib: AST generation failed for %s", lib.implicitID)
 	}
-	pkg := ast.ToPackage(cx, cu)
-
 	nameComps := make([]model.Name, len(lib.nameComps))
 	for i, c := range lib.nameComps {
 		nameComps[i] = model.Name(c)
 	}
-	pkg.PackageID = cx.NewPackageID(model.Name(lib.org), nameComps, model.Name(lib.version))
+	pkgID := cx.NewPackageID(model.Name(lib.org), nameComps, model.Name(lib.version))
+	cu.SetPackageID(pkgID)
+	compilationUnits := []*ast.BLangCompilationUnit{cu}
 
 	// lang libraries do not themselves import migrated libs, so the
 	// still-intrinsic implicit imports are sufficient here.
-	imported := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx),
+	importedByCU := semantics.ResolveCompilationUnitImports(cx, compilationUnits, semantics.GetImplicitImports(cx),
 		make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), lib.org)
-	exported := semantics.ResolveSymbols(cx, pkg, imported)
+	pkgScope, exported := semantics.ResolveSymbols(cx, *pkgID, importedByCU)
+	pkg := ast.ToPackageFromCompilationUnits(compilationUnits)
+	pkg.PackageID = pkgID
+	pkg.Scope = pkgScope
+	pkg.Imports = nil
+	imported := importedByCU[0].Imports
 	semantics.ResolveTopLevelNodes(cx, pkg, imported)
 	cache[lib.balPath] = exported
 	return exported, nil

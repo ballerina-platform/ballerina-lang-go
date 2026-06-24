@@ -71,10 +71,6 @@ func (p *PrettyPrinter) Print(tyCtx semtypes.Context, node BIRPackage) string {
 	p.write("module ")
 	p.write(p.PrintPackageID(node.PackageID))
 	p.write(";\n")
-	for _, importModule := range node.ImportModules {
-		p.write(p.PrintImportModule(importModule))
-		p.write(";\n")
-	}
 	sortedGlobalVars := make([]BIRGlobalVariableDcl, 0, len(node.GlobalVars))
 	for _, globalVar := range node.GlobalVars {
 		sortedGlobalVars = append(sortedGlobalVars, globalVar)
@@ -538,13 +534,6 @@ func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
 		return "<UNKNOWN>"
 	}
 	return semtypes.ToString(p.cx, typeNode)
-}
-
-func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {
-	sb := strings.Builder{}
-	sb.WriteString("import ")
-	sb.WriteString(p.PrintPackageID(importModules.PackageID))
-	return sb.String()
 }
 
 func (p *PrettyPrinter) PrintPackageID(packageID *model.PackageID) string {
