@@ -967,8 +967,6 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 		return binaryExpression(ctx, curBB, expr)
 	case *ast.BLangSimpleVarRef:
 		return simpleVariableReference(ctx, curBB, expr)
-	case *ast.BLangConstRef:
-		return simpleVariableReference(ctx, curBB, &expr.BLangSimpleVarRef)
 	case *ast.BLangUnaryExpr:
 		return unaryExpression(ctx, curBB, expr)
 	case *ast.BLangWildCardBindingPattern:
