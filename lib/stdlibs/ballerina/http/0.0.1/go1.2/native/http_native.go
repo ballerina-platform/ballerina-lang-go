@@ -1179,7 +1179,10 @@ func initHttpModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Request.setJsonPayload",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			b, _ := json.Marshal(values.BalToGoJSON(args[1]))
+			b, err := toJSONBytes(args[1])
+			if err != nil {
+				return values.NewErrorWithMessage("setJsonPayload: " + err.Error()), nil
+			}
 			self.Put("$body", &requestBodyHolder{buf: b})
 			ct := "application/json"
 			if len(args) > 2 {
@@ -1711,5 +1714,5 @@ func listToBytes(list *values.List) ([]byte, bool) {
 
 // toJSONBytes serializes a Ballerina value to JSON bytes.
 func toJSONBytes(v values.BalValue) ([]byte, error) {
-	return json.Marshal(values.BalToGoJSON(v))
+	return values.ToJSONByteArray(v)
 }
