@@ -318,7 +318,13 @@ type (
 	// here because model must not import ast.
 	ConstantValueSymbol struct {
 		VariableSymbol
-		value      values.BalValue
+		value values.BalValue
+		// valueKnown marks whether value has been folded yet. Folding is lazy:
+		// during resolution a forward-referenced constant may not be folded when
+		// another constant references it, and because nil is a valid constant
+		// value this flag is what distinguishes "not folded yet" from "folded to
+		// nil". After resolution every constant that compiled is folded (an
+		// unfoldable const-expr is a compile error), so it is always true then.
 		valueKnown bool
 	}
 
