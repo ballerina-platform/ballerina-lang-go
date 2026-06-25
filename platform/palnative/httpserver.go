@@ -80,7 +80,7 @@ func Listen(cfg pal.ServerConfig, handler http.Handler) (pal.ServerHandle, error
 	if err != nil {
 		return nil, err
 	}
-	var serveLn net.Listener = ln
+	serveLn := ln
 	if tlsCfg != nil {
 		serveLn = tls.NewListener(ln, tlsCfg)
 	}
