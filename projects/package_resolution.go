@@ -228,6 +228,7 @@ func (r *PackageResolution) resolveTransitiveDependencies(
 // bundled langlibs repository.
 var bundledLangLibs = []struct{ org, name, version string }{
 	{"ballerina", "lang.int", "0.0.1"},
+	{"ballerina", "lang.boolean", "0.0.1"},
 	{"ballerina", "lang.error", "0.0.1"},
 	{"ballerina", "lang.string", "0.0.1"},
 	{"ballerina", "lang.value", "0.0.1"},
