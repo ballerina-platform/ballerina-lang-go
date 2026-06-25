@@ -1722,7 +1722,7 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 	sym := ctx.getSymbol(symRef)
 	if sym.Kind() == model.SymbolKindType {
 		resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-		td := values.NewTypeDesc(ctx.symbolType(symRef), annotationValuesForTypeSymbol(sym).Clone())
+		td := values.NewTypeDesc(ctx.symbolType(symRef), ctx.compilerContext().SymbolAnnotationValues(symRef))
 		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 		return expressionEffect{
 			result: resultOperand,
@@ -1753,15 +1753,6 @@ func simpleVariableReference(ctx context, curBB *BIRBasicBlock, expr *ast.BLangS
 		result: &BIROperand{VariableDcl: gv},
 		block:  curBB,
 	}
-}
-
-func annotationValuesForTypeSymbol(symbol model.Symbol) values.AnnotationValues {
-	if sym, ok := symbol.(interface {
-		AnnotationValues() values.AnnotationValues
-	}); ok {
-		return sym.AnnotationValues()
-	}
-	return values.NewAnnotationValues()
 }
 
 func trapExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTrapExpr) expressionEffect {

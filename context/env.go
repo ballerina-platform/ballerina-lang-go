@@ -23,19 +23,40 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 // CompilerEnvironment maintain the shared state of the frontend.
 type CompilerEnvironment struct {
-	anonTypeCount     map[*model.PackageID]int
-	anonFuncCount     map[*model.PackageID]int
-	packageInterner   *model.PackageIDInterner
-	symbolSpaces      []*model.SymbolSpace
-	symbolSpacesMu    sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
-	typeEnv           semtypes.Env
-	underlyingSymbol  sync.Map
+	anonTypeCount    map[*model.PackageID]int
+	anonFuncCount    map[*model.PackageID]int
+	packageInterner  *model.PackageIDInterner
+	symbolSpaces     []*model.SymbolSpace
+	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
+	typeEnv          semtypes.Env
+	underlyingSymbol sync.Map
+	// symbolAnnotations holds annotation values keyed by symbol ref, instead of
+	// a field on each symbol — most symbols carry no annotations, so this avoids
+	// a per-symbol word and keeps lookup keyed by reference. Values are written
+	// single-threaded during top-level resolution and read concurrently later.
+	symbolAnnotations sync.Map // model.SymbolRef -> values.AnnotationValues
 	statsEnabled      bool
 	diagnosticContext *diagnostics.DiagnosticEnv
+}
+
+// SetSymbolAnnotationValue records an annotation value for the given symbol.
+func (c *CompilerEnvironment) SetSymbolAnnotationValue(symbol model.SymbolRef, key string, value values.AnnotationValue) {
+	actual, _ := c.symbolAnnotations.LoadOrStore(symbol, values.NewAnnotationValues())
+	actual.(values.AnnotationValues)[key] = value
+}
+
+// SymbolAnnotationValues returns a copy of the annotation values for the given
+// symbol, or an empty set if it has none.
+func (c *CompilerEnvironment) SymbolAnnotationValues(symbol model.SymbolRef) values.AnnotationValues {
+	if av, ok := c.symbolAnnotations.Load(symbol); ok {
+		return av.(values.AnnotationValues).Clone()
+	}
+	return values.NewAnnotationValues()
 }
 
 func (c *CompilerEnvironment) DiagnosticEnv() *diagnostics.DiagnosticEnv {

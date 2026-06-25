@@ -1241,12 +1241,12 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 		if runtimeValue {
 			ref := createRuntimeAnnotationGlobal(t, task.ann.Expr)
 			if storedOnType {
-				setTypeAnnotationValue(t.getSymbol(task.typeSymbol), key, ref)
+				setTypeAnnotationValue(t, task.typeSymbol, key, ref)
 			}
 			continue
 		}
 		if storedOnType {
-			setTypeAnnotationValue(t.getSymbol(task.typeSymbol), key, result.value)
+			setTypeAnnotationValue(t, task.typeSymbol, key, result.value)
 		}
 	}
 
@@ -1264,12 +1264,12 @@ func evaluateAnnotationTasks(t typeResolver, tasks []annotationEvaluationTask) {
 			}
 			expr.SetPosition(group.expressions[0].GetPosition())
 			expr.SetDeterminedType(group.listType)
-			setTypeAnnotationValue(t.getSymbol(key.symbol), key.key, createRuntimeAnnotationGlobal(t, expr))
+			setTypeAnnotationValue(t, key.symbol, key.key, createRuntimeAnnotationGlobal(t, expr))
 			continue
 		}
 		restFiller, _ := values.FillerFactoryFor(t.typeContext(), atomic.Rest())
 		value := values.NewList(group.listType, atomic, true, restFiller, len(group.values), group.values)
-		setTypeAnnotationValue(t.getSymbol(key.symbol), key.key, value)
+		setTypeAnnotationValue(t, key.symbol, key.key, value)
 	}
 }
 
@@ -1331,15 +1331,8 @@ func evaluateAnnotationTask(t typeResolver, cache *constantEvaluationCache, task
 	return annotationEvaluationResult{value: value, err: err}
 }
 
-type annotationValueSymbol interface {
-	SetAnnotationValue(key string, value values.AnnotationValue)
-	AnnotationValues() values.AnnotationValues
-}
-
-func setTypeAnnotationValue(symbol model.Symbol, key string, value values.AnnotationValue) {
-	if sym, ok := symbol.(annotationValueSymbol); ok {
-		sym.SetAnnotationValue(key, value)
-	}
+func setTypeAnnotationValue(t typeResolver, symbol model.SymbolRef, key string, value values.AnnotationValue) {
+	t.compilerContext().SetSymbolAnnotationValue(symbol, key, value)
 }
 
 func resolveBlockStatements(t typeResolver, chain *binding, stmts []ast.StatementNode) (statementEffect, bool) {
@@ -3146,14 +3139,7 @@ func annotationValuesForTypeDescriptor(t typeResolver, typeDesc ast.TypeDescript
 	if !ok || !ast.SymbolIsSet(udt) {
 		return values.NewAnnotationValues()
 	}
-	return annotationValuesForTypeSymbol(t.getSymbol(udt.Symbol()))
-}
-
-func annotationValuesForTypeSymbol(symbol model.Symbol) values.AnnotationValues {
-	if sym, ok := symbol.(annotationValueSymbol); ok {
-		return sym.AnnotationValues()
-	}
-	return values.NewAnnotationValues()
+	return t.compilerContext().SymbolAnnotationValues(udt.Symbol())
 }
 
 func resolveXMLTextLiteral(_ typeResolver, chain *binding, e *ast.BLangXMLTextLiteral) (semtypes.SemType, expressionEffect, bool) {

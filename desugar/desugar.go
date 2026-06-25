@@ -364,22 +364,14 @@ func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
 
 func (v *dependencyVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
 
-type annotationValueCarrier interface {
-	AnnotationValues() values.AnnotationValues
-}
-
 func (v *dependencyVisitor) dependsOnRuntimeAnnotation(expr *ast.BLangAnnotAccessExpr) {
 	receiver, ok := expr.Expr.(ast.BNodeWithSymbol)
 	if !ok {
 		return
 	}
-	carrier, ok := v.compilerCtx.GetSymbol(receiver.Symbol()).(annotationValueCarrier)
-	if !ok {
-		return
-	}
 	annotationSymbol := v.compilerCtx.GetSymbol(expr.Symbol())
 	key := model.AnnotationKey(v.compilerCtx.SymbolPackage(expr.Symbol()), annotationSymbol.Name())
-	ref, ok := carrier.AnnotationValues()[key].(*values.RuntimeAnnotationValueRef)
+	ref, ok := v.compilerCtx.SymbolAnnotationValues(receiver.Symbol())[key].(*values.RuntimeAnnotationValueRef)
 	if !ok {
 		return
 	}

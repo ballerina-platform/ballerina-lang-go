@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"sort"
 
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 const (
@@ -62,16 +64,26 @@ type symbolWriter struct {
 	cp     *constantPool
 	tp     *semtypes.TypePool
 	env    semtypes.Env
+	cenv   *context.CompilerEnvironment
 	refMap map[model.SymbolRef]int
 }
 
-func Marshal(exported model.ExportedSymbolSpace, env semtypes.Env) ([]byte, error) {
+func Marshal(exported model.ExportedSymbolSpace, cenv *context.CompilerEnvironment) ([]byte, error) {
 	sw := &symbolWriter{
-		cp:  newConstantPool(),
-		tp:  semtypes.NewTypePool(),
-		env: env,
+		cp:   newConstantPool(),
+		tp:   semtypes.NewTypePool(),
+		env:  cenv.GetTypeEnv(),
+		cenv: cenv,
 	}
 	return sw.serialize(exported)
+}
+
+// symbolAnnotations returns the annotation values stored for the symbol at the
+// given ref. Annotations live on the compiler environment (keyed by ref) rather
+// than on the symbol, so the serializer fetches them here to keep them written
+// alongside their symbol.
+func (sw *symbolWriter) symbolAnnotations(ref model.SymbolRef) values.AnnotationValues {
+	return sw.cenv.SymbolAnnotationValues(ref)
 }
 
 func (sw *symbolWriter) serialize(exported model.ExportedSymbolSpace) ([]byte, error) {
@@ -157,8 +169,8 @@ func (sw *symbolWriter) writeSymbolSpaces(buf *bytes.Buffer, spaces []*model.Sym
 	}
 
 	for _, space := range spaces {
-		for _, sym := range space.Symbols() {
-			if err := sw.writeSymbol(buf, sym); err != nil {
+		for i, sym := range space.Symbols() {
+			if err := sw.writeSymbol(buf, space.RefAt(i), sym); err != nil {
 				return err
 			}
 		}
@@ -176,7 +188,7 @@ func compactSymbolSpaces(spaces []*model.SymbolSpace) []*model.SymbolSpace {
 	return result
 }
 
-func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
+func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, ref model.SymbolRef, sym model.Symbol) error {
 	if op, ok := sym.(model.OpaqueSymbol); ok {
 		if err := write(buf, symTagOpaque); err != nil {
 			return err
@@ -185,15 +197,15 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 	}
 	switch s := sym.(type) {
 	case *model.NetworkClassSymbol:
-		return sw.writeClassSymbol(buf, symTagNetworkClass, s)
+		return sw.writeClassSymbol(buf, symTagNetworkClass, s, sw.symbolAnnotations(ref))
 	case model.ClassSymbol:
-		return sw.writeClassSymbol(buf, symTagClass, s)
+		return sw.writeClassSymbol(buf, symTagClass, s, sw.symbolAnnotations(ref))
 	case *model.RecordSymbol:
-		return sw.writeRecordSymbol(buf, s)
+		return sw.writeRecordSymbol(buf, s, sw.symbolAnnotations(ref))
 	case *model.ObjectTypeSymbol:
-		return sw.writeObjectTypeSymbol(buf, s)
+		return sw.writeObjectTypeSymbol(buf, s, sw.symbolAnnotations(ref))
 	case *model.TypeSymbol:
-		return sw.writeTypeSymbol(buf, s)
+		return sw.writeTypeSymbol(buf, s, sw.symbolAnnotations(ref))
 	case *model.ConstantValueSymbol:
 		return sw.writeConstantValueSymbol(buf, s)
 	case *model.VariableSymbol:
@@ -221,40 +233,40 @@ func (sw *symbolWriter) writeSymbolBase(buf *bytes.Buffer, sym model.Symbol) err
 	return sw.writeType(buf, sym.Type())
 }
 
-func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol) error {
+func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol, annotations values.AnnotationValues) error {
 	if err := write(buf, symTagType); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+	if err := sw.writeAnnotationValues(buf, annotations); err != nil {
 		return err
 	}
 	return sw.writeInclusionMembers(buf, nil)
 }
 
-func (sw *symbolWriter) writeRecordSymbol(buf *bytes.Buffer, sym *model.RecordSymbol) error {
+func (sw *symbolWriter) writeRecordSymbol(buf *bytes.Buffer, sym *model.RecordSymbol, annotations values.AnnotationValues) error {
 	if err := write(buf, symTagRecord); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+	if err := sw.writeAnnotationValues(buf, annotations); err != nil {
 		return err
 	}
 	return sw.writeInclusionMembers(buf, sym.Members())
 }
 
-func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.ObjectTypeSymbol) error {
+func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.ObjectTypeSymbol, annotations values.AnnotationValues) error {
 	if err := write(buf, symTagObjectType); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+	if err := sw.writeAnnotationValues(buf, annotations); err != nil {
 		return err
 	}
 	return sw.writeInclusionMembers(buf, sym.Members())
@@ -338,14 +350,14 @@ func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) e
 	return write(buf, int32(ref.Index))
 }
 
-func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol) error {
+func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model.ClassSymbol, annotations values.AnnotationValues) error {
 	if err := write(buf, tag); err != nil {
 		return err
 	}
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	if err := sw.writeAnnotationValues(buf, sym.AnnotationValues()); err != nil {
+	if err := sw.writeAnnotationValues(buf, annotations); err != nil {
 		return err
 	}
 	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {

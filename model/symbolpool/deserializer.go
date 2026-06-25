@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 type symbolReader struct {
@@ -94,14 +95,24 @@ func (sr *symbolReader) readResourceMethodSymbol(space *model.SymbolSpace) {
 	addDeserializedSymbol(space, name, rm)
 }
 
-func addDeserializedSymbol(space *model.SymbolSpace, name string, sym model.Symbol) {
+func addDeserializedSymbol(space *model.SymbolSpace, name string, sym model.Symbol) model.SymbolRef {
 	if !sym.IsPublic() {
 		if _, exists := space.GetSymbol(name); exists {
-			space.AppendSymbol(sym)
-			return
+			return space.RefAt(space.AppendSymbol(sym))
 		}
 	}
 	space.AddSymbol(name, sym)
+	ref, _ := space.GetSymbol(name)
+	return ref
+}
+
+// storeAnnotations records deserialized annotation values on the compiler
+// environment, keyed by the symbol's ref (annotations no longer live on the
+// symbol itself).
+func (sr *symbolReader) storeAnnotations(ref model.SymbolRef, annotations values.AnnotationValues) {
+	for key, value := range annotations {
+		sr.env.SetSymbolAnnotationValue(ref, key, value)
+	}
 }
 
 func (sr *symbolReader) readPackageIdentifier() *model.PackageID {
@@ -187,31 +198,34 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewTypeSymbol(name, isPublic)
 	sym.SetType(ty)
-	sr.setAnnotationValues(&sym)
+	annotations := sr.readAnnotationValues()
 	_ = sr.readInclusionMembers(space)
-	addDeserializedSymbol(space, name, &sym)
+	ref := addDeserializedSymbol(space, name, &sym)
+	sr.storeAnnotations(ref, annotations)
 }
 
 func (sr *symbolReader) readRecordSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewRecordSymbol(name, isPublic)
 	sym.SetType(ty)
-	sr.setAnnotationValues(&sym.TypeSymbol)
+	annotations := sr.readAnnotationValues()
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
-	addDeserializedSymbol(space, name, &sym)
+	ref := addDeserializedSymbol(space, name, &sym)
+	sr.storeAnnotations(ref, annotations)
 }
 
 func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewObjectTypeSymbol(name, isPublic)
 	sym.SetType(ty)
-	sr.setAnnotationValues(&sym.TypeSymbol)
+	annotations := sr.readAnnotationValues()
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
-	addDeserializedSymbol(space, name, &sym)
+	ref := addDeserializedSymbol(space, name, &sym)
+	sr.storeAnnotations(ref, annotations)
 }
 
 func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.InclusionMember {
@@ -282,9 +296,7 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool
 		sym = model.NewClassSymbol(name, isPublic)
 	}
 	sym.SetType(ty)
-	for key, value := range sr.readAnnotationValues() {
-		sym.SetAnnotationValue(key, value)
-	}
+	annotations := sr.readAnnotationValues()
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
@@ -301,13 +313,8 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool
 			networkSym.AddResourceMethod(sr.readSymbolRef(space))
 		}
 	}
-	addDeserializedSymbol(space, name, sym)
-}
-
-func (sr *symbolReader) setAnnotationValues(sym *model.TypeSymbol) {
-	for key, value := range sr.readAnnotationValues() {
-		sym.SetAnnotationValue(key, value)
-	}
+	ref := addDeserializedSymbol(space, name, sym)
+	sr.storeAnnotations(ref, annotations)
 }
 
 type valueSymbolFields struct {

@@ -255,7 +255,6 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
-		annotations values.AnnotationValues
 	}
 
 	AnnotationSymbol struct {
@@ -802,17 +801,6 @@ func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
 }
 
-func (ts *TypeSymbol) SetAnnotationValue(key string, value values.AnnotationValue) {
-	if ts.annotations == nil {
-		ts.annotations = values.NewAnnotationValues()
-	}
-	ts.annotations[key] = value
-}
-
-func (ts *TypeSymbol) AnnotationValues() values.AnnotationValues {
-	return ts.annotations.Clone()
-}
-
 func (as *AnnotationSymbol) Kind() SymbolKind {
 	return SymbolKindAnnotation
 }
@@ -882,8 +870,6 @@ type MemberCarrier interface {
 type ClassSymbol interface {
 	Symbol
 	MemberCarrier
-	SetAnnotationValue(key string, value values.AnnotationValue)
-	AnnotationValues() values.AnnotationValues
 	SetMethods(map[string]SymbolRef)
 	MethodSymbol(name string) (SymbolRef, bool)
 }
@@ -1168,8 +1154,7 @@ func NewConstantValueSymbol(name string, isPublic bool) *ConstantValueSymbol {
 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
-		symbolBase:  symbolBase{name: name, isPublic: isPublic},
-		annotations: values.NewAnnotationValues(),
+		symbolBase: symbolBase{name: name, isPublic: isPublic},
 	}
 }
 
@@ -1209,8 +1194,7 @@ func NewNetworkClassSymbol(name string, isPublic bool) ClassSymbol {
 func newClassSymbolBase(name string, isPublic bool) classSymbolBase {
 	return classSymbolBase{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, isPublic: isPublic},
-			annotations: values.NewAnnotationValues(),
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 		methods: map[string]SymbolRef{},
 	}
@@ -1261,8 +1245,7 @@ func (r *ResourceMethodSymbol) Copy() Symbol {
 func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 	return RecordSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, isPublic: isPublic},
-			annotations: values.NewAnnotationValues(),
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 	}
 }
@@ -1270,8 +1253,7 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
-			symbolBase:  symbolBase{name: name, isPublic: isPublic},
-			annotations: values.NewAnnotationValues(),
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},
 	}
 }

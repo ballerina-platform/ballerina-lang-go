@@ -770,7 +770,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 			return stdoutBuf.String(), stderrBuf.String()
 		}
 
-		symBytes, err := symbolpool.Marshal(exported, tyEnv)
+		symBytes, err := symbolpool.Marshal(exported, project.Environment().CompilerEnvironment())
 		if err != nil {
 			fmt.Fprintf(&stdoutBuf, "symbol serialization failed: %v\n", err)
 			return stdoutBuf.String(), stderrBuf.String()
