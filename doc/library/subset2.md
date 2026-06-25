@@ -18,6 +18,34 @@ body, response payload and headers, and TLS). Subset 2 adds the following
 | `responseLimits` | `ResponseLimitConfigs`: `maxStatusLineLength`, `maxHeaderSize`, `maxEntityBodySize` bound the accepted response size |
 | `parseHeader(headerValue)` | Module-level function that parses a header value into its base value and parameter map; returns `[string, map<string>]\|http:ClientError` |
 
+### Server (listener & service)
+
+Subset 2 adds the server side: an `http:Listener` that accepts connections and
+routes requests to attached services by base path.
+
+| Feature | Notes |
+|---|---|
+| `new http:Listener(port, config?)` | `ListenerConfiguration`: `host` (default `0.0.0.0`), `timeout` (seconds, default 60), `httpVersion` (`http:HTTP_2_0` default — serves HTTP/1.1 + HTTP/2 — or `http:HTTP_1_1`), `secureSocket` |
+| `secureSocket` (TLS) | `ListenerSecureSocket`: `key` (`CertKey` with `certFile`/`keyFile`), `cert`, `mutualSsl`, `protocol`, `ciphers`, `shareSession` |
+| `service /basePath on new http:Listener(port) { ... }` | Attach a service at a base path declaratively, or via `Listener.attach(svc, name?)` / `detach(svc)` |
+| Resource functions | `resource function get\|post\|... <path>(...)`; path segments may be typed params (`[int id]`, `[string s]`, `[boolean b]`, `[decimal d]`) coerced from the URL; an optional `http:Request` parameter receives the inbound request |
+| Resource return | `string`, `http:Response`, `error`, or unions thereof; non-matching path → 404, wrong method → 405 |
+| Listener lifecycle | `start` / `gracefulStop` / `immediateStop` are driven by the module lifecycle (`$start`/`$gracefulStop`/`$immediateStop`); the program stays alive while listening and winds down on a stop signal |
+
+### Request / Response messages
+
+Subset 1 exposed the response payload/header getters. Subset 2 adds mutating
+methods (used when building responses in services and forwarding requests):
+
+| Method | Notes |
+|---|---|
+| `addHeader` / `removeHeader` / `removeAllHeaders` | Add/remove headers without replacing existing values; `position` (`LEADING`/`TRAILING`) accepted, `TRAILING` ignored at runtime |
+| `setContentType` / `getContentType` | Set/read the `Content-Type` header |
+
+`http:Response` also exposes the `statusCode` (default 200), `reasonPhrase`,
+`server`, and `resolvedRequestedURI` fields. The `forward` client method proxies
+a received `http:Request` to a target unchanged.
+
 ## [crypto](https://github.com/ballerina-platform/module-ballerina-crypto/blob/master/docs/spec/spec.md)
 
 | Function | Notes |
