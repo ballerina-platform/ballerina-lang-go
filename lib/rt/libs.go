@@ -20,6 +20,7 @@ import (
 	_ "ballerina-lang-go/lib/langinternal/runtime"
 	_ "ballerina-lang-go/lib/langlibs/go/lang.array"
 	_ "ballerina-lang-go/lib/langlibs/go/lang.boolean"
+	_ "ballerina-lang-go/lib/langlibs/go/lang.decimal"
 	_ "ballerina-lang-go/lib/langlibs/go/lang.error"
 	_ "ballerina-lang-go/lib/langlibs/go/lang.int"
 	_ "ballerina-lang-go/lib/langlibs/go/lang.map"
