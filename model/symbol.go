@@ -62,12 +62,12 @@ type Symbol interface {
 	Copy() Symbol
 }
 
-// ValueSymbolView is satisfied by both *ValueSymbol and *ConstantValueSymbol.
+// ValueSymbol is satisfied by both *VariableSymbol and *ConstantValueSymbol.
 // Callers that only care about a symbol's value-symbol facets (whether it is a
 // constant, parameter, final, etc.) should type-assert against this interface
-// rather than the concrete *ValueSymbol, so that constants — which are stored as
+// rather than the concrete *VariableSymbol, so that constants — which are stored as
 // *ConstantValueSymbol — are matched too.
-type ValueSymbolView interface {
+type ValueSymbol interface {
 	Symbol
 	IsConst() bool
 	IsParameter() bool
@@ -301,12 +301,12 @@ type (
 		FnRef     SymbolRef
 	}
 
-	ValueSymbol struct {
+	VariableSymbol struct {
 		symbolBase
 		flags valueSymbolFlags
 	}
 
-	// ConstantValueSymbol is a ValueSymbol for a module constant whose
+	// ConstantValueSymbol is a VariableSymbol for a module constant whose
 	// expression has been folded at compile time. It carries the folded value
 	// (the "E" of the design): a restricted, non-cyclic, serializable BalValue.
 	//
@@ -317,7 +317,7 @@ type (
 	// package (the "apply", analogous to TypeOp.Apply) — that step cannot live
 	// here because model must not import ast.
 	ConstantValueSymbol struct {
-		ValueSymbol
+		VariableSymbol
 		value      values.BalValue
 		valueKnown bool
 	}
@@ -494,10 +494,10 @@ var (
 	_ MemberCarrier                  = &NetworkClassSymbol{}
 	_ MemberCarrier                  = &RecordSymbol{}
 	_ MemberCarrier                  = &ObjectTypeSymbol{}
-	_ Symbol                         = &ValueSymbol{}
+	_ Symbol                         = &VariableSymbol{}
 	_ Symbol                         = &ConstantValueSymbol{}
-	_ ValueSymbolView                = &ValueSymbol{}
-	_ ValueSymbolView                = &ConstantValueSymbol{}
+	_ ValueSymbol                    = &VariableSymbol{}
+	_ ValueSymbol                    = &ConstantValueSymbol{}
 	_ Symbol                         = &XMLNSSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
@@ -929,7 +929,7 @@ func (r *RecordSymbol) RestField() (*RestTypeDescriptor, bool) {
 	return nil, false
 }
 
-func (vs *ValueSymbol) Kind() SymbolKind {
+func (vs *VariableSymbol) Kind() SymbolKind {
 	if vs.hasFlag(valueSymbolFlagConst) {
 		return SymbolKindConstant
 	}
@@ -939,33 +939,33 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 	return SymbolKindVariable
 }
 
-func (vs *ValueSymbol) IsConst() bool {
+func (vs *VariableSymbol) IsConst() bool {
 	return vs.hasFlag(valueSymbolFlagConst) || vs.hasFlag(valueSymbolFlagParameter)
 }
 
-func (vs *ValueSymbol) IsParameter() bool { return vs.hasFlag(valueSymbolFlagParameter) }
+func (vs *VariableSymbol) IsParameter() bool { return vs.hasFlag(valueSymbolFlagParameter) }
 
-func (vs *ValueSymbol) IsIsolated() bool { return vs.hasFlag(valueSymbolFlagIsolated) }
+func (vs *VariableSymbol) IsIsolated() bool { return vs.hasFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) SetIsolated() { vs.setFlag(valueSymbolFlagIsolated) }
+func (vs *VariableSymbol) SetIsolated() { vs.setFlag(valueSymbolFlagIsolated) }
 
-func (vs *ValueSymbol) IsFinal() bool { return vs.hasFlag(valueSymbolFlagFinal) }
+func (vs *VariableSymbol) IsFinal() bool { return vs.hasFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) SetFinal() { vs.setFlag(valueSymbolFlagFinal) }
+func (vs *VariableSymbol) SetFinal() { vs.setFlag(valueSymbolFlagFinal) }
 
-func (vs *ValueSymbol) IsConfigurable() bool { return vs.hasFlag(valueSymbolFlagConfigurable) }
+func (vs *VariableSymbol) IsConfigurable() bool { return vs.hasFlag(valueSymbolFlagConfigurable) }
 
-func (vs *ValueSymbol) SetConfigurable() { vs.setFlag(valueSymbolFlagConfigurable) }
+func (vs *VariableSymbol) SetConfigurable() { vs.setFlag(valueSymbolFlagConfigurable) }
 
-func (vs *ValueSymbol) IsListener() bool { return vs.hasFlag(valueSymbolFlagListener) }
+func (vs *VariableSymbol) IsListener() bool { return vs.hasFlag(valueSymbolFlagListener) }
 
-func (vs *ValueSymbol) SetListener() { vs.setFlag(valueSymbolFlagListener) }
+func (vs *VariableSymbol) SetListener() { vs.setFlag(valueSymbolFlagListener) }
 
-func (vs *ValueSymbol) hasFlag(flag valueSymbolFlags) bool { return vs.flags&flag != 0 }
+func (vs *VariableSymbol) hasFlag(flag valueSymbolFlags) bool { return vs.flags&flag != 0 }
 
-func (vs *ValueSymbol) setFlag(flag valueSymbolFlags) { vs.flags |= flag }
+func (vs *VariableSymbol) setFlag(flag valueSymbolFlags) { vs.flags |= flag }
 
-func (vs *ValueSymbol) Copy() Symbol {
+func (vs *VariableSymbol) Copy() Symbol {
 	cp := *vs
 	return &cp
 }
@@ -1140,7 +1140,7 @@ func (fs *FunctionSignature) IsTransactional() bool {
 	return fs.Flags&FuncSymbolFlagTransactional != 0
 }
 
-func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
+func NewVariableSymbol(name string, isPublic bool, isConst bool, isParameter bool) VariableSymbol {
 	var flags valueSymbolFlags
 	if isConst {
 		flags |= valueSymbolFlagConst
@@ -1148,7 +1148,7 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 	if isParameter {
 		flags |= valueSymbolFlagParameter
 	}
-	return ValueSymbol{
+	return VariableSymbol{
 		symbolBase: symbolBase{name: name, isPublic: isPublic},
 		flags:      flags,
 	}
@@ -1156,7 +1156,7 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 
 func NewConstantValueSymbol(name string, isPublic bool) *ConstantValueSymbol {
 	return &ConstantValueSymbol{
-		ValueSymbol: NewValueSymbol(name, isPublic, true, false),
+		VariableSymbol: NewVariableSymbol(name, isPublic, true, false),
 	}
 }
 

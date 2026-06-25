@@ -1325,7 +1325,7 @@ func createRuntimeAnnotationGlobal(t typeResolver, expr ast.BLangExpression) *va
 			break
 		}
 	}
-	symbol := model.NewValueSymbol(name, false, false, false)
+	symbol := model.NewVariableSymbol(name, false, false, false)
 	symbol.SetType(semtypes.ANY)
 	resolver.scope.AddSymbol(name, &symbol)
 	ref, _ := resolver.scope.GetSymbol(name)
@@ -5865,7 +5865,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSy
 		sig := sym.Signature()
 		argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv, expectedType)
 		return argTys, fnSymbol, chain, ok
-	case model.ValueSymbolView:
+	case model.ValueSymbol:
 		narrowedSymbol := lookupSymbol(chain, fnSymbol)
 		inv.SetResolvedSymbol(narrowedSymbol)
 		fnTy := t.symbolType(narrowedSymbol)

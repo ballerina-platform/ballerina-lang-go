@@ -560,7 +560,7 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 		if node.expr == nil {
 			continue
 		}
-		if vs, ok := compilerCtx.GetSymbol(node.sym).(*model.ValueSymbol); ok && vs.IsListener() {
+		if vs, ok := compilerCtx.GetSymbol(node.sym).(*model.VariableSymbol); ok && vs.IsListener() {
 			initStmts = append(initStmts, buildListnerInit(pkgCtx, node, moduleListenersRef)...)
 		} else {
 			initStmts = append(initStmts, buildInitAssignment(compilerCtx, node))
@@ -718,7 +718,7 @@ func ListenerMethodFor(name string) string {
 
 func hasModuleListenerVar(compilerCtx *context.CompilerContext, nodes []moduleInitNode) bool {
 	for _, n := range nodes {
-		if vs, ok := compilerCtx.GetSymbol(n.sym).(*model.ValueSymbol); ok && vs.IsListener() {
+		if vs, ok := compilerCtx.GetSymbol(n.sym).(*model.VariableSymbol); ok && vs.IsListener() {
 			return true
 		}
 	}
@@ -826,7 +826,7 @@ func addModuleListenersGlobal(pkgCtx *packageContext, pkg *ast.BLangPackage, pos
 		arrTy = listDefn.DefineListTypeWrapped(env, nil, 0, listnerTop, semtypes.CellMutability_CELL_MUT_LIMITED)
 	}
 
-	sym := model.NewValueSymbol(moduleListenersGlobalName, false, false, false)
+	sym := model.NewVariableSymbol(moduleListenersGlobalName, false, false, false)
 	symRef := pkgCtx.addModuleSymbol(moduleListenersGlobalName, &sym)
 	pkgCtx.setSymbolType(symRef, arrTy)
 
@@ -908,7 +908,7 @@ func hoistInlineServiceListeners(pkgCtx *packageContext, pkg *ast.BLangPackage) 
 			}
 			ty := semtypes.Diff(exprTy, semtypes.ERROR)
 			name := pkgCtx.nextDesugarSymbolName()
-			sym := model.NewValueSymbol(name, false, false, false)
+			sym := model.NewVariableSymbol(name, false, false, false)
 			sym.SetListener()
 			symRef := pkgCtx.addModuleSymbol(name, &sym)
 			pkgCtx.setSymbolType(symRef, ty)
@@ -1176,7 +1176,7 @@ func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*
 			paramTy := ctx.symbolType(precedingParam.Symbol())
 			newParam := newSimpleVariable(paramName, paramTy)
 			newParam.SetRequiredParam()
-			fnScope.AddSymbol(paramName, new(model.NewValueSymbol(paramName, false, false, true)))
+			fnScope.AddSymbol(paramName, new(model.NewVariableSymbol(paramName, false, false, true)))
 			paramSymRef, _ := fnScope.GetSymbol(paramName)
 			ctx.setSymbolType(paramSymRef, paramTy)
 			newParam.SetSymbol(paramSymRef)

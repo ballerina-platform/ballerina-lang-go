@@ -332,7 +332,7 @@ func (sr *symbolReader) readValueSymbolFields() valueSymbolFields {
 	return f
 }
 
-func applyValueSymbolFields(sym *model.ValueSymbol, f valueSymbolFields) {
+func applyValueSymbolFields(sym *model.VariableSymbol, f valueSymbolFields) {
 	sym.SetType(f.ty)
 	if f.isFinal {
 		sym.SetFinal()
@@ -347,7 +347,7 @@ func applyValueSymbolFields(sym *model.ValueSymbol, f valueSymbolFields) {
 
 func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 	f := sr.readValueSymbolFields()
-	sym := model.NewValueSymbol(f.name, f.isPublic, f.isConst, f.isParameter)
+	sym := model.NewVariableSymbol(f.name, f.isPublic, f.isConst, f.isParameter)
 	applyValueSymbolFields(&sym, f)
 	addDeserializedSymbol(space, f.name, &sym)
 }
@@ -355,7 +355,7 @@ func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 func (sr *symbolReader) readConstantValueSymbol(space *model.SymbolSpace) {
 	f := sr.readValueSymbolFields()
 	sym := model.NewConstantValueSymbol(f.name, f.isPublic)
-	applyValueSymbolFields(&sym.ValueSymbol, f)
+	applyValueSymbolFields(&sym.VariableSymbol, f)
 	var valueKnown bool
 	read(sr.r, &valueKnown)
 	if valueKnown {

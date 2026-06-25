@@ -637,7 +637,7 @@ func (ms *moduleSymbolResolver) allocateGlobalVarSymbol(globalVar *ast.BLangSimp
 	name := globalVar.Name.Value
 	isPublic := globalVar.IsPublic()
 	{
-		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		symbol := model.NewVariableSymbol(name, isPublic, false, false)
 		if globalVar.IsFinal() {
 			symbol.SetFinal()
 		}
@@ -776,7 +776,7 @@ func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams 
 			semanticError(functionResolver, "redeclared symbol '"+name+"'", param.GetPosition())
 			continue
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewVariableSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
 		if trackParams {
 			markInit(functionResolver, name, param.Symbol(), param.GetPosition())
@@ -788,7 +788,7 @@ func resolveFunctionInner(functionResolver *blockSymbolResolver, requiredParams 
 		if _, exists := scope.GetSymbol(name); exists {
 			semanticError(functionResolver, "redeclared symbol '"+name+"'", rest.GetPosition())
 		} else {
-			symbol := model.NewValueSymbol(name, false, false, true)
+			symbol := model.NewVariableSymbol(name, false, false, true)
 			addSymbolAndSetOnNode(functionResolver, name, &symbol, rest)
 			if trackParams {
 				markInit(functionResolver, name, rest.Symbol(), rest.GetPosition())
@@ -848,7 +848,7 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 		if isShadowed(parent, name) {
 			semanticError(functionResolver, "Variable already defined: "+name, param.GetPosition())
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewVariableSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
 		markInit(functionResolver, name, param.Symbol(), param.GetPosition())
 	}
@@ -859,7 +859,7 @@ func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockS
 		if isShadowed(parent, name) {
 			semanticError(functionResolver, "Variable already defined: "+name, restParam.GetPosition())
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewVariableSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
 		markInit(functionResolver, name, restParam.Symbol(), restParam.GetPosition())
 	}
@@ -1233,7 +1233,7 @@ func defineVariable(resolver *blockSymbolResolver, variable ast.VariableNode, is
 		if isShadowed(resolver, name) {
 			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
-		symbol := model.NewValueSymbol(name, false, isFinal, false)
+		symbol := model.NewVariableSymbol(name, false, isFinal, false)
 		if isFinal {
 			symbol.SetFinal()
 		}
@@ -1603,7 +1603,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 			continue
 		}
 		isPublic := field.IsPublic()
-		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		symbol := model.NewVariableSymbol(name, isPublic, false, false)
 		blockRes.AddSymbol(name, &symbol)
 	}
 
@@ -1625,7 +1625,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 		if _, _, exists := blockRes.GetSymbol(m.name); exists {
 			continue
 		}
-		symbol := model.NewValueSymbol(m.name, m.isPublic, false, false)
+		symbol := model.NewVariableSymbol(m.name, m.isPublic, false, false)
 		blockRes.AddSymbol(m.name, &symbol)
 	}
 
@@ -1635,7 +1635,7 @@ func finishResolveClassDefinition(ms *moduleSymbolResolver, blockRes *blockSymbo
 		addSymbolAndSetOnNode(blockRes, "init", symbol, initFn)
 	}
 
-	selfSymbol := model.NewValueSymbol("self", false, false, false)
+	selfSymbol := model.NewVariableSymbol("self", false, false, false)
 	blockRes.AddSymbol("self", &selfSymbol)
 
 	for _, field := range fields {
@@ -1730,7 +1730,7 @@ func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangR
 			semanticError(functionResolver, "redeclared symbol '"+name+"'", seg.GetPosition())
 			continue
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewVariableSymbol(name, false, false, true)
 		functionResolver.AddSymbol(name, &symbol)
 	}
 	resolveFunctionInner(functionResolver, rm.RequiredParams, rm.RestParam, rm, rm.Body)

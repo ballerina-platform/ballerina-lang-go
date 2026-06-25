@@ -196,7 +196,7 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeTypeSymbol(buf, s)
 	case *model.ConstantValueSymbol:
 		return sw.writeConstantValueSymbol(buf, s)
-	case *model.ValueSymbol:
+	case *model.VariableSymbol:
 		return sw.writeValueSymbol(buf, s)
 	case *model.AnnotationSymbol:
 		return sw.writeAnnotationSymbol(buf, s)
@@ -365,14 +365,14 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, tag uint8, sym model
 	return nil
 }
 
-func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {
+func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.VariableSymbol) error {
 	if err := write(buf, symTagValue); err != nil {
 		return err
 	}
 	return sw.writeValueSymbolBody(buf, sym)
 }
 
-func (sw *symbolWriter) writeValueSymbolBody(buf *bytes.Buffer, sym *model.ValueSymbol) error {
+func (sw *symbolWriter) writeValueSymbolBody(buf *bytes.Buffer, sym *model.VariableSymbol) error {
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
@@ -395,7 +395,7 @@ func (sw *symbolWriter) writeConstantValueSymbol(buf *bytes.Buffer, sym *model.C
 	if err := write(buf, symTagConstantValue); err != nil {
 		return err
 	}
-	if err := sw.writeValueSymbolBody(buf, &sym.ValueSymbol); err != nil {
+	if err := sw.writeValueSymbolBody(buf, &sym.VariableSymbol); err != nil {
 		return err
 	}
 	value, known := sym.ConstantValue()
