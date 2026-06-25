@@ -13,11 +13,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal hello))))
+                  (literal -c)
+                  (literal echo hello))))
             (mapping-constructor-expr))))))
       (if
         (type-test-expr is
@@ -77,11 +78,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal world))))
+                  (literal -c)
+                  (literal echo world))))
             (mapping-constructor-expr))))))
       (if
         (type-test-expr is
@@ -149,11 +151,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal bye))))
+                  (literal -c)
+                  (literal echo bye))))
             (mapping-constructor-expr))))))
       (if
         (type-test-expr is

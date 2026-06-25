@@ -8,11 +8,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal hello))))
+                  (literal -c)
+                  (literal echo hello))))
             (named-arg envProperties
               (mapping-constructor-expr))))))))
     (var-def
@@ -45,11 +46,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal world))))
+                  (literal -c)
+                  (literal echo world))))
             (named-arg envProperties
               (mapping-constructor-expr))))))))
     (var-def
@@ -95,11 +97,12 @@
             (mapping-constructor-expr
               (key-value
                 (literal value)
-                (literal echo))
+                (literal sh))
               (key-value
                 (literal arguments)
                 (list-constructor-expr
-                  (literal bye))))
+                  (literal -c)
+                  (literal echo bye))))
             (named-arg envProperties
               (mapping-constructor-expr))))))))
     (expression-stmt
