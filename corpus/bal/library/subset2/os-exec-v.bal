@@ -14,23 +14,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Skipped on Windows (see test_util.WindowsUnsupportedTests): `sh` is not
-// available there. We use `sh -c "echo ..."` rather than `echo` directly
-// because `echo` is not a standalone binary in all Unix environments (e.g.
-// the WASM CI runner's Node.js PATH).
+// Skipped on Windows and WASM (see test_util.WindowsUnsupportedTests,
+// test_util.WASMUnsupportedTests): `echo` is a shell builtin on Windows and
+// no executables are available in the WASM sandbox.
 import ballerina/os;
 import ballerina/io;
 
 public function main() returns error? {
-    // Run a shell command, wait for it to exit, and read its captured stdout.
-    os:Process p = check os:exec({value: "sh", arguments: ["-c", "echo hello"]});
+    // Run `echo`, wait for it to exit, and read its captured stdout.
+    os:Process p = check os:exec({value: "echo", arguments: ["hello"]});
     int code = check p.waitForExit();
     io:println(code);             // @output 0
     byte[] out = check p.output();
     io:println(out.length() > 0); // @output true
 
     // The process's stderr stream is empty for a successful echo.
-    os:Process p2 = check os:exec({value: "sh", arguments: ["-c", "echo world"]});
+    os:Process p2 = check os:exec({value: "echo", arguments: ["world"]});
     int _ = check p2.waitForExit();
     byte[] err = check p2.output(io:stderr);
     io:println(err.length());     // @output 0
@@ -40,7 +39,7 @@ public function main() returns error? {
     io:println(bad is os:Error);  // @output true
 
     // exit() terminates a process.
-    os:Process p3 = check os:exec({value: "sh", arguments: ["-c", "echo bye"]});
+    os:Process p3 = check os:exec({value: "echo", arguments: ["bye"]});
     p3.exit();
     io:println("exited");         // @output exited
 }
