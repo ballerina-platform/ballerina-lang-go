@@ -15,12 +15,11 @@
               (mapping-constructor-expr
                 (key-value
                   (literal value)
-                  (literal sh))
+                  (literal echo))
                 (key-value
                   (literal arguments)
                   (list-constructor-expr
-                    (literal -c)
-                    (literal echo hello))))))))))
+                    (literal hello))))))))))
       (var-def
         (variable code (type
           (value-type int)) (expr
@@ -51,12 +50,11 @@
               (mapping-constructor-expr
                 (key-value
                   (literal value)
-                  (literal sh))
+                  (literal echo))
                 (key-value
                   (literal arguments)
                   (list-constructor-expr
-                    (literal -c)
-                    (literal echo world))))))))))
+                    (literal world))))))))))
       (var-def
         (variable _ (type
           (value-type int)) (expr
@@ -98,12 +96,11 @@
               (mapping-constructor-expr
                 (key-value
                   (literal value)
-                  (literal sh))
+                  (literal echo))
                 (key-value
                   (literal arguments)
                   (list-constructor-expr
-                    (literal -c)
-                    (literal echo bye))))))))))
+                    (literal bye))))))))))
       (expression-stmt
         (invocation exit expr:
           (simple-var-ref p3) ()))
