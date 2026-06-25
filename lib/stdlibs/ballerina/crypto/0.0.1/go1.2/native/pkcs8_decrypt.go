@@ -176,12 +176,10 @@ func decryptPBES2(info encryptedPrivateKeyInfo, password string) (any, error) {
 	keySize := 16
 	prf := kdfParams.PRF.Algorithm
 	switch {
-	case len(prf) == 0 || prf.Equal(oidHMACWithSHA1):
-		hashFunc = sha1.New
 	case prf.Equal(oidHMACWithSHA256):
 		hashFunc = sha256.New
 		keySize = 32
-	default:
+	case len(prf) != 0 && !prf.Equal(oidHMACWithSHA1):
 		return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", prf)
 	}
 

@@ -21,7 +21,6 @@ import (
 	"ballerina-lang-go/runtime/extern"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
-	"sync"
 )
 
 const (
@@ -34,15 +33,10 @@ func mapLength(_ *extern.Context, args []values.BalValue) (values.BalValue, erro
 	return int64(m.Len()), nil
 }
 
-func mapKeys(rt *runtime.Runtime) extern.NativeFunc {
-	var stringArrayTy semtypes.SemType
-	var stringArrayOnce sync.Once
+func mapKeys(env semtypes.Env) extern.NativeFunc {
+	ld := semtypes.NewListDefinition()
+	stringArrayTy := ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		stringArrayOnce.Do(func() {
-			env := rt.GetTypeEnv()
-			ld := semtypes.NewListDefinition()
-			stringArrayTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
-		})
 		m := args[0].(*values.Map)
 		keys := m.Keys()
 		items := make([]values.BalValue, len(keys))
@@ -65,7 +59,7 @@ func mapRemove(ctx *extern.Context, args []values.BalValue) (values.BalValue, er
 
 func initMapModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "length", mapLength)
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "keys", mapKeys(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "keys", mapKeys(rt.GetTypeEnv()))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "remove", mapRemove)
 }
 

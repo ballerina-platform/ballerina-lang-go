@@ -17,6 +17,8 @@
 package extern_test
 
 import (
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -40,6 +42,7 @@ import (
 	"ballerina-lang-go/platform/pal"
 	"ballerina-lang-go/platform/palnative"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testharness"
 )
 
 // rewritingHTTPClient forwards requests from "http://testserver/..." (the
@@ -143,6 +146,107 @@ func TestHttpClientMethods(t *testing.T) {
 	runExtern(t, fileCase("http-client-methods-v"), newHTTPPal(rewriteClient(server.URL)), nil)
 }
 
+// TestHttpClientJsonLocal exercises JSON request serialization (balToGoJSON) and
+// JSON response parsing (goToBalValue) against a local echo server, with no network.
+func TestHttpClientJsonLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/echo" && r.Method == http.MethodPost:
+			body, _ := io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			_, _ = w.Write(body)
+		case r.URL.Path == "/json-array":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			_, _ = fmt.Fprint(w, `[1, 2.5, "three", true, null, [10, 20], {"k": "v"}]`)
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-json-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
+// TestHttpClientBinaryLocal exercises byte[] request bodies (listToBytes) and
+// binary response payloads (getBinaryPayload) against a local server.
+func TestHttpClientBinaryLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/echo-bytes" && r.Method == http.MethodPost:
+			body, _ := io.ReadAll(r.Body)
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(200)
+			_, _ = w.Write(body)
+		case r.URL.Path == "/bytes":
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte{1, 2, 3, 4})
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-binary-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
+// TestHttpClientCompressionLocal exercises transparent gzip/deflate response
+// decompression (decompressResponseBody + the gzip/deflate ReadClosers). The
+// client factory disables Go's automatic decompression so the compressed body
+// and Content-Encoding header reach the Ballerina layer untouched.
+func TestHttpClientCompressionLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/gzip":
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(200)
+			gz := gzip.NewWriter(w)
+			_, _ = gz.Write([]byte("hello gzipped world"))
+			_ = gz.Close()
+		case "/deflate":
+			w.Header().Set("Content-Encoding", "deflate")
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(200)
+			fl, _ := flate.NewWriter(w, flate.DefaultCompression)
+			_, _ = fl.Write([]byte("hello deflated world"))
+			_ = fl.Close()
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+
+	noAutoDecompress := func(cfg pal.ClientConfig) pal.HTTPClient {
+		return &rewritingHTTPClient{
+			serverURL: server.URL,
+			client:    &http.Client{Timeout: cfg.Timeout, Transport: &http.Transport{DisableCompression: true}},
+		}
+	}
+	runExtern(t, fileCase("http-client-compression-local-v"), newHTTPPal(noAutoDecompress), nil)
+}
+
+// TestHttpClientHeadersLocal exercises request-header handling: forwarding a
+// materialised request with a hop-by-hop header (removeHopByHopHeaders /
+// takeStream / materialize), mixed string/list headers (extractHeaders), and
+// the ALWAYS/NEVER compression modes (applyCompressionHeaders).
+func TestHttpClientHeadersLocal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A hop-by-hop Connection header must not have been forwarded.
+		if r.URL.Path == "/fwd" && r.Header.Get("Connection") != "" {
+			w.WriteHeader(400)
+			return
+		}
+		if r.URL.Path == "/empty" {
+			w.WriteHeader(204)
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer server.Close()
+	runExtern(t, fileCase("http-client-headers-local-v"), newHTTPPal(rewriteClient(server.URL)), nil)
+}
+
 // TestHttpClientTLSInsecure: A client without InsecureSkipVerify would fail
 // the handshake against a self-signed httptest TLS server. This verifies
 // secureSocket: {enable: false} propagates InsecureSkipVerify through PAL.
@@ -158,6 +262,7 @@ func TestHttpClientTLSInsecure(t *testing.T) {
 		if cfg.TLS.InsecureSkipVerify {
 			serverTLSConfig.InsecureSkipVerify = true //nolint:gosec
 		}
+		serverTLSConfig.NextProtos = []string{"http/1.1"}
 		return &rewritingHTTPClient{
 			serverURL: server.URL,
 			client:    &http.Client{Timeout: cfg.Timeout, Transport: &http.Transport{TLSClientConfig: serverTLSConfig}},
@@ -261,8 +366,8 @@ func TestHttpClientMTLS(t *testing.T) {
 		Certificates: []tls.Certificate{serverTLSCert},
 		ClientCAs:    clientCertPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+		NextProtos:   []string{"http/1.1"},
 	}
-	server.EnableHTTP2 = true
 	server.StartTLS()
 	defer server.Close()
 
@@ -292,6 +397,7 @@ import ballerina/io;
 
 public function main() returns error? {
     http:Client c = check new ("%s", {
+        httpVersion: http:HTTP_1_1,
         secureSocket: {
             verifyHostName: false,
             key: {certFile: "%s", keyFile: "%s"}
@@ -314,6 +420,44 @@ public function main() returns error? {
 		ExpectedPath: filepath.Join(expectedDir, "http-client-mtls-v.txtar"),
 	}
 	runExtern(t, tc, newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
+}
+
+func TestHttpClientForward(t *testing.T) {
+	type forwardResult struct {
+		method string
+		body   []byte
+		header string
+	}
+	resultCh := make(chan forwardResult, 1)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		resultCh <- forwardResult{method: r.Method, body: body, header: r.Header.Get("X-Forwarded-From")}
+		w.WriteHeader(200)
+		_, _ = fmt.Fprint(w, "forwarded ok")
+	}))
+	defer server.Close()
+
+	tc := fileCase("http-client-forward-v")
+	tp := newHTTPPal(rewriteClient(server.URL))
+	testharness.Run(t, tc, tp, nil)
+
+	received := <-resultCh
+	if received.method != "POST" {
+		t.Errorf("expected forwarded method POST, got %q", received.method)
+	}
+	if string(received.body) != "hello body" {
+		t.Errorf("expected forwarded body %q, got %q", "hello body", string(received.body))
+	}
+	if received.header != "test" {
+		t.Errorf("expected X-Forwarded-From %q, got %q", "test", received.header)
+	}
+
+	if *update {
+		testharness.Update(t, tc, tp)
+		return
+	}
+	testharness.Validate(t, tc, tp)
 }
 
 // generateTestCerts generates a self-signed CA, a server cert for 127.0.0.1,
@@ -374,46 +518,4 @@ func generateTestCerts(t *testing.T) (caCertPEM, serverCertPEM, serverKeyPEM, cl
 	serverCertPEM, serverKeyPEM = newLeafCert("127.0.0.1", []net.IP{net.ParseIP("127.0.0.1")}, x509.ExtKeyUsageServerAuth)
 	clientCertPEM, clientKeyPEM = newLeafCert("client", nil, x509.ExtKeyUsageClientAuth)
 	return
-}
-
-// TestHttpClientForward verifies that Client.forward proxies a Request's
-// method, body, and headers to the target unchanged, and returns the target's
-// response. The capturing server records what it received so the forwarded
-// method/body/header are asserted after the program runs.
-func TestHttpClientForward(t *testing.T) {
-	type forwardResult struct {
-		method string
-		body   []byte
-		header string
-	}
-	resultCh := make(chan forwardResult, 1)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		resultCh <- forwardResult{
-			method: r.Method,
-			body:   body,
-			header: r.Header.Get("X-Forwarded-From"),
-		}
-		w.WriteHeader(200)
-		_, _ = fmt.Fprint(w, "forwarded ok")
-	}))
-	defer server.Close()
-
-	runExtern(t, fileCase("http-client-forward-v"), newHTTPPal(rewriteClient(server.URL)), nil)
-
-	select {
-	case received := <-resultCh:
-		if received.method != "POST" {
-			t.Errorf("expected forwarded method POST, got %q", received.method)
-		}
-		if string(received.body) != "hello body" {
-			t.Errorf("expected forwarded body %q, got %q", "hello body", string(received.body))
-		}
-		if received.header != "test" {
-			t.Errorf("expected X-Forwarded-From header %q, got %q", "test", received.header)
-		}
-	default:
-		t.Error("forward target server received no request")
-	}
 }

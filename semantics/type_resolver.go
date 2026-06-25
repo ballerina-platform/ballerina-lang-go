@@ -260,7 +260,11 @@ func (t *packageTypeResolver) nextMonoFnName(origName string) string {
 }
 
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
-	classRef, ok := t.classSymbolByType[t.semtypeInterner.Intern(receiverTy)]
+	handle, ok := t.semtypeInterner.Lookup(receiverTy)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	classRef, ok := t.classSymbolByType[handle]
 	if !ok {
 		return model.SymbolRef{}, false
 	}
@@ -480,9 +484,8 @@ func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
 	}
 
 	for _, importedSpace := range t.importedSymbols {
-		for i, sym := range importedSpace.Main.Symbols() {
+		for ref, sym := range importedSpace.PublicMainSymbols() {
 			if _, ok := sym.(model.ClassSymbol); ok {
-				ref := importedSpace.Main.RefAt(i)
 				if ty := sym.Type(); !semtypes.IsZero(ty) {
 					t.classSymbolByType[t.semtypeInterner.Intern(ty)] = ref
 				}
@@ -582,8 +585,14 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 			if mat != nil {
 				t.setMappingAtomSymRef(mat, ref)
 			}
-			if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
-				t.setClassAtomSymbol(oat, ref)
+			// Only real class symbols may back a `new` expression. Mapping any
+			// type alias whose semtype merely contains an object atom (e.g. a
+			// union like `RequestMessage = json|Request`) would clobber the
+			// genuine class's atom mapping, so restrict this to ClassSymbols.
+			if _, isClass := sym.(model.ClassSymbol); isClass {
+				if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
+					t.setClassAtomSymbol(oat, ref)
+				}
 			}
 		}
 	}

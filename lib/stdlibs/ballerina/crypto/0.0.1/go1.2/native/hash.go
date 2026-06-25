@@ -31,24 +31,24 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func registerHashFunctions(rt *runtime.Runtime) {
+func registerHashFunctions(rt *runtime.Runtime, types cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashMd5",
-		hashFunc(func() hash.Hash { return md5.New() })) //nolint:gosec
+		hashFunc(func() hash.Hash { return md5.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashSha1",
-		hashFunc(func() hash.Hash { return sha1.New() })) //nolint:gosec
+		hashFunc(func() hash.Hash { return sha1.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashSha256",
-		hashFunc(func() hash.Hash { return sha256.New() }))
+		hashFunc(func() hash.Hash { return sha256.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashSha384",
-		hashFunc(func() hash.Hash { return sha512.New384() }))
+		hashFunc(func() hash.Hash { return sha512.New384() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashSha512",
-		hashFunc(func() hash.Hash { return sha512.New() }))
+		hashFunc(func() hash.Hash { return sha512.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashKeccak256",
-		hashFunc(func() hash.Hash { return sha3.NewLegacyKeccak256() }))
+		hashFunc(func() hash.Hash { return sha3.NewLegacyKeccak256() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "crc32b",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
@@ -60,7 +60,7 @@ func registerHashFunctions(rt *runtime.Runtime) {
 
 // hashFunc returns an extern that computes a hash using the given factory.
 // Salt (args[1]) is written first, then input (args[0]) — matching jBallerina.
-func hashFunc(newHash func() hash.Hash) extern.NativeFunc {
+func hashFunc(newHash func() hash.Hash, types cryptoTypes) extern.NativeFunc {
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		input := listToBytes(args[0].(*values.List))
 		h := newHash()
@@ -69,6 +69,6 @@ func hashFunc(newHash func() hash.Hash) extern.NativeFunc {
 			h.Write(salt)
 		}
 		h.Write(input)
-		return bytesToList(ctx, h.Sum(nil)), nil
+		return bytesToList(types.byteArrTy, ctx, h.Sum(nil)), nil
 	}
 }

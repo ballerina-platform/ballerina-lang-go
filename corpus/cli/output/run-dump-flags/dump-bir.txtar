@@ -13,7 +13,6 @@ F(9) = 34
 
 ==================BEGIN BIR==================
 module $anon.run-and-print v 0.0.0;
-import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 10

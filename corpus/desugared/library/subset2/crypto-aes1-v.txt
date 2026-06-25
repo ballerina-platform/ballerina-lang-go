@@ -1,0 +1,524 @@
+(package
+  (import-package ballerina crypto (as crypto))
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (function main () (
+    (union-type
+      (error-type)
+      (value-type null)))
+    (block-function-body
+      (var-def
+        (variable plaintext (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 72)
+            (literal 101)
+            (literal 108)
+            (literal 108)
+            (literal 111)
+            (literal 87)
+            (literal 111)
+            (literal 114)
+            (literal 108)
+            (literal 100)))))
+      (var-def
+        (variable key (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 0)
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5)
+            (literal 6)
+            (literal 7)
+            (literal 8)
+            (literal 9)
+            (literal 10)
+            (literal 11)
+            (literal 12)
+            (literal 13)
+            (literal 14)
+            (literal 15)))))
+      (var-def
+        (variable iv (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5)
+            (literal 6)
+            (literal 7)
+            (literal 8)
+            (literal 9)
+            (literal 10)
+            (literal 11)
+            (literal 12)
+            (literal 13)
+            (literal 14)
+            (literal 15)
+            (literal 16)))))
+      (var-def
+        (variable iv12 (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5)
+            (literal 6)
+            (literal 7)
+            (literal 8)
+            (literal 9)
+            (literal 10)
+            (literal 11)
+            (literal 12)))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$1 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$2 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$3 (expr
+          (invocation $default$18 (
+            (simple-var-ref $desugar$0)
+            (simple-var-ref $desugar$1)
+            (simple-var-ref $desugar$2))))))
+      (var-def
+        (variable $desugar$4 (expr
+          (invocation crypto encryptAesCbc (
+            (simple-var-ref $desugar$0)
+            (simple-var-ref $desugar$1)
+            (simple-var-ref $desugar$2)
+            (simple-var-ref $desugar$3))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$4))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$4))) ())
+      (var-def
+        (variable cbc (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$4))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (invocation lang.array length (
+              (simple-var-ref cbc)))
+            (invocation lang.array length (
+              (simple-var-ref plaintext)))))))
+      (var-def
+        (variable $desugar$5 (expr
+          (simple-var-ref cbc))))
+      (var-def
+        (variable $desugar$6 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$7 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$8 (expr
+          (invocation $default$23 (
+            (simple-var-ref $desugar$5)
+            (simple-var-ref $desugar$6)
+            (simple-var-ref $desugar$7))))))
+      (var-def
+        (variable $desugar$9 (expr
+          (invocation crypto decryptAesCbc (
+            (simple-var-ref $desugar$5)
+            (simple-var-ref $desugar$6)
+            (simple-var-ref $desugar$7)
+            (simple-var-ref $desugar$8))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$9))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$9))) ())
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$9)
+            (simple-var-ref plaintext)))))
+      (var-def
+        (variable $desugar$10 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$11 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$12 (expr
+          (invocation $default$19 (
+            (simple-var-ref $desugar$10)
+            (simple-var-ref $desugar$11))))))
+      (var-def
+        (variable $desugar$13 (expr
+          (invocation crypto encryptAesEcb (
+            (simple-var-ref $desugar$10)
+            (simple-var-ref $desugar$11)
+            (simple-var-ref $desugar$12))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$13))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$13))) ())
+      (var-def
+        (variable ecb (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$13))))
+      (var-def
+        (variable $desugar$14 (expr
+          (simple-var-ref ecb))))
+      (var-def
+        (variable $desugar$15 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$16 (expr
+          (invocation $default$24 (
+            (simple-var-ref $desugar$14)
+            (simple-var-ref $desugar$15))))))
+      (var-def
+        (variable $desugar$17 (expr
+          (invocation crypto decryptAesEcb (
+            (simple-var-ref $desugar$14)
+            (simple-var-ref $desugar$15)
+            (simple-var-ref $desugar$16))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$17))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$17))) ())
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$17)
+            (simple-var-ref plaintext)))))
+      (var-def
+        (variable $desugar$18 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$19 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$20 (expr
+          (simple-var-ref iv12))))
+      (var-def
+        (variable $desugar$21 (expr
+          (invocation $default$20 (
+            (simple-var-ref $desugar$18)
+            (simple-var-ref $desugar$19)
+            (simple-var-ref $desugar$20))))))
+      (var-def
+        (variable $desugar$22 (expr
+          (invocation $default$21 (
+            (simple-var-ref $desugar$18)
+            (simple-var-ref $desugar$19)
+            (simple-var-ref $desugar$20)
+            (simple-var-ref $desugar$21))))))
+      (var-def
+        (variable $desugar$23 (expr
+          (invocation crypto encryptAesGcm (
+            (simple-var-ref $desugar$18)
+            (simple-var-ref $desugar$19)
+            (simple-var-ref $desugar$20)
+            (simple-var-ref $desugar$21)
+            (simple-var-ref $desugar$22))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$23))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$23))) ())
+      (var-def
+        (variable gcm (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$23))))
+      (var-def
+        (variable $desugar$24 (expr
+          (simple-var-ref gcm))))
+      (var-def
+        (variable $desugar$25 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$26 (expr
+          (simple-var-ref iv12))))
+      (var-def
+        (variable $desugar$27 (expr
+          (invocation $default$25 (
+            (simple-var-ref $desugar$24)
+            (simple-var-ref $desugar$25)
+            (simple-var-ref $desugar$26))))))
+      (var-def
+        (variable $desugar$28 (expr
+          (invocation $default$26 (
+            (simple-var-ref $desugar$24)
+            (simple-var-ref $desugar$25)
+            (simple-var-ref $desugar$26)
+            (simple-var-ref $desugar$27))))))
+      (var-def
+        (variable $desugar$29 (expr
+          (invocation crypto decryptAesGcm (
+            (simple-var-ref $desugar$24)
+            (simple-var-ref $desugar$25)
+            (simple-var-ref $desugar$26)
+            (simple-var-ref $desugar$27)
+            (simple-var-ref $desugar$28))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$29))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$29))) ())
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$29)
+            (simple-var-ref plaintext)))))
+      (var-def
+        (variable $desugar$30 (expr
+          (invocation crypto encryptAesGcm (
+            (simple-var-ref plaintext)
+            (simple-var-ref key)
+            (simple-var-ref iv12)
+            (simple-var-ref crypto NONE)
+            (literal 96))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$30))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$30))) ())
+      (var-def
+        (variable gcm96 (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (simple-var-ref $desugar$30))))
+      (var-def
+        (variable $desugar$31 (expr
+          (invocation crypto decryptAesGcm (
+            (simple-var-ref gcm96)
+            (simple-var-ref key)
+            (simple-var-ref iv12)
+            (simple-var-ref crypto NONE)
+            (literal 96))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$31))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$31))) ())
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref $desugar$31)
+            (simple-var-ref plaintext)))))
+      (var-def
+        (variable badKey (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 0)
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)))))
+      (var-def
+        (variable $desugar$32 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$33 (expr
+          (simple-var-ref badKey))))
+      (var-def
+        (variable $desugar$34 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$35 (expr
+          (invocation $default$18 (
+            (simple-var-ref $desugar$32)
+            (simple-var-ref $desugar$33)
+            (simple-var-ref $desugar$34))))))
+      (var-def
+        (variable cbcErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto encryptAesCbc (
+            (simple-var-ref $desugar$32)
+            (simple-var-ref $desugar$33)
+            (simple-var-ref $desugar$34)
+            (simple-var-ref $desugar$35))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref cbcErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable $desugar$36 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$37 (expr
+          (simple-var-ref badKey))))
+      (var-def
+        (variable $desugar$38 (expr
+          (invocation $default$19 (
+            (simple-var-ref $desugar$36)
+            (simple-var-ref $desugar$37))))))
+      (var-def
+        (variable ecbErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto encryptAesEcb (
+            (simple-var-ref $desugar$36)
+            (simple-var-ref $desugar$37)
+            (simple-var-ref $desugar$38))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref ecbErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable $desugar$39 (expr
+          (simple-var-ref plaintext))))
+      (var-def
+        (variable $desugar$40 (expr
+          (simple-var-ref badKey))))
+      (var-def
+        (variable $desugar$41 (expr
+          (simple-var-ref iv12))))
+      (var-def
+        (variable $desugar$42 (expr
+          (invocation $default$20 (
+            (simple-var-ref $desugar$39)
+            (simple-var-ref $desugar$40)
+            (simple-var-ref $desugar$41))))))
+      (var-def
+        (variable $desugar$43 (expr
+          (invocation $default$21 (
+            (simple-var-ref $desugar$39)
+            (simple-var-ref $desugar$40)
+            (simple-var-ref $desugar$41)
+            (simple-var-ref $desugar$42))))))
+      (var-def
+        (variable gcmErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto encryptAesGcm (
+            (simple-var-ref $desugar$39)
+            (simple-var-ref $desugar$40)
+            (simple-var-ref $desugar$41)
+            (simple-var-ref $desugar$42)
+            (simple-var-ref $desugar$43))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref gcmErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable zeros (type
+          (array-type
+            (value-type byte) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)
+            (literal 0)))))
+      (var-def
+        (variable $desugar$44 (expr
+          (simple-var-ref zeros))))
+      (var-def
+        (variable $desugar$45 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$46 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$47 (expr
+          (invocation $default$23 (
+            (simple-var-ref $desugar$44)
+            (simple-var-ref $desugar$45)
+            (simple-var-ref $desugar$46))))))
+      (var-def
+        (variable padErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto decryptAesCbc (
+            (simple-var-ref $desugar$44)
+            (simple-var-ref $desugar$45)
+            (simple-var-ref $desugar$46)
+            (simple-var-ref $desugar$47))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref padErr)
+            (user-defined-type crypto Error)))))
+      (var-def
+        (variable $desugar$48 (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)))))
+      (var-def
+        (variable $desugar$49 (expr
+          (simple-var-ref key))))
+      (var-def
+        (variable $desugar$50 (expr
+          (simple-var-ref iv))))
+      (var-def
+        (variable $desugar$51 (expr
+          (invocation $default$23 (
+            (simple-var-ref $desugar$48)
+            (simple-var-ref $desugar$49)
+            (simple-var-ref $desugar$50))))))
+      (var-def
+        (variable sizeErr (type
+          (union-type
+            (array-type
+              (value-type byte) dimensions: 1 ([]))
+            (user-defined-type crypto Error))) (expr
+          (invocation crypto decryptAesCbc (
+            (simple-var-ref $desugar$48)
+            (simple-var-ref $desugar$49)
+            (simple-var-ref $desugar$50)
+            (simple-var-ref $desugar$51))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref sizeErr)
+            (user-defined-type crypto Error))))))))

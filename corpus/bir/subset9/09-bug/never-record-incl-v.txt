@@ -1,5 +1,4 @@
 module $anon.. v 0.0.0;
-import ballerina.io v 0.0.0;
 foo(string,{| age: string, city: string, country: string, name: never, never... |}) -> nil{
   bb0 {
     %3 = println(name) -> bb1;

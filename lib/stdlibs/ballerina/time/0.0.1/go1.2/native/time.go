@@ -80,18 +80,18 @@ func nanosToFrac(nanos int64) *decimal.Decimal {
 }
 
 // goTimeToUtc converts a Go time.Time to a Ballerina Utc tuple.
-func goTimeToUtc(env semtypes.Env, tc semtypes.Context, t time.Time) *values.List {
+func goTimeToUtc(utcTy semtypes.SemType, tc semtypes.Context, t time.Time) *values.List {
 	t = t.UTC()
-	return buildUtcTuple(env, tc, t.Unix(), nanosToFrac(int64(t.Nanosecond())))
+	return buildUtcTuple(utcTy, tc, t.Unix(), nanosToFrac(int64(t.Nanosecond())))
 }
 
 // goTimeToUtcWithPrecision converts a Go time.Time to a Utc tuple, rounding fractional seconds
 // to the given decimal precision using Go's Round (ties away from zero = HALF_UP for positive values).
-func goTimeToUtcWithPrecision(env semtypes.Env, tc semtypes.Context, t time.Time, precision int) *values.List {
+func goTimeToUtcWithPrecision(utcTy semtypes.SemType, tc semtypes.Context, t time.Time, precision int) *values.List {
 	t = t.UTC()
 	unit := time.Duration(roundingUnit(precision))
 	t = t.Round(unit)
-	return buildUtcTuple(env, tc, t.Unix(), nanosToFrac(int64(t.Nanosecond())))
+	return buildUtcTuple(utcTy, tc, t.Unix(), nanosToFrac(int64(t.Nanosecond())))
 }
 
 // roundingUnit returns the nanosecond unit for the given decimal precision (0..9).
@@ -104,9 +104,7 @@ func roundingUnit(precision int) int64 {
 }
 
 // buildUtcTuple wraps epochSec and frac into a readonly [int, decimal] Ballerina tuple.
-func buildUtcTuple(env semtypes.Env, tc semtypes.Context, epochSec int64, frac *decimal.Decimal) *values.List {
-	bld := semtypes.NewListDefinition()
-	utcTy := bld.TupleTypeWrappedRo(env, semtypes.INT, semtypes.DECIMAL)
+func buildUtcTuple(utcTy semtypes.SemType, tc semtypes.Context, epochSec int64, frac *decimal.Decimal) *values.List {
 	atomic := semtypes.ToListAtomicType(tc, utcTy)
 	items := []values.BalValue{epochSec, frac}
 	return values.NewList(utcTy, atomic, true, nil, 2, items)
@@ -455,15 +453,17 @@ func civilMapToGoTimeInLocation(m *values.Map, loc *time.Location) (time.Time, e
 
 func initTimeModule(rt *runtime.Runtime) {
 	env := rt.GetTypeEnv()
+	utcBld := semtypes.NewListDefinition()
+	utcTy := utcBld.TupleTypeWrappedRo(env, semtypes.INT, semtypes.DECIMAL)
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externUtcNow",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			precision := int(getInt64Arg(args, 0))
 			now := rt.Platform().Time.Now()
 			if precision < 0 {
-				return goTimeToUtc(env, ctx.TypeCtx, now), nil
+				return goTimeToUtc(utcTy, ctx.TypeCtx, now), nil
 			}
-			return goTimeToUtcWithPrecision(env, ctx.TypeCtx, now, precision), nil
+			return goTimeToUtcWithPrecision(utcTy, ctx.TypeCtx, now, precision), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externMonotonicNow",
@@ -482,7 +482,7 @@ func initTimeModule(rt *runtime.Runtime) {
 				return newFormatError(fmt.Sprintf(
 					"The provided string '%s' does not adhere to the expected RFC 3339 format 'YYYY-MM-DDTHH:MM:SS.SSZ'. ", str)), nil
 			}
-			return goTimeToUtc(env, ctx.TypeCtx, t), nil
+			return goTimeToUtc(utcTy, ctx.TypeCtx, t), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externUtcToString",
@@ -500,7 +500,7 @@ func initTimeModule(rt *runtime.Runtime) {
 				dur := time.Duration(decimalToNanos(seconds))
 				t = t.Add(dur)
 			}
-			return goTimeToUtc(env, ctx.TypeCtx, t), nil
+			return goTimeToUtc(utcTy, ctx.TypeCtx, t), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externUtcDiffSeconds",
@@ -575,7 +575,7 @@ func initTimeModule(rt *runtime.Runtime) {
 			if err != nil {
 				return newFormatError(err.Error()), nil
 			}
-			return goTimeToUtc(env, ctx.TypeCtx, t), nil
+			return goTimeToUtc(utcTy, ctx.TypeCtx, t), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCivilFromString",
@@ -764,7 +764,7 @@ func initTimeModule(rt *runtime.Runtime) {
 			if err != nil {
 				return newFormatError(err.Error()), nil
 			}
-			return goTimeToUtc(env, ctx.TypeCtx, t), nil
+			return goTimeToUtc(utcTy, ctx.TypeCtx, t), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "TimeZone.utcToCivil",

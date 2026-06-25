@@ -1,0 +1,182 @@
+module $anon.. v 0.0.0;
+main() -> nil|error{
+  bb0 {
+    %1 = ConstantLoad value
+    %2 = ConstantLoad echo
+    %3 = ConstantLoad arguments
+    %4 = ConstantLoad hello
+    %5 = ConstantLoad 1
+    %6 = newArray [string...][%5]{%4}
+    %7 = newMap {| arguments: [string...], value: string, never... |}{%1=%2, %3=%6} defaults{arguments=ballerina/os:$desugar$0}
+    %8 = newMap {| command: never, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{}
+    %9 = exec(%7,%8) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %9;
+    %11 = $desugar$0 is error
+    %11 ? bb2 : bb3;
+  }
+  bb2 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$0);
+    PopScopeFrame
+    return;
+  }
+  bb3 {
+    p = $desugar$0;
+    %13 = waitForExit(p) -> bb4;
+  }
+  bb4 {
+    $desugar$1 = %13;
+    %15 = $desugar$1 is error
+    %15 ? bb5 : bb6;
+  }
+  bb5 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$1);
+    PopScopeFrame
+    return;
+  }
+  bb6 {
+    code = $desugar$1;
+    %17 = code;
+    %18 = println(%17) -> bb7;
+  }
+  bb7 {
+    %19 = $default$0() -> bb8;
+  }
+  bb8 {
+    $desugar$2 = %19;
+    %21 = $desugar$2;
+    %22 = output(p,%21) -> bb9;
+  }
+  bb9 {
+    $desugar$3 = %22;
+    %24 = $desugar$3 is error
+    %24 ? bb10 : bb11;
+  }
+  bb10 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$3);
+    PopScopeFrame
+    return;
+  }
+  bb11 {
+    out = $desugar$3;
+    %27 = length(out) -> bb12;
+  }
+  bb12 {
+    %28 = %27;
+    %29 = ConstantLoad 0
+    %30 = %29;
+    %26 = > %28 %30;
+    %31 = %26;
+    %32 = println(%31) -> bb13;
+  }
+  bb13 {
+    %33 = ConstantLoad value
+    %34 = ConstantLoad echo
+    %35 = ConstantLoad arguments
+    %36 = ConstantLoad world
+    %37 = ConstantLoad 1
+    %38 = newArray [string...][%37]{%36}
+    %39 = newMap {| arguments: [string...], value: string, never... |}{%33=%34, %35=%38} defaults{arguments=ballerina/os:$desugar$0}
+    %40 = newMap {| command: never, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{}
+    %41 = exec(%39,%40) -> bb14;
+  }
+  bb14 {
+    $desugar$4 = %41;
+    %43 = $desugar$4 is error
+    %43 ? bb15 : bb16;
+  }
+  bb15 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$4);
+    PopScopeFrame
+    return;
+  }
+  bb16 {
+    p2 = $desugar$4;
+    %45 = waitForExit(p2) -> bb17;
+  }
+  bb17 {
+    $desugar$5 = %45;
+    %47 = $desugar$5 is error
+    %47 ? bb18 : bb19;
+  }
+  bb18 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$5);
+    PopScopeFrame
+    return;
+  }
+  bb19 {
+    _ = $desugar$5;
+    %49 = output(p2,stderr) -> bb20;
+  }
+  bb20 {
+    $desugar$6 = %49;
+    %51 = $desugar$6 is error
+    %51 ? bb21 : bb22;
+  }
+  bb21 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$6);
+    PopScopeFrame
+    return;
+  }
+  bb22 {
+    err = $desugar$6;
+    %53 = length(err) -> bb23;
+  }
+  bb23 {
+    %54 = %53;
+    %55 = println(%54) -> bb24;
+  }
+  bb24 {
+    %56 = ConstantLoad value
+    %57 = ConstantLoad no_such_command_xyz_123
+    %58 = newMap {| arguments: [string...], value: string, never... |}{%56=%57} defaults{arguments=ballerina/os:$desugar$0}
+    %59 = newMap {| command: never, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{}
+    %60 = exec(%58,%59) -> bb25;
+  }
+  bb25 {
+    bad = %60;
+    %62 = bad is error
+    %63 = %62;
+    %64 = println(%63) -> bb26;
+  }
+  bb26 {
+    %65 = ConstantLoad value
+    %66 = ConstantLoad echo
+    %67 = ConstantLoad arguments
+    %68 = ConstantLoad bye
+    %69 = ConstantLoad 1
+    %70 = newArray [string...][%69]{%68}
+    %71 = newMap {| arguments: [string...], value: string, never... |}{%65=%66, %67=%70} defaults{arguments=ballerina/os:$desugar$0}
+    %72 = newMap {| command: never, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{}
+    %73 = exec(%71,%72) -> bb27;
+  }
+  bb27 {
+    $desugar$7 = %73;
+    %75 = $desugar$7 is error
+    %75 ? bb28 : bb29;
+  }
+  bb28 {
+    PushScopeFrame 0
+    (1, %0) = (1, $desugar$7);
+    PopScopeFrame
+    return;
+  }
+  bb29 {
+    p3 = $desugar$7;
+    %77 = exit(p3) -> bb30;
+  }
+  bb30 {
+    %78 = ConstantLoad exited
+    %79 = println(%78) -> bb31;
+  }
+  bb31 {
+    return;
+  }
+}

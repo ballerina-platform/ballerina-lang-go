@@ -44,7 +44,7 @@ var pbkdf2HashPattern = regexp.MustCompile(`^\$pbkdf2-(\w+)\$i=(\d+)\$([A-Za-z0-
 // Also matches without v= for compatibility.
 var argon2Pattern = regexp.MustCompile(`^\$argon2id(?:\$v=\d+)?\$m=(\d+),t=(\d+),p=(\d+)\$([A-Za-z0-9+/]+={0,2})\$([A-Za-z0-9+/]+={0,2})$`)
 
-func registerPasswordFunctions(rt *runtime.Runtime) {
+func registerPasswordFunctions(rt *runtime.Runtime, _ cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "hashBcrypt",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			password, _ := args[0].(string)
@@ -167,6 +167,6 @@ func pbkdf2Params(alg string) (func() hash.Hash, int, string, error) {
 	case "SHA512":
 		return sha512.New, 64, "SHA512", nil
 	default:
-		return nil, 0, "", fmt.Errorf("Error occurred while hashing password: unsupported algorithm %q", alg)
+		return nil, 0, "", fmt.Errorf("error occurred while hashing password: unsupported algorithm %q", alg)
 	}
 }

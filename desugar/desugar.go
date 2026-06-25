@@ -114,9 +114,8 @@ func (ctx *packageContext) addSymbolToSameSpace(ref model.SymbolRef, name string
 }
 
 func (ctx *packageContext) addModuleSymbol(name string, symbol model.Symbol) model.SymbolRef {
-	ms := ctx.pkg.Scope.(*model.ModuleScope)
-	ms.AddSymbol(name, symbol)
-	ref, _ := ms.GetSymbol(name)
+	ctx.pkg.Scope.AddSymbol(name, symbol)
+	ref, _ := ctx.pkg.Scope.GetSymbol(name)
 	return ref
 }
 
@@ -621,6 +620,8 @@ func createLifeCycleHooks(pkgCtx *packageContext, pkg *ast.BLangPackage, moduleL
 		loopVarRef.SetPosition(initPos)
 
 		collectionRef := *moduleListenersRef
+		variableName := *moduleListenersRef.VariableName
+		collectionRef.VariableName = &variableName
 		bodyStmt := buildMethodCallStmt(foreachScope, loopVarRef, methodName)
 
 		foreach := &ast.BLangForeach{
@@ -662,7 +663,7 @@ func createLifeCycleHooks(pkgCtx *packageContext, pkg *ast.BLangPackage, moduleL
 	}
 
 	for _, fnName := range []string{StartFunctionName, GracefulStopFunctionName, ImmediateStopFunctionName} {
-		pkg.Functions = append(pkg.Functions, *desugarFunction(pkgCtx, buildLifecycleFn(fnName)))
+		pkg.Functions = append(pkg.Functions, *buildLifecycleFn(fnName))
 	}
 }
 
@@ -1248,11 +1249,6 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	desugarTopLevelFunctionDefaults(pkgCtx, pkg)
 	desugarClassMethodDefaults(pkgCtx, pkg)
 
-	// Desugar all functions
-	for i := range pkg.Functions {
-		desugarFn(&pkg.Functions[i])
-	}
-
 	desugarObjectDefinitionConcurrently := func(class *ast.BLangClassDefinition) {
 		wg.Go(func() {
 			defer func() {
@@ -1269,10 +1265,6 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			}
 			*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
 		})
-	}
-	// Desugar class definitions (each class concurrently, members sequentially)
-	for i := range pkg.ClassDefinitions {
-		desugarObjectDefinitionConcurrently(&pkg.ClassDefinitions[i])
 	}
 	desugarServiceConcurrently := func(svc *ast.BLangService) {
 		wg.Go(func() {
@@ -1298,6 +1290,15 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	hoistInlineServiceListeners(pkgCtx, pkg)
 	desugarInitFn(pkgCtx, compilerCtx, pkg)
 
+	// Desugar all functions after desugarInitFn has created any lifecycle hooks.
+	for i := range pkg.Functions {
+		desugarFn(&pkg.Functions[i])
+	}
+
+	// Desugar class definitions (each class concurrently, members sequentially)
+	for i := range pkg.ClassDefinitions {
+		desugarObjectDefinitionConcurrently(&pkg.ClassDefinitions[i])
+	}
 	for i := range pkg.Services {
 		desugarServiceConcurrently(&pkg.Services[i])
 	}

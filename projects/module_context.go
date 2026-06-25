@@ -246,17 +246,19 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 		return
 	}
 
-	// Build BLangPackage from syntax trees.
+	// Build compilation units from syntax trees.
 	compilerCtx.StartStage(context.StageASTBuild)
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
-	pkgNode := buildBLangPackage(compilerCtx, syntaxTrees, compilationOptions)
-	moduleCtx.bLangPkg = pkgNode
+	compilationUnits := buildCompilationUnits(compilerCtx, syntaxTrees, compilationOptions)
 
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
-	pkgNode.PackageID = createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
+	pkgID := createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
+	for _, cu := range compilationUnits {
+		cu.SetPackageID(pkgID)
+	}
 	compilerCtx.EndStage()
 
 	// Resolve symbols (imports) before type resolution
@@ -265,12 +267,17 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	// PR-TODO: remove this after migration all lang libraries
 	implicitImports := semantics.GetImplicitImports(compilerCtx)
 	seedMigratedLangLibs(implicitImports, publicSymbols)
-	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, implicitImports, publicSymbols, moduleCtx.moduleDescriptor.Org().value)
-	moduleCtx.importedSymbols = importedSymbols
+	importedSymbolsByCU := semantics.ResolveCompilationUnitImports(compilerCtx, compilationUnits, implicitImports, publicSymbols, moduleCtx.moduleDescriptor.Org().value)
+	moduleCtx.importedSymbols = mergeCompilationUnitImports(importedSymbolsByCU)
 	compilerCtx.EndStage()
 
 	compilerCtx.StartStage(context.StageSymbolResolution)
-	exported := semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
+	pkgScope, exported := semantics.ResolveSymbols(compilerCtx, *pkgID, importedSymbolsByCU)
+	pkgNode := ast.ToPackageFromCompilationUnits(compilationUnits)
+	pkgNode.Imports = nil
+	pkgNode.PackageID = pkgID
+	pkgNode.Scope = pkgScope
+	moduleCtx.bLangPkg = pkgNode
 	compilerCtx.EndStage()
 
 	if compilerCtx.HasErrors() {
@@ -286,7 +293,7 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 
 	// Add type resolution step (this only resolve types of top level nodes)
 	compilerCtx.StartStage(context.StageTopLevelTypeResolution)
-	semantics.ResolveTopLevelNodes(compilerCtx, pkgNode, importedSymbols)
+	semantics.ResolveTopLevelNodes(compilerCtx, pkgNode, moduleCtx.importedSymbols)
 	compilerCtx.EndStage()
 }
 
@@ -414,70 +421,30 @@ func parseDocumentsParallel(
 	return syntaxTrees
 }
 
-// buildBLangPackage builds a BLangPackage from one or more syntax trees.
-// For a single file this is equivalent to ast.ToPackage(ast.GetCompilationUnit(cx, st)).
-// For multiple files it merges all compilation units into a single package.
-func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, compilationOptions CompilationOptions) *ast.BLangPackage {
+func buildCompilationUnits(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, compilationOptions CompilationOptions) []*ast.BLangCompilationUnit {
 	dumpAST := compilationOptions.DumpAST()
 	var prettyPrinter ast.PrettyPrinter
 	if dumpAST {
 		prettyPrinter = ast.PrettyPrinter{}
 	}
 
-	if len(syntaxTrees) == 1 {
-		cu := ast.GetCompilationUnit(cx, syntaxTrees[0])
-		if dumpAST {
-			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
-		}
-		return ast.ToPackage(cx, cu)
-	}
-
-	pkg := &ast.BLangPackage{}
-	initDuplicated := false
+	compilationUnits := make([]*ast.BLangCompilationUnit, 0, len(syntaxTrees))
 	for _, st := range syntaxTrees {
 		cu := ast.GetCompilationUnit(cx, st)
 		if dumpAST {
 			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
 		}
-		if pkg.PackageID == nil {
-			pkg.PackageID = cu.GetPackageID()
-		}
-		for _, node := range cu.GetTopLevelNodes() {
-			switch n := node.(type) {
-			case *ast.BLangImportPackage:
-				pkg.Imports = append(pkg.Imports, *n)
-			case *ast.BLangConstant:
-				pkg.Constants = append(pkg.Constants, *n)
-			case *ast.BLangService:
-				pkg.Services = append(pkg.Services, *n)
-			case *ast.BLangSimpleVariable:
-				pkg.GlobalVars = append(pkg.GlobalVars, *n)
-			case *ast.BLangFunction:
-				if n.Name.Value == "init" {
-					if pkg.InitFunction != nil {
-						if !initDuplicated {
-							cx.SemanticError("redeclared symbol 'init'", pkg.InitFunction.Name.GetPosition())
-							initDuplicated = true
-						}
-						cx.SemanticError("redeclared symbol 'init'", n.Name.GetPosition())
-					} else {
-						pkg.InitFunction = n
-					}
-				} else {
-					pkg.Functions = append(pkg.Functions, *n)
-				}
-			case *ast.BLangTypeDefinition:
-				pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
-			case *ast.BLangAnnotation:
-				pkg.Annotations = append(pkg.Annotations, *n)
-			case *ast.BLangXMLNS:
-				pkg.XmlnsList = append(pkg.XmlnsList, *n)
-			default:
-				cx.InternalError(fmt.Sprintf("unexpected top-level node type: %T", node), node.GetPosition())
-			}
-		}
+		compilationUnits = append(compilationUnits, cu)
 	}
-	return pkg
+	return compilationUnits
+}
+
+func mergeCompilationUnitImports(imports []semantics.CompilationUnitImports) map[string]model.ExportedSymbolSpace {
+	result := make(map[string]model.ExportedSymbolSpace)
+	for _, cuImports := range imports {
+		maps.Copy(result, cuImports.Imports)
+	}
+	return result
 }
 
 // seedMigratedLangLibs adds the migrated lang libraries (compiled as real

@@ -19,7 +19,7 @@ package native
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/md5"  //nolint:gosec
+	"crypto/md5" //nolint:gosec
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1" //nolint:gosec
@@ -33,7 +33,7 @@ import (
 	"ballerina-lang-go/values"
 )
 
-func registerRsaFunctions(rt *runtime.Runtime) {
+func registerRsaFunctions(rt *runtime.Runtime, types cryptoTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "encryptRsaEcb",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			input := listToBytes(args[0].(*values.List))
@@ -47,12 +47,12 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.EncryptOAEP(oaepHash, rand.Reader, k, input, nil)
 				} else {
-					out, err = rsa.EncryptPKCS1v15(rand.Reader, k, input) //nolint:gosec
+					out, err = rsa.EncryptPKCS1v15(rand.Reader, k, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
 				}
-				return bytesToList(ctx, out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			case *rsa.PrivateKey:
 				pub := &k.PublicKey
 				var out []byte
@@ -60,12 +60,12 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.EncryptOAEP(oaepHash, rand.Reader, pub, input, nil)
 				} else {
-					out, err = rsa.EncryptPKCS1v15(rand.Reader, pub, input) //nolint:gosec
+					out, err = rsa.EncryptPKCS1v15(rand.Reader, pub, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA encrypt: %s", err.Error())), nil
 				}
-				return bytesToList(ctx, out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			default:
 				return cryptoError("Uninitialized public key"), nil
 			}
@@ -84,31 +84,31 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 				if oaepHash != nil {
 					out, err = rsa.DecryptOAEP(oaepHash, rand.Reader, k, input, nil)
 				} else {
-					out, err = rsa.DecryptPKCS1v15(rand.Reader, k, input)
+					out, err = rsa.DecryptPKCS1v15(rand.Reader, k, input) //nolint:gosec,staticcheck
 				}
 				if err != nil {
 					return cryptoError(fmt.Sprintf("Error occurred while RSA decrypt: %s", err.Error())), nil
 				}
-				return bytesToList(ctx, out), nil
+				return bytesToList(types.byteArrTy, ctx, out), nil
 			default:
 				return cryptoError("Uninitialized private key"), nil
 			}
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaMd5",
-		rsaSignFunc(crypto.MD5, func() hash.Hash { return md5.New() })) //nolint:gosec
+		rsaSignFunc(crypto.MD5, func() hash.Hash { return md5.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaSha1",
-		rsaSignFunc(crypto.SHA1, func() hash.Hash { return sha1.New() })) //nolint:gosec
+		rsaSignFunc(crypto.SHA1, func() hash.Hash { return sha1.New() }, types)) //nolint:gosec
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaSha256",
-		rsaSignFunc(crypto.SHA256, func() hash.Hash { return sha256.New() }))
+		rsaSignFunc(crypto.SHA256, func() hash.Hash { return sha256.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaSha384",
-		rsaSignFunc(crypto.SHA384, func() hash.Hash { return sha512.New384() }))
+		rsaSignFunc(crypto.SHA384, func() hash.Hash { return sha512.New384() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaSha512",
-		rsaSignFunc(crypto.SHA512, func() hash.Hash { return sha512.New() }))
+		rsaSignFunc(crypto.SHA512, func() hash.Hash { return sha512.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signRsaSsaPss256",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
@@ -125,14 +125,14 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 			if err != nil {
 				return cryptoError(fmt.Sprintf("Error occurred while calculating signature: %s", err.Error())), nil
 			}
-			return bytesToList(ctx, sig), nil
+			return bytesToList(types.byteArrTy, ctx, sig), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signSha256withEcdsa",
-		ecdsaSignFunc(func() hash.Hash { return sha256.New() }))
+		ecdsaSignFunc(func() hash.Hash { return sha256.New() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "signSha384withEcdsa",
-		ecdsaSignFunc(func() hash.Hash { return sha512.New384() }))
+		ecdsaSignFunc(func() hash.Hash { return sha512.New384() }, types))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "verifyRsaMd5Signature",
 		rsaVerifyFunc(crypto.MD5, func() hash.Hash { return md5.New() })) //nolint:gosec
@@ -175,7 +175,7 @@ func registerRsaFunctions(rt *runtime.Runtime) {
 		ecdsaVerifyFunc(func() hash.Hash { return sha512.New384() }))
 }
 
-func rsaSignFunc(hashID crypto.Hash, newHash func() hash.Hash) extern.NativeFunc {
+func rsaSignFunc(hashID crypto.Hash, newHash func() hash.Hash, types cryptoTypes) extern.NativeFunc {
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		input := listToBytes(args[0].(*values.List))
 		keyMap, _ := args[1].(*values.Map)
@@ -189,7 +189,7 @@ func rsaSignFunc(hashID crypto.Hash, newHash func() hash.Hash) extern.NativeFunc
 		if err != nil {
 			return cryptoError(fmt.Sprintf("Error occurred while calculating signature: %s", err.Error())), nil
 		}
-		return bytesToList(ctx, sig), nil
+		return bytesToList(types.byteArrTy, ctx, sig), nil
 	}
 }
 
@@ -212,7 +212,7 @@ func rsaVerifyFunc(hashID crypto.Hash, newHash func() hash.Hash) extern.NativeFu
 	}
 }
 
-func ecdsaSignFunc(newHash func() hash.Hash) extern.NativeFunc {
+func ecdsaSignFunc(newHash func() hash.Hash, types cryptoTypes) extern.NativeFunc {
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		input := listToBytes(args[0].(*values.List))
 		keyMap, _ := args[1].(*values.Map)
@@ -226,7 +226,7 @@ func ecdsaSignFunc(newHash func() hash.Hash) extern.NativeFunc {
 		if err != nil {
 			return cryptoError(fmt.Sprintf("Error occurred while calculating signature: %s", err.Error())), nil
 		}
-		return bytesToList(ctx, sig), nil
+		return bytesToList(types.byteArrTy, ctx, sig), nil
 	}
 }
 

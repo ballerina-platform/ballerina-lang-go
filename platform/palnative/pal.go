@@ -99,23 +99,7 @@ func NewPlatform() (pal.Platform, func()) {
 				}
 				return result
 			},
-			Exec: func(command string, args []string, envOverride map[string]string) (pal.ProcessHandle, error) {
-				cmd := exec.Command(command, args...) //nolint:gosec
-				if len(envOverride) > 0 {
-					env := os.Environ()
-					for k, v := range envOverride {
-						env = append(env, k+"="+v)
-					}
-					cmd.Env = env
-				}
-				var stdout, stderr bytes.Buffer
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-				if err := cmd.Start(); err != nil {
-					return nil, err
-				}
-				return &nativeProcess{cmd: cmd, stdout: &stdout, stderr: &stderr}, nil
-			},
+			Exec: Exec,
 		},
 		Time: pal.Time{
 			Now:          time.Now,
@@ -127,6 +111,26 @@ func NewPlatform() (pal.Platform, func()) {
 		},
 		Signals: signals,
 	}, cleanupSignals
+}
+
+// Exec starts a subprocess and returns a handle to it. Exposed at package level
+// so test harnesses can wire real subprocess execution into a pal.Platform.
+func Exec(command string, args []string, envOverride map[string]string) (pal.ProcessHandle, error) {
+	cmd := exec.Command(command, args...) //nolint:gosec
+	if len(envOverride) > 0 {
+		env := os.Environ()
+		for k, v := range envOverride {
+			env = append(env, k+"="+v)
+		}
+		cmd.Env = env
+	}
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return &nativeProcess{cmd: cmd, stdout: &stdout, stderr: &stderr}, nil
 }
 
 type nativeProcess struct {

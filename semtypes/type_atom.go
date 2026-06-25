@@ -20,6 +20,7 @@ import "ballerina-lang-go/common"
 
 type typeAtom struct {
 	idx        int
+	gen        uint64
 	AtomicType atomicType
 }
 
@@ -34,10 +35,21 @@ func createTypeAtom(index int, atomicType atomicType) typeAtom {
 	}
 }
 
+func createEphemeralTypeAtom(index int, gen uint64, atomicType atomicType) *typeAtom {
+	common.Assert(index >= 0)
+	common.Assert(gen > 0)
+
+	return &typeAtom{
+		idx:        index,
+		gen:        gen,
+		AtomicType: atomicType,
+	}
+}
+
 func (t *typeAtom) index() int {
 	return t.idx
 }
 
 func (t *typeAtom) canonicalKey() atomKey {
-	return typeAtomKey(t.idx)
+	return typeAtomKey(t.idx, t.gen)
 }
