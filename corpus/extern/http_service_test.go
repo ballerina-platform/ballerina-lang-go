@@ -17,10 +17,14 @@
 package extern_test
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	goruntime "runtime"
 	"testing"
 
 	"ballerina-lang-go/platform/palnative"
+	"ballerina-lang-go/test_util"
 )
 
 // skipIfNoLoopback skips on platforms without loopback TCP (js/wasm). Unlike
@@ -116,4 +120,115 @@ func TestHttpServiceClientMethods(t *testing.T) {
 func TestHttpServiceClientRedirect(t *testing.T) {
 	skipIfNoLoopback(t)
 	runExtern(t, fileCase("http-service/http-svc-client-redirect-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceResponseVariants covers the writeResult return-value cases: a
+// () return mapped to 202, an error value mapped to 500, a multi-value response
+// header, and a hop-by-hop header dropped before reaching the client.
+func TestHttpServiceResponseVariants(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-response-variants-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceNoMatch covers dispatch 404s: a request to an unmatched base
+// path and a request to a bare base path that resolves no resource.
+func TestHttpServiceNoMatch(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-no-match-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceConfig covers the listener host and timeout configuration
+// fields in initNative.
+func TestHttpServiceConfig(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-config-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceLargeBody covers the streaming (non-eager) request body path
+// in buildRequestFromHTTP by posting a body larger than eagerBufferThreshold.
+func TestHttpServiceLargeBody(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-large-body-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceTLSOptions covers the optional TLS listener settings in
+// buildListenerTLSConfig: protocol version bounds, cipher suites, and disabled
+// session tickets.
+func TestHttpServiceTLSOptions(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-tls-options-v"), newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
+}
+
+// TestHttpServiceMTLS covers the mutual-TLS branch of buildListenerTLSConfig: a
+// listener configured with mutualSsl + a CA cert requires the client to present
+// a cert signed by that CA. Certs are generated at runtime (reusing
+// generateTestCerts), so the .bal source embedding the temp cert paths is
+// materialised per run, mirroring TestHttpClientMTLS.
+func TestHttpServiceMTLS(t *testing.T) {
+	skipIfNoLoopback(t)
+	caCertPEM, serverCertPEM, serverKeyPEM, clientCertPEM, clientKeyPEM := generateTestCerts(t)
+
+	tmpDir := t.TempDir()
+	files := map[string][]byte{
+		"server.crt": serverCertPEM,
+		"server.key": serverKeyPEM,
+		"ca.crt":     caCertPEM,
+		"client.crt": clientCertPEM,
+		"client.key": clientKeyPEM,
+	}
+	paths := make(map[string]string, len(files))
+	for name, data := range files {
+		p := filepath.Join(tmpDir, name)
+		if err := os.WriteFile(p, data, 0600); err != nil {
+			t.Fatalf("writing %s: %v", name, err)
+		}
+		paths[name] = filepath.ToSlash(p)
+	}
+
+	balContent := fmt.Sprintf(`
+import ballerina/http;
+import ballerina/io;
+
+http:ListenerConfiguration mtlsConfig = {
+    httpVersion: http:HTTP_1_1,
+    secureSocket: {
+        key: {certFile: "%s", keyFile: "%s"},
+        mutualSsl: true,
+        cert: "%s"
+    }
+};
+
+service /secure on new http:Listener(19208, mtlsConfig) {
+    resource function get hello() returns http:Response {
+        http:Response resp = new;
+        resp.setTextPayload("mtls hello");
+        return resp;
+    }
+}
+
+public function testMain() returns error? {
+    http:Client c = check new ("https://localhost:19208", {
+        httpVersion: http:HTTP_1_1,
+        secureSocket: {
+            verifyHostName: false,
+            key: {certFile: "%s", keyFile: "%s"}
+        }
+    });
+    http:Response r = check c->get("/secure/hello");
+    io:println(r.statusCode); // @output 200
+    io:println(r.getTextPayload()); // @output mtls hello
+}
+`, paths["server.crt"], paths["server.key"], paths["ca.crt"], paths["client.crt"], paths["client.key"])
+
+	tmpBalFile := filepath.Join(tmpDir, "http-svc-mtls-v.bal")
+	if err := os.WriteFile(tmpBalFile, []byte(balContent), 0644); err != nil {
+		t.Fatalf("writing bal file: %v", err)
+	}
+
+	tc := test_util.TestCase{
+		Name:         "http-svc-mtls-v",
+		InputPath:    tmpBalFile,
+		ExpectedPath: filepath.Join(expectedDir, "http-service", "http-svc-mtls-v.txtar"),
+	}
+	runExtern(t, tc, newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
 }
