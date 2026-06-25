@@ -37,47 +37,47 @@ func skipIfNoLoopback(t *testing.T) {
 // listener → dispatch → resource → response path.
 func TestHttpServiceBasic(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-basic-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-basic-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServicePathParam exercises a typed (int) path parameter.
 func TestHttpServicePathParam(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-path-param-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-path-param-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceRequest exercises Request injection and JSON body round-trip
 // through a POST resource.
 func TestHttpServiceRequest(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-request-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-request-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceRouting exercises 200 / 404 (unknown path) / 405 (wrong
 // method) dispatch outcomes.
 func TestHttpServiceRouting(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-routing-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-routing-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceMultiService attaches two services at distinct base paths to a
 // single listener and confirms each routes to the correct service.
 func TestHttpServiceMultiService(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-multi-service-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-multi-service-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceTypedParams exercises the runtime path dispatcher's coercion of
 // boolean, decimal, and string path parameters.
 func TestHttpServiceTypedParams(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-typed-params-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-typed-params-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceDuplicateBasePath verifies that attaching two services at the
 // same base path fails at listener-init time with a runtime error.
 func TestHttpServiceDuplicateBasePath(t *testing.T) {
-	runExtern(t, fileCase("http-svc-dup-path-p"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-dup-path-p"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceStatusCode verifies that direct field assignment to
@@ -85,7 +85,7 @@ func TestHttpServiceDuplicateBasePath(t *testing.T) {
 // field default of 200 is used when no assignment is made.
 func TestHttpServiceStatusCode(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-status-code-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+	runExtern(t, fileCase("http-service/http-svc-status-code-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
 // TestHttpServiceTLS exercises a TLS listener: the server loads its cert/key
@@ -93,5 +93,5 @@ func TestHttpServiceStatusCode(t *testing.T) {
 // disabled for the self-signed cert.
 func TestHttpServiceTLS(t *testing.T) {
 	skipIfNoLoopback(t)
-	runExtern(t, fileCase("http-svc-tls-v"), newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
+	runExtern(t, fileCase("http-service/http-svc-tls-v"), newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
 }
