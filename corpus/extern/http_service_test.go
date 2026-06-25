@@ -95,3 +95,25 @@ func TestHttpServiceTLS(t *testing.T) {
 	skipIfNoLoopback(t)
 	runExtern(t, fileCase("http-service/http-svc-tls-v"), newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
 }
+
+// TestHttpServiceClientPayloads drives a local service from testMain to exercise
+// the client-side payload getters (getJsonPayload / getTextPayload /
+// getBinaryPayload) and a default-200 response over the real palnative client.
+func TestHttpServiceClientPayloads(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-client-payloads-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceClientMethods exercises the POST, PUT, DELETE, and PATCH client
+// verbs against dedicated local resources that each return 200.
+func TestHttpServiceClientMethods(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-client-methods-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
+// TestHttpServiceClientRedirect verifies the client follows a 302 redirect
+// (Location header) emitted by a local service and lands on the 200 target.
+func TestHttpServiceClientRedirect(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-client-redirect-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
