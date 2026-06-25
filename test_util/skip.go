@@ -44,14 +44,6 @@ var WindowsUnsupportedTests = []string{
 // "subset8/08-foo/bar-v.bal"). They are matched as suffixes against either a
 // relative test name or an absolute path.
 var UnsupportedTests = []string{
-	// --- Deferred during stdlibs-l2 -> http-svc merge ---
-	// lang.runtime:onGracefulStop registers a user graceful-stop callback via a
-	// runtime builtin + stopHandlers list. http-svc refactored lifecycle into
-	// per-module $start/$gracefulStop/$immediateStop dispatch with no slot for
-	// user handlers, so this feature needs a deliberate lifecycle re-plumb.
-	// TODO: port onGracefulStop onto the per-module lifecycle, then unskip.
-	"subset9/09-function/on-graceful-stop1-v.bal",
-
 	// --- Needs constant folding ---
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/83
 

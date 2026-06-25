@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"fmt"
+	"iter"
 	"sync"
 
 	"ballerina-lang-go/platform/pal"
@@ -80,6 +81,7 @@ type lifeCycle struct {
 	startFns         []*exec.InvokableHandle
 	gracefulStopFns  []*exec.InvokableHandle
 	immediateStopFns []*exec.InvokableHandle
+	stopHandlers     []*exec.InvokableHandle
 
 	exitCode     uint8
 	exitCodeChan chan<- uint8
@@ -97,7 +99,7 @@ func init() {
 	transitionTable[StateUninitialized][StateInitializing] = initializingAction
 
 	transitionTable[StateInitializing][StateInitializing] = initializingAction
-	transitionTable[StateInitializing][StateGracefulStopping] = abortAction
+	transitionTable[StateInitializing][StateGracefulStopping] = gracefulStopAction
 	transitionTable[StateInitializing][StateImmediateStopping] = abortAction
 	transitionTable[StateInitializing][StateListening] = listenAction
 	transitionTable[StateInitializing][StateStopped] = stoppedAction
@@ -133,11 +135,19 @@ func initializingAction(rt *Runtime) {
 	rt.mu.Lock()
 	rt.state = StateInitializing
 	rt.mu.Unlock()
+	rt.env.TypeEnv.Freeze()
 	rt.setupSignalListeners()
 }
 
 func abortAction(_ *Runtime) {
 	panic("ABORT: aborting module initialization due to stop signal")
+}
+
+func (rt *Runtime) stopAfterInitFailure() {
+	rt.mu.Lock()
+	rt.exitCode = 1
+	rt.mu.Unlock()
+	rt.transition(StateGracefulStopping)
 }
 
 // listenAction runs $start for every registered module on the caller's
@@ -168,63 +178,80 @@ func listenAction(rt *Runtime) {
 	rt.mu.Unlock()
 }
 
-// gracefulStopAction walks gracefulStopFns from the end, popping one
-// handle per iteration under rt.mu and then dispatching it with the
-// mutex released. Both gracefulStopFns and immediateStopFns are popped
-// in lockstep so that if a concurrent ImmediateStop signal flips state
-// to StateImmediateStopping mid-loop, the next iteration breaks and the
-// immediateStopAction picks up from the same module index.
+// gracefulStopAction call gracefulStop on all module listeners in the
+// reverse order modules were initialized. Then it calls stop handlers
+// registered via runtime:onGracefulStop again on the reverse order they
+// registered. If we get another stop signal while performing this, or get
+// an error from any of the above functinos we transition to immediate stop.
+//
+// NOTE: currently for listeners this stop signal escalation is granular at
+// module level not listener level. This is due to how desugar generate
+// module gracefulStop function
 func gracefulStopAction(rt *Runtime) {
 	rt.mu.Lock()
 	rt.state = StateGracefulStopping
 	rt.mu.Unlock()
-	if rt.exitCode == 0 {
-		rt.exitCode = 130 // 128 + SIGINT
-	}
-	onError := func(message string) {
-		writeStderr(rt.env, message)
-		rt.transition(StateImmediateStopping)
-	}
-	for len(rt.gracefulStopFns) != 0 {
-		rt.mu.Lock()
-		if rt.state != StateGracefulStopping {
-			rt.mu.Unlock()
-			return
-		}
-		fn := rt.gracefulStopFns[len(rt.gracefulStopFns)-1]
-		rt.gracefulStopFns = rt.gracefulStopFns[:len(rt.gracefulStopFns)-1]
-		rt.immediateStopFns = rt.immediateStopFns[:len(rt.immediateStopFns)-1]
-		rt.mu.Unlock()
-
+	for fn := range rt.gracefulStopFnSeq() {
 		cx := exec.CreateContext(rt.env)
 		res, err := exec.Invoke(cx, fn, nil)
 		if err != nil {
-			onError(err.Error())
+			writeStderr(rt.env, err.Error())
+			rt.transition(StateImmediateStopping)
 			return
 		}
 		if errVal, isErr := res.(*values.Error); isErr {
-			onError("error: " + errVal.Message + "\n")
+			writeStderr(rt.env, "error: "+errVal.Message+"\n")
+			rt.transition(StateImmediateStopping)
 			return
 		}
 	}
 	rt.transition(StateStopped)
 }
 
-// immediateStopAction is the graceful action's sibling: post an immediate
-// command and let the lifecycle goroutine pick it up. If the goroutine
-// is already mid-graceful, escalateAction will have flipped state to
-// ImmediateStopping; the goroutine notices on its next module-boundary
-// poll.
-func immediateStopAction(rt *Runtime) {
-	if rt.exitCode == 0 {
-		rt.exitCode = 131 // 128  + SIGQUIT
+func (rt *Runtime) gracefulStopFnSeq() iter.Seq[*exec.InvokableHandle] {
+	return func(yield func(*exec.InvokableHandle) bool) {
+		for {
+			rt.mu.Lock()
+			if rt.state != StateGracefulStopping || len(rt.gracefulStopFns) == 0 {
+				rt.mu.Unlock()
+				break
+			}
+			fn := rt.gracefulStopFns[len(rt.gracefulStopFns)-1]
+			rt.gracefulStopFns = rt.gracefulStopFns[:len(rt.gracefulStopFns)-1]
+			rt.immediateStopFns = rt.immediateStopFns[:len(rt.immediateStopFns)-1]
+			rt.mu.Unlock()
+			if !yield(fn) {
+				return
+			}
+		}
+		for {
+			rt.mu.Lock()
+			if rt.state != StateGracefulStopping || len(rt.stopHandlers) == 0 {
+				rt.mu.Unlock()
+				return
+			}
+			fn := rt.stopHandlers[len(rt.stopHandlers)-1]
+			rt.stopHandlers = rt.stopHandlers[:len(rt.stopHandlers)-1]
+			rt.mu.Unlock()
+			if !yield(fn) {
+				return
+			}
+		}
 	}
+}
+
+// immediateStopAction call immediateStop on all module listeners in the reverse order
+// they got registered. should any of those functions return an error runtime will panic
+func immediateStopAction(rt *Runtime) {
 	onError := func(reason string) {
 		rt.mu.Unlock()
 		writeStderr(rt.env, fmt.Sprintf("panic: immediate stop failed due to %s\n", reason))
 		rt.transition(StateStopped)
 	}
 	rt.mu.Lock()
+	if rt.exitCode == 0 {
+		rt.exitCode = 131 // 128  + SIGQUIT
+	}
 	rt.state = StateImmediateStopping
 	for i := len(rt.immediateStopFns) - 1; i >= 0; i-- {
 		fn := rt.immediateStopFns[i]
@@ -244,13 +271,15 @@ func immediateStopAction(rt *Runtime) {
 }
 
 func stoppedAction(rt *Runtime) {
+	rt.mu.Lock()
 	if rt.state == StateStopped {
+		rt.mu.Unlock()
 		return
 	}
-	rt.mu.Lock()
 	rt.state = StateStopped
+	exitCode := rt.exitCode
 	rt.mu.Unlock()
-	rt.exitCodeChan <- rt.exitCode
+	rt.exitCodeChan <- exitCode
 	close(rt.exitCodeChan)
 }
 
@@ -265,13 +294,24 @@ func (rt *Runtime) setupSignalListeners() {
 		panic("no signal channel in PAL")
 	}
 	go func(ch <-chan pal.Signal) {
-		for rt.state != StateStopped {
+		for {
+			rt.mu.Lock()
+			stopped := rt.state == StateStopped
+			rt.mu.Unlock()
+			if stopped {
+				return
+			}
 			sig, ok := <-ch
 			if !ok {
 				return
 			}
 			switch sig {
 			case pal.GracefulStop:
+				rt.mu.Lock()
+				if rt.exitCode == 0 {
+					rt.exitCode = 130 // 128 + SIGINT
+				}
+				rt.mu.Unlock()
 				go rt.transition(StateGracefulStopping)
 			case pal.ImmediateStop:
 				go rt.transition(StateImmediateStopping)
@@ -280,6 +320,21 @@ func (rt *Runtime) setupSignalListeners() {
 			}
 		}
 	}(ch)
+}
+
+func (rt *Runtime) registerGracefulStopHandler(handler *exec.InvokableHandle) error {
+	if !rt.mu.TryLock() {
+		return fmt.Errorf("can't register graceful stop listeners during state transitions")
+	}
+	defer rt.mu.Unlock()
+	if rt.state != StateInitializing {
+		// Strictly speaking spec don't forbid this but the spirit of the spec https://github.com/ballerina-platform/ballerina-spec/issues/730#issuecomment-773018382
+		// was not to allow this, and allowing this would add complications with reguard to reentrant locks in the current implementation, which I don't think
+		// worth it to deal with (at the moment)
+		return fmt.Errorf("registering graceful stop listeners outside of module init not supported")
+	}
+	rt.stopHandlers = append(rt.stopHandlers, handler)
+	return nil
 }
 
 func writeStderr(env *extern.Env, s string) {
