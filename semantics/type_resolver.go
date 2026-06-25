@@ -129,8 +129,6 @@ type packageTypeResolver struct {
 	defaultFnSymbolCount  int
 	monoCounters          map[string]int
 	annotationGlobalCount int
-	annotationMapType     semtypes.SemType
-	annotationMapListType semtypes.SemType
 	scope                 model.Scope
 	mappingAtomToSymRef   map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols      map[*semtypes.MappingAtomicType]model.SymbolRef
@@ -918,42 +916,18 @@ func annotationTypeValid(t typeResolver, ty semtypes.SemType) bool {
 		semtypes.IsSubtype(cx, ty, cloneableMapList)
 }
 
+// annotationMapType is map<Cloneable>. It is recomputed per call rather than
+// cached on the package resolver: the expensive part, CreateCloneable, is
+// already memoized in the semtype context, and caching on the shared resolver
+// would be a data race (local-node resolution runs many type resolvers
+// concurrently off the same package resolver).
 func annotationMapType(t typeResolver) semtypes.SemType {
-	if resolver := packageResolverOf(t); resolver != nil {
-		if semtypes.IsZero(resolver.annotationMapType) {
-			resolver.annotationMapType = semtypes.Intersect(
-				semtypes.MAPPING,
-				semtypes.CreateCloneable(resolver.typeContext()),
-			)
-		}
-		return resolver.annotationMapType
-	}
 	return semtypes.Intersect(semtypes.MAPPING, semtypes.CreateCloneable(t.typeContext()))
 }
 
 func annotationMapListType(t typeResolver) semtypes.SemType {
-	if resolver := packageResolverOf(t); resolver != nil {
-		if semtypes.IsZero(resolver.annotationMapListType) {
-			ld := semtypes.NewListDefinition()
-			resolver.annotationMapListType = ld.DefineListTypeWrappedWithEnvSemType(
-				resolver.typeEnv(),
-				annotationMapType(t),
-			)
-		}
-		return resolver.annotationMapListType
-	}
 	ld := semtypes.NewListDefinition()
 	return ld.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), annotationMapType(t))
-}
-
-func packageResolverOf(t typeResolver) *packageTypeResolver {
-	for t != nil {
-		if resolver, ok := t.(*packageTypeResolver); ok {
-			return resolver
-		}
-		t = t.parent()
-	}
-	return nil
 }
 
 func resolveAnnotationDeclaration(t typeResolver, annotation *ast.BLangAnnotation) bool {
