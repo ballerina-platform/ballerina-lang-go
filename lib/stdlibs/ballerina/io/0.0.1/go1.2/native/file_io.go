@@ -34,8 +34,6 @@ type fileIOTypes struct {
 	byteArrTy         semtypes.SemType
 	jsonListTy        semtypes.SemType
 	jsonMapTy         semtypes.SemType
-	stringMapTy       semtypes.SemType
-	stringMapAtomicTy *semtypes.MappingAtomicType
 }
 
 func fileIOError(msg string) values.BalValue {
@@ -72,15 +70,11 @@ func initFileIOModule(rt *runtime.Runtime) {
 	bld := semtypes.NewListDefinition()
 	jmd := semtypes.NewMappingDefinition()
 	jld := semtypes.NewListDefinition()
-	smd := semtypes.NewMappingDefinition()
-	stringMapTy := smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
 	types := fileIOTypes{
-		strArrTy:          sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING),
-		byteArrTy:         bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
-		jsonMapTy:         jmd.DefineMappingTypeWrapped(env, nil, jsonTy),
-		jsonListTy:        jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy),
-		stringMapTy:       stringMapTy,
-		stringMapAtomicTy: semtypes.ToMappingAtomicType(typCtx, stringMapTy),
+		strArrTy:   sld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING),
+		byteArrTy:  bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.BYTE),
+		jsonMapTy:  jmd.DefineMappingTypeWrapped(env, nil, jsonTy),
+		jsonListTy: jld.DefineListTypeWrappedWithEnvSemType(env, jsonTy),
 	}
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadString",
@@ -214,7 +208,7 @@ func initFileIOModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileWriteJson",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			path, _ := args[0].(string)
-			data, err := json.Marshal(values.BalToGoJSON(args[1]))
+			data, err := values.ToJSONByteArray(args[1])
 			if err != nil {
 				return fileIOError(fmt.Sprintf("error while serializing JSON for file '%s': %s", path, err.Error())), nil
 			}
@@ -225,14 +219,14 @@ func initFileIOModule(rt *runtime.Runtime) {
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externFileReadXml",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 
 			path, _ := args[0].(string)
 			data, err := rt.Platform().FS.ReadFile(path)
 			if err != nil {
 				return fileIOError(fmt.Sprintf("error while reading file '%s': %s", path, err.Error())), nil
 			}
-			xmlVal, parseErr := values.ParseXMLFromBytes(data, types.stringMapTy, types.stringMapAtomicTy)
+			xmlVal, parseErr := values.ParseAsXMLValue(ctx.TypeCtx, values.FromBytes(data), values.XMLLenientMode)
 			if parseErr != nil {
 				return fileIOError(fmt.Sprintf("error while parsing XML from file '%s': %s", path, parseErr.Error())), nil
 			}

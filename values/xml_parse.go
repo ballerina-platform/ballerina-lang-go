@@ -27,12 +27,78 @@ import (
 
 const xmlNamespaceURI = "http://www.w3.org/XML/1998/namespace"
 
+// XMLParseMode selects how ParseAsXMLValue interprets its input.
+type XMLParseMode int
+
+const (
+	// XMLTemplateMode re-parses XML template content under strict rules: XML
+	// directives and the reserved "xml" processing-instruction target are
+	// rejected, and the resulting value is readonly.
+	XMLTemplateMode XMLParseMode = iota
+	// XMLLenientMode parses external XML (e.g. io:fileReadXml): directives are
+	// skipped and any processing instruction is accepted. The resulting value
+	// is mutable.
+	XMLLenientMode
+)
+
+// FromBytes interprets a byte slice as a UTF-8 encoded string, for callers that
+// read raw XML bytes and hand them to ParseAsXMLValue.
+func FromBytes(data []byte) string {
+	return string(data)
+}
+
+// ParseAsXMLValue parses XML content into a Ballerina XML value. The mode
+// selects the strict, readonly template semantics or the lenient, mutable
+// semantics used for external XML. The map<string> type used for attribute and
+// namespace maps is built from the runtime context (an ephemeral, non-cyclic
+// type), so the only difference between the two modes is the parsing rules.
+func ParseAsXMLValue(tc semtypes.Context, content string, mode XMLParseMode) (XMLValue, error) {
+	bc := newXMLBuildCtx(tc, mode)
+	if mode == XMLLenientMode {
+		return parseXMLLenient(content, bc)
+	}
+	return parseXMLStrict(content, bc)
+}
+
+// xmlBuildCtx carries the type information and readonly flag used while building
+// XML values during a parse.
+type xmlBuildCtx struct {
+	stringMapTy     semtypes.SemType
+	stringMapAtomic *semtypes.MappingAtomicType
+	readonly        bool
+}
+
+func newXMLBuildCtx(tc semtypes.Context, mode XMLParseMode) xmlBuildCtx {
+	md := semtypes.NewMappingDefinition()
+	stringMapTy := md.DefineMappingTypeWrapped(tc.Env(), nil, semtypes.STRING)
+	return xmlBuildCtx{
+		stringMapTy:     stringMapTy,
+		stringMapAtomic: semtypes.ToMappingAtomicType(tc, stringMapTy),
+		readonly:        mode == XMLTemplateMode,
+	}
+}
+
+// stringMap builds a map<string> from entries, always returning a non-nil map.
+func (bc xmlBuildCtx) stringMap(entries []MapEntry) *Map {
+	return NewMap(bc.stringMapTy, bc.stringMapAtomic, false, entries)
+}
+
+// stringMapOrNil is stringMap but returns nil for an empty entry set, matching
+// the template parser's representation of attribute/namespace-free elements.
+func (bc xmlBuildCtx) stringMapOrNil(entries []MapEntry) *Map {
+	if len(entries) == 0 {
+		return nil
+	}
+	return bc.stringMap(entries)
+}
+
 type xmlParseElement struct {
 	e  *XMLElement
 	ns map[string]string
 }
 
-func ParseAsXMLValue(content string) (XMLValue, error) {
+// parseXMLStrict implements XMLTemplateMode.
+func parseXMLStrict(content string, bc xmlBuildCtx) (XMLValue, error) {
 	decoder := xml.NewDecoder(strings.NewReader(content))
 	decoder.Strict = true
 	var stack []xmlParseElement
@@ -50,9 +116,9 @@ func ParseAsXMLValue(content string) (XMLValue, error) {
 		switch t := tok.(type) {
 		case xml.StartElement:
 			ns := cloneStringMap(currentNS)
-			attrs, namespaces := xmlAttrsAndNamespaces(t.Attr, ns)
+			attrs, namespaces := bc.xmlAttrsAndNamespaces(t.Attr, ns)
 			name := xmlQualifiedName(t.Name, ns, true)
-			stack = append(stack, xmlParseElement{e: NewXMLElement(name, attrs, namespaces, nil, true), ns: currentNS})
+			stack = append(stack, xmlParseElement{e: NewXMLElement(name, attrs, namespaces, nil, bc.readonly), ns: currentNS})
 			currentNS = ns
 			continue
 		case xml.EndElement:
@@ -69,12 +135,12 @@ func ParseAsXMLValue(content string) (XMLValue, error) {
 			}
 			item = NewXMLText(string(t))
 		case xml.Comment:
-			item = NewXMLComment(string(t), true)
+			item = NewXMLComment(string(t), bc.readonly)
 		case xml.ProcInst:
 			if strings.EqualFold(t.Target, "xml") {
 				return nil, fmt.Errorf("xml processing instruction target %q is reserved", t.Target)
 			}
-			item = NewXMLProcessingInstruction(t.Target, string(t.Inst), true)
+			item = NewXMLProcessingInstruction(t.Target, string(t.Inst), bc.readonly)
 		case xml.Directive:
 			return nil, fmt.Errorf("xml directive not allowed in template content: <!%s>", string(t))
 		default:
@@ -110,7 +176,7 @@ func collapseXMLItems(items []XMLValue) XMLValue {
 	return NewNormalizedXMLSequence(items)
 }
 
-func xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) {
+func (bc xmlBuildCtx) xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) {
 	var nsEntries []MapEntry
 	for _, attr := range attrs {
 		if !isXMLNSParseAttr(attr) {
@@ -132,18 +198,11 @@ func xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) 
 		}
 		attrEntries = append(attrEntries, MapEntry{Key: xmlQualifiedName(attr.Name, ns, false), Value: attr.Value})
 	}
-	return newXMLStringMap(attrEntries), newXMLStringMap(nsEntries)
+	return bc.stringMapOrNil(attrEntries), bc.stringMapOrNil(nsEntries)
 }
 
 func isXMLNSParseAttr(attr xml.Attr) bool {
 	return attr.Name.Space == "xmlns" || attr.Name.Space == "" && attr.Name.Local == "xmlns"
-}
-
-func newXMLStringMap(entries []MapEntry) *Map {
-	if len(entries) == 0 {
-		return nil
-	}
-	return NewMap(semtypes.MAPPING, &semtypes.MAPPING_ATOMIC_INNER, false, entries)
 }
 
 func xmlQualifiedName(name xml.Name, ns map[string]string, element bool) string {
@@ -177,4 +236,127 @@ func cloneStringMap(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+// parseXMLLenient implements XMLLenientMode.
+func parseXMLLenient(content string, bc xmlBuildCtx) (XMLValue, error) {
+	dec := xml.NewDecoder(strings.NewReader(content))
+	items, err := parseXMLItems(dec, xmlNsCtx{}, bc, true)
+	if err != nil {
+		return nil, err
+	}
+	switch len(items) {
+	case 0:
+		return NewNormalizedXMLSequence(nil), nil
+	case 1:
+		return items[0], nil
+	default:
+		return NewNormalizedXMLSequence(items), nil
+	}
+}
+
+// xmlNsCtx maps namespace URI to prefix, accumulated as we descend into elements.
+type xmlNsCtx map[string]string
+
+func (c xmlNsCtx) child(attrs []xml.Attr) xmlNsCtx {
+	ch := make(xmlNsCtx, len(c)+4)
+	for k, v := range c {
+		ch[k] = v
+	}
+	for _, attr := range attrs {
+		switch {
+		case attr.Name.Space == "xmlns":
+			ch[attr.Value] = attr.Name.Local
+		case attr.Name.Space == "" && attr.Name.Local == "xmlns":
+			ch[attr.Value] = ""
+		}
+	}
+	return ch
+}
+
+func (c xmlNsCtx) qualifiedName(name xml.Name) string {
+	if name.Space == "" {
+		return name.Local
+	}
+	if prefix, ok := c[name.Space]; ok {
+		if prefix == "" {
+			return name.Local
+		}
+		return prefix + ":" + name.Local
+	}
+	return name.Local
+}
+
+func parseXMLItems(dec *xml.Decoder, ctx xmlNsCtx, bc xmlBuildCtx, topLevel bool) ([]XMLValue, error) {
+	var items []XMLValue
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			if err == io.EOF {
+				if !topLevel {
+					return nil, fmt.Errorf("unexpected end of file inside element")
+				}
+				return items, nil
+			}
+			return nil, err
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			elem, parseErr := parseXMLElement(dec, t, ctx, bc)
+			if parseErr != nil {
+				return nil, parseErr
+			}
+			items = append(items, elem)
+		case xml.EndElement:
+			if topLevel {
+				return nil, fmt.Errorf("unexpected end element </%s>", t.Name.Local)
+			}
+			return items, nil
+		case xml.CharData:
+			body := string(t)
+			if topLevel && strings.TrimSpace(body) == "" {
+				continue
+			}
+			items = append(items, NewXMLText(body))
+		case xml.Comment:
+			items = append(items, NewXMLComment(string(t), bc.readonly))
+		case xml.ProcInst:
+			items = append(items, NewXMLProcessingInstruction(t.Target, string(t.Inst), bc.readonly))
+		case xml.Directive:
+			// skip DOCTYPE and similar directives
+		}
+	}
+}
+
+func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx xmlNsCtx, bc xmlBuildCtx) (*XMLElement, error) {
+	ctx := parentCtx.child(start.Attr)
+	name := ctx.qualifiedName(start.Name)
+
+	var attrsEntries []MapEntry
+	var nsEntries []MapEntry
+	for _, attr := range start.Attr {
+		switch {
+		case attr.Name.Space == "xmlns":
+			nsEntries = append(nsEntries, MapEntry{Key: "xmlns:" + attr.Name.Local, Value: attr.Value})
+		case attr.Name.Space == "" && attr.Name.Local == "xmlns":
+			nsEntries = append(nsEntries, MapEntry{Key: "xmlns", Value: attr.Value})
+		default:
+			attrName := ctx.qualifiedName(attr.Name)
+			attrsEntries = append(attrsEntries, MapEntry{Key: attrName, Value: attr.Value})
+		}
+	}
+
+	attrs := bc.stringMap(attrsEntries)
+	namespaces := bc.stringMap(nsEntries)
+
+	children, err := parseXMLItems(dec, ctx, bc, false)
+	if err != nil {
+		return nil, err
+	}
+	var childVal XMLValue
+	if len(children) > 0 {
+		childVal = NewNormalizedXMLSequence(children)
+	}
+
+	return NewXMLElement(name, attrs, namespaces, childVal, bc.readonly), nil
 }

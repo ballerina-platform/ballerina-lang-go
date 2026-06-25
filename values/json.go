@@ -24,11 +24,19 @@ import (
 	"ballerina-lang-go/semtypes"
 )
 
-// BalToGoJSON converts a Ballerina JSON value to a Go value suitable for
+// ToJSONByteArray serializes a Ballerina JSON value to its JSON byte
+// representation. It is shared by stdlib I/O paths that write JSON to the wire
+// or to files (e.g. io:fileWriteJson, http request/response payloads). Decimals
+// are serialized in their exact string form so precision is preserved.
+func ToJSONByteArray(v BalValue) ([]byte, error) {
+	return json.Marshal(balToGoJSON(v))
+}
+
+// balToGoJSON converts a Ballerina JSON value to a Go value suitable for
 // json.Marshal. Decimals are emitted as their exact string form so marshalling
 // preserves precision. Values outside the json type (and unrecognised types)
 // map to nil.
-func BalToGoJSON(v BalValue) any {
+func balToGoJSON(v BalValue) any {
 	switch t := v.(type) {
 	case nil:
 		return nil
@@ -46,13 +54,13 @@ func BalToGoJSON(v BalValue) any {
 		m := make(map[string]any, t.Len())
 		for _, k := range t.Keys() {
 			val, _ := t.Get(k)
-			m[k] = BalToGoJSON(val)
+			m[k] = balToGoJSON(val)
 		}
 		return m
 	case *List:
 		s := make([]any, t.Len())
 		for i := range t.Len() {
-			s[i] = BalToGoJSON(t.Get(i))
+			s[i] = balToGoJSON(t.Get(i))
 		}
 		return s
 	default:
