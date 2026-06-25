@@ -200,8 +200,8 @@ type (
 	ServerConfig struct {
 		Host         string
 		Port         int
-		HTTPVersion  string        // "1.1" or "2.0"
-		WriteTimeout time.Duration // 0 → platform default
+		HTTPVersion  string           // "1.1" or "2.0"
+		WriteTimeout time.Duration    // 0 → platform default
 		TLS          *ServerTLSConfig // nil = plaintext
 	}
 	// ServerHandle is an opaque handle to a started HTTP listener, returned by
