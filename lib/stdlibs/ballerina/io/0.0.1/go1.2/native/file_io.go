@@ -30,10 +30,10 @@ import (
 )
 
 type fileIOTypes struct {
-	strArrTy          semtypes.SemType
-	byteArrTy         semtypes.SemType
-	jsonListTy        semtypes.SemType
-	jsonMapTy         semtypes.SemType
+	strArrTy   semtypes.SemType
+	byteArrTy  semtypes.SemType
+	jsonListTy semtypes.SemType
+	jsonMapTy  semtypes.SemType
 }
 
 func fileIOError(msg string) values.BalValue {
