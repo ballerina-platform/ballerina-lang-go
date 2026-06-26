@@ -987,7 +987,9 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 	case *ast.BLangTypedescExpr:
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangAnnotAccessExpr:
-		if !analyzeActionOrExpression(a, expr.Expr, semtypes.SemType{}) {
+		// Annotation access is only valid on a typedesc value, so the receiver
+		// is analyzed with typedesc as its expected type.
+		if !analyzeActionOrExpression(a, expr.Expr, semtypes.TYPEDESC) {
 			return false
 		}
 		return validateResolvedType(a, expr, expectedType)
