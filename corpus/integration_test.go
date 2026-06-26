@@ -936,7 +936,11 @@ func BenchmarkIntegration(b *testing.B) {
 			var run caseRun
 			b.ResetTimer()
 			for b.Loop() {
-				run = runIntegrationCase(testPair.InputPath)
+				if testPair.IsProject {
+					run = runProjectIntegrationCase(testPair.InputPath)
+				} else {
+					run = runIntegrationCase(testPair.InputPath)
+				}
 			}
 			b.StopTimer()
 

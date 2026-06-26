@@ -40,10 +40,15 @@ type serializationFixture struct {
 	cenv            *context.CompilerEnvironment
 }
 
-func compileForSerializationBench(b *testing.B, balFile string) *serializationFixture {
+func compileForSerializationBench(b *testing.B, tc test_util.TestCase) *serializationFixture {
 	b.Helper()
 
-	fsys := os.DirFS(filepath.Dir(balFile))
+	fsys := os.DirFS(filepath.Dir(tc.InputPath))
+	entry := filepath.Base(tc.InputPath)
+	if tc.IsProject {
+		fsys = os.DirFS(tc.InputPath)
+		entry = "."
+	}
 
 	ballerinaEnvPath, err := getBallerinaEnvPath()
 	if err != nil {
@@ -51,11 +56,11 @@ func compileForSerializationBench(b *testing.B, balFile string) *serializationFi
 	}
 	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
 
-	result, err := projects.Load(fsys, filepath.Base(balFile), projects.ProjectLoadConfig{
+	result, err := projects.Load(fsys, entry, projects.ProjectLoadConfig{
 		BallerinaEnvFs: ballerinaEnvFs,
 	})
 	if err != nil {
-		b.Fatalf("projects.Load(%s): %v", balFile, err)
+		b.Fatalf("projects.Load(%s): %v", tc.InputPath, err)
 	}
 	tyEnv := result.Project().Environment().TypeEnv()
 	cenv := result.Project().Environment().CompilerEnvironment()
@@ -64,13 +69,13 @@ func compileForSerializationBench(b *testing.B, balFile string) *serializationFi
 	var stderrBuf bytes.Buffer
 	printDiagnostics(fsys, &stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
-		b.Fatalf("compile errors for %s:\n%s", balFile, stderrBuf.String())
+		b.Fatalf("compile errors for %s:\n%s", tc.InputPath, stderrBuf.String())
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
 	birPkg := backend.BIR()
 	if birPkg == nil {
-		b.Fatalf("nil BIR for %s", balFile)
+		b.Fatalf("nil BIR for %s", tc.InputPath)
 	}
 
 	pkgIdent := semantics.PackageIdentifier{
@@ -91,7 +96,7 @@ func benchTestPairs(b *testing.B) []test_util.TestCase {
 
 func BenchmarkBIRMarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
-		fixture := compileForSerializationBench(b, tc.InputPath)
+		fixture := compileForSerializationBench(b, tc)
 		b.Run(tc.Name, func(b *testing.B) {
 			for b.Loop() {
 				if _, err := bircodec.Marshal(fixture.tyEnv, fixture.birPkg); err != nil {
@@ -104,7 +109,7 @@ func BenchmarkBIRMarshal(b *testing.B) {
 
 func BenchmarkBIRUnmarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
-		fixture := compileForSerializationBench(b, tc.InputPath)
+		fixture := compileForSerializationBench(b, tc)
 		data, err := bircodec.Marshal(fixture.tyEnv, fixture.birPkg)
 		if err != nil {
 			b.Fatalf("BIR Marshal setup: %v", err)
@@ -123,7 +128,7 @@ func BenchmarkBIRUnmarshal(b *testing.B) {
 
 func BenchmarkSymbolMarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
-		fixture := compileForSerializationBench(b, tc.InputPath)
+		fixture := compileForSerializationBench(b, tc)
 		b.Run(tc.Name, func(b *testing.B) {
 			for b.Loop() {
 				if _, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.cenv); err != nil {
@@ -136,7 +141,7 @@ func BenchmarkSymbolMarshal(b *testing.B) {
 
 func BenchmarkSymbolUnmarshal(b *testing.B) {
 	for _, tc := range benchTestPairs(b) {
-		fixture := compileForSerializationBench(b, tc.InputPath)
+		fixture := compileForSerializationBench(b, tc)
 		data, err := symbolpool.Marshal(fixture.exportedSymbols, fixture.cenv)
 		if err != nil {
 			b.Fatalf("Symbol Marshal setup: %v", err)
