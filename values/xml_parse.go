@@ -55,9 +55,9 @@ func FromBytes(data []byte) string {
 func ParseAsXMLValue(tc semtypes.Context, content string, mode XMLParseMode) (XMLValue, error) {
 	bc := newXMLBuildCtx(tc, mode)
 	if mode == XMLLenientMode {
-		return parseXMLLenient(content, bc)
+		return parseXMLLenient(bc, content)
 	}
-	return parseXMLStrict(content, bc)
+	return parseXMLStrict(bc, content)
 }
 
 // xmlBuildCtx carries the type information and readonly flag used while building
@@ -68,10 +68,10 @@ type xmlBuildCtx struct {
 	readonly        bool
 }
 
-func newXMLBuildCtx(tc semtypes.Context, mode XMLParseMode) xmlBuildCtx {
+func newXMLBuildCtx(tc semtypes.Context, mode XMLParseMode) *xmlBuildCtx {
 	md := semtypes.NewMappingDefinition()
 	stringMapTy := md.DefineMappingTypeWrapped(tc.Env(), nil, semtypes.STRING)
-	return xmlBuildCtx{
+	return &xmlBuildCtx{
 		stringMapTy:     stringMapTy,
 		stringMapAtomic: semtypes.ToMappingAtomicType(tc, stringMapTy),
 		readonly:        mode == XMLTemplateMode,
@@ -79,13 +79,13 @@ func newXMLBuildCtx(tc semtypes.Context, mode XMLParseMode) xmlBuildCtx {
 }
 
 // stringMap builds a map<string> from entries, always returning a non-nil map.
-func (bc xmlBuildCtx) stringMap(entries []MapEntry) *Map {
+func (bc *xmlBuildCtx) stringMap(entries []MapEntry) *Map {
 	return NewMap(bc.stringMapTy, bc.stringMapAtomic, false, entries)
 }
 
 // stringMapOrNil is stringMap but returns nil for an empty entry set, matching
 // the template parser's representation of attribute/namespace-free elements.
-func (bc xmlBuildCtx) stringMapOrNil(entries []MapEntry) *Map {
+func (bc *xmlBuildCtx) stringMapOrNil(entries []MapEntry) *Map {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -98,7 +98,7 @@ type xmlParseElement struct {
 }
 
 // parseXMLStrict implements XMLTemplateMode.
-func parseXMLStrict(content string, bc xmlBuildCtx) (XMLValue, error) {
+func parseXMLStrict(bc *xmlBuildCtx, content string) (XMLValue, error) {
 	decoder := xml.NewDecoder(strings.NewReader(content))
 	decoder.Strict = true
 	var stack []xmlParseElement
@@ -176,7 +176,7 @@ func collapseXMLItems(items []XMLValue) XMLValue {
 	return NewNormalizedXMLSequence(items)
 }
 
-func (bc xmlBuildCtx) xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) {
+func (bc *xmlBuildCtx) xmlAttrsAndNamespaces(attrs []xml.Attr, ns map[string]string) (*Map, *Map) {
 	var nsEntries []MapEntry
 	for _, attr := range attrs {
 		if !isXMLNSParseAttr(attr) {
@@ -239,9 +239,9 @@ func cloneStringMap(in map[string]string) map[string]string {
 }
 
 // parseXMLLenient implements XMLLenientMode.
-func parseXMLLenient(content string, bc xmlBuildCtx) (XMLValue, error) {
+func parseXMLLenient(bc *xmlBuildCtx, content string) (XMLValue, error) {
 	dec := xml.NewDecoder(strings.NewReader(content))
-	items, err := parseXMLItems(dec, xmlNsCtx{}, bc, true)
+	items, err := parseXMLItems(bc, dec, xmlNsCtx{}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (c xmlNsCtx) qualifiedName(name xml.Name) string {
 	return name.Local
 }
 
-func parseXMLItems(dec *xml.Decoder, ctx xmlNsCtx, bc xmlBuildCtx, topLevel bool) ([]XMLValue, error) {
+func parseXMLItems(bc *xmlBuildCtx, dec *xml.Decoder, ctx xmlNsCtx, topLevel bool) ([]XMLValue, error) {
 	var items []XMLValue
 	for {
 		tok, err := dec.Token()
@@ -302,7 +302,7 @@ func parseXMLItems(dec *xml.Decoder, ctx xmlNsCtx, bc xmlBuildCtx, topLevel bool
 		}
 		switch t := tok.(type) {
 		case xml.StartElement:
-			elem, parseErr := parseXMLElement(dec, t, ctx, bc)
+			elem, parseErr := parseXMLElement(bc, dec, t, ctx)
 			if parseErr != nil {
 				return nil, parseErr
 			}
@@ -328,7 +328,7 @@ func parseXMLItems(dec *xml.Decoder, ctx xmlNsCtx, bc xmlBuildCtx, topLevel bool
 	}
 }
 
-func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx xmlNsCtx, bc xmlBuildCtx) (*XMLElement, error) {
+func parseXMLElement(bc *xmlBuildCtx, dec *xml.Decoder, start xml.StartElement, parentCtx xmlNsCtx) (*XMLElement, error) {
 	ctx := parentCtx.child(start.Attr)
 	name := ctx.qualifiedName(start.Name)
 
@@ -349,7 +349,7 @@ func parseXMLElement(dec *xml.Decoder, start xml.StartElement, parentCtx xmlNsCt
 	attrs := bc.stringMap(attrsEntries)
 	namespaces := bc.stringMap(nsEntries)
 
-	children, err := parseXMLItems(dec, ctx, bc, false)
+	children, err := parseXMLItems(bc, dec, ctx, false)
 	if err != nil {
 		return nil, err
 	}
