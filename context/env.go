@@ -132,6 +132,23 @@ func (c *CompilerEnvironment) SymbolPackage(symbol model.SymbolRef) model.Packag
 	return c.symbolSpace(symbol.SpaceIndex).Pkg
 }
 
+// FindSymbol is used for symbol serialization, and is not meant to be used by other parts. This lookup is
+// potentially very slow and you should have a symbolRef in the AST for anywhere that you may need a symbol
+func (c *CompilerEnvironment) FindSymbol(pkg model.PackageIdentifier, name string) (model.SymbolRef, bool) {
+	c.symbolSpacesMu.RLock()
+	spaces := append([]*model.SymbolSpace(nil), c.symbolSpaces...)
+	c.symbolSpacesMu.RUnlock()
+	for _, space := range spaces {
+		if space.Pkg != pkg {
+			continue
+		}
+		if ref, ok := space.GetSymbol(name); ok {
+			return ref, true
+		}
+	}
+	return model.SymbolRef{}, false
+}
+
 func (c *CompilerEnvironment) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
 	space := c.symbolSpace(ref.SpaceIndex)
 	space.AddSymbol(name, symbol)
