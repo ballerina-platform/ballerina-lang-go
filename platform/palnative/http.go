@@ -22,6 +22,7 @@
 package palnative
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -43,6 +44,33 @@ type httpClient struct {
 }
 
 func (c *httpClient) Execute(ctx context.Context, method, targetURL string, body io.Reader, contentLength int64, contentType string, reqHeaders map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
+	// When a streamed body has a declared content length, bound it with
+	// io.LimitReader. After writing the declared bytes, net/http's
+	// transferWriter.writeBody does a second drain read (into io.Discard) to verify
+	// there are no extra bytes. For a passthrough that forwards the inbound request's
+	// r.Body, that stream may already be closed by the time the drain read runs —
+	// surfacing as "http: invalid Read on closed Body", which aborts the upstream
+	// connection mid-response and drops the request (~0.05% under load, streamed
+	// bodies only). LimitReader returns EOF after contentLength bytes without
+	// touching the underlying stream, so the drain read always sees a clean EOF.
+	//
+	// In-memory bodies (*bytes.Reader/*bytes.Buffer/*strings.Reader) are left as-is:
+	// they are not the affected case, and net/http recognises them to populate
+	// Request.GetBody so the request stays replayable on a stale pooled connection.
+	//
+	// Note: io.LimitReader is not an io.Closer, so the transport no longer Close()s
+	// the wrapped stream. That is fine for the only streamed caller (forward, the
+	// sole takeStream site), which forwards the server-owned inbound r.Body whose
+	// lifetime net/http manages. A future caller that passes an owned io.ReadCloser
+	// here (with contentLength >= 0) expecting the transport to close it would leak.
+	if body != nil && contentLength >= 0 {
+		switch body.(type) {
+		case *bytes.Reader, *bytes.Buffer, *strings.Reader:
+			// replayable in-memory body — leave untouched
+		default:
+			body = io.LimitReader(body, contentLength)
+		}
+	}
 	req, err := http.NewRequestWithContext(ctx, method, targetURL, body)
 	if err != nil {
 		return 0, nil, nil, err
