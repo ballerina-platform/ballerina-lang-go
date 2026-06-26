@@ -13,7 +13,7 @@ jobs:
     env:
       GOOS: js
       GOARCH: wasm
-      GOEXPERIMENT: nogreenteagc
+      GOEXPERIMENT: greenteagc
       GOGC: "1000"
     steps:
       - name: Checkout

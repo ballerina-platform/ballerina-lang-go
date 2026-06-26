@@ -107,6 +107,36 @@ func TestBenchmarkBinaryRunExportsHTMLForDirectoryTarget(t *testing.T) {
 	}
 }
 
+func TestResolveDirectoryTargetIncludesProjectRootWithoutProjectFiles(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	directFile := filepath.Join(root, "1-v.bal")
+	projectDir := filepath.Join(root, "project-v")
+	projectFile := filepath.Join(projectDir, "main.bal")
+	moduleFile := filepath.Join(projectDir, "modules", "mod", "mod.bal")
+	for _, path := range []string{directFile, projectFile, moduleFile} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("public function main() {}"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "Ballerina.toml"), []byte("[package]\norg = \"benchorg\"\nname = \"project\"\nversion = \"0.1.0\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	target, err := resolveTarget(root)
+	if err != nil {
+		t.Fatalf("resolveTarget(%q): %v", root, err)
+	}
+	want := []string{directFile, projectDir}
+	if !slices.Equal(target.paths, want) {
+		t.Fatalf("target paths = %v, want %v", target.paths, want)
+	}
+}
+
 func TestBenchmarkBinaryRunExportsHTMLForPackageTarget(t *testing.T) {
 	skipUnlessBenchmarkIntegration(t)
 	t.Parallel()

@@ -175,6 +175,10 @@ func GetTests(t testing.TB, kind TestKind, filterFunc func(string) bool) []TestC
 		outputExt = ".txtar"
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDir, outputBaseDir)
+	if kind == Bench {
+		return walkBenchDir(t, resolvedInputDir, resolvedOutputDir, outputExt, filterFunc)
+	}
+
 	files := walkDir(t, resolvedInputDir, filterFunc)
 	testPairs := make([]TestCase, 0, len(files))
 	for _, inputPath := range files {
@@ -235,6 +239,65 @@ func walkDir(t testing.TB, dir string, filterFunc func(string) bool) []string {
 		t.Fatalf("Failed to walk directory %s: %v", dir, err)
 	}
 	return files
+}
+
+func walkBenchDir(t testing.TB, inputDir, outputDir, outputExt string, filterFunc func(string) bool) []TestCase {
+	var cases []TestCase
+	err := filepath.Walk(inputDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			if !strings.HasSuffix(path, ".bal") || !isDirectBenchFile(inputDir, path) {
+				return nil
+			}
+			if filterFunc != nil && !filterFunc(path) {
+				return nil
+			}
+			relPath, _ := filepath.Rel(inputDir, path)
+			cases = append(cases, TestCase{
+				Name:         relPath,
+				InputPath:    path,
+				ExpectedPath: computeExpectedPath(path, inputDir, outputDir, outputExt),
+			})
+			return nil
+		}
+
+		if path == inputDir {
+			return nil
+		}
+		if isBenchProjectDir(path) {
+			if filterFunc != nil && !filterFunc(path+".bal") {
+				return filepath.SkipDir
+			}
+			relPath, _ := filepath.Rel(inputDir, path)
+			cases = append(cases, TestCase{
+				Name:         relPath,
+				InputPath:    path,
+				ExpectedPath: filepath.Join(outputDir, relPath+outputExt),
+				IsProject:    true,
+			})
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to walk benchmark directory %s: %v", inputDir, err)
+	}
+	return cases
+}
+
+func isDirectBenchFile(inputDir, path string) bool {
+	relPath, err := filepath.Rel(inputDir, path)
+	if err != nil {
+		return false
+	}
+	return len(strings.Split(filepath.ToSlash(relPath), "/")) == 2
+}
+
+func isBenchProjectDir(path string) bool {
+	info, err := os.Stat(filepath.Join(path, "Ballerina.toml"))
+	return err == nil && !info.IsDir()
 }
 
 // computeExpectedPath converts an input path to the expected output path

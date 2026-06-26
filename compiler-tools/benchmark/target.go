@@ -100,6 +100,11 @@ func collectBalFiles(dir string) ([]string, error) {
 		}
 		visited[abs] = struct{}{}
 
+		if _, err := os.Stat(filepath.Join(path, "Ballerina.toml")); err == nil {
+			files = append(files, path)
+			return nil
+		}
+
 		entries, err := os.ReadDir(path)
 		if err != nil {
 			return fmt.Errorf("failed to read directory %q: %w", path, err)
