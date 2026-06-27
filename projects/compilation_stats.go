@@ -180,12 +180,13 @@ func formatStatsReportOneline(allStats []*context.ModuleStats) string {
 }
 
 func findStageDuration(ms *context.ModuleStats, stage context.CompilationStage) time.Duration {
+	var total time.Duration
 	for _, s := range ms.Stages {
 		if s.Name == stage {
-			return s.Duration
+			total += s.Duration
 		}
 	}
-	return 0
+	return total
 }
 
 func formatDuration(d time.Duration) string {

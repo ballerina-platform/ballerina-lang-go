@@ -220,6 +220,9 @@ func (c *CompilerContext) InitModuleStats(moduleName string) {
 	if !c.env.statsEnabled {
 		return
 	}
+	if c.moduleStats != nil {
+		return
+	}
 	c.moduleStats = &ModuleStats{ModuleName: moduleName}
 }
 
@@ -234,10 +237,23 @@ func (c *CompilerContext) EndStage() {
 	if !c.env.statsEnabled {
 		return
 	}
+	c.RecordStageDuration(c.stage.name, time.Since(c.stage.start))
+}
+
+func (c *CompilerContext) RecordStageDuration(name CompilationStage, duration time.Duration) {
+	if !c.CanRecordStageDuration() {
+		return
+	}
+	c.mu.Lock()
 	c.moduleStats.Stages = append(c.moduleStats.Stages, StageTiming{
-		Name:     c.stage.name,
-		Duration: time.Since(c.stage.start),
+		Name:     name,
+		Duration: duration,
 	})
+	c.mu.Unlock()
+}
+
+func (c *CompilerContext) CanRecordStageDuration() bool {
+	return c != nil && c.env.statsEnabled && c.moduleStats != nil
 }
 
 func (c *CompilerContext) GetModuleStats() *ModuleStats {

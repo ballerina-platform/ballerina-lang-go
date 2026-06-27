@@ -104,6 +104,21 @@ func TestFormatStatsReportEmpty(t *testing.T) {
 	}
 }
 
+func TestFindStageDurationSumsRepeatedStageEntries(t *testing.T) {
+	stats := &context.ModuleStats{
+		ModuleName: "multi-file/mod",
+		Stages: []context.StageTiming{
+			{Name: context.StageParse, Duration: 2 * time.Millisecond},
+			{Name: context.StageASTBuild, Duration: 10 * time.Millisecond},
+			{Name: context.StageParse, Duration: 3 * time.Millisecond},
+		},
+	}
+
+	if got := findStageDuration(stats, context.StageParse); got != 5*time.Millisecond {
+		t.Fatalf("expected repeated parse entries to be summed, got %s", got)
+	}
+}
+
 func TestFormatStatsReportPartialStages(t *testing.T) {
 	stats := []*context.ModuleStats{
 		{
