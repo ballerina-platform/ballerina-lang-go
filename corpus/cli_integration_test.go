@@ -335,13 +335,6 @@ func assertBalCommandMatchesTxtarFragmentsLoose(t *testing.T, balBin, repoRoot, 
 	stdout = test_util.NormalizeNewlines(stdout)
 	stderr = test_util.NormalizeNewlines(stderr)
 
-	if *update {
-		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderrExitcode(stdout, stderr, strconv.Itoa(exitCode))) {
-			t.Fatalf("Updated expected file: %s", txtarPath)
-		}
-		return
-	}
-
 	expectedStdoutFragments, expectedStderrFragments, expectedExitCode, err := test_util.LoadTxtarStdoutStderrExitcode(txtarPath)
 	if err != nil {
 		t.Fatalf("failed to parse txtar file %s: %v", txtarPath, err)
@@ -480,13 +473,6 @@ func assertBalCommandMatchesTxtarFragmentsForBinary(t *testing.T, balBin, repoRo
 	stderr = test_util.NormalizeNewlines(stderr)
 	expectedPath := filepath.Join(append([]string{repoRoot, "corpus", "cli", "output"}, txtarPathParts...)...)
 
-	if *update {
-		if test_util.UpdateTxtarArchiveIfNeeded(t, expectedPath, test_util.TxtarFilesStdoutStderrExitcode(stdout, stderr, strconv.Itoa(exitCode))) {
-			t.Fatalf("Updated expected file: %s", expectedPath)
-		}
-		return
-	}
-
 	expectedStdoutFragments, expectedStderr, expectedExitCode, err := test_util.LoadTxtarStdoutStderrExitcode(expectedPath)
 	if err != nil {
 		t.Fatalf("failed to parse txtar file %s: %v", expectedPath, err)
@@ -572,13 +558,6 @@ func runBalRunCorpusCase(t *testing.T, balBin, repoRoot, coverDir, outputsRoot, 
 		actualOutput := test_util.NormalizeNewlines(stdout)
 		actualError := test_util.NormalizeNewlines(stderr)
 		actualExitCode := strconv.Itoa(exitCode)
-
-		if *update {
-			if test_util.UpdateTxtarArchiveIfNeeded(t, expectedPath, test_util.TxtarFilesStdoutStderrExitcode(actualOutput, actualError, actualExitCode)) {
-				t.Fatalf("Updated expected file: %s", expectedPath)
-			}
-			return
-		}
 
 		expectedOutput, expectedError, expectedExitCode, err := test_util.LoadTxtarStdoutStderrExitcode(expectedPath)
 		if err != nil {
