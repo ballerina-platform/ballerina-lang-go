@@ -123,7 +123,8 @@ type packageTypeResolver struct {
 	lazyResolutionStatus map[model.SymbolRef]resolutionStatus
 	functionNodes        map[model.SymbolRef]*ast.BLangFunction
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
-	typeDefnNodes        map[model.SymbolRef]ast.TypeDefinition
+	typeDefnNodes        map[model.SymbolRef]*ast.BLangTypeDefinition
+	classDefnNodes       map[model.SymbolRef]*ast.BLangClassDefinition
 	defaultFnSymbolCount int
 	monoCounters         map[string]int
 	scope                model.Scope
@@ -465,7 +466,8 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		lazyResolutionStatus:   make(map[model.SymbolRef]resolutionStatus),
 		functionNodes:          make(map[model.SymbolRef]*ast.BLangFunction),
 		mappingAtomToBType:     make(map[*semtypes.MappingAtomicType]ast.BType),
-		typeDefnNodes:          make(map[model.SymbolRef]ast.TypeDefinition),
+		typeDefnNodes:          make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+		classDefnNodes:         make(map[model.SymbolRef]*ast.BLangClassDefinition),
 		mappingAtomToSymRef:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:       make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classSymbolByType:      make(map[semtypes.InternHandle]model.SymbolRef),
@@ -500,6 +502,10 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 	}
 	if defn, ok := t.typeDefnNodes[ref]; ok {
 		_, ok := resolveTypeDefinition(t, defn, depth)
+		return ok
+	}
+	if classDef, ok := t.classDefnNodes[ref]; ok {
+		_, ok := resolveClassTypeDefinition(t, classDef, depth)
 		return ok
 	}
 	if c, inMap := t.packageConstants[ref]; inMap {
@@ -706,7 +712,7 @@ func resolveInvokableSignature(t typeResolver, fn functionDecl, fnSym model.Func
 		setOtherNodesAsNever(&requiredParams[i])
 		paramTypes[i] = requiredParams[i].GetDeterminedType()
 	}
-	var restTy = semtypes.NEVER
+	restTy := semtypes.NEVER
 	if rp := fn.GetRestParam(); rp != nil {
 		restParam := rp.(*ast.BLangSimpleVariable)
 		resolveSimpleVariable(t, nil, restParam)
@@ -794,7 +800,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		t.typeDefnNodes[classDef.Symbol()] = classDef
+		t.classDefnNodes[classDef.Symbol()] = classDef
 	}
 
 	for i := range pkg.Constants {
@@ -812,7 +818,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		if _, ok := resolveTypeDefinition(t, classDef, 0); !ok {
+		if _, ok := resolveClassTypeDefinition(t, classDef, 0); !ok {
 			return
 		}
 	}
@@ -1456,7 +1462,7 @@ func allocateDefaultFnSymbol(t typeResolver, fieldTy semtypes.SemType) model.Sym
 	return ref
 }
 
-func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (semtypes.SemType, bool) {
+func resolveTypeDefinition(t typeResolver, defn *ast.BLangTypeDefinition, depth int) (semtypes.SemType, bool) {
 	if ty := t.symbolType(defn.Symbol()); !semtypes.IsZero(ty) {
 		return ty, true
 	}
@@ -1468,12 +1474,9 @@ func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (
 		return semtypes.SemType{}, false
 	}
 	defn.SetCycleDepth(depth)
-	var semType semtypes.SemType
-	var ok bool
-	if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
-		semType, ok = resolveClassDefinitionType(t, classDef, depth)
-	} else {
-		semType, ok = resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	semType, ok := resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	if ok {
+		semType, ok = resolveDistinctTypeDefinition(t, defn, semType)
 	}
 	if !ok {
 		return semtypes.SemType{}, false
@@ -1486,45 +1489,95 @@ func resolveTypeDefinition(t typeResolver, defn ast.TypeDefinition, depth int) (
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
 		addInclusionsToTypeSymbol(t, defn)
-		kind := "type definition"
-		if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
-			if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
-				t.setSymbolType(selfRef, semType)
-			}
-			kind = "class definition"
-		}
 		name := defn.GetName().GetValue()
 		pos := defn.GetPosition()
 		t.ensureNotEmpty(semType, func() {
-			t.semanticError(fmt.Sprintf("%s %s is empty", kind, name), pos)
+			t.semanticError(fmt.Sprintf("type definition %s is empty", name), pos)
 		})
 		return semType, true
 	}
-	// This can happen with recursion
-	// We use the first definition we produced
-	// and throw away the others
 	return defn.GetDeterminedType(), true
+}
+
+func resolveClassTypeDefinition(t typeResolver, classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
+	if ty := t.symbolType(classDef.Symbol()); !semtypes.IsZero(ty) {
+		return ty, true
+	}
+	if classDef.GetName() != nil {
+		setOtherNodesAsNever(classDef.GetName())
+	}
+	if depth == classDef.GetCycleDepth() {
+		t.semanticError(fmt.Sprintf("invalid cycle detected for type definition %s", classDef.GetName().GetValue()), classDef.GetPosition())
+		return semtypes.SemType{}, false
+	}
+	classDef.SetCycleDepth(depth)
+	semType, ok := resolveClassDefinitionType(t, classDef, depth)
+	if !ok {
+		return semtypes.SemType{}, false
+	}
+	return semType, true
+}
+
+func resolveDistinctTypeDefinition(t typeResolver, typeDef *ast.BLangTypeDefinition, semType semtypes.SemType) (semtypes.SemType, bool) {
+	objectType, ok := typeDef.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+	if !ok {
+		if typeDef.IsDistinct() {
+			t.unimplemented("distinct types are only supported for object types", typeDef.GetPosition())
+			return semtypes.SemType{}, false
+		}
+		return semType, true
+	}
+	return appendDistinctAtoms(t, semType, typeDef.Symbol(), objectType.Inclusions), true
+}
+
+func appendDistinctAtoms(t typeResolver, semType semtypes.SemType, symbol model.SymbolRef, inclusions []model.SymbolRef) semtypes.SemType {
+	carrier, ok := t.getSymbol(symbol).(model.ObjectType)
+	if !ok {
+		return semType
+	}
+
+	seen := make(map[int]bool)
+	var ids []int
+	addIDs := func(obj model.ObjectType) {
+		for _, id := range obj.DistinctTypeIDs() {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+
+	addIDs(carrier)
+	for _, inc := range inclusions {
+		incCarrier, ok := t.getSymbol(inc).(model.ObjectType)
+		if ok {
+			addIDs(incCarrier)
+		}
+	}
+
+	carrier.SetDistinctTypeIDs(ids)
+	current := semType
+	for _, distinctTypeID := range ids {
+		current = semtypes.Intersect(current, semtypes.ObjectDefinitionDistinct(distinctTypeID))
+	}
+	return current
 }
 
 // addInclusionsToTypeSymbol addes all the inclusions (both transitive and direct) to the type symbol
 // This should be called only after resolving the underlying type
-func addInclusionsToTypeSymbol(t typeResolver, defn ast.TypeDefinition) {
+func addInclusionsToTypeSymbol(t typeResolver, defn *ast.BLangTypeDefinition) {
 	var members []model.InclusionMember
-	switch d := defn.(type) {
-	case *ast.BLangTypeDefinition:
-		typeDesc := d.GetTypeData().TypeDescriptor
-		switch td := typeDesc.(type) {
-		case *ast.BLangRecordType:
-			members = recordTypeMembers(t, td)
-		case *ast.BLangObjectType:
-			members = objectTypeMembers(t, td)
-		default:
-			return
-		}
-	case *ast.BLangClassDefinition:
-		members = classMembers(t, d)
+	typeDesc := defn.GetTypeData().TypeDescriptor
+	switch td := typeDesc.(type) {
+	case *ast.BLangRecordType:
+		members = recordTypeMembers(t, td)
+	case *ast.BLangObjectType:
+		members = objectTypeMembers(t, td)
+	default:
+		return
 	}
-	carrier := getMemberCarrierFromDefn(t, defn)
+	carrier := getMemberCarrierFromDefn(t, defn.Symbol(), defn.GetPosition())
 	if carrier == nil {
 		return
 	}
@@ -1533,8 +1586,18 @@ func addInclusionsToTypeSymbol(t typeResolver, defn ast.TypeDefinition) {
 	}
 }
 
-func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.MemberCarrier {
-	sym := t.getSymbol(defn.Symbol())
+func addInclusionsToClassSymbol(t typeResolver, classDef *ast.BLangClassDefinition) {
+	carrier := getMemberCarrierFromDefn(t, classDef.Symbol(), classDef.GetPosition())
+	if carrier == nil {
+		return
+	}
+	for _, m := range classMembers(t, classDef) {
+		carrier.AddMember(m)
+	}
+}
+
+func getMemberCarrierFromDefn(t typeResolver, ref model.SymbolRef, pos diagnostics.Location) model.MemberCarrier {
+	sym := t.getSymbol(ref)
 	switch s := sym.(type) {
 	case *model.RecordSymbol:
 		return s
@@ -1543,7 +1606,7 @@ func getMemberCarrierFromDefn(t typeResolver, defn ast.TypeDefinition) model.Mem
 	case model.ClassSymbol:
 		return s
 	default:
-		t.internalError("unexpected type definition", defn.GetPosition())
+		t.internalError("unexpected type definition", pos)
 		return nil
 	}
 }
@@ -1727,8 +1790,9 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		// Recursive self-reference while the surrounding class is still being
 		// resolved. Return the partial type so callers can refer to it.
 		recTy := classDef.Definition.GetSemType(t.typeEnv())
-		t.setSymbolType(classDef.Symbol(), recTy)
-		return recTy, true
+		semType := appendDistinctAtoms(t, recTy, classDef.Symbol(), classDef.Inclusions)
+		t.setSymbolType(classDef.Symbol(), semType)
+		return semType, true
 	}
 
 	isClient := classDef.IsClient()
@@ -1736,7 +1800,29 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	od := semtypes.NewObjectDefinition()
 	classDef.Definition = &od
 
-	return finishResolveObjectDefinitionType(t, &od, classDef.Fields, classDef.Methods, classDef.ResourceMethods, classDef.InitFunction, classDef.Inclusions, classDef.GetPosition(), depth, classDef.IsIsolated(), isClient, isService)
+	semType, ok := finishResolveObjectDefinitionType(t, &od, classDef.Fields, classDef.Methods, classDef.ResourceMethods, classDef.InitFunction,
+		classDef.Inclusions, classDef.GetPosition(), depth, classDef.IsIsolated(), classDef.IsReadonly(), isClient, isService,
+		classDef.Symbol())
+	if !ok {
+		return semtypes.SemType{}, false
+	}
+
+	classDef.SetDeterminedType(semType)
+	t.setSymbolType(classDef.Symbol(), semType)
+	classDef.SetCycleDepth(-1)
+	typeData := classDef.GetTypeData()
+	typeData.Type = semType
+	classDef.SetTypeData(typeData)
+	addInclusionsToClassSymbol(t, classDef)
+	if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
+		t.setSymbolType(selfRef, semType)
+	}
+	name := classDef.GetName().GetValue()
+	pos := classDef.GetPosition()
+	t.ensureNotEmpty(semType, func() {
+		t.semanticError(fmt.Sprintf("class definition %s is empty", name), pos)
+	})
+	return semType, true
 }
 
 func resolveServiceType(t typeResolver, svc *ast.BLangService, depth int) bool {
@@ -1751,7 +1837,7 @@ func resolveServiceType(t typeResolver, svc *ast.BLangService, depth int) bool {
 	svc.Definition = &od
 
 	semType, ok := finishResolveObjectDefinitionType(t, &od, svc.Fields, svc.Methods, svc.ResourceMethods, svc.InitFunction,
-		nil, svc.GetPosition(), depth, svc.IsIsolated(), false, true)
+		nil, svc.GetPosition(), depth, svc.IsIsolated(), false, false, true, model.SymbolRef{})
 	if !ok {
 		return false
 	}
@@ -1776,7 +1862,7 @@ func resolveServiceType(t typeResolver, svc *ast.BLangService, depth int) bool {
 
 func finishResolveObjectDefinitionType(t typeResolver, od *semtypes.ObjectDefinition, fields []ast.SimpleVariableNode,
 	methods map[string]*ast.BLangFunction, resourceMethods []*ast.BLangResourceMethod, initFn *ast.BLangFunction, inclusions []model.SymbolRef,
-	pos diagnostics.Location, depth int, isIsolated, isClient, isService bool,
+	pos diagnostics.Location, depth int, isIsolated, isReadonly, isClient, isService bool, distinctSymbol model.SymbolRef,
 ) (semtypes.SemType, bool) {
 	for _, fieldNode := range fields {
 		field := fieldNode.(*ast.BLangSimpleVariable)
@@ -1829,7 +1915,7 @@ func finishResolveObjectDefinitionType(t typeResolver, od *semtypes.ObjectDefini
 		return semtypes.SemType{}, false
 	}
 
-	return defineObjectSemType(t, od, isIsolated, isClient, isService, members), true
+	return defineObjectSemType(t, od, isIsolated, isReadonly, isClient, isService, members, distinctSymbol, inclusions), true
 }
 
 func collectObjectIncludedMembers(t typeResolver, inclusions []model.SymbolRef, pos diagnostics.Location, depth int) (map[string][]semtypes.Member, bool) {
@@ -1938,15 +2024,21 @@ func initDirectMember(t typeResolver, initFn *ast.BLangFunction) (directMember, 
 
 // defineObjectSemType finalises the object semtype using the class/service
 // qualifiers and resolved members.
-func defineObjectSemType(t typeResolver, od *semtypes.ObjectDefinition, isolated bool, isClient bool, isService bool, members []semtypes.Member) semtypes.SemType {
+func defineObjectSemType(t typeResolver, od *semtypes.ObjectDefinition, isolated bool, readonly bool, isClient bool, isService bool,
+	members []semtypes.Member, distinctSymbol model.SymbolRef, inclusions []model.SymbolRef,
+) semtypes.SemType {
 	networkQual := semtypes.NetworkQualifierNone
 	if isClient {
 		networkQual = semtypes.NetworkQualifierClient
 	} else if isService {
 		networkQual = semtypes.NetworkQualifierService
 	}
-	qualifiers := semtypes.ObjectQualifiersFrom(isolated, false, networkQual)
-	return od.Define(t.typeEnv(), qualifiers, members)
+	qualifiers := semtypes.ObjectQualifiersFrom(isolated, readonly, networkQual)
+	semType := od.Define(t.typeEnv(), qualifiers, members)
+	if distinctSymbol.IsEmpty() {
+		return semType
+	}
+	return appendDistinctAtoms(t, semType, distinctSymbol, inclusions)
 }
 
 func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) bool {
@@ -2722,7 +2814,7 @@ func resolveXMLTemplateExpr(t typeResolver, chain *binding, e *ast.BLangXMLTempl
 }
 
 func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSequenceLiteral, _ semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	var childUnion = semtypes.NEVER
+	childUnion := semtypes.NEVER
 	for _, child := range e.Children {
 		childTy, _, ok := resolveActionOrExpression(t, chain, child, semtypes.XML)
 		if !ok {
@@ -2887,8 +2979,12 @@ func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, argTys []
 		t.semanticError("ambiguous object type", expr.GetPosition())
 		return semtypes.SemType{}, false
 	}
-	expr.SetDeterminedType(semtypes.Union(candidates[0].objType, semtypes.Diff(candidates[0].initReturnType, semtypes.NIL)))
-	return candidates[0].objType, true
+	resultObjType := candidates[0].objType
+	if semtypes.IsSubtype(cx, objectTy, candidates[0].objType) {
+		resultObjType = objectTy
+	}
+	expr.SetDeterminedType(semtypes.Union(resultObjType, semtypes.Diff(candidates[0].initReturnType, semtypes.NIL)))
+	return resultObjType, true
 }
 
 func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -3403,7 +3499,7 @@ func resolveQueryCollectionElementType(
 	switch {
 	case semtypes.IsSubtype(t.typeContext(), collectionTy, semtypes.LIST):
 		memberTypes := semtypes.ListAllMemberTypesInner(t.typeContext(), collectionTy)
-		var result = semtypes.NEVER
+		result := semtypes.NEVER
 		for _, each := range memberTypes.SemTypes {
 			result = semtypes.Union(result, each)
 		}
@@ -3475,7 +3571,7 @@ func listQuerySelectExpectedType(ctx semtypes.Context, expectedType semtypes.Sem
 		return semtypes.SemType{}
 	}
 	memberTypes := semtypes.ListAllMemberTypesInner(ctx, listTy)
-	var result = semtypes.NEVER
+	result := semtypes.NEVER
 	for _, memberTy := range memberTypes.SemTypes {
 		result = semtypes.Union(result, memberTy)
 	}
@@ -3897,7 +3993,7 @@ func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangL
 
 func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
 	memberTypes := make([]semtypes.SemType, 0, len(expr.Exprs))
-	var restTy = semtypes.NEVER
+	restTy := semtypes.NEVER
 	spreadMembers := make([]bool, len(expr.Exprs))
 	hasSpread := false
 	for i, memberExpr := range expr.Exprs {
@@ -4340,7 +4436,7 @@ func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.Sem
 		t.semanticError("both operands must belong to same basic type", pos)
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
-	var resultTy = lhsBasicTy
+	resultTy := lhsBasicTy
 	if nilLifted {
 		resultTy = semtypes.Union(semtypes.NIL, resultTy)
 	}
@@ -4388,7 +4484,7 @@ func resolveShiftExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemTyp
 		t.semanticError(fmt.Sprintf("expect integer types for %s", string(op)), pos)
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
-	var resultTy = semtypes.INT
+	resultTy := semtypes.INT
 	switch op {
 	case model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
 		for _, ty := range bitWiseOpLookOrder {
@@ -4438,7 +4534,7 @@ func resolveRelationalExpr(t typeResolver, chain *binding, expr *ast.BLangBinary
 }
 
 func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	var operandExpectedType = semtypes.NUMBER
+	operandExpectedType := semtypes.NUMBER
 	if !semtypes.IsZero(expectedType) {
 		operandExpectedType = semtypes.Intersect(expectedType, operandExpectedType)
 	}
@@ -4455,7 +4551,7 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 }
 
 func resolveMultiplicativeExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, rhs ast.BLangActionOrExpression, op model.OperatorKind, expectedType semtypes.SemType, pos diagnostics.Location) (semtypes.SemType, expressionEffect, bool) {
-	var operandExpectedType = semtypes.NUMBER
+	operandExpectedType := semtypes.NUMBER
 	if !semtypes.IsZero(expectedType) {
 		operandExpectedType = semtypes.Intersect(expectedType, operandExpectedType)
 	}
@@ -4537,7 +4633,7 @@ func resolveBitWiseExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemT
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
 
-	var resultTy = semtypes.INT
+	resultTy := semtypes.INT
 	switch op {
 	case model.OperatorKind_BITWISE_AND:
 		for _, ty := range bitWiseOpLookOrder {
@@ -4648,7 +4744,7 @@ func resolveAndExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType,
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
 
-	var resultTy = semtypes.BOOLEAN
+	resultTy := semtypes.BOOLEAN
 	if isSingletonBool(lhsTy, false) || isSingletonBool(rhsTy, false) {
 		resultTy = semtypes.BooleanConst(false)
 	} else if isSingletonBool(lhsTy, true) && isSingletonBool(rhsTy, true) {
@@ -4687,7 +4783,7 @@ func resolveOrExprInner(t typeResolver, chain *binding, lhsTy semtypes.SemType, 
 		return semtypes.SemType{}, expressionEffect{}, false
 	}
 
-	var resultTy = semtypes.BOOLEAN
+	resultTy := semtypes.BOOLEAN
 	if isSingletonBool(lhsTy, true) || isSingletonBool(rhsTy, true) {
 		resultTy = semtypes.BooleanConst(true)
 	} else if isSingletonBool(lhsTy, false) && isSingletonBool(rhsTy, false) {
@@ -4752,7 +4848,7 @@ func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemTyp
 	fields := []semtypes.Field{
 		semtypes.FieldFrom("value", t, false, false),
 	}
-	var rest = semtypes.NEVER
+	rest := semtypes.NEVER
 	recordTy := createClosedRecordType(env, fields, rest)
 
 	resultTy := semtypes.Union(recordTy, c)
@@ -5078,7 +5174,7 @@ func resolveResourceMethodSignature(t typeResolver, isClient bool, isService boo
 func resolveResourcePathType(t typeResolver, method *ast.BLangResourceMethod) (semtypes.SemType, []model.SymbolRef, bool) {
 	anydata := semtypes.CreateAnydata(t.typeContext())
 	var members []semtypes.SemType
-	var restMember = semtypes.NEVER
+	restMember := semtypes.NEVER
 	var paramRefs []model.SymbolRef
 	for i := range method.ResourcePath {
 		seg := &method.ResourcePath[i]
@@ -5898,7 +5994,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		}
 		return t.symbolType(symbol), true
 	case *ast.BLangFiniteTypeNode:
-		var result = semtypes.NEVER
+		result := semtypes.NEVER
 		for _, value := range ty.ValueSpace {
 			valueTy, _, ok := resolveActionOrExpression(t, nil, value, semtypes.SemType{})
 			if !ok {
@@ -6119,7 +6215,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				ty.RequiredParams[i].Name.SetDeterminedType(semtypes.NEVER)
 			}
 		}
-		var restTy = semtypes.NEVER
+		restTy := semtypes.NEVER
 		if ty.RestParam != nil {
 			restParamTy, ok := resolveBType(t, ty.RestParam.TypeDesc, depth+1)
 			if !ok {
@@ -6206,7 +6302,8 @@ func resolveObjectType(t typeResolver, ty *ast.BLangObjectType, depth int) (semt
 	// Step 3: Create semtype
 	networkQual := semtypeNetworkQualifier(ty.NetworkQuals)
 	qualifiers := semtypes.ObjectQualifiersFrom(ty.Isolated, false, networkQual)
-	return od.Define(t.typeEnv(), qualifiers, members), true
+	semType := od.Define(t.typeEnv(), qualifiers, members)
+	return semType, true
 }
 
 // directMember represents a member declared directly on a type (not inherited via inclusion).
@@ -6439,7 +6536,7 @@ func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchS
 
 func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMatchClause, remainingType semtypes.SemType) (semtypes.SemType, *binding, bool) {
 	tyCtx := semtypes.ContextFrom(t.typeEnv())
-	var acceptedTy = semtypes.NEVER
+	acceptedTy := semtypes.NEVER
 	patternRemaining := remainingType
 	for i, pattern := range clause.Patterns {
 		patternTy, ok := resolveMatchPattern(t, chain, pattern, remainingType)

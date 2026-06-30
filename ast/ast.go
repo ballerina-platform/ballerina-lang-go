@@ -352,8 +352,10 @@ func (b *classDefnBase) Flags() model.Flag { return b.flags }
 // BLangTypeDefinition flag methods
 func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.Has(model.FlagPublic) }
 func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.Has(model.FlagAnonymous) }
+func (b *BLangTypeDefinition) IsDistinct() bool  { return b.flags.Has(model.FlagDistinct) }
 func (b *BLangTypeDefinition) SetPublic()        { b.flags |= model.FlagPublic }
 func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymous }
+func (b *BLangTypeDefinition) SetDistinct()      { b.flags |= model.FlagDistinct }
 
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
@@ -427,7 +429,6 @@ var (
 	_ AnnotationAttachmentNode                    = &BLangAnnotationAttachment{}
 	_ ImportPackageNode                           = &BLangImportPackage{}
 	_ ClassDefinition                             = &BLangClassDefinition{}
-	_ TypeDefinition                              = &BLangClassDefinition{}
 	_ NodeWithScope                               = &BLangClassDefinition{}
 	_ PackageNode                                 = &BLangPackage{}
 	_ PackageNode                                 = &BLangTestablePackage{}
@@ -436,7 +437,6 @@ var (
 	_ ServiceNode                                 = &BLangService{}
 	_ CompilationUnitNode                         = &BLangCompilationUnit{}
 	_ ConstantNode                                = &BLangConstant{}
-	_ TypeDefinition                              = &BLangTypeDefinition{}
 	_ SimpleVariableNode                          = &BLangSimpleVariable{}
 	_ MarkdownDocumentationNode                   = &BLangMarkdownDocumentation{}
 	_ MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
@@ -1310,20 +1310,16 @@ func (b *BLangPackage) AddFunction(function FunctionNode) {
 	}
 }
 
-func (b *BLangPackage) GetTypeDefinitions() []TypeDefinition {
-	result := make([]TypeDefinition, len(b.TypeDefinitions))
+func (b *BLangPackage) GetTypeDefinitions() []*BLangTypeDefinition {
+	result := make([]*BLangTypeDefinition, len(b.TypeDefinitions))
 	for i := range b.TypeDefinitions {
 		result[i] = &b.TypeDefinitions[i]
 	}
 	return result
 }
 
-func (b *BLangPackage) AddTypeDefinition(typeDefinition TypeDefinition) {
-	if td, ok := typeDefinition.(*BLangTypeDefinition); ok {
-		b.TypeDefinitions = append(b.TypeDefinitions, *td)
-	} else {
-		panic("typeDefinition is not a BLangTypeDefinition")
-	}
+func (b *BLangPackage) AddTypeDefinition(typeDefinition *BLangTypeDefinition) {
+	b.TypeDefinitions = append(b.TypeDefinitions, *typeDefinition)
 }
 
 func (b *BLangPackage) GetAnnotations() []AnnotationNode {
