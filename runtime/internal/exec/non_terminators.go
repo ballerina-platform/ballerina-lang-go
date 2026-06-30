@@ -18,7 +18,6 @@ package exec
 
 import (
 	"fmt"
-	"math"
 	"unsafe"
 
 	"ballerina-lang-go/bir"
@@ -254,70 +253,27 @@ func badTypeCastError() *values.Error {
 }
 
 func toInt(value any) int64 {
-	switch v := value.(type) {
-	case int64:
-		return v
-	case float64:
-		if math.IsNaN(v) || math.IsInf(v, 0) {
-			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast non-finite value %v to int", v)))
-		}
-		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
-			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast out-of-range value %v to int", v)))
-		}
-		return int64(math.RoundToEven(v))
-	case *decimal.Decimal:
-		return decimalToInt(v)
-	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", value)))
-	}
-}
-
-func decimalToInt(v *decimal.Decimal) int64 {
-	n, ok, err := v.Int64()
+	n, err := values.NumericConvertToInt(value)
 	if err != nil {
-		panic(values.NewErrorWithMessage(fmt.Sprintf("cannot convert %v to int: %v", v, err)))
-	}
-	if !ok {
-		panic(values.NewErrorWithMessage(fmt.Sprintf("cannot convert %v to int64: value out of range", v)))
+		panic(values.NewErrorWithMessage("bad type cast: " + err.Error()))
 	}
 	return n
 }
 
 func toFloat(value any) float64 {
-	switch v := value.(type) {
-	case int64:
-		return float64(v)
-	case float64:
-		return v
-	case *decimal.Decimal:
-		return v.Float64()
-	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to float", value)))
-	}
-}
-
-// floatToDecimal converts an IEEE 754 float64 into a Ballerina decimal.
-// Ballerina decimals do not support NaN, infinities, or subnormals, so any
-// such input triggers a runtime panic with the spec-mandated message.
-func floatToDecimal(v float64) *decimal.Decimal {
-	d, err := decimal.FromFloat64(v)
+	f, err := values.NumericConvertToFloat(value)
 	if err != nil {
-		panic(values.NewErrorWithMessage(err.Error()))
+		panic(values.NewErrorWithMessage("bad type cast: " + err.Error()))
 	}
-	return d
+	return f
 }
 
 func toDecimal(value any) *decimal.Decimal {
-	switch v := value.(type) {
-	case int64:
-		return decimal.FromInt64(v)
-	case float64:
-		return floatToDecimal(v)
-	case *decimal.Decimal:
-		return v
-	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))
+	d, err := values.NumericConvertToDecimal(value)
+	if err != nil {
+		panic(values.NewErrorWithMessage("bad type cast: " + err.Error()))
 	}
+	return d
 }
 
 func execNewXMLText(ctx *extern.Context, instr *bir.NewXMLText, frame *Frame) {

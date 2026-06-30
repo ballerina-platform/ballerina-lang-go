@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 const (
@@ -581,6 +582,9 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value 
 		write(buf, val)
 	case typeTagNil:
 		write(buf, int32(-1))
+	case typeTagTypedesc:
+		td := value.(*values.TypeDesc)
+		bw.writeType(buf, td.Type)
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
 	}
@@ -603,6 +607,8 @@ func (bw *birWriter) inferTag(value any) (typeTag, error) {
 		return typeTagByte, nil
 	case *decimal.Decimal:
 		return typeTagDecimal, nil
+	case *values.TypeDesc:
+		return typeTagTypedesc, nil
 	case nil:
 		return typeTagNil, nil
 	default:

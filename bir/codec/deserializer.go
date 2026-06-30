@@ -1090,6 +1090,10 @@ func (br *birReader) readConstValueByTag(tag typeTag) any {
 		var idx int32
 		br.read(&idx)
 		return nil
+	case typeTagTypedesc:
+		return &values.TypeDesc{
+			Type: br.readType(),
+		}
 	default:
 		var idx int32
 		br.read(&idx)

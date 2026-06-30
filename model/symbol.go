@@ -129,6 +129,8 @@ const (
 // return types of dependently typed functions in a serializable manner.
 type TypeOp interface {
 	Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType
+	// FixedPart returns the part of the return type that does not depend on any typedesc parameter.
+	FixedPart() semtypes.SemType
 }
 
 type BinaryTypeOp struct {
@@ -146,11 +148,24 @@ func (binary *BinaryTypeOp) Apply(ctx semtypes.Context, args []semtypes.SemType)
 	return semtypes.Intersect(lhs, rhs)
 }
 
+func (binary *BinaryTypeOp) FixedPart() semtypes.SemType {
+	lhs := binary.Lhs.FixedPart()
+	rhs := binary.Rhs.FixedPart()
+	if binary.Kind == TypeOpUnion {
+		return semtypes.Union(lhs, rhs)
+	}
+	return semtypes.Intersect(lhs, rhs)
+}
+
 type IdentityTypeOp struct {
 	Type semtypes.SemType
 }
 
 func (identity *IdentityTypeOp) Apply(_ semtypes.Context, _ []semtypes.SemType) semtypes.SemType {
+	return identity.Type
+}
+
+func (identity *IdentityTypeOp) FixedPart() semtypes.SemType {
 	return identity.Type
 }
 
@@ -161,6 +176,10 @@ type RefTypeOp struct {
 
 func (ref *RefTypeOp) Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType {
 	return semtypes.TypedescConstraint(ctx, args[ref.Index])
+}
+
+func (ref *RefTypeOp) FixedPart() semtypes.SemType {
+	return semtypes.NEVER
 }
 
 type SymbolKind uint

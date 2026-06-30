@@ -93,6 +93,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSimpleVariableDef(t)
 	case *BLangGroupExpr:
 		p.printGroupExpr(t)
+	case *BLangTypedescExpr:
+		p.printTypedescExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
 	case *BLangLock:
@@ -327,8 +329,11 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	p.StartNode()
 	p.PrintString("package")
 	p.indentLevel++
-	for i := range node.Imports {
-		p.printImportPackage(&node.Imports[i])
+	sortedImports := slices.SortedFunc(slices.Values(node.Imports), func(a, b BLangImportPackage) int {
+		return cmp.Compare(a.Alias.Value, b.Alias.Value)
+	})
+	for i := range sortedImports {
+		p.printImportPackage(&sortedImports[i])
 	}
 	for i := range node.Constants {
 		p.printConstant(&node.Constants[i])
@@ -543,6 +548,17 @@ func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
 		p.PrintString(node.PkgAlias.Value + " " + node.VariableName.Value)
 	} else {
 		p.PrintString(node.VariableName.Value)
+	}
+	p.EndNode()
+}
+
+func (p *PrettyPrinter) printTypedescExpr(node *BLangTypedescExpr) {
+	p.StartNode()
+	p.PrintString("typedesc-expr")
+	if td := node.GetTypeDescriptor(); td != nil {
+		p.indentLevel++
+		p.PrintInner(td.(BLangNode))
+		p.indentLevel--
 	}
 	p.EndNode()
 }

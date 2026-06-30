@@ -349,6 +349,8 @@ func (dc *bddDeserializationContext) deserializeType(poolIndex int) SemType {
 			data = dc.deserializeBddFromDnf(dc.bp.objectBdds[sde.index], dc.deserializeMappingAtom)
 		case streamBddSubtypeData:
 			data = dc.deserializeBddFromDnf(dc.bp.streamBdds[sde.index], dc.deserializeListAtom)
+		case typedescBddSubtypeData:
+			data = dc.deserializeBddFromDnf(dc.bp.typedescBdds[sde.index], dc.deserializeMappingAtom)
 		case xmlSubtypeData:
 			entry := dc.bp.xmlSubtypes[sde.index]
 			sequence := dc.deserializeBddFromDnf(entry.sequence, dc.deserializeXmlAtom)
