@@ -1614,8 +1614,22 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, typeDef.Name.GetValue())
 
+	typeDescriptorNode := typeDefinitionNode.TypeDescriptor()
+	if distinctTypeDescriptorNode, ok := typeDescriptorNode.(*tree.DistinctTypeDescriptorNode); ok {
+		innerTypeDescriptorNode := distinctTypeDescriptorNode.TypeDescriptor()
+		if innerTypeDescriptorNode == nil || innerTypeDescriptorNode.Kind() != common.OBJECT_TYPE_DESC {
+			n.cx.Unimplemented("distinct types are only supported for object types", getPosition(n.de(), distinctTypeDescriptorNode))
+			neverType := &BLangValueType{TypeKind: TypeKind_NEVER}
+			neverType.pos = getPosition(n.de(), distinctTypeDescriptorNode)
+			typeDef.SetTypeData(TypeData{TypeDescriptor: neverType})
+			n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+			return typeDef
+		}
+		typeDescriptorNode = innerTypeDescriptorNode
+		typeDef.SetDistinct()
+	}
 	typeData := TypeData{
-		TypeDescriptor: n.createTypeNode(typeDefinitionNode.TypeDescriptor()),
+		TypeDescriptor: n.createTypeNode(typeDescriptorNode),
 	}
 	typeDef.SetTypeData(typeData)
 
@@ -2544,6 +2558,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			objectType.NetworkQuals = ObjectNetworkQualsService
 		case common.ISOLATED_KEYWORD:
 			objectType.Isolated = true
+		case common.READONLY_KEYWORD:
+			// https://github.com/ballerina-platform/ballerina-lang-go/issues/537",
+			n.cx.Unimplemented("readonly object type descriptors are not implemented", getPosition(n.de(), q))
 		}
 	}
 
@@ -4592,7 +4609,10 @@ func (n *NodeBuilder) TransformMatchGuard(matchGuardNode *tree.MatchGuardNode) B
 }
 
 func (n *NodeBuilder) TransformDistinctTypeDescriptor(distinctTypeDescriptorNode *tree.DistinctTypeDescriptorNode) BLangNode {
-	panic("TransformDistinctTypeDescriptor unimplemented")
+	n.cx.Unimplemented("inline distinct object type definitions are not supported", getPosition(n.de(), distinctTypeDescriptorNode))
+	neverType := &BLangValueType{TypeKind: TypeKind_NEVER}
+	neverType.pos = getPosition(n.de(), distinctTypeDescriptorNode)
+	return neverType
 }
 
 func (n *NodeBuilder) TransformListMatchPattern(listMatchPatternNode *tree.ListMatchPatternNode) BLangNode {

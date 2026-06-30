@@ -25,6 +25,40 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+type distinctTypeTracker struct {
+	mu     sync.Mutex
+	ids    map[model.SymbolRef]int
+	refs   map[int]model.SymbolRef
+	nextID int
+}
+
+func newDistinctTypeTracker() distinctTypeTracker {
+	return distinctTypeTracker{
+		ids:  make(map[model.SymbolRef]int),
+		refs: make(map[int]model.SymbolRef),
+	}
+}
+
+func (t *distinctTypeTracker) id(symbol model.SymbolRef) int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if id, ok := t.ids[symbol]; ok {
+		return id
+	}
+	id := t.nextID
+	t.nextID++
+	t.ids[symbol] = id
+	t.refs[id] = symbol
+	return id
+}
+
+func (t *distinctTypeTracker) symbolRef(id int) (model.SymbolRef, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	ref, ok := t.refs[id]
+	return ref, ok
+}
+
 // CompilerEnvironment maintain the shared state of the frontend.
 type CompilerEnvironment struct {
 	anonTypeCount     map[*model.PackageID]int
@@ -34,6 +68,7 @@ type CompilerEnvironment struct {
 	symbolSpacesMu    sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
 	typeEnv           semtypes.Env
 	underlyingSymbol  sync.Map
+	distinctTypes     distinctTypeTracker
 	statsEnabled      bool
 	diagnosticContext *diagnostics.DiagnosticEnv
 }
@@ -97,6 +132,23 @@ func (c *CompilerEnvironment) SymbolPackage(symbol model.SymbolRef) model.Packag
 	return c.symbolSpace(symbol.SpaceIndex).Pkg
 }
 
+// FindSymbol is used for symbol serialization, and is not meant to be used by other parts. This lookup is
+// potentially very slow and you should have a symbolRef in the AST for anywhere that you may need a symbol
+func (c *CompilerEnvironment) FindSymbol(pkg model.PackageIdentifier, name string) (model.SymbolRef, bool) {
+	c.symbolSpacesMu.RLock()
+	spaces := append([]*model.SymbolSpace(nil), c.symbolSpaces...)
+	c.symbolSpacesMu.RUnlock()
+	for _, space := range spaces {
+		if space.Pkg != pkg {
+			continue
+		}
+		if ref, ok := space.GetSymbol(name); ok {
+			return ref, true
+		}
+	}
+	return model.SymbolRef{}, false
+}
+
 func (c *CompilerEnvironment) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
 	space := c.symbolSpace(ref.SpaceIndex)
 	space.AddSymbol(name, symbol)
@@ -152,6 +204,14 @@ func (c *CompilerEnvironment) SetSymbolType(symbol model.SymbolRef, ty semtypes.
 	c.GetSymbol(symbol).SetType(ty)
 }
 
+func (c *CompilerEnvironment) DistinctTypeID(symbol model.SymbolRef) int {
+	return c.distinctTypes.id(symbol)
+}
+
+func (c *CompilerEnvironment) DistinctTypeSymbolRef(id int) (model.SymbolRef, bool) {
+	return c.distinctTypes.symbolRef(id)
+}
+
 func (c *CompilerEnvironment) GetDefaultPackage() *model.PackageID {
 	return c.packageInterner.GetDefaultPackage()
 }
@@ -165,6 +225,7 @@ func NewCompilerEnvironment(typeEnv semtypes.Env, statsEnabled bool) *CompilerEn
 		anonTypeCount:     make(map[*model.PackageID]int),
 		anonFuncCount:     make(map[*model.PackageID]int),
 		packageInterner:   model.DefaultPackageIDInterner,
+		distinctTypes:     newDistinctTypeTracker(),
 		typeEnv:           typeEnv,
 		statsEnabled:      statsEnabled,
 		diagnosticContext: diagnostics.NewDiagnosticEnv(),

@@ -475,7 +475,7 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 			t.Fatalf("exported symbols not found for %s/%s", pkgIdent.OrgName, pkgIdent.ModuleName)
 		}
 
-		symBytes, err := symbolpool.Marshal(exported, typeEnv)
+		symBytes, err := symbolpool.Marshal(exported, project.Environment().CompilerEnvironment())
 		if err != nil {
 			t.Fatalf("symbol Marshal for %s/%s: %v", pkgIdent.OrgName, pkgIdent.ModuleName, err)
 		}
