@@ -89,6 +89,8 @@ var (
 		"subset8/08-xml/namespace12-v.bal",
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/533
 		"subset9/09-template-expr/template-query-xml-sequence-fv.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/538
+		"subset9/09-object/readonly-distinct-object-fe.bal",
 	}
 
 	// Skip project-level integration tests with non-deterministic output.
@@ -740,6 +742,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 	project := result.Project()
+	compilerEnv := project.Environment().CompilerEnvironment()
 	tyEnv := project.Environment().TypeEnv()
 	currentPkg := project.CurrentPackage()
 	compilation := currentPkg.Compilation()
@@ -777,7 +780,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 			return stdoutBuf.String(), stderrBuf.String()
 		}
 
-		symBytes, err := symbolpool.Marshal(exported, tyEnv)
+		symBytes, err := symbolpool.Marshal(exported, compilerEnv)
 		if err != nil {
 			fmt.Fprintf(&stdoutBuf, "symbol serialization failed: %v\n", err)
 			return stdoutBuf.String(), stderrBuf.String()

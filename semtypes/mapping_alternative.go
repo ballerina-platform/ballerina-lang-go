@@ -36,7 +36,7 @@ func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	}
 
 	paths := []bddPath{}
-	bddPaths(getComplexSubtypeData(t, BTMapping).(Bdd), &paths, bddPathFrom())
+	bddPathsPositive(getComplexSubtypeData(t, BTMapping).(Bdd), &paths, bddPathFrom())
 	alts := []MappingAlternative{}
 	for _, bddPath := range paths {
 		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))

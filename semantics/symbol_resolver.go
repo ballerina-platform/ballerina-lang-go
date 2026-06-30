@@ -67,7 +67,8 @@ type symbolResolver interface {
 	GetScope() model.Scope
 	GetCtx() *context.CompilerContext
 	TypeContext() semtypes.Context
-	GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition
+	GetTypeDefns() map[model.SymbolRef]*ast.BLangTypeDefinition
+	GetClassDefns() map[model.SymbolRef]*ast.BLangClassDefinition
 }
 
 type (
@@ -99,7 +100,8 @@ type (
 		scope          *model.ModuleScope
 		packageScope   *model.ModuleScope
 		pkgID          model.PackageID
-		typeDefns      map[model.SymbolRef]ast.TypeDefinition
+		typeDefns      map[model.SymbolRef]*ast.BLangTypeDefinition
+		classDefns     map[model.SymbolRef]*ast.BLangClassDefinition
 		packageSymbols map[string]model.SymbolRef
 		prevPos        map[string]prevPos
 		usedPrefixes   map[string]bool
@@ -211,7 +213,8 @@ func newCompilationUnitsSymbolResolver(ctx *context.CompilerContext, pkgID model
 		scope:          packageScope,
 		packageScope:   packageScope,
 		pkgID:          pkgID,
-		typeDefns:      make(map[model.SymbolRef]ast.TypeDefinition),
+		typeDefns:      make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+		classDefns:     make(map[model.SymbolRef]*ast.BLangClassDefinition),
 		packageSymbols: make(map[string]model.SymbolRef),
 		prevPos:        make(map[string]prevPos),
 		usedPrefixes:   make(map[string]bool),
@@ -226,6 +229,7 @@ func (ms *moduleSymbolResolver) forCompilationUnit(scope *model.ModuleScope) *mo
 		packageScope:   ms.packageScope,
 		pkgID:          ms.pkgID,
 		typeDefns:      ms.typeDefns,
+		classDefns:     ms.classDefns,
 		packageSymbols: ms.packageSymbols,
 		prevPos:        ms.prevPos,
 		usedPrefixes:   make(map[string]bool),
@@ -303,8 +307,12 @@ func (ms *moduleSymbolResolver) nextDefaultSymbolName() string {
 	return name
 }
 
-func (ms *moduleSymbolResolver) GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition {
+func (ms *moduleSymbolResolver) GetTypeDefns() map[model.SymbolRef]*ast.BLangTypeDefinition {
 	return ms.typeDefns
+}
+
+func (ms *moduleSymbolResolver) GetClassDefns() map[model.SymbolRef]*ast.BLangClassDefinition {
+	return ms.classDefns
 }
 
 func (bs *blockSymbolResolver) GetSymbol(name string) (model.SymbolRef, scopeKind, bool) {
@@ -339,8 +347,12 @@ func (bs *blockSymbolResolver) TypeContext() semtypes.Context {
 	return bs.parent.TypeContext()
 }
 
-func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]ast.TypeDefinition {
+func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]*ast.BLangTypeDefinition {
 	return bs.parent.GetTypeDefns()
+}
+
+func (bs *blockSymbolResolver) GetClassDefns() map[model.SymbolRef]*ast.BLangClassDefinition {
+	return bs.parent.GetClassDefns()
 }
 
 // isIgnoredDeclName reports whether a name should be excluded from unused-variable tracking.
@@ -393,7 +405,7 @@ func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedTyp
 		return false
 	}
 	visited[symRef] = true
-	td, ok := ms.typeDefns[symRef].(*ast.BLangTypeDefinition)
+	td, ok := ms.typeDefns[symRef]
 	if !ok {
 		return false
 	}
@@ -561,6 +573,14 @@ func (ms *moduleSymbolResolver) allocateTypeSymbol(typeDef *ast.BLangTypeDefinit
 		return
 	}
 	symRef, _, _ := ms.GetSymbol(name)
+	if typeDef.IsDistinct() {
+		carrier, ok := ms.ctx.GetSymbol(symRef).(model.ObjectType)
+		if !ok {
+			ms.ctx.Unimplemented("distinct types are only supported for object types", typeDef.GetPosition())
+		} else {
+			carrier.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+		}
+	}
 	ms.typeDefns[symRef] = typeDef
 }
 
@@ -611,11 +631,15 @@ func (ms *moduleSymbolResolver) allocateGlobalVarSymbol(globalVar *ast.BLangSimp
 
 func (ms *moduleSymbolResolver) allocateClassSymbol(classDef *ast.BLangClassDefinition) {
 	name := classDef.Name.Value
-	if !addTopLevelSymbol(ms, name, newClassSymbolForDefn(classDef), classDef.Name.GetPosition()) {
+	symbol := newClassSymbolForDefn(classDef)
+	if !addTopLevelSymbol(ms, name, symbol, classDef.Name.GetPosition()) {
 		return
 	}
 	symRef, _, _ := ms.GetSymbol(name)
-	ms.typeDefns[symRef] = classDef
+	if classDef.IsDistinct() {
+		symbol.SetDistinctTypeIDs([]int{ms.ctx.DistinctTypeID(symRef)})
+	}
+	ms.classDefns[symRef] = classDef
 }
 
 func compilationUnitImports(cu *ast.BLangCompilationUnit) []ast.BLangImportPackage {
@@ -1291,26 +1315,22 @@ type inclusionMemberForSymbolResolution struct {
 // to a valid AST node.
 func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []diagnostics.Location, []inclusionMemberForSymbolResolution) {
 	ctx := resolver.GetCtx()
-	localDefns := resolver.GetTypeDefns()
+	localTypeDefns := resolver.GetTypeDefns()
+	localClassDefns := resolver.GetClassDefns()
 	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
 	positions := make([]diagnostics.Location, 0, len(unresolvedInclusions))
 	var includedFields []inclusionMemberForSymbolResolution
 	for _, inc := range unresolvedInclusions {
 		ast.Walk(resolver, inc)
 		symRef := inc.Symbol()
-		if tDefn, ok := localDefns[symRef]; ok {
-			switch tDefn.(type) {
-			case *ast.BLangTypeDefinition:
-				if _, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
-					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
-					continue
-				}
-			case *ast.BLangClassDefinition:
-			default:
-				ctx.InternalError("unexpected type definition kind for inclusion", inc.GetPosition())
+		if tDefn, ok := localTypeDefns[symRef]; ok {
+			if _, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
+				ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 				continue
 			}
-			includedFields = append(includedFields, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
+			includedFields = append(includedFields, collectTransitiveFieldsFromTypeDefn(ctx, tDefn, localTypeDefns, localClassDefns)...)
+		} else if classDefn, ok := localClassDefns[symRef]; ok {
+			includedFields = append(includedFields, collectTransitiveFieldsFromClassDefn(ctx, classDefn, localTypeDefns, localClassDefns)...)
 		} else {
 			sym := ctx.GetSymbol(symRef)
 			var carrier model.MemberCarrier
@@ -1347,7 +1367,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 
 func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []ast.BType) []model.SymbolRef {
 	ctx := resolver.GetCtx()
-	localDefns := resolver.GetTypeDefns()
+	localTypeDefns := resolver.GetTypeDefns()
 	var inclusions []model.SymbolRef
 	for _, inc := range typeInclusions {
 		udt, ok := inc.(*ast.BLangUserDefinedType)
@@ -1357,7 +1377,7 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 		}
 		ast.Walk(resolver, udt)
 		symRef := udt.Symbol()
-		if tDefn, ok := localDefns[symRef]; ok {
+		if tDefn, ok := localTypeDefns[symRef]; ok {
 			if _, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType); !ok {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
@@ -1379,11 +1399,13 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 	return inclusions
 }
 
-func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.SymbolRef, directFields []inclusionMemberForSymbolResolution, localDefns map[model.SymbolRef]ast.TypeDefinition) []inclusionMemberForSymbolResolution {
+func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.SymbolRef, directFields []inclusionMemberForSymbolResolution, localTypeDefns map[model.SymbolRef]*ast.BLangTypeDefinition, localClassDefns map[model.SymbolRef]*ast.BLangClassDefinition) []inclusionMemberForSymbolResolution {
 	var result []inclusionMemberForSymbolResolution
 	for _, symRef := range inclusions {
-		if tDefn, ok := localDefns[symRef]; ok {
-			result = append(result, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
+		if tDefn, ok := localTypeDefns[symRef]; ok {
+			result = append(result, collectTransitiveFieldsFromTypeDefn(ctx, tDefn, localTypeDefns, localClassDefns)...)
+		} else if classDefn, ok := localClassDefns[symRef]; ok {
+			result = append(result, collectTransitiveFieldsFromClassDefn(ctx, classDefn, localTypeDefns, localClassDefns)...)
 		} else {
 			sym := ctx.GetSymbol(symRef)
 			var carrier model.MemberCarrier
@@ -1413,37 +1435,34 @@ func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.Sy
 	return result
 }
 
-func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn ast.TypeDefinition, localDefns map[model.SymbolRef]ast.TypeDefinition) []inclusionMemberForSymbolResolution {
-	switch defn := tDefn.(type) {
-	case *ast.BLangTypeDefinition:
-		objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-		if !ok {
-			return nil
-		}
-		var directFields []inclusionMemberForSymbolResolution
-		for m := range objTy.Members() {
-			if m.MemberKind() != ast.ObjectMemberKindField {
-				continue
-			}
-			directFields = append(directFields, inclusionMemberForSymbolResolution{
-				name:     m.Name(),
-				isPublic: m.IsPublic(),
-			})
-		}
-		return collectTransitiveFields(ctx, objTy.Inclusions, directFields, localDefns)
-	case *ast.BLangClassDefinition:
-		var directFields []inclusionMemberForSymbolResolution
-		for _, fieldNode := range defn.Fields {
-			field := fieldNode.(*ast.BLangSimpleVariable)
-			directFields = append(directFields, inclusionMemberForSymbolResolution{
-				name:     field.Name.Value,
-				isPublic: field.IsPublic(),
-			})
-		}
-		return collectTransitiveFields(ctx, defn.Inclusions, directFields, localDefns)
-	default:
+func collectTransitiveFieldsFromTypeDefn(ctx *context.CompilerContext, defn *ast.BLangTypeDefinition, localTypeDefns map[model.SymbolRef]*ast.BLangTypeDefinition, localClassDefns map[model.SymbolRef]*ast.BLangClassDefinition) []inclusionMemberForSymbolResolution {
+	objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+	if !ok {
 		return nil
 	}
+	var directFields []inclusionMemberForSymbolResolution
+	for m := range objTy.Members() {
+		if m.MemberKind() != ast.ObjectMemberKindField {
+			continue
+		}
+		directFields = append(directFields, inclusionMemberForSymbolResolution{
+			name:     m.Name(),
+			isPublic: m.IsPublic(),
+		})
+	}
+	return collectTransitiveFields(ctx, objTy.Inclusions, directFields, localTypeDefns, localClassDefns)
+}
+
+func collectTransitiveFieldsFromClassDefn(ctx *context.CompilerContext, defn *ast.BLangClassDefinition, localTypeDefns map[model.SymbolRef]*ast.BLangTypeDefinition, localClassDefns map[model.SymbolRef]*ast.BLangClassDefinition) []inclusionMemberForSymbolResolution {
+	var directFields []inclusionMemberForSymbolResolution
+	for _, fieldNode := range defn.Fields {
+		field := fieldNode.(*ast.BLangSimpleVariable)
+		directFields = append(directFields, inclusionMemberForSymbolResolution{
+			name:     field.Name.Value,
+			isPublic: field.IsPublic(),
+		})
+	}
+	return collectTransitiveFields(ctx, defn.Inclusions, directFields, localTypeDefns, localClassDefns)
 }
 
 type namedClassMethod struct {
