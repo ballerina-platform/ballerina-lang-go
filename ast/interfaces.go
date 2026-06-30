@@ -84,8 +84,8 @@ type PackageNode interface {
 	AddService(service ServiceNode)
 	GetFunctions() []FunctionNode
 	AddFunction(function FunctionNode)
-	GetTypeDefinitions() []TypeDefinition
-	AddTypeDefinition(typeDefinition TypeDefinition)
+	GetTypeDefinitions() []*BLangTypeDefinition
+	AddTypeDefinition(typeDefinition *BLangTypeDefinition)
 	GetAnnotations() []AnnotationNode
 	AddAnnotation(annotation AnnotationNode)
 	GetClassDefinitions() []ClassDefinition
@@ -199,22 +199,6 @@ type ServiceNode interface {
 	GetAttachedExprs() []BLangExpression
 	GetAbsolutePath() []*BLangIdentifier
 	GetAttachPointLiteral() LiteralNode
-}
-
-// Type-definition node (carries either a BLangTypeDefinition or a
-// BLangClassDefinition).
-type TypeDefinition interface {
-	AnnotatableNode
-	DocumentableNode
-	TopLevelNode
-	NodeWithSymbol
-	GetName() *BLangIdentifier
-	SetName(name *BLangIdentifier)
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
-	SetDeterminedType(ty semtypes.SemType)
-	GetCycleDepth() int
-	SetCycleDepth(depth int)
 }
 
 type TypeDescriptor interface {

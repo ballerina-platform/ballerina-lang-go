@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go test *)",
+      "Bash(grep \"\\\\.go$\")",
+      "Bash(go tool *)",
+      "Bash(go run *)",
+      "Bash(python3)",
+      "Bash(sort -t: -k3 -n)",
+      "Bash(awk '{print $3}')",
+      "Bash(awk '{sum += $1; count++} END {print \"avg:\", sum/count \"%\", \"count:\", count}')",
+      "Bash(awk '{print $1\"\\\\t\"$3}')",
+      "Bash(awk '{print $1, $3}')",
+      "Bash(go tool cover -html=coverage_corpus_curr.out -o /tmp/coverage_html.html 2>/dev/null *)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

@@ -1980,6 +1980,9 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	if node.IsPublic() {
 		p.PrintString("public")
 	}
+	if node.IsDistinct() {
+		p.PrintString("distinct")
+	}
 	p.PrintString(node.Name.Value)
 	p.indentLevel++
 	p.printAnnotationAttachments(node)

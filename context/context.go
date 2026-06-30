@@ -141,6 +141,14 @@ func (c *CompilerContext) SymbolAnnotationValues(symbol model.SymbolRef) values.
 	return c.env.SymbolAnnotationValues(symbol)
 }
 
+func (c *CompilerContext) DistinctTypeID(symbol model.SymbolRef) int {
+	return c.env.DistinctTypeID(symbol)
+}
+
+func (c *CompilerContext) DistinctTypeSymbolRef(id int) (model.SymbolRef, bool) {
+	return c.env.DistinctTypeSymbolRef(id)
+}
+
 func (c *CompilerContext) GetDefaultPackage() *model.PackageID {
 	return c.env.GetDefaultPackage()
 }

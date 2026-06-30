@@ -66,6 +66,14 @@ func (pool *TypePool) Put(ty SemType) TypePoolIndex {
 	return TypePoolIndex(id)
 }
 
+func (pool *TypePool) PutObjectDefinition(ty SemType) TypePoolIndex {
+	return pool.Put(stripObjectDistinctAtoms(ty))
+}
+
+func (pool *TypePool) PutErrorDefinition(ty SemType) TypePoolIndex {
+	return pool.Put(stripErrorDistinctAtoms(ty))
+}
+
 func fromTypePool(pool *TypePool, env Env) binaryPool {
 	bp := binaryPool{}
 	cx := ContextFrom(env)

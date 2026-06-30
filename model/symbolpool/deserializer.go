@@ -27,10 +27,11 @@ import (
 )
 
 type symbolReader struct {
-	r   *bytes.Reader
-	cp  []string
-	tp  *semtypes.TypePool
-	env *context.CompilerEnvironment
+	r               *bytes.Reader
+	cp              []string
+	tp              *semtypes.TypePool
+	env             *context.CompilerEnvironment
+	externalRefKeys []serializedSymbolRefKey
 }
 
 func Unmarshal(env *context.CompilerEnvironment, data []byte) (model.ExportedSymbolSpace, error) {
@@ -74,6 +75,7 @@ func (sr *symbolReader) deserialize() (result model.ExportedSymbolSpace, err err
 	sr.tp = semtypes.UnmarshalTypePool(tpBytes, sr.env.GetTypeEnv())
 
 	sr.cp = deserializeConstantPool(sr.r)
+	sr.externalRefKeys = sr.readExternalSymbolRefPool()
 
 	mainSpace := sr.readSymbolSpace()
 	annotationSpace := sr.readSymbolSpace()
@@ -224,8 +226,32 @@ func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
 	for _, m := range sr.readInclusionMembers(space) {
 		sym.AddMember(m)
 	}
+	ids := sr.readDistinctTypes(space)
+	sym.SetDistinctTypeIDs(ids)
+	sym.SetType(addObjectDistinctAtoms(ty, ids))
 	ref := addDeserializedSymbol(space, name, &sym)
 	sr.storeAnnotations(ref, annotations)
+}
+
+func (sr *symbolReader) readDistinctTypes(space *model.SymbolSpace) []int {
+	var count int64
+	read(sr.r, &count)
+	ids := make([]int, 0, count)
+	for i := int64(0); i < count; i++ {
+		ref := sr.readSymbolRef(space)
+		ids = append(ids, sr.env.DistinctTypeID(ref))
+	}
+	return ids
+}
+
+func addObjectDistinctAtoms(ty semtypes.SemType, ids []int) semtypes.SemType {
+	if semtypes.IsZero(ty) {
+		return ty
+	}
+	for _, id := range ids {
+		ty = semtypes.Intersect(ty, semtypes.ObjectDefinitionDistinct(id))
+	}
+	return ty
 }
 
 func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.InclusionMember {
@@ -279,12 +305,44 @@ func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.I
 }
 
 func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
-	var index int32
-	read(sr.r, &index)
-	return model.SymbolRef{
-		Index:      int(index),
-		SpaceIndex: space.SpaceIndex(),
+	var tag uint8
+	read(sr.r, &tag)
+	switch tag {
+	case symbolRefTagEmpty:
+		return model.SymbolRef{}
+	case symbolRefTagLocal:
+		var index int32
+		read(sr.r, &index)
+		return model.SymbolRef{
+			Index:      int(index),
+			SpaceIndex: space.SpaceIndex(),
+		}
+	case symbolRefTagExternal:
+		var index int32
+		read(sr.r, &index)
+		key := sr.externalRefKeys[index]
+		ref, ok := sr.env.FindSymbol(key.pkg, key.name)
+		if !ok {
+			panic(fmt.Sprintf("external symbol not found: %s/%s:%s", key.pkg.Organization, key.pkg.Package, key.name))
+		}
+		return ref
+	default:
+		panic(fmt.Sprintf("unknown symbol ref tag: %d", tag))
 	}
+}
+
+func (sr *symbolReader) readExternalSymbolRefPool() []serializedSymbolRefKey {
+	var count int64
+	read(sr.r, &count)
+	keys := make([]serializedSymbolRefKey, count)
+	for i := range keys {
+		pkgID := sr.readPackageIdentifier()
+		keys[i] = serializedSymbolRefKey{
+			pkg:  model.PackageIdentifierFromID(pkgID),
+			name: sr.readStringCP(),
+		}
+	}
+	return keys
 }
 
 func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool) {
@@ -304,6 +362,9 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace, isNetwork bool
 			methods[md.MemberName()] = md.MethodRef
 		}
 	}
+	ids := sr.readDistinctTypes(space)
+	sym.SetDistinctTypeIDs(ids)
+	sym.SetType(addObjectDistinctAtoms(ty, ids))
 	sym.SetMethods(methods)
 	if isNetwork {
 		var rmCount int64

@@ -359,8 +359,13 @@ func (s *toStringState) bddObjectToString(bdd Bdd) string {
 }
 
 func (s *toStringState) objectAtomToString(atom atom) string {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_OBJECT_READONLY {
-		return "readonly"
+	if recAtom, ok := atom.(*recAtom); ok {
+		if recAtom.index() < 0 {
+			return "object"
+		}
+		if recAtom.index() == BDD_REC_ATOM_OBJECT_READONLY {
+			return "readonly"
+		}
 	}
 	key := atom.canonicalKey()
 	if s.visited[key] {

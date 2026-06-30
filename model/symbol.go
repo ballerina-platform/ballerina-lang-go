@@ -270,9 +270,14 @@ type (
 		members []InclusionMember
 	}
 
+	distinctTypeBase struct {
+		typeIDs []int
+	}
+
 	classSymbolBase struct {
 		TypeSymbol
 		memberHolderBase
+		distinctTypeBase
 		methods         map[string]SymbolRef
 		resourceMethods []SymbolRef
 	}
@@ -293,6 +298,7 @@ type (
 	ObjectTypeSymbol struct {
 		TypeSymbol
 		memberHolderBase
+		distinctTypeBase
 	}
 
 	FieldDefault struct {
@@ -869,9 +875,15 @@ type MemberCarrier interface {
 	FieldDefaults() []FieldDefault
 }
 
+type ObjectType interface {
+	DistinctTypeIDs() []int
+	SetDistinctTypeIDs(typeIDs []int)
+}
+
 type ClassSymbol interface {
 	Symbol
 	MemberCarrier
+	ObjectType
 	SetMethods(map[string]SymbolRef)
 	MethodSymbol(name string) (SymbolRef, bool)
 }
@@ -889,6 +901,14 @@ func (m *memberHolderBase) FieldDefaults() []FieldDefault {
 		}
 	}
 	return defaults
+}
+
+func (d *distinctTypeBase) DistinctTypeIDs() []int {
+	return d.typeIDs
+}
+
+func (d *distinctTypeBase) SetDistinctTypeIDs(typeIDs []int) {
+	d.typeIDs = typeIDs
 }
 
 func (r *RecordSymbol) Fields() iter.Seq2[string, *FieldDescriptor] {

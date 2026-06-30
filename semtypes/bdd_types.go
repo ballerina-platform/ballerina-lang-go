@@ -175,9 +175,14 @@ func (sc *bddSerializationContext) resolveAtom(
 	serializeAtom func(atom) int32,
 	atomKind kind,
 ) atomEntry {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_READONLY {
-		if atomKind == kind_LIST_ATOM || atomKind == kind_MAPPING_ATOM {
-			return atomEntry{isRec: false, index: 0}
+	if recAtom, ok := atom.(*recAtom); ok {
+		if recAtom.index() < 0 {
+			return atomEntry{isRec: true, index: int32(recAtom.index())}
+		}
+		if recAtom.index() == BDD_REC_ATOM_READONLY {
+			if atomKind == kind_LIST_ATOM || atomKind == kind_MAPPING_ATOM {
+				return atomEntry{isRec: false, index: 0}
+			}
 		}
 	}
 	if idx, ok := atomMap[atom]; ok {
@@ -413,6 +418,10 @@ func (dc *bddDeserializationContext) deserializeListAtom(atomIndex int32) atom {
 }
 
 func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) atom {
+	if atomIndex < 0 {
+		atom := createDistinctRecAtom(int(atomIndex))
+		return &atom
+	}
 	if atomIndex == 0 {
 		ro := createRecAtom(BDD_REC_ATOM_READONLY)
 		return &ro
