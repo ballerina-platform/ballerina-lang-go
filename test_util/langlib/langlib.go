@@ -106,6 +106,14 @@ var migratedLangLibs = []bundledLib{
 	},
 	{
 		org:        "ballerina",
+		nameComps:  []string{"lang", "float"},
+		implicitID: "lang.float",
+		srcFS:      langlibs.FS,
+		balPath:    "ballerina/lang.float/0.0.1/any/lang.float.bal",
+		version:    "0.0.1",
+	},
+	{
+		org:        "ballerina",
 		nameComps:  []string{"lang", "array"},
 		implicitID: "lang.array",
 		srcFS:      langlibs.FS,
@@ -134,7 +142,7 @@ var bundledStdlibs = []bundledLib{
 		org:       "ballerina",
 		nameComps: []string{"io"},
 		srcFS:     stdlibs.FS,
-		balPath:   "ballerina/io/0.0.1/any/io.bal",
+		balPath:   "ballerina/io/0.0.1/go1.2/io.bal",
 		version:   "0.0.1",
 	},
 }

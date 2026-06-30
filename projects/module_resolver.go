@@ -99,27 +99,29 @@ func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoad
 		org = request.orgName.Value()
 	}
 
-	// Extract package name from module name (e.g., "http.auth" -> "http")
-	pkgName := extractPackageName(request.moduleName)
-
-	// Look up packages via PackageResolver
-	// Packages are returned oldest-first, so iterate in reverse to get the newest version
-	packages := r.packageResolver.ResolveByName(ctx, org, pkgName, r.resolutionOptions)
-	for i := len(packages) - 1; i >= 0; i-- {
-		pkg := packages[i]
-		// Check if module exists in this package
-		for _, mod := range pkg.Modules() {
-			if mod.ModuleName().String() == request.moduleName {
-				pkgDesc := pkg.Manifest().PackageDescriptor()
-				// Only set packageDescriptor for external packages (nil for same-package)
-				var pkgDescPtr *PackageDescriptor
-				if !pkgDesc.Equals(r.rootPkgDesc) {
-					pkgDescPtr = &pkgDesc
-				}
-				return &importModuleResponse{
-					packageDescriptor: pkgDescPtr,
-					moduleDesc:        mod.Descriptor(),
-					resolutionStatus:  resolutionStatusResolved,
+	// Try each package name candidate in order.
+	// The full module name is tried first (handles top-level packages like "math.vector"),
+	// then the prefix before the first dot (handles sub-modules like "http.auth" within "http").
+	for _, pkgName := range packageNameCandidates(request.moduleName) {
+		// Look up packages via PackageResolver.
+		// Packages are returned oldest-first, so iterate in reverse to get the newest version.
+		packages := r.packageResolver.ResolveByName(ctx, org, pkgName, r.resolutionOptions)
+		for i := len(packages) - 1; i >= 0; i-- {
+			pkg := packages[i]
+			// Check if module exists in this package
+			for _, mod := range pkg.Modules() {
+				if mod.ModuleName().String() == request.moduleName {
+					pkgDesc := pkg.Manifest().PackageDescriptor()
+					// Only set packageDescriptor for external packages (nil for same-package)
+					var pkgDescPtr *PackageDescriptor
+					if !pkgDesc.Equals(r.rootPkgDesc) {
+						pkgDescPtr = &pkgDesc
+					}
+					return &importModuleResponse{
+						packageDescriptor: pkgDescPtr,
+						moduleDesc:        mod.Descriptor(),
+						resolutionStatus:  resolutionStatusResolved,
+					}
 				}
 			}
 		}
@@ -131,13 +133,15 @@ func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoad
 	}
 }
 
-// extractPackageName extracts the package name from a module name.
-// e.g., "http" -> "http", "http.auth" -> "http"
-func extractPackageName(moduleName string) string {
+// packageNameCandidates returns the package name(s) to try when resolving a module.
+// The full module name is the first candidate (handles packages whose name contains a dot,
+// e.g. "math.vector"). If the name contains a dot, the prefix before the first dot is also
+// appended as a fallback (handles sub-modules, e.g. "http.auth" lives in package "http").
+func packageNameCandidates(moduleName string) []string {
 	for i, c := range moduleName {
 		if c == '.' {
-			return moduleName[:i]
+			return []string{moduleName, moduleName[:i]}
 		}
 	}
-	return moduleName
+	return []string{moduleName}
 }

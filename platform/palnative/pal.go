@@ -22,9 +22,12 @@ package palnative
 
 import (
 	"os"
+	"time"
 
 	"ballerina-lang-go/platform/pal"
 )
+
+var processStart = time.Now()
 
 // NewPlatform returns the native-CLI pal.Platform, wiring os.Stdout/Stderr for
 // IO and NewHTTPClient for HTTP. The returned cleanup function releases signal
@@ -40,6 +43,26 @@ func NewPlatform() (pal.Platform, func()) {
 			ReadFile: func(path string) ([]byte, error) {
 				return os.ReadFile(path)
 			},
+			WriteFile: func(path string, data []byte) error {
+				return os.WriteFile(path, data, 0o644)
+			},
+			AppendFile: func(path string, data []byte) (err error) {
+				f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
+				_, err = f.Write(data)
+				return err
+			},
+		},
+		Time: pal.Time{
+			Now:          time.Now,
+			MonotonicNow: func() time.Duration { return time.Since(processStart) },
 		},
 		HTTP: pal.HTTP{
 			NewClient: NewHTTPClient,

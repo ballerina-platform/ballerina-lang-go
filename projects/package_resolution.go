@@ -234,6 +234,7 @@ var bundledLangLibs = []struct{ org, name, version string }{
 	{"ballerina", "lang.string", "0.0.1"},
 	{"ballerina", "lang.value", "0.0.1"},
 	{"ballerina", "lang.xml", "0.0.1"},
+	{"ballerina", "lang.float", "0.0.1"},
 	{"ballerina", "lang.array", "0.0.1"},
 	{"ballerina", "lang.map", "0.0.1"},
 	{"ballerina", "lang.runtime", "0.0.1"},
