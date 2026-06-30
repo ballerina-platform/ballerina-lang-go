@@ -62,6 +62,11 @@ func (e *Environment) TypeEnv() semtypes.Env {
 	return e.compilerEnv.GetTypeEnv()
 }
 
+// CompilerEnvironment returns the compiler environment associated with this environment.
+func (e *Environment) CompilerEnvironment() *context.CompilerEnvironment {
+	return e.compilerEnv
+}
+
 func (e *Environment) fs() fs.FS {
 	return e.fsys
 }
