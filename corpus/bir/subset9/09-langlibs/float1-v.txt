@@ -443,7 +443,7 @@ main() -> nil{
     GOTO bb90;
   }
   bb90 {
-    PushScopeFrame 111
+    PushScopeFrame 166
     %0 = ConstantLoad 0x1p0
     %1 = fromString(%0) -> bb91;
   }
@@ -453,7 +453,7 @@ main() -> nil{
     %4 = println(%3) -> bb92;
   }
   bb92 {
-    %5 = ConstantLoad bad
+    %5 = ConstantLoad 1_000.0
     %6 = fromString(%5) -> bb93;
   }
   bb93 {
@@ -462,191 +462,290 @@ main() -> nil{
     %9 = println(%8) -> bb94;
   }
   bb94 {
-    %10 = ConstantLoad 10.2453
-    %11 = unknown %10;
-    %12 = %11;
-    %13 = toHexString(%12) -> bb95;
+    %10 = ConstantLoad Inf
+    %11 = fromString(%10) -> bb95;
   }
   bb95 {
+    %12 = %11 is error
+    %13 = %12;
     %14 = println(%13) -> bb96;
   }
   bb96 {
-    %15 = toHexString(Infinity) -> bb97;
+    %15 = ConstantLoad inf
+    %16 = fromString(%15) -> bb97;
   }
   bb97 {
-    %16 = println(%15) -> bb98;
+    %17 = %16 is error
+    %18 = %17;
+    %19 = println(%18) -> bb98;
   }
   bb98 {
-    %17 = ConstantLoad 1
-    %18 = %17;
-    %19 = toHexString(%18) -> bb99;
+    %20 = ConstantLoad Infinity
+    %21 = fromString(%20) -> bb99;
   }
   bb99 {
-    %20 = println(%19) -> bb100;
+    %22 = %21 is error
+    %23 = %22;
+    %24 = println(%23) -> bb100;
   }
   bb100 {
-    %21 = ConstantLoad 0.5
-    %22 = %21;
-    %23 = toHexString(%22) -> bb101;
+    %25 = ConstantLoad 1.
+    %26 = fromString(%25) -> bb101;
   }
   bb101 {
-    %24 = println(%23) -> bb102;
+    %27 = %26 is error
+    %28 = %27;
+    %29 = println(%28) -> bb102;
   }
   bb102 {
-    %25 = ConstantLoad 0x1.0a3d70a3d70a4p4
-    %26 = fromHexString(%25) -> bb103;
+    %30 = ConstantLoad 1f
+    %31 = fromString(%30) -> bb103;
   }
   bb103 {
-    %27 = println(%26) -> bb104;
+    %32 = %31 is error
+    %33 = %32;
+    %34 = println(%33) -> bb104;
   }
   bb104 {
-    %28 = ConstantLoad 12.5
-    %29 = fromHexString(%28) -> bb105;
+    %35 = ConstantLoad bad
+    %36 = fromString(%35) -> bb105;
   }
   bb105 {
-    %30 = %29 is error
-    %31 = %30;
-    %32 = println(%31) -> bb106;
+    %37 = %36 is error
+    %38 = %37;
+    %39 = println(%38) -> bb106;
   }
   bb106 {
-    %33 = ConstantLoad 0x1J
-    %34 = fromHexString(%33) -> bb107;
+    %40 = ConstantLoad 10.2453
+    %41 = unknown %40;
+    %42 = %41;
+    %43 = toHexString(%42) -> bb107;
   }
   bb107 {
-    %35 = %34 is error
-    %36 = %35;
-    %37 = println(%36) -> bb108;
+    %44 = println(%43) -> bb108;
   }
   bb108 {
-    %38 = ConstantLoad 4.16
-    %39 = %38;
-    %40 = toBitsInt(%39) -> bb109;
+    %45 = toHexString(Infinity) -> bb109;
   }
   bb109 {
-    %41 = %40;
-    %42 = println(%41) -> bb110;
+    %46 = println(%45) -> bb110;
   }
   bb110 {
-    %43 = ConstantLoad 4
-    %44 = %43;
-    %45 = fromBitsInt(%44) -> bb111;
+    %47 = ConstantLoad 1
+    %48 = %47;
+    %49 = toHexString(%48) -> bb111;
   }
   bb111 {
-    %46 = %45;
-    %47 = println(%46) -> bb112;
+    %50 = println(%49) -> bb112;
   }
   bb112 {
-    %48 = ConstantLoad 9221120237041090561
-    %49 = %48;
-    %50 = fromBitsInt(%49) -> bb113;
+    %51 = ConstantLoad 0.5
+    %52 = %51;
+    %53 = toHexString(%52) -> bb113;
   }
   bb113 {
-    %51 = %50;
-    %52 = isNaN(%51) -> bb114;
+    %54 = println(%53) -> bb114;
   }
   bb114 {
-    %53 = %52;
-    %54 = println(%53) -> bb115;
+    %55 = ConstantLoad 0x1.0a3d70a3d70a4p4
+    %56 = fromHexString(%55) -> bb115;
   }
   bb115 {
-    %55 = ConstantLoad 12.456
-    %56 = %55;
-    %57 = ConstantLoad 2
-    %58 = %57;
-    %59 = toFixedString(%56,%58) -> bb116;
+    %57 = println(%56) -> bb116;
   }
   bb116 {
-    %60 = println(%59) -> bb117;
+    %58 = ConstantLoad 0x1.0
+    %59 = fromHexString(%58) -> bb117;
   }
   bb117 {
-    %61 = ConstantLoad 12.456
-    %62 = %61;
-    %63 = ConstantLoad <nil>
-    %64 = %63;
-    %65 = toFixedString(%62,%64) -> bb118;
+    %60 = println(%59) -> bb118;
   }
   bb118 {
-    %66 = println(%65) -> bb119;
+    %61 = ConstantLoad 0x1.
+    %62 = fromHexString(%61) -> bb119;
   }
   bb119 {
-    %67 = ConstantLoad 2
-    %68 = %67;
-    %69 = toFixedString(Infinity,%68) -> bb120;
+    %63 = %62 is error
+    %64 = %63;
+    %65 = println(%64) -> bb120;
   }
   bb120 {
-    %70 = println(%69) -> bb121;
+    %66 = ConstantLoad 0x1
+    %67 = fromHexString(%66) -> bb121;
   }
   bb121 {
-    %71 = ConstantLoad 12.456
-    %72 = %71;
-    %73 = ConstantLoad 2
-    %74 = %73;
-    %75 = toExpString(%72,%74) -> bb122;
+    %68 = %67 is error
+    %69 = %68;
+    %70 = println(%69) -> bb122;
   }
   bb122 {
-    %76 = println(%75) -> bb123;
+    %71 = ConstantLoad 12.5
+    %72 = fromHexString(%71) -> bb123;
   }
   bb123 {
-    %77 = ConstantLoad 12.456
-    %78 = %77;
-    %79 = ConstantLoad <nil>
-    %80 = %79;
-    %81 = toExpString(%78,%80) -> bb124;
+    %73 = %72 is error
+    %74 = %73;
+    %75 = println(%74) -> bb124;
   }
   bb124 {
-    %82 = println(%81) -> bb125;
+    %76 = ConstantLoad 0x1J
+    %77 = fromHexString(%76) -> bb125;
   }
   bb125 {
-    %83 = ConstantLoad 2
-    %84 = %83;
-    %85 = toExpString(NaN,%84) -> bb126;
+    %78 = %77 is error
+    %79 = %78;
+    %80 = println(%79) -> bb126;
   }
   bb126 {
-    %86 = println(%85) -> bb127;
+    %81 = ConstantLoad 4.16
+    %82 = %81;
+    %83 = toBitsInt(%82) -> bb127;
   }
   bb127 {
-    %87 = ConstantLoad 1
-    %88 = %87;
-    %89 = ConstantLoad 0
-    %90 = %89;
-    %91 = toExpString(%88,%90) -> bb128;
+    %84 = %83;
+    %85 = println(%84) -> bb128;
   }
   bb128 {
-    %92 = println(%91) -> bb129;
+    %86 = ConstantLoad 4
+    %87 = %86;
+    %88 = fromBitsInt(%87) -> bb129;
   }
   bb129 {
-    %93 = ConstantLoad 0.001
-    %94 = %93;
-    %95 = ConstantLoad <nil>
-    %96 = %95;
-    %97 = toExpString(%94,%96) -> bb130;
+    %89 = %88;
+    %90 = println(%89) -> bb130;
   }
   bb130 {
-    %98 = println(%97) -> bb131;
+    %91 = ConstantLoad 9221120237041090561
+    %92 = %91;
+    %93 = fromBitsInt(%92) -> bb131;
   }
   bb131 {
-    %99 = ConstantLoad 2
-    %100 = %99;
-    %101 = ConstantLoad 4
-    %102 = %101;
-    %103 = avg(%100,%102) -> bb132;
+    %94 = %93;
+    %95 = isNaN(%94) -> bb132;
   }
   bb132 {
-    %104 = %103;
-    %105 = println(%104) -> bb133;
+    %96 = %95;
+    %97 = println(%96) -> bb133;
   }
   bb133 {
-    %106 = avg() -> bb134;
+    %98 = ConstantLoad 12.456
+    %99 = %98;
+    %100 = ConstantLoad 2
+    %101 = %100;
+    %102 = toFixedString(%99,%101) -> bb134;
   }
   bb134 {
-    %107 = %106;
-    %108 = isNaN(%107) -> bb135;
+    %103 = println(%102) -> bb135;
   }
   bb135 {
-    %109 = %108;
-    %110 = println(%109) -> bb136;
+    %104 = ConstantLoad 12.456
+    %105 = %104;
+    %106 = ConstantLoad <nil>
+    %107 = %106;
+    %108 = toFixedString(%105,%107) -> bb136;
   }
   bb136 {
+    %109 = println(%108) -> bb137;
+  }
+  bb137 {
+    %110 = ConstantLoad 1
+    %111 = %110;
+    %112 = ConstantLoad <nil>
+    %113 = %112;
+    %114 = toFixedString(%111,%113) -> bb138;
+  }
+  bb138 {
+    %115 = println(%114) -> bb139;
+  }
+  bb139 {
+    %116 = ConstantLoad 2
+    %117 = %116;
+    %118 = toFixedString(Infinity,%117) -> bb140;
+  }
+  bb140 {
+    %119 = println(%118) -> bb141;
+  }
+  bb141 {
+    %120 = ConstantLoad 12.456
+    %121 = %120;
+    %122 = ConstantLoad 2
+    %123 = %122;
+    %124 = toExpString(%121,%123) -> bb142;
+  }
+  bb142 {
+    %125 = println(%124) -> bb143;
+  }
+  bb143 {
+    %126 = ConstantLoad 12.456
+    %127 = %126;
+    %128 = ConstantLoad <nil>
+    %129 = %128;
+    %130 = toExpString(%127,%129) -> bb144;
+  }
+  bb144 {
+    %131 = println(%130) -> bb145;
+  }
+  bb145 {
+    %132 = ConstantLoad 1
+    %133 = %132;
+    %134 = ConstantLoad <nil>
+    %135 = %134;
+    %136 = toExpString(%133,%135) -> bb146;
+  }
+  bb146 {
+    %137 = println(%136) -> bb147;
+  }
+  bb147 {
+    %138 = ConstantLoad 2
+    %139 = %138;
+    %140 = toExpString(NaN,%139) -> bb148;
+  }
+  bb148 {
+    %141 = println(%140) -> bb149;
+  }
+  bb149 {
+    %142 = ConstantLoad 1
+    %143 = %142;
+    %144 = ConstantLoad 0
+    %145 = %144;
+    %146 = toExpString(%143,%145) -> bb150;
+  }
+  bb150 {
+    %147 = println(%146) -> bb151;
+  }
+  bb151 {
+    %148 = ConstantLoad 0.001
+    %149 = %148;
+    %150 = ConstantLoad <nil>
+    %151 = %150;
+    %152 = toExpString(%149,%151) -> bb152;
+  }
+  bb152 {
+    %153 = println(%152) -> bb153;
+  }
+  bb153 {
+    %154 = ConstantLoad 2
+    %155 = %154;
+    %156 = ConstantLoad 4
+    %157 = %156;
+    %158 = avg(%155,%157) -> bb154;
+  }
+  bb154 {
+    %159 = %158;
+    %160 = println(%159) -> bb155;
+  }
+  bb155 {
+    %161 = avg() -> bb156;
+  }
+  bb156 {
+    %162 = %161;
+    %163 = isNaN(%162) -> bb157;
+  }
+  bb157 {
+    %164 = %163;
+    %165 = println(%164) -> bb158;
+  }
+  bb158 {
     PopScopeFrame
     return;
   }
