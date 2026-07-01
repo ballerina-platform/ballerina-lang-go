@@ -71,6 +71,12 @@ func initOSModule(rt *runtime.Runtime) {
 	smd := semtypes.NewMappingDefinition()
 	strMapTy := smd.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
 
+	// Atomic types are a structural property of the (fixed) SemTypes above and
+	// do not vary per strand, so compute them once instead of on every call.
+	initCtx := semtypes.ContextFrom(env)
+	strMapAtomic := semtypes.ToMappingAtomicType(initCtx, strMapTy)
+	byteArrAtomic := semtypes.ToListAtomicType(initCtx, byteArrTy)
+
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "getEnv",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			name, _ := args[0].(string)
@@ -110,8 +116,7 @@ func initOSModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 
 			envMap := rt.Platform().OS.ListEnv()
-			atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx, strMapTy)
-			m := values.NewMap(strMapTy, atomic, false, nil)
+			m := values.NewMap(strMapTy, strMapAtomic, false, nil)
 			for k, v := range envMap {
 				m.Put(ctx.TypeCtx, k, v)
 			}
@@ -192,7 +197,7 @@ func initOSModule(rt *runtime.Runtime) {
 			for i, b := range data {
 				items[i] = int64(b)
 			}
-			return values.NewList(byteArrTy, semtypes.ToListAtomicType(ctx.TypeCtx, byteArrTy), false, nil, 0, items), nil
+			return values.NewList(byteArrTy, byteArrAtomic, false, nil, 0, items), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Process.exit",

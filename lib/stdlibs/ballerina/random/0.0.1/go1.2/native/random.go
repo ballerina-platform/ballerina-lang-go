@@ -17,8 +17,6 @@
 package native
 
 import (
-	cryptorand "crypto/rand"
-	"encoding/binary"
 	mathrand "math/rand/v2"
 
 	"ballerina-lang-go/runtime"
@@ -35,21 +33,13 @@ func randomError(msg string) values.BalValue {
 	return values.NewErrorWithMessage(msg)
 }
 
-// cryptoFloat64 returns a uniformly distributed float64 in [0.0, 1.0) sourced from
-// the OS cryptographic entropy pool (equivalent to java.security.SecureRandom.nextFloat()).
-func cryptoFloat64() float64 {
-	var b [8]byte
-	if _, err := cryptorand.Read(b[:]); err != nil {
-		return mathrand.Float64()
-	}
-	n := binary.BigEndian.Uint64(b[:]) >> 11
-	return float64(n) / (1 << 53)
-}
-
 func initRandomModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCreateDecimal",
 		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
-			return cryptoFloat64(), nil
+			// The ballerina/random values are explicitly documented as not
+			// cryptographically secure (matching jBallerina's Math.random), so a
+			// plain PRNG is sufficient here.
+			return mathrand.Float64(), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCreateIntInRange",

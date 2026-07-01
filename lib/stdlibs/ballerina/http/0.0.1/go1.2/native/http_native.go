@@ -1595,10 +1595,8 @@ func decompressResponseBody(headers map[string][]string, body io.ReadCloser) io.
 		enc := strings.ToLower(strings.TrimSpace(vals[0]))
 		switch enc {
 		case "gzip":
-			if gr, err := gzip.NewReader(body); err == nil {
-				delete(headers, k)
-				return &gzipReadCloser{reader: gr, underlying: body}
-			}
+			delete(headers, k)
+			return &gzipReadCloser{underlying: body}
 		case "deflate":
 			delete(headers, k)
 			return &deflateReadCloser{reader: flate.NewReader(body), underlying: body}
@@ -1608,14 +1606,33 @@ func decompressResponseBody(headers map[string][]string, body io.ReadCloser) io.
 	return body
 }
 
+// gzipReadCloser lazily creates the gzip reader on first Read. Deferring
+// gzip.NewReader (which parses the header eagerly) means a malformed gzip stream
+// surfaces as a read error to the payload getters — via responseBodyHolder.readErr
+// — instead of being silently passed through as raw compressed bytes. This mirrors
+// the deflate path and jBallerina's lazy Netty decompression.
 type gzipReadCloser struct {
 	reader     *gzip.Reader
 	underlying io.ReadCloser
+	started    bool
 }
 
-func (g *gzipReadCloser) Read(p []byte) (int, error) { return g.reader.Read(p) }
+func (g *gzipReadCloser) Read(p []byte) (int, error) {
+	if !g.started {
+		g.started = true
+		gr, err := gzip.NewReader(g.underlying)
+		if err != nil {
+			return 0, err
+		}
+		g.reader = gr
+	}
+	return g.reader.Read(p)
+}
+
 func (g *gzipReadCloser) Close() error {
-	_ = g.reader.Close()
+	if g.reader != nil {
+		_ = g.reader.Close()
+	}
 	return g.underlying.Close()
 }
 
