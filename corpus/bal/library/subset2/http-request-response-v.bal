@@ -77,6 +77,14 @@ public function main() returns error? {
     res.setTextPayload("resp body");
     io:println(check res.getTextPayload());              // @output resp body
 
+    // JSON and binary payload round-trips on the response.
+    res.setJsonPayload([1, 2, 3]);
+    json rj = check res.getJsonPayload();
+    io:println(rj);                                      // @output [1,2,3]
+    res.setBinaryPayload([10, 20, 30]);
+    byte[] rb = check res.getBinaryPayload();
+    io:println(rb.length());                             // @output 3
+
     res.removeHeader("X-Resp");
     io:println(res.hasHeader("X-Resp"));                 // @output false
     res.removeAllHeaders();

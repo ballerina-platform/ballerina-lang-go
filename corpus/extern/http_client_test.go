@@ -211,6 +211,13 @@ func TestHttpClientCompressionLocal(t *testing.T) {
 			fl, _ := flate.NewWriter(w, flate.DefaultCompression)
 			_, _ = fl.Write([]byte("hello deflated world"))
 			_ = fl.Close()
+		case "/badgzip":
+			// Advertise gzip but send a body that is not a valid gzip stream, so
+			// the gzip header parse fails when the payload is read.
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte("this is not gzip"))
 		default:
 			w.WriteHeader(404)
 		}

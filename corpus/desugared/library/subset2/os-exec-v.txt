@@ -128,6 +128,118 @@
           (invocation lang.array length (
             (simple-var-ref err))))))
       (var-def
+        (variable dirWithSpace (type
+          (value-type string)) (expr
+          (literal /tmp/bal_exec_space_test/foo bar))))
+      (var-def
+        (variable $desugar$7 (expr
+          (invocation os exec (
+            (mapping-constructor-expr
+              (key-value
+                (literal value)
+                (literal mkdir))
+              (key-value
+                (literal arguments)
+                (list-constructor-expr
+                  (literal -p)
+                  (simple-var-ref dirWithSpace))))
+            (mapping-constructor-expr))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$7))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$7))) ())
+      (var-def
+        (variable mk (type
+          (user-defined-type os Process)) (expr
+          (simple-var-ref $desugar$7))))
+      (var-def
+        (variable $desugar$8 (expr
+          (invocation waitForExit expr:
+            (simple-var-ref mk) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$8))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$8))) ())
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref $desugar$8))))
+      (var-def
+        (variable $desugar$9 (expr
+          (invocation os exec (
+            (mapping-constructor-expr
+              (key-value
+                (literal value)
+                (literal ls))
+              (key-value
+                (literal arguments)
+                (list-constructor-expr
+                  (simple-var-ref dirWithSpace))))
+            (mapping-constructor-expr))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$9))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$9))) ())
+      (var-def
+        (variable lsProc (type
+          (user-defined-type os Process)) (expr
+          (simple-var-ref $desugar$9))))
+      (var-def
+        (variable $desugar$10 (expr
+          (invocation waitForExit expr:
+            (simple-var-ref lsProc) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$10))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$10))) ())
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref $desugar$10))))
+      (var-def
+        (variable $desugar$11 (expr
+          (invocation os exec (
+            (mapping-constructor-expr
+              (key-value
+                (literal value)
+                (literal rm))
+              (key-value
+                (literal arguments)
+                (list-constructor-expr
+                  (literal -rf)
+                  (literal /tmp/bal_exec_space_test))))
+            (mapping-constructor-expr))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$11))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$11))) ())
+      (var-def
+        (variable rm (type
+          (user-defined-type os Process)) (expr
+          (simple-var-ref $desugar$11))))
+      (var-def
+        (variable $desugar$12 (expr
+          (invocation waitForExit expr:
+            (simple-var-ref rm) ()))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$12))
+        (block-stmt
+          (return
+            (simple-var-ref $desugar$12))) ())
+      (var-def
+        (variable _ (type
+          (value-type int)) (expr
+          (simple-var-ref $desugar$12))))
+      (var-def
         (variable bad (type
           (union-type
             (user-defined-type os Process)
@@ -144,7 +256,7 @@
             (simple-var-ref bad)
             (user-defined-type os Error)))))
       (var-def
-        (variable $desugar$7 (expr
+        (variable $desugar$13 (expr
           (invocation os exec (
             (mapping-constructor-expr
               (key-value
@@ -157,14 +269,14 @@
             (mapping-constructor-expr))))))
       (if
         (type-test-expr is
-          (simple-var-ref $desugar$7))
+          (simple-var-ref $desugar$13))
         (block-stmt
           (return
-            (simple-var-ref $desugar$7))) ())
+            (simple-var-ref $desugar$13))) ())
       (var-def
         (variable p3 (type
           (user-defined-type os Process)) (expr
-          (simple-var-ref $desugar$7))))
+          (simple-var-ref $desugar$13))))
       (expression-stmt
         (invocation exit expr:
           (simple-var-ref p3) ()))
