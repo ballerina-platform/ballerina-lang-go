@@ -77,6 +77,9 @@ func compileForSerializationBench(b *testing.B, tc test_util.TestCase) *serializ
 	if birPkg == nil {
 		b.Fatalf("nil BIR for %s", tc.InputPath)
 	}
+	if birPkg.PackageID == nil || birPkg.PackageID.OrgName == nil || birPkg.PackageID.PkgName == nil {
+		b.Fatalf("BIR package has incomplete package ID for %s", tc.InputPath)
+	}
 
 	pkgIdent := semantics.PackageIdentifier{
 		OrgName:    birPkg.PackageID.OrgName.Value(),
