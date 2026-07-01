@@ -656,8 +656,13 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	for _, t := range resolvers {
 		maps.Copy(allImports, t.implicitImports)
 	}
-	for _, importNode := range allImports {
-		pkg.Imports = append(pkg.Imports, importNode)
+	importNames := make([]string, 0, len(allImports))
+	for name := range allImports {
+		importNames = append(importNames, name)
+	}
+	sort.Strings(importNames)
+	for _, name := range importNames {
+		pkg.Imports = append(pkg.Imports, allImports[name])
 	}
 }
 
