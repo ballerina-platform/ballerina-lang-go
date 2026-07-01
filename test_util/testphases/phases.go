@@ -80,6 +80,9 @@ type stdlibEntry struct {
 // binary that are still seeded manually for hand-rolled compile drivers.
 var builtinStdlibs = []stdlibEntry{
 	{"ballerina", "http", "0.0.1"},
+	{"ballerina", "math.vector", "0.0.1"},
+	{"ballerina", "time", "0.0.1"},
+	{"ballerina", "url", "0.0.1"},
 }
 
 // loadBuiltinPublicSymbols compiles the embedded standard-library packages into

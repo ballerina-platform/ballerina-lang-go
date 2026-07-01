@@ -22,18 +22,21 @@ package testharness
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/platform/pal"
@@ -180,8 +183,8 @@ type TestPal interface {
 // behaviour can swap in their own HTTPClient via a custom TestPal.
 type stubHTTP struct{}
 
-func (c *stubHTTP) Execute(_, _ string, _ []byte, _ string, _ map[string][]string) (int, map[string][]string, []byte, error) {
-	return 200, map[string][]string{}, []byte("test body"), nil
+func (c *stubHTTP) Execute(_ context.Context, _, _ string, _ io.Reader, _ int64, _ string, _ map[string][]string) (int, map[string][]string, io.ReadCloser, error) {
+	return 200, map[string][]string{}, io.NopCloser(strings.NewReader("test body")), nil
 }
 
 type testPal struct {
@@ -202,6 +205,13 @@ func NewTestPal() TestPal {
 	return &testPal{}
 }
 
+func normalizePath(path string) string {
+	if goruntime.GOOS == "windows" && strings.HasPrefix(path, "/tmp/") {
+		return filepath.Join(os.TempDir(), path[5:])
+	}
+	return path
+}
+
 func (p *testPal) Platform() pal.Platform {
 	p.ensureSignalSource()
 	return pal.Platform{
@@ -219,8 +229,28 @@ func (p *testPal) Platform() pal.Platform {
 		},
 		FS: pal.FS{
 			ReadFile: func(path string) ([]byte, error) {
-				return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+				return os.ReadFile(normalizePath(path))
 			},
+			WriteFile: func(path string, data []byte) error {
+				return os.WriteFile(normalizePath(path), data, 0o644)
+			},
+			AppendFile: func(path string, data []byte) (err error) {
+				f, err := os.OpenFile(normalizePath(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if cerr := f.Close(); cerr != nil && err == nil {
+						err = cerr
+					}
+				}()
+				_, err = f.Write(data)
+				return err
+			},
+		},
+		Time: pal.Time{
+			Now:          time.Now,
+			MonotonicNow: func() time.Duration { return time.Since(time.Time{}) },
 		},
 		HTTP: pal.HTTP{
 			NewClient: func(_ pal.ClientConfig) pal.HTTPClient {

@@ -594,8 +594,14 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 			if mat != nil {
 				t.setMappingAtomSymRef(mat, ref)
 			}
-			if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
-				t.setClassAtomSymbol(oat, ref)
+			// Only real class symbols may back a `new` expression. Mapping any
+			// type alias whose semtype merely contains an object atom (e.g. a
+			// union like `RequestMessage = json|Request`) would clobber the
+			// genuine class's atom mapping, so restrict this to ClassSymbols.
+			if _, isClass := sym.(model.ClassSymbol); isClass {
+				if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
+					t.setClassAtomSymbol(oat, ref)
+				}
 			}
 		}
 	}
@@ -5554,6 +5560,8 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.int", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.DECIMAL):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.decimal", methodSymbol.name, expr)
+	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.FLOAT):
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.float", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.MAPPING):
 		symbolRef, pkgAlias, ok = resolveLangLibImport(t, "lang.map", methodSymbol.name, expr)
 	case semtypes.IsSubtype(t.typeContext(), recieverTy, semtypes.ERROR):

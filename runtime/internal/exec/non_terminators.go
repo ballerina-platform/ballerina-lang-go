@@ -378,7 +378,7 @@ func execEvalTemplateExpr(ctx *extern.Context, instr *bir.EvalTemplateExpr, fram
 	case bir.TemplateKindString:
 		setOperandValue(ctx, instr.LhsOp, frame, result)
 	case bir.TemplateKindXML:
-		xmlValue, err := values.ParseAsXMLValue(result)
+		xmlValue, err := values.ParseAsXMLValue(ctx.TypeCtx, result, values.XMLTemplateMode)
 		if err != nil {
 			panic(err)
 		}
