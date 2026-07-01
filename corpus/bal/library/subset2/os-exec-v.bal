@@ -34,6 +34,17 @@ public function main() returns error? {
     byte[] err = check p2.output(io:stderr);
     io:println(err.length());     // @output 0
 
+    // A directory whose name contains a space must reach `ls` as a single argv
+    // entry (no shell word-splitting); listing it exits 0. Had the space been
+    // split into "foo"/"bar", ls would receive two missing paths and fail.
+    string dirWithSpace = "/tmp/bal_exec_space_test/foo bar";
+    os:Process mk = check os:exec({value: "mkdir", arguments: ["-p", dirWithSpace]});
+    io:println(check mk.waitForExit());  // @output 0
+    os:Process lsProc = check os:exec({value: "ls", arguments: [dirWithSpace]});
+    io:println(check lsProc.waitForExit());  // @output 0
+    os:Process rm = check os:exec({value: "rm", arguments: ["-rf", "/tmp/bal_exec_space_test"]});
+    int _ = check rm.waitForExit();
+
     // exec of a non-existent command returns an error.
     os:Process|os:Error bad = os:exec({value: "no_such_command_xyz_123"});
     io:println(bad is os:Error);  // @output true

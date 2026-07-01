@@ -74,6 +74,67 @@
           (invocation length expr:
             (simple-var-ref err) ()))))
       (var-def
+        (variable dirWithSpace (type
+          (value-type string)) (expr
+          (literal /tmp/bal_exec_space_test/foo bar))))
+      (var-def
+        (variable mk (type
+          (user-defined-type os Process)) (expr
+          (checked-expr
+            (invocation os exec (
+              (mapping-constructor-expr
+                (key-value
+                  (literal value)
+                  (literal mkdir))
+                (key-value
+                  (literal arguments)
+                  (list-constructor-expr
+                    (literal -p)
+                    (simple-var-ref dirWithSpace))))))))))
+      (expression-stmt
+        (invocation io println (
+          (checked-expr
+            (invocation waitForExit expr:
+              (simple-var-ref mk) ())))))
+      (var-def
+        (variable lsProc (type
+          (user-defined-type os Process)) (expr
+          (checked-expr
+            (invocation os exec (
+              (mapping-constructor-expr
+                (key-value
+                  (literal value)
+                  (literal ls))
+                (key-value
+                  (literal arguments)
+                  (list-constructor-expr
+                    (simple-var-ref dirWithSpace))))))))))
+      (expression-stmt
+        (invocation io println (
+          (checked-expr
+            (invocation waitForExit expr:
+              (simple-var-ref lsProc) ())))))
+      (var-def
+        (variable rm (type
+          (user-defined-type os Process)) (expr
+          (checked-expr
+            (invocation os exec (
+              (mapping-constructor-expr
+                (key-value
+                  (literal value)
+                  (literal rm))
+                (key-value
+                  (literal arguments)
+                  (list-constructor-expr
+                    (literal -rf)
+                    (literal /tmp/bal_exec_space_test))))))))))
+      (var-def
+        (variable _ (type
+          (value-type int)) (expr
+          (checked-expr
+            (invocation waitForExit expr:
+              (simple-var-ref rm) ())))))
+      (var-def
         (variable bad (type
           (union-type
             (user-defined-type os Process)
