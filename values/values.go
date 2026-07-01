@@ -26,39 +26,6 @@ import (
 // Currently this is just an alias on any but I think we will need to add methods to this like type
 type BalValue any
 
-// AnnotationValue is the evaluated Ballerina value stored for an annotation.
-type AnnotationValue = BalValue
-
-// AnnotationValues maps fully-qualified annotation keys to evaluated values.
-type AnnotationValues map[string]AnnotationValue
-
-// RuntimeAnnotationValueRef identifies an annotation value initialized in a
-// module global.
-type RuntimeAnnotationValueRef struct {
-	Organization string
-	Module       string
-	GlobalName   string
-}
-
-// GlobalLookupKey returns the runtime global key for the annotation value.
-func (r *RuntimeAnnotationValueRef) GlobalLookupKey() string {
-	return r.Organization + "/" + r.Module + ":" + r.GlobalName
-}
-
-// NewAnnotationValues returns an initialized annotation value map.
-func NewAnnotationValues() AnnotationValues {
-	return make(AnnotationValues)
-}
-
-// Clone returns a shallow copy of the annotation value map.
-func (values AnnotationValues) Clone() AnnotationValues {
-	result := NewAnnotationValues()
-	for key, value := range values {
-		result[key] = value
-	}
-	return result
-}
-
 type Function struct {
 	Type      semtypes.SemType
 	LookupKey string
