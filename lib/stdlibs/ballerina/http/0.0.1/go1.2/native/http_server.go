@@ -397,9 +397,9 @@ func dispatchRequest(rt *runtime.Runtime, state *listenerState, w http.ResponseW
 	var found *serviceEntry
 	var subPath string
 	for _, e := range state.services {
-		if strings.HasPrefix(r.URL.Path, e.basePath) {
+		if rest, ok := matchBasePath(r.URL.Path, e.basePath); ok {
 			found = e
-			subPath = r.URL.Path[len(e.basePath):]
+			subPath = rest
 			break
 		}
 	}
@@ -451,6 +451,22 @@ func dispatchRequest(rt *runtime.Runtime, state *listenerState, w http.ResponseW
 		}
 	}
 	writeErrorJSON(w, r, http.StatusNotFound, "no matching resource found for path")
+}
+
+// matchBasePath reports whether path is under the attach point basePath,
+// returning the remaining sub-path. A match requires a path-segment boundary:
+// basePath "/foo" matches "/foo" and "/foo/bar" but not "/foobar".
+func matchBasePath(path, basePath string) (string, bool) {
+	if basePath == "/" {
+		return path, true
+	}
+	if path == basePath {
+		return "", true
+	}
+	if strings.HasPrefix(path, basePath) && path[len(basePath)] == '/' {
+		return path[len(basePath):], true
+	}
+	return "", false
 }
 
 // splitURLPath splits a URL sub-path into segments, stripping leading/trailing slashes.

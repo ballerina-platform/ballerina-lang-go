@@ -64,6 +64,14 @@ func TestHttpServiceRouting(t *testing.T) {
 	runExtern(t, fileCase("http-service/http-svc-routing-v"), newHTTPPal(palnative.NewHTTPClient), nil)
 }
 
+// TestHttpServicePathBoundary verifies that base-path matching stops at a
+// path-segment boundary: a service attached at /foo must not match /foobar
+// or /foobaz.
+func TestHttpServicePathBoundary(t *testing.T) {
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("http-service/http-svc-path-boundary-v"), newHTTPPal(palnative.NewHTTPClient), nil)
+}
+
 // TestHttpServiceMultiService attaches two services at distinct base paths to a
 // single listener and confirms each routes to the correct service.
 func TestHttpServiceMultiService(t *testing.T) {

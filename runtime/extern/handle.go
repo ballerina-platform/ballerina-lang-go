@@ -37,14 +37,11 @@ type FunctionHandle struct {
 // Context.Lookup*/InvokeMethod/StartMethod methods. Lookup hooks return the
 // resolved payload along with a found bool; Context methods forward both.
 type DispatchHandles struct {
-	LookupObject   func(*Context, *values.Object, string) (any, bool)
-	LookupRemote   func(*Context, *values.Object, string) (any, bool)
-	LookupResource func(*Context, *values.Object, string, []values.BalValue) (any, bool) // resourceMethodName, path
-	// LookupResourceByPath resolves a resource from raw string path segments,
-	// coercing them to the candidate's parameter types. Returns the resolved
-	// payload, the number of non-path args the resource expects, and a found bool.
-	LookupResourceByPath func(*Context, *values.Object, string, []string) (any, int, bool) // accessor, segments
-	LookupFunction       func(*Context, string, string, string) (any, bool)                // org, module, name
+	LookupObject         func(*Context, *values.Object, string) (any, bool)
+	LookupRemote         func(*Context, *values.Object, string) (any, bool)
+	LookupResource       func(*Context, *values.Object, string, []values.BalValue) (any, bool) // resourceMethodName, path
+	LookupResourceByPath func(*Context, *values.Object, string, []string) (any, int, bool)     // accessor, segments
+	LookupFunction       func(*Context, string, string, string) (any, bool)                    // org, module, name
 	Invoke               func(*Context, any, []values.BalValue) (values.BalValue, error)
 	Start                func(*Context, any, []values.BalValue) (<-chan values.BalValue, error)
 }

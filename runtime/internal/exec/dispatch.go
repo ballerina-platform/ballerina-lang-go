@@ -18,6 +18,7 @@ package exec
 
 import (
 	"strconv"
+	"strings"
 
 	"ballerina-lang-go/decimal"
 	"ballerina-lang-go/model"
@@ -170,8 +171,9 @@ func coerceSegment(tc semtypes.Context, segTy semtypes.SemType, s string) (value
 			if s != decodeBalIdentifier(lit) {
 				return nil, false
 			}
-			// Return the stored literal so its singleton type matches the entry.
-			return lit, true
+			// s is already the decoded literal text (equal to decodeBalIdentifier(lit));
+			// return it rather than the raw, possibly escaped source token.
+			return s, true
 		}
 	}
 	if semtypes.IsSubtype(tc, semtypes.INT, segTy) {
@@ -196,10 +198,12 @@ func coerceSegment(tc semtypes.Context, segTy semtypes.SemType, s string) (value
 		return d, true
 	}
 	if semtypes.IsSubtype(tc, semtypes.BOOLEAN, segTy) {
-		switch s {
-		case "true":
+		// Matches lang.boolean:fromString's accepted range for consistency
+		// with the other typed path parameters.
+		switch strings.ToLower(s) {
+		case "true", "1":
 			return true, true
-		case "false":
+		case "false", "0":
 			return false, true
 		}
 		return nil, false

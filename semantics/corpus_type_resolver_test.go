@@ -33,13 +33,6 @@ import (
 var typeResolverSkipList = []string{
 	// https://github.com/ballerina-platform/ballerina-lang-go/issues/417
 	"subset8/08-xml/namespace12-v.bal",
-	// The standalone type-resolver pipeline cannot resolve the ballerina/os
-	// package, whose Process.output method has a cross-module imported-value
-	// default parameter (io:stdout). The full integration pipeline compiles and
-	// runs these fine (see corpus/integration/os-*); only this single-file
-	// resolver path is affected.
-	"os-env1-v.bal",
-	"os-setenv1-v.bal",
 }
 
 func TestTypeResolver(t *testing.T) {
