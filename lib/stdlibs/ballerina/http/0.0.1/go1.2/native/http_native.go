@@ -1615,6 +1615,7 @@ type gzipReadCloser struct {
 	reader     *gzip.Reader
 	underlying io.ReadCloser
 	started    bool
+	initErr    error
 }
 
 func (g *gzipReadCloser) Read(p []byte) (int, error) {
@@ -1622,9 +1623,13 @@ func (g *gzipReadCloser) Read(p []byte) (int, error) {
 		g.started = true
 		gr, err := gzip.NewReader(g.underlying)
 		if err != nil {
+			g.initErr = err
 			return 0, err
 		}
 		g.reader = gr
+	}
+	if g.initErr != nil {
+		return 0, g.initErr
 	}
 	return g.reader.Read(p)
 }
