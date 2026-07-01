@@ -623,6 +623,12 @@ func constantToDecimal(value values.BalValue) (values.BalValue, error) {
 	case int64:
 		return decimal.FromInt64(value), nil
 	case float64:
+		if math.IsInf(value, 0) {
+			return nil, fmt.Errorf("arithmetic overflow")
+		}
+		if math.IsNaN(value) {
+			return nil, fmt.Errorf("not a valid decimal")
+		}
 		result, err := decimal.FromFloat64(value)
 		if err != nil {
 			return nil, errors.New(err.Error())

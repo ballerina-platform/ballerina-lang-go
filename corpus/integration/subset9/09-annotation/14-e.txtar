@@ -1,6 +1,12 @@
 -- stdout --
 -- stderr --
 error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: arithmetic overflow
+  --> 14-e.bal:54:14
+   |
+54 | @decimalInfo {value: 9.999999999999999999999999999999999E6144d * 2d} // @error
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: arithmetic overflow
   --> 14-e.bal:75:14
    |
 75 | @decimalInfo {value: <decimal>(1.0 / 0.0)} // @error
@@ -101,9 +107,3 @@ error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: integer o
    |
 48 | @intInfo {value: (-9223372036854775807 - 1) / -1} // @error
    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-error[SEMANTIC_ERROR]: cannot evaluate annotation constant expression: not a valid decimal
-  --> 14-e.bal:54:14
-   |
-54 | @decimalInfo {value: 9.999999999999999999999999999999999E6144d * 2d} // @error
-   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
