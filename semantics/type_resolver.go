@@ -1238,7 +1238,8 @@ func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbo
 				if pname == name {
 					t.semanticError(
 						fmt.Sprintf("parameter '%s' conflicts with field of included record parameter '%s'", name, paramNames[i]),
-						param.GetPosition())
+						param.GetPosition(),
+					)
 					return false
 				}
 			}
@@ -1247,14 +1248,16 @@ func validateIncludedRecordParams(t typeResolver, fn *ast.BLangFunction, fnSymbo
 				if restParam.GetName().GetValue() == name {
 					t.semanticError(
 						fmt.Sprintf("parameter '%s' conflicts with field of included record parameter '%s'", name, paramNames[i]),
-						param.GetPosition())
+						param.GetPosition(),
+					)
 					return false
 				}
 			}
 			if prev, seen := fieldOrigin[name]; seen {
 				t.semanticError(
 					fmt.Sprintf("duplicate field '%s' in included record parameters '%s' and '%s'", name, paramNames[prev], paramNames[i]),
-					param.GetPosition())
+					param.GetPosition(),
+				)
 				return false
 			}
 			fieldOrigin[name] = i
@@ -5510,7 +5513,8 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				case *mappingSlot:
 					t.semanticError(
 						fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
-						a.GetPosition())
+						a.GetPosition(),
+					)
 					return nil, chain, false
 				}
 				slots[idx] = &valueSlot{expr: a.Expr}
@@ -5537,7 +5541,8 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 				case *valueSlot:
 					t.semanticError(
 						fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[idx]),
-						a.GetPosition())
+						a.GetPosition(),
+					)
 					return nil, chain, false
 				case *mappingSlot:
 					s.fields = append(s.fields, mappingField{name: name, expr: a.Expr})
@@ -5563,7 +5568,8 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 			case *mappingSlot:
 				t.semanticError(
 					fmt.Sprintf("record value and field-level arguments for the same included record parameter '%s'", paramNames[i]),
-					arg.GetPosition())
+					arg.GetPosition(),
+				)
 				return nil, chain, false
 			}
 		}

@@ -71,7 +71,8 @@ func TestPackageResolution_PackageNotFound(t *testing.T) {
 	version, err := projects.NewPackageVersionFromString("1.0.0")
 	require.NoError(err)
 
-	resp := env.PackageResolver().ResolvePackages(context.Background(),
+	resp := env.PackageResolver().ResolvePackages(
+		context.Background(),
 		[]projects.ResolutionRequest{
 			projects.NewResolutionRequest(projects.NewPackageDescriptor(
 				projects.NewPackageOrg("missingorg"),
@@ -344,8 +345,8 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	// Step 5: Verify external packages were resolved and cached during compilation.
 	// middlepkg declares aaaleafpkg and leafpkg as direct deps; with the main
 	// project that's 4 packages, plus the always-compiled implicit lang libs
-	// (lang.int, lang.boolean, lang.decimal, lang.error, lang.string, lang.value,
-	// lang.xml, lang.float, lang.array, lang.map, lang.runtime), giving 15 packages total in the cache.
+	// (lang.int, lang.boolean, lang.decimal, lang.error, lang.string, lang.float, lang.value,
+	// lang.xml, lang.array, lang.map, lang.runtime), giving 15 packages total in the cache.
 	assert.Equal(15, env.PackageCache().Size(), "expected 15 packages in cache after compilation")
 
 	cachedMiddle := env.PackageCache().Get("mockorg", "middlepkg", "1.0.0")

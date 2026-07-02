@@ -14,18 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions float function-call-expr method-call-expr local-var-decl-stmt lang-float-round
-import ballerina/io;
-
 public function main() {
-    io:println((2.5).round());    // @output 2.0
-    io:println((3.5).round());    // @output 4.0
-    io:println((-2.5).round());   // @output -2.0
-    io:println((2.4).round());    // @output 2.0
-    io:println((2.6).round());    // @output 3.0
-    io:println((0.0).round());    // @output 0.0
-    io:println((-0.0).round());   // @output -0.0
-    io:println((1.0 / 0.0).round());   // @output Infinity
-    io:println((-1.0 / 0.0).round());  // @output -Infinity
-    io:println((0.0 / 0.0).round());   // @output NaN
+    _ = (12.456).toFixedString(-1); // @panic fractionDigits must be non-negative
 }

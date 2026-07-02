@@ -1,0 +1,752 @@
+module $anon.. v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = %1;
+    %3 = isFinite(%2) -> bb1;
+  }
+  bb1 {
+    %4 = %3;
+    %5 = println(%4) -> bb2;
+  }
+  bb2 {
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = isFinite(%7) -> bb3;
+  }
+  bb3 {
+    %9 = %8;
+    %10 = println(%9) -> bb4;
+  }
+  bb4 {
+    %11 = isInfinite(Infinity) -> bb5;
+  }
+  bb5 {
+    %12 = %11;
+    %13 = println(%12) -> bb6;
+  }
+  bb6 {
+    %14 = isNaN(NaN) -> bb7;
+  }
+  bb7 {
+    %15 = %14;
+    %16 = println(%15) -> bb8;
+  }
+  bb8 {
+    %17 = sum() -> bb9;
+  }
+  bb9 {
+    %18 = %17;
+    %19 = println(%18) -> bb10;
+  }
+  bb10 {
+    %20 = ConstantLoad 1.5
+    %21 = %20;
+    %22 = ConstantLoad 2.25
+    %23 = %22;
+    %24 = ConstantLoad 0.75
+    %25 = unknown %24;
+    %26 = %25;
+    %27 = sum(%21,%23,%26) -> bb11;
+  }
+  bb11 {
+    %28 = %27;
+    %29 = println(%28) -> bb12;
+  }
+  bb12 {
+    %30 = max() -> bb13;
+  }
+  bb13 {
+    %31 = %30;
+    %32 = println(%31) -> bb14;
+  }
+  bb14 {
+    %33 = ConstantLoad 1.5
+    %34 = %33;
+    %35 = ConstantLoad 2.25
+    %36 = %35;
+    %37 = ConstantLoad 0.75
+    %38 = unknown %37;
+    %39 = %38;
+    %40 = max(%34,%36,%39) -> bb15;
+  }
+  bb15 {
+    %41 = %40;
+    %42 = println(%41) -> bb16;
+  }
+  bb16 {
+    %43 = min() -> bb17;
+  }
+  bb17 {
+    %44 = %43;
+    %45 = println(%44) -> bb18;
+  }
+  bb18 {
+    %46 = ConstantLoad 1.5
+    %47 = %46;
+    %48 = ConstantLoad 2.25
+    %49 = %48;
+    %50 = ConstantLoad 0.75
+    %51 = unknown %50;
+    %52 = %51;
+    %53 = min(%47,%49,%52) -> bb19;
+  }
+  bb19 {
+    %54 = %53;
+    %55 = println(%54) -> bb20;
+  }
+  bb20 {
+    %56 = ConstantLoad 1.25
+    %57 = unknown %56;
+    %58 = %57;
+    %59 = abs(%58) -> bb21;
+  }
+  bb21 {
+    %60 = %59;
+    %61 = println(%60) -> bb22;
+  }
+  bb22 {
+    %62 = ConstantLoad 0
+    $desugar$0 = %62;
+    %64 = $desugar$0;
+    %65 = $default$0(%64) -> bb23;
+  }
+  bb23 {
+    $desugar$1 = %65;
+    %67 = $desugar$0;
+    %68 = $desugar$1;
+    %69 = round(%67,%68) -> bb24;
+  }
+  bb24 {
+    %70 = %69;
+    %71 = println(%70) -> bb25;
+  }
+  bb25 {
+    $desugar$2 = NaN;
+    %73 = $desugar$2;
+    %74 = $default$0(%73) -> bb26;
+  }
+  bb26 {
+    $desugar$3 = %74;
+    %76 = $desugar$2;
+    %77 = $desugar$3;
+    %78 = round(%76,%77) -> bb27;
+  }
+  bb27 {
+    %79 = %78;
+    %80 = isNaN(%79) -> bb28;
+  }
+  bb28 {
+    %81 = %80;
+    %82 = println(%81) -> bb29;
+  }
+  bb29 {
+    $desugar$4 = Infinity;
+    %84 = $desugar$4;
+    %85 = $default$0(%84) -> bb30;
+  }
+  bb30 {
+    $desugar$5 = %85;
+    %87 = $desugar$4;
+    %88 = $desugar$5;
+    %89 = round(%87,%88) -> bb31;
+  }
+  bb31 {
+    %90 = %89;
+    %91 = println(%90) -> bb32;
+  }
+  bb32 {
+    %92 = ConstantLoad 2.5
+    $desugar$6 = %92;
+    %94 = $desugar$6;
+    %95 = $default$0(%94) -> bb33;
+  }
+  bb33 {
+    $desugar$7 = %95;
+    %97 = $desugar$6;
+    %98 = $desugar$7;
+    %99 = round(%97,%98) -> bb34;
+  }
+  bb34 {
+    %100 = %99;
+    %101 = println(%100) -> bb35;
+  }
+  bb35 {
+    %102 = ConstantLoad 3.5
+    $desugar$8 = %102;
+    %104 = $desugar$8;
+    %105 = $default$0(%104) -> bb36;
+  }
+  bb36 {
+    $desugar$9 = %105;
+    %107 = $desugar$8;
+    %108 = $desugar$9;
+    %109 = round(%107,%108) -> bb37;
+  }
+  bb37 {
+    %110 = %109;
+    %111 = println(%110) -> bb38;
+  }
+  bb38 {
+    %112 = ConstantLoad 4.55555
+    %113 = %112;
+    %114 = ConstantLoad 3
+    %115 = %114;
+    %116 = round(%113,%115) -> bb39;
+  }
+  bb39 {
+    %117 = %116;
+    %118 = println(%117) -> bb40;
+  }
+  bb40 {
+    %119 = ConstantLoad 1.2345
+    %120 = %119;
+    %121 = ConstantLoad 400
+    %122 = %121;
+    %123 = round(%120,%122) -> bb41;
+  }
+  bb41 {
+    %124 = %123;
+    %125 = println(%124) -> bb42;
+  }
+  bb42 {
+    %126 = ConstantLoad 1.2345
+    %127 = %126;
+    %128 = ConstantLoad 400
+    %129 = unknown %128;
+    %130 = %129;
+    %131 = round(%127,%130) -> bb43;
+  }
+  bb43 {
+    %132 = %131;
+    %133 = println(%132) -> bb44;
+  }
+  bb44 {
+    %134 = ConstantLoad 1.2345
+    %135 = unknown %134;
+    %136 = %135;
+    %137 = ConstantLoad 309
+    %138 = unknown %137;
+    %139 = %138;
+    %140 = round(%136,%139) -> bb45;
+  }
+  bb45 {
+    %141 = %140;
+    %142 = println(%141) -> bb46;
+  }
+  bb46 {
+    %143 = ConstantLoad 1.79e+308
+    %144 = %143;
+    %145 = ConstantLoad 1
+    %146 = unknown %145;
+    %147 = %146;
+    %148 = round(%144,%147) -> bb47;
+  }
+  bb47 {
+    %149 = %148;
+    %150 = println(%149) -> bb48;
+  }
+  bb48 {
+    %151 = ConstantLoad 1.79e+308
+    %152 = %151;
+    %153 = ConstantLoad 1
+    %154 = %153;
+    %155 = round(%152,%154) -> bb49;
+  }
+  bb49 {
+    %156 = %155;
+    %157 = println(%156) -> bb50;
+  }
+  bb50 {
+    %158 = ConstantLoad 1.2
+    %159 = unknown %158;
+    %160 = %159;
+    %161 = floor(%160) -> bb51;
+  }
+  bb51 {
+    %162 = %161;
+    %163 = println(%162) -> bb52;
+  }
+  bb52 {
+    %164 = ConstantLoad 1.2
+    %165 = unknown %164;
+    %166 = %165;
+    %167 = ceiling(%166) -> bb53;
+  }
+  bb53 {
+    %168 = %167;
+    %169 = println(%168) -> bb54;
+  }
+  bb54 {
+    %170 = ConstantLoad 4
+    %171 = %170;
+    %172 = sqrt(%171) -> bb55;
+  }
+  bb55 {
+    %173 = %172;
+    %174 = println(%173) -> bb56;
+  }
+  bb56 {
+    %175 = ConstantLoad 0.125
+    %176 = %175;
+    %177 = cbrt(%176) -> bb57;
+  }
+  bb57 {
+    %178 = %177;
+    %179 = println(%178) -> bb58;
+  }
+  bb58 {
+    %180 = ConstantLoad 2
+    %181 = %180;
+    %182 = ConstantLoad 3
+    %183 = %182;
+    %184 = pow(%181,%183) -> bb59;
+  }
+  bb59 {
+    %185 = %184;
+    %186 = println(%185) -> bb60;
+  }
+  bb60 {
+    %187 = ConstantLoad 1
+    %188 = %187;
+    %189 = log(%188) -> bb61;
+  }
+  bb61 {
+    %190 = %189;
+    %191 = println(%190) -> bb62;
+  }
+  bb62 {
+    %192 = ConstantLoad 10
+    %193 = %192;
+    %194 = log10(%193) -> bb63;
+  }
+  bb63 {
+    %195 = %194;
+    %196 = println(%195) -> bb64;
+  }
+  bb64 {
+    %197 = ConstantLoad 0
+    %198 = %197;
+    %199 = exp(%198) -> bb65;
+  }
+  bb65 {
+    %200 = %199;
+    %201 = println(%200) -> bb66;
+  }
+  bb66 {
+    %202 = ConstantLoad 0
+    %203 = %202;
+    %204 = sin(%203) -> bb67;
+  }
+  bb67 {
+    %205 = %204;
+    %206 = println(%205) -> bb68;
+  }
+  bb68 {
+    %207 = ConstantLoad 0
+    %208 = %207;
+    %209 = cos(%208) -> bb69;
+  }
+  bb69 {
+    %210 = %209;
+    %211 = println(%210) -> bb70;
+  }
+  bb70 {
+    %212 = ConstantLoad 0
+    %213 = %212;
+    %214 = tan(%213) -> bb71;
+  }
+  bb71 {
+    %215 = %214;
+    %216 = println(%215) -> bb72;
+  }
+  bb72 {
+    %217 = ConstantLoad 1
+    %218 = %217;
+    %219 = acos(%218) -> bb73;
+  }
+  bb73 {
+    %220 = %219;
+    %221 = println(%220) -> bb74;
+  }
+  bb74 {
+    %222 = ConstantLoad 0
+    %223 = %222;
+    %224 = atan(%223) -> bb75;
+  }
+  bb75 {
+    %225 = %224;
+    %226 = println(%225) -> bb76;
+  }
+  bb76 {
+    %227 = ConstantLoad 0
+    %228 = %227;
+    %229 = asin(%228) -> bb77;
+  }
+  bb77 {
+    %230 = %229;
+    %231 = println(%230) -> bb78;
+  }
+  bb78 {
+    %232 = ConstantLoad 0
+    %233 = %232;
+    %234 = ConstantLoad 1
+    %235 = %234;
+    %236 = atan2(%233,%235) -> bb79;
+  }
+  bb79 {
+    %237 = %236;
+    %238 = println(%237) -> bb80;
+  }
+  bb80 {
+    %239 = ConstantLoad 0
+    %240 = %239;
+    %241 = sinh(%240) -> bb81;
+  }
+  bb81 {
+    %242 = %241;
+    %243 = println(%242) -> bb82;
+  }
+  bb82 {
+    %244 = ConstantLoad 0
+    %245 = %244;
+    %246 = cosh(%245) -> bb83;
+  }
+  bb83 {
+    %247 = %246;
+    %248 = println(%247) -> bb84;
+  }
+  bb84 {
+    %249 = ConstantLoad 0
+    %250 = %249;
+    %251 = tanh(%250) -> bb85;
+  }
+  bb85 {
+    %252 = %251;
+    %253 = println(%252) -> bb86;
+  }
+  bb86 {
+    %254 = ConstantLoad +12.5
+    %255 = fromString(%254) -> bb87;
+  }
+  bb87 {
+    parsed = %255;
+    %257 = parsed is float
+    %257 ? bb88 : bb90;
+  }
+  bb88 {
+    PushScopeFrame 1
+    %0 = println((1, parsed)) -> bb89;
+  }
+  bb89 {
+    PopScopeFrame
+    GOTO bb90;
+  }
+  bb90 {
+    PushScopeFrame 166
+    %0 = ConstantLoad 0x1p0
+    %1 = fromString(%0) -> bb91;
+  }
+  bb91 {
+    %2 = %1 is error
+    %3 = %2;
+    %4 = println(%3) -> bb92;
+  }
+  bb92 {
+    %5 = ConstantLoad 1_000.0
+    %6 = fromString(%5) -> bb93;
+  }
+  bb93 {
+    %7 = %6 is error
+    %8 = %7;
+    %9 = println(%8) -> bb94;
+  }
+  bb94 {
+    %10 = ConstantLoad Inf
+    %11 = fromString(%10) -> bb95;
+  }
+  bb95 {
+    %12 = %11 is error
+    %13 = %12;
+    %14 = println(%13) -> bb96;
+  }
+  bb96 {
+    %15 = ConstantLoad inf
+    %16 = fromString(%15) -> bb97;
+  }
+  bb97 {
+    %17 = %16 is error
+    %18 = %17;
+    %19 = println(%18) -> bb98;
+  }
+  bb98 {
+    %20 = ConstantLoad Infinity
+    %21 = fromString(%20) -> bb99;
+  }
+  bb99 {
+    %22 = %21 is error
+    %23 = %22;
+    %24 = println(%23) -> bb100;
+  }
+  bb100 {
+    %25 = ConstantLoad 1.
+    %26 = fromString(%25) -> bb101;
+  }
+  bb101 {
+    %27 = %26 is error
+    %28 = %27;
+    %29 = println(%28) -> bb102;
+  }
+  bb102 {
+    %30 = ConstantLoad 1f
+    %31 = fromString(%30) -> bb103;
+  }
+  bb103 {
+    %32 = %31 is error
+    %33 = %32;
+    %34 = println(%33) -> bb104;
+  }
+  bb104 {
+    %35 = ConstantLoad bad
+    %36 = fromString(%35) -> bb105;
+  }
+  bb105 {
+    %37 = %36 is error
+    %38 = %37;
+    %39 = println(%38) -> bb106;
+  }
+  bb106 {
+    %40 = ConstantLoad 10.2453
+    %41 = unknown %40;
+    %42 = %41;
+    %43 = toHexString(%42) -> bb107;
+  }
+  bb107 {
+    %44 = println(%43) -> bb108;
+  }
+  bb108 {
+    %45 = toHexString(Infinity) -> bb109;
+  }
+  bb109 {
+    %46 = println(%45) -> bb110;
+  }
+  bb110 {
+    %47 = ConstantLoad 1
+    %48 = %47;
+    %49 = toHexString(%48) -> bb111;
+  }
+  bb111 {
+    %50 = println(%49) -> bb112;
+  }
+  bb112 {
+    %51 = ConstantLoad 0.5
+    %52 = %51;
+    %53 = toHexString(%52) -> bb113;
+  }
+  bb113 {
+    %54 = println(%53) -> bb114;
+  }
+  bb114 {
+    %55 = ConstantLoad 0x1.0a3d70a3d70a4p4
+    %56 = fromHexString(%55) -> bb115;
+  }
+  bb115 {
+    %57 = println(%56) -> bb116;
+  }
+  bb116 {
+    %58 = ConstantLoad 0x1.0
+    %59 = fromHexString(%58) -> bb117;
+  }
+  bb117 {
+    %60 = println(%59) -> bb118;
+  }
+  bb118 {
+    %61 = ConstantLoad 0x1.
+    %62 = fromHexString(%61) -> bb119;
+  }
+  bb119 {
+    %63 = %62 is error
+    %64 = %63;
+    %65 = println(%64) -> bb120;
+  }
+  bb120 {
+    %66 = ConstantLoad 0x1
+    %67 = fromHexString(%66) -> bb121;
+  }
+  bb121 {
+    %68 = %67 is error
+    %69 = %68;
+    %70 = println(%69) -> bb122;
+  }
+  bb122 {
+    %71 = ConstantLoad 12.5
+    %72 = fromHexString(%71) -> bb123;
+  }
+  bb123 {
+    %73 = %72 is error
+    %74 = %73;
+    %75 = println(%74) -> bb124;
+  }
+  bb124 {
+    %76 = ConstantLoad 0x1J
+    %77 = fromHexString(%76) -> bb125;
+  }
+  bb125 {
+    %78 = %77 is error
+    %79 = %78;
+    %80 = println(%79) -> bb126;
+  }
+  bb126 {
+    %81 = ConstantLoad 4.16
+    %82 = %81;
+    %83 = toBitsInt(%82) -> bb127;
+  }
+  bb127 {
+    %84 = %83;
+    %85 = println(%84) -> bb128;
+  }
+  bb128 {
+    %86 = ConstantLoad 4
+    %87 = %86;
+    %88 = fromBitsInt(%87) -> bb129;
+  }
+  bb129 {
+    %89 = %88;
+    %90 = println(%89) -> bb130;
+  }
+  bb130 {
+    %91 = ConstantLoad 9221120237041090561
+    %92 = %91;
+    %93 = fromBitsInt(%92) -> bb131;
+  }
+  bb131 {
+    %94 = %93;
+    %95 = isNaN(%94) -> bb132;
+  }
+  bb132 {
+    %96 = %95;
+    %97 = println(%96) -> bb133;
+  }
+  bb133 {
+    %98 = ConstantLoad 12.456
+    %99 = %98;
+    %100 = ConstantLoad 2
+    %101 = %100;
+    %102 = toFixedString(%99,%101) -> bb134;
+  }
+  bb134 {
+    %103 = println(%102) -> bb135;
+  }
+  bb135 {
+    %104 = ConstantLoad 12.456
+    %105 = %104;
+    %106 = ConstantLoad <nil>
+    %107 = %106;
+    %108 = toFixedString(%105,%107) -> bb136;
+  }
+  bb136 {
+    %109 = println(%108) -> bb137;
+  }
+  bb137 {
+    %110 = ConstantLoad 1
+    %111 = %110;
+    %112 = ConstantLoad <nil>
+    %113 = %112;
+    %114 = toFixedString(%111,%113) -> bb138;
+  }
+  bb138 {
+    %115 = println(%114) -> bb139;
+  }
+  bb139 {
+    %116 = ConstantLoad 2
+    %117 = %116;
+    %118 = toFixedString(Infinity,%117) -> bb140;
+  }
+  bb140 {
+    %119 = println(%118) -> bb141;
+  }
+  bb141 {
+    %120 = ConstantLoad 12.456
+    %121 = %120;
+    %122 = ConstantLoad 2
+    %123 = %122;
+    %124 = toExpString(%121,%123) -> bb142;
+  }
+  bb142 {
+    %125 = println(%124) -> bb143;
+  }
+  bb143 {
+    %126 = ConstantLoad 12.456
+    %127 = %126;
+    %128 = ConstantLoad <nil>
+    %129 = %128;
+    %130 = toExpString(%127,%129) -> bb144;
+  }
+  bb144 {
+    %131 = println(%130) -> bb145;
+  }
+  bb145 {
+    %132 = ConstantLoad 1
+    %133 = %132;
+    %134 = ConstantLoad <nil>
+    %135 = %134;
+    %136 = toExpString(%133,%135) -> bb146;
+  }
+  bb146 {
+    %137 = println(%136) -> bb147;
+  }
+  bb147 {
+    %138 = ConstantLoad 2
+    %139 = %138;
+    %140 = toExpString(NaN,%139) -> bb148;
+  }
+  bb148 {
+    %141 = println(%140) -> bb149;
+  }
+  bb149 {
+    %142 = ConstantLoad 1
+    %143 = %142;
+    %144 = ConstantLoad 0
+    %145 = %144;
+    %146 = toExpString(%143,%145) -> bb150;
+  }
+  bb150 {
+    %147 = println(%146) -> bb151;
+  }
+  bb151 {
+    %148 = ConstantLoad 0.001
+    %149 = %148;
+    %150 = ConstantLoad <nil>
+    %151 = %150;
+    %152 = toExpString(%149,%151) -> bb152;
+  }
+  bb152 {
+    %153 = println(%152) -> bb153;
+  }
+  bb153 {
+    %154 = ConstantLoad 2
+    %155 = %154;
+    %156 = ConstantLoad 4
+    %157 = %156;
+    %158 = avg(%155,%157) -> bb154;
+  }
+  bb154 {
+    %159 = %158;
+    %160 = println(%159) -> bb155;
+  }
+  bb155 {
+    %161 = avg() -> bb156;
+  }
+  bb156 {
+    %162 = %161;
+    %163 = isNaN(%162) -> bb157;
+  }
+  bb157 {
+    %164 = %163;
+    %165 = println(%164) -> bb158;
+  }
+  bb158 {
+    PopScopeFrame
+    return;
+  }
+}
