@@ -69,9 +69,30 @@ If every row is "No risk identified", say so and move on.
 
 You are editing existing files, **not** creating new ones. In particular:
 
-- **Do not** create new manifest files (`Ballerina.toml`, `Bala.toml`, `Dependencies.toml` already exist).
+- **Do not** create new manifest files (`Ballerina.toml`, `Bala.toml` already exist).
 - **Do not** modify `lib/rt/libs.go` — the blank import is already there.
 - **Do not** modify `test_util/testphases/phases.go` — the `builtinStdlibs` entry is already there.
+- **Exception — `Dependencies.toml`**: if the gap being filled adds a new `import ballerina/<dep>;` to the `.bal` source that was not there before, you **must** update `Dependencies.toml` to declare the dependency. Add one `[[package]]` entry for each new stdlib import, then add a `dependencies = [...]` field on this package's own entry. Without this, the project resolver's BFS will not compile the dependency before this package, causing `Unknown import: ballerina/<dep>` at runtime. Example:
+
+  ```toml
+  [ballerina]
+  dependencies-toml-version = "2"
+
+  [[package]]
+  org     = "ballerina"
+  name    = "<dep>"
+  version = "0.0.1"
+
+  [[package]]
+  org     = "ballerina"
+  name    = "<this-package>"
+  version = "0.0.1"
+  dependencies = [
+      {org = "ballerina", name = "<dep>"}
+  ]
+  ```
+
+  Also ensure `<dep>` appears before `<this-package>` in the `builtinStdlibs` list in `test_util/testphases/phases.go` (it almost certainly already does, but verify).
 
 What you *do* edit:
 
@@ -134,6 +155,7 @@ Update the README row via the **`stdlib-readme-format`** skill:
 - [ ] `lib/stdlibs/ballerina/README.md` aggregator updated (package row recounted, Total footer recomputed, behavioural changes mirrored if any changed).
 - [ ] `stdlib-readme-format` validation checklist passes.
 - [ ] Any unavoidable divergence is in **Notable Behavioural Changes**.
+- [ ] If a new `import ballerina/<dep>` was added to the `.bal` source: `Dependencies.toml` updated with the new entry and `dependencies = [...]` field.
 - [ ] PAL fields (if any added) implemented in `palnative/` and wired into `TestPal`.
 
 ### Final report
