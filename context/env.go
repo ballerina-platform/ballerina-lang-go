@@ -85,11 +85,12 @@ func (c *CompilerEnvironment) SetSymbolAnnotationValue(symbol model.SymbolRef, k
 	actual.(values.AnnotationValues)[key] = value
 }
 
-// SymbolAnnotationValues returns a copy of the annotation values for the given
-// symbol, or an empty set if it has none.
+// SymbolAnnotationValues returns the annotation values for the given symbol, or
+// an empty set if it has none. Callers should treat the returned map as
+// read-only compiler metadata.
 func (c *CompilerEnvironment) SymbolAnnotationValues(symbol model.SymbolRef) values.AnnotationValues {
 	if av, ok := c.symbolAnnotations.Load(symbol); ok {
-		return av.(values.AnnotationValues).Clone()
+		return av.(values.AnnotationValues)
 	}
 	return values.NewAnnotationValues()
 }

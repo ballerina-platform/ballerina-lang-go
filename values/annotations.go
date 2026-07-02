@@ -39,13 +39,3 @@ func (r *RuntimeAnnotationValueRef) GlobalLookupKey() string {
 func NewAnnotationValues() AnnotationValues {
 	return make(AnnotationValues)
 }
-
-// Clone returns a shallow copy so callers can read annotation maps without
-// sharing mutable ownership with compiler environment or runtime typedesc state.
-func (values AnnotationValues) Clone() AnnotationValues {
-	result := NewAnnotationValues()
-	for key, value := range values {
-		result[key] = value
-	}
-	return result
-}

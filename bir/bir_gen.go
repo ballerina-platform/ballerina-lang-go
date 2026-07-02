@@ -1020,7 +1020,7 @@ func handleActionOrExpression(ctx context, curBB *BIRBasicBlock, expr ast.BLangA
 
 func typedescExpression(ctx context, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	td := values.NewTypeDesc(expr.Constraint, expr.AnnotationValues.Clone())
+	td := values.NewTypeDesc(expr.Constraint, expr.AnnotationValues)
 	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.function().loc(expr.GetPosition())))
 	return expressionEffect{
 		result: resultOperand,
