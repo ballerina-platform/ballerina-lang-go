@@ -152,13 +152,6 @@ type responseBodyHolder struct {
 	readErr error // set if the stream returned an error during materialization
 }
 
-func newResponseBodyHolder(stream io.ReadCloser) *responseBodyHolder {
-	if stream == nil {
-		return &responseBodyHolder{buf: []byte{}}
-	}
-	return &responseBodyHolder{stream: stream}
-}
-
 func (h *responseBodyHolder) materialize() ([]byte, error) {
 	h.once.Do(func() {
 		if h.stream != nil {
@@ -884,10 +877,13 @@ func initHttpModule(rt *runtime.Runtime) {
 	runtime.RegisterExternClassDef(rt, responseClassDef)
 
 	// Response write methods.
+	// initNative initialises internal fields not covered by Ballerina field defaults:
+	// $headers and body. statusCode is initialised to 200 by the field default in
+	// http.bal and must not be overridden here — doing so would mask any value the
+	// caller stored via direct field assignment before initNative runs.
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Response.initNative",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			self.Put("statusCode", int64(200))
 			self.Put("$headers", newMappingValue(ctx.TypeCtx))
 			self.Put("body", &responseBodyHolder{buf: []byte{}})
 			return nil, nil
@@ -1495,6 +1491,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			}
 			return newTypedListValue(ctx.TypeCtx, types.strArrTy, items), nil
 		})
+
+	// Server-side: register the http:Listener class and its native methods.
+	registerListenerExterns(rt)
 }
 
 // splitOutsideQuotes splits s on every occurrence of sep that is not inside a
@@ -1602,10 +1601,8 @@ func decompressResponseBody(headers map[string][]string, body io.ReadCloser) io.
 		enc := strings.ToLower(strings.TrimSpace(vals[0]))
 		switch enc {
 		case "gzip":
-			if gr, err := gzip.NewReader(body); err == nil {
-				delete(headers, k)
-				return &gzipReadCloser{reader: gr, underlying: body}
-			}
+			delete(headers, k)
+			return &gzipReadCloser{underlying: body}
 		case "deflate":
 			delete(headers, k)
 			return &deflateReadCloser{reader: flate.NewReader(body), underlying: body}
@@ -1615,14 +1612,38 @@ func decompressResponseBody(headers map[string][]string, body io.ReadCloser) io.
 	return body
 }
 
+// gzipReadCloser lazily creates the gzip reader on first Read. Deferring
+// gzip.NewReader (which parses the header eagerly) means a malformed gzip stream
+// surfaces as a read error to the payload getters — via responseBodyHolder.readErr
+// — instead of being silently passed through as raw compressed bytes. This mirrors
+// the deflate path and jBallerina's lazy Netty decompression.
 type gzipReadCloser struct {
 	reader     *gzip.Reader
 	underlying io.ReadCloser
+	started    bool
+	initErr    error
 }
 
-func (g *gzipReadCloser) Read(p []byte) (int, error) { return g.reader.Read(p) }
+func (g *gzipReadCloser) Read(p []byte) (int, error) {
+	if !g.started {
+		g.started = true
+		gr, err := gzip.NewReader(g.underlying)
+		if err != nil {
+			g.initErr = err
+			return 0, err
+		}
+		g.reader = gr
+	}
+	if g.initErr != nil {
+		return 0, g.initErr
+	}
+	return g.reader.Read(p)
+}
+
 func (g *gzipReadCloser) Close() error {
-	_ = g.reader.Close()
+	if g.reader != nil {
+		_ = g.reader.Close()
+	}
 	return g.underlying.Close()
 }
 
