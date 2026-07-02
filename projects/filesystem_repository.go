@@ -23,6 +23,10 @@ import (
 	"io/fs"
 	"path"
 	"sort"
+	"strings"
+
+	"ballerina-lang-go/lib/langlibs"
+	"ballerina-lang-go/lib/stdlibs"
 )
 
 const (
@@ -34,6 +38,10 @@ const (
 	localRepoCacheSubpath = "repositories/local/bala"
 	// platformAny is the platform directory name for platform-independent packages.
 	platformAny = "any"
+	// platformGoPrefix marks platform directories that target a specific Go
+	// toolchain version (e.g. "go1.26"). Used as a fallback when no "any"
+	// directory is present.
+	platformGoPrefix = "go"
 )
 
 // bindableRepository is an internal interface for repositories that support late binding.
@@ -159,20 +167,55 @@ func (r *FileSystemRepository) Exists(ctx context.Context, org, name, version st
 	return found, nil
 }
 
+// findPlatformDir resolves the platform-specific subdirectory of a versioned
+// bala directory. Priority order:
+//  1. "any" — platform-agnostic balas win when present.
+//  2. First valid "go*" directory found — Go-targeted balas.
+//
+// A directory only qualifies when it contains either a Bala.toml (new format)
+// or a package.json (legacy v3 format) — the marker the bala loader uses to
+// dispatch.
 func (r *FileSystemRepository) findPlatformDir(versionDir string) (string, bool, error) {
-	platformPath := path.Join(versionDir, platformAny)
+	if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, platformAny)); err != nil {
+		return "", false, err
+	} else if ok {
+		return dir, true, nil
+	}
+
+	entries, err := fs.ReadDir(r.fsys, versionDir)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), platformGoPrefix) {
+			if dir, ok, err := r.checkPlatformDir(path.Join(versionDir, entry.Name())); err != nil {
+				return "", false, err
+			} else if ok {
+				return dir, true, nil
+			}
+		}
+	}
+	return "", false, nil
+}
+
+// checkPlatformDir returns (path, true, nil) when platformPath is a directory
+// holding a valid bala manifest (Bala.toml or legacy package.json).
+func (r *FileSystemRepository) checkPlatformDir(platformPath string) (string, bool, error) {
 	info, exists, err := statIfExists(r.fsys, platformPath)
 	if err != nil || !exists || !info.IsDir() {
 		return "", false, err
 	}
-
-	packageJSON := path.Join(platformPath, "package.json")
-	_, exists, err = statIfExists(r.fsys, packageJSON)
-	if err != nil || !exists {
-		return "", false, err
+	for _, marker := range []string{BalaTomlFile, "package.json"} {
+		if _, found, err := statIfExists(r.fsys, path.Join(platformPath, marker)); err != nil {
+			return "", false, err
+		} else if found {
+			return platformPath, true, nil
+		}
 	}
-
-	return platformPath, true, nil
+	return "", false, nil
 }
 
 // statIfExists returns (info, true, nil) if path exists, (nil, false, nil) if not found,
@@ -191,12 +234,25 @@ func statIfExists(fsys fs.FS, path string) (fs.FileInfo, bool, error) {
 var _ Repository = (*FileSystemRepository)(nil)
 var _ bindableRepository = (*FileSystemRepository)(nil)
 
-// defaultRepositories returns the default chain (central) and the custom-repo
-// registry (currently just "local") for the given ballerinaEnvFs.
+// defaultRepositories returns the default chain and the custom-repo registry
+// (currently just "local") for the given ballerinaEnvFs.
+// Bundled repositories (lang libs, std libs) are searched first so packages
+// baked into the binary resolve without touching the central cache.
 func defaultRepositories(ballerinaEnvFs fs.FS) ([]Repository, map[string]Repository) {
 	centralCache := NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath)
 	localCache := NewFileSystemRepository(ballerinaEnvFs, localRepoCacheSubpath)
-	chain := []Repository{NewRemoteRepository(centralCache)}
+	chain := append(bundledRepositories(), NewRemoteRepository(centralCache))
 	custom := map[string]Repository{"local": localCache}
 	return chain, custom
+}
+
+// bundledRepositories returns the repositories baked into the binary: the lang
+// libraries and the standard libraries. They are always searched first in the
+// default chain so these packages (e.g. ballerina/io) resolve without a
+// central cache hit.
+func bundledRepositories() []Repository {
+	return []Repository{
+		NewFileSystemRepository(langlibs.FS, "."),
+		NewFileSystemRepository(stdlibs.FS, "."),
+	}
 }
