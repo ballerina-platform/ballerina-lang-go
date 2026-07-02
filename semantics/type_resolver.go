@@ -3529,6 +3529,15 @@ func resolveForeachVariableType(t typeResolver, collection ast.BLangActionOrExpr
 	case semtypes.IsSubtype(ctx, collectionTy, semtypes.MAPPING):
 		return semtypes.MappingMemberTypeInnerVal(ctx, collectionTy, semtypes.STRING), true
 	default:
+		iterableTy, ok := getIterableType(t.compilerContext(), t.symbolType)
+		if !ok {
+			t.semanticError("foreach collection must be subtype of object:Iterable", collection.GetPosition())
+			return semtypes.SemType{}, false
+		}
+		if !semtypes.IsSubtype(ctx, collectionTy, iterableTy) {
+			t.semanticError("foreach collection must be subtype of object:Iterable", collection.GetPosition())
+			return semtypes.SemType{}, false
+		}
 		ld := semtypes.NewListDefinition()
 		emptyListTy := ld.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 		iteratorFnTy := semtypes.ObjectMemberType(ctx, semtypes.StringConst("iterator"), collectionTy)
