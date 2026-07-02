@@ -34,7 +34,7 @@ const (
 	StageImportResolution       CompilationStage = "Import Resolution"
 	StageSymbolResolution       CompilationStage = "Symbol Resolution"
 	StageTopLevelTypeResolution CompilationStage = "Top-Level Type Resolution"
-	StageLocalNodeResolution    CompilationStage = "Local Node Resolution"
+	StageLocalNodeResolution    CompilationStage = "Local Type Resolution"
 	StageSemanticAnalysis       CompilationStage = "Semantic Analysis"
 	StageCFGCreation            CompilationStage = "CFG Creation"
 	StageCFGAnalysis            CompilationStage = "CFG Analysis"

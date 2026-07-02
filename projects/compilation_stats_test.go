@@ -57,8 +57,8 @@ func TestFormatStatsReport(t *testing.T) {
 	assertContains(t, report, "Import Resolution")
 	assertContains(t, report, "Symbol Resolution")
 	assertContains(t, report, "Top-Level Type Resolution")
-	assertContains(t, report, "Analysis and Desugaring")
-	assertContains(t, report, "Local Node Resolution")
+	assertContains(t, report, "Analysis")
+	assertContains(t, report, "Local Type Resolution")
 	assertContains(t, report, "Semantic Analysis")
 	assertContains(t, report, "CFG Creation")
 	assertContains(t, report, "CFG Analysis")
@@ -78,7 +78,11 @@ func TestFormatStatsReportOneline(t *testing.T) {
 
 	assertContains(t, report, "Compilation Stats:")
 	assertContains(t, report, "Parse")
-	assertContains(t, report, "Analysis and Desugaring")
+	assertContains(t, report, "Local Type Resolution")
+	assertContains(t, report, "Semantic Analysis")
+	assertContains(t, report, "CFG Creation")
+	assertContains(t, report, "CFG Analysis")
+	assertContains(t, report, "Desugaring")
 	assertContains(t, report, "BIR Generation")
 	assertContains(t, report, "Total")
 
@@ -132,7 +136,7 @@ func TestFormatStatsReportPartialStages(t *testing.T) {
 
 	report := formatStatsReport(stats)
 	assertContains(t, report, "Parse")
-	assertContains(t, report, "Analysis and Desugaring")
+	assertContains(t, report, "Semantic Analysis")
 	assertContains(t, report, "Total")
 
 	if strings.Contains(report, "BIR Generation") {
