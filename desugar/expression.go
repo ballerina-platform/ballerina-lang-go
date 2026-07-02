@@ -421,7 +421,7 @@ func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) de
 		expr.Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
-	name := expr.Field.Value
+	name := expr.Field.GetValue()
 	lit := &ast.BLangLiteral{
 		Value:         name,
 		OriginalValue: name,
@@ -671,7 +671,7 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 		switch arg := arg.(type) {
 		case *ast.BLangNamedArgsExpression:
 			for j, name := range sig.ParamNames {
-				if name == arg.Name.Value {
+				if name == arg.Name.GetValue() {
 					reordered[j] = arg.Expr
 					break
 				}
@@ -1146,7 +1146,7 @@ func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConst
 
 		if kv.Key.Kind != ast.MappingKeyComputed {
 			if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
-				name := varRef.VariableName.Value
+				name := varRef.VariableName.GetValue()
 				lit := &ast.BLangLiteral{
 					Value:         name,
 					OriginalValue: name,
@@ -1231,14 +1231,14 @@ func createNilTypeTest(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty 
 	return typeTest
 }
 
-func createVarRef(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semtypes.SemType) *ast.BLangSimpleVarRef {
+func createVarRef(varName ast.IdentifierNode, symbol model.SymbolRef, ty semtypes.SemType) *ast.BLangSimpleVarRef {
 	ref := &ast.BLangSimpleVarRef{VariableName: varName}
 	ref.SetSymbol(symbol)
 	ref.SetDeterminedType(ty)
 	return ref
 }
 
-func createResultAssignment(resultVarName *ast.BLangIdentifier, resultSymbol model.SymbolRef, resultTy semtypes.SemType, valueExpr ast.BLangExpression, pos diagnostics.Location) *ast.BLangAssignment {
+func createResultAssignment(resultVarName ast.IdentifierNode, resultSymbol model.SymbolRef, resultTy semtypes.SemType, valueExpr ast.BLangExpression, pos diagnostics.Location) *ast.BLangAssignment {
 	varRef := createVarRef(resultVarName, resultSymbol, resultTy)
 	assign := &ast.BLangAssignment{
 		VarRef: varRef,

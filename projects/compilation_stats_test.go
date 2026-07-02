@@ -57,8 +57,8 @@ func TestFormatStatsReport(t *testing.T) {
 	assertContains(t, report, "Import Resolution")
 	assertContains(t, report, "Symbol Resolution")
 	assertContains(t, report, "Top-Level Type Resolution")
-	assertContains(t, report, "Analysis and Desugaring")
-	assertContains(t, report, "Local Node Resolution")
+	assertContains(t, report, "Analysis")
+	assertContains(t, report, "Local Type Resolution")
 	assertContains(t, report, "Semantic Analysis")
 	assertContains(t, report, "CFG Creation")
 	assertContains(t, report, "CFG Analysis")
@@ -78,7 +78,11 @@ func TestFormatStatsReportOneline(t *testing.T) {
 
 	assertContains(t, report, "Compilation Stats:")
 	assertContains(t, report, "Parse")
-	assertContains(t, report, "Analysis and Desugaring")
+	assertContains(t, report, "Local Type Resolution")
+	assertContains(t, report, "Semantic Analysis")
+	assertContains(t, report, "CFG Creation")
+	assertContains(t, report, "CFG Analysis")
+	assertContains(t, report, "Desugaring")
 	assertContains(t, report, "BIR Generation")
 	assertContains(t, report, "Total")
 
@@ -104,6 +108,21 @@ func TestFormatStatsReportEmpty(t *testing.T) {
 	}
 }
 
+func TestFindStageDurationSumsRepeatedStageEntries(t *testing.T) {
+	stats := &context.ModuleStats{
+		ModuleName: "multi-file/mod",
+		Stages: []context.StageTiming{
+			{Name: context.StageParse, Duration: 2 * time.Millisecond},
+			{Name: context.StageASTBuild, Duration: 10 * time.Millisecond},
+			{Name: context.StageParse, Duration: 3 * time.Millisecond},
+		},
+	}
+
+	if got := findStageDuration(stats, context.StageParse); got != 5*time.Millisecond {
+		t.Fatalf("expected repeated parse entries to be summed, got %s", got)
+	}
+}
+
 func TestFormatStatsReportPartialStages(t *testing.T) {
 	stats := []*context.ModuleStats{
 		{
@@ -117,7 +136,7 @@ func TestFormatStatsReportPartialStages(t *testing.T) {
 
 	report := formatStatsReport(stats)
 	assertContains(t, report, "Parse")
-	assertContains(t, report, "Analysis and Desugaring")
+	assertContains(t, report, "Semantic Analysis")
 	assertContains(t, report, "Total")
 
 	if strings.Contains(report, "BIR Generation") {

@@ -34,7 +34,7 @@ const (
 	StageImportResolution       CompilationStage = "Import Resolution"
 	StageSymbolResolution       CompilationStage = "Symbol Resolution"
 	StageTopLevelTypeResolution CompilationStage = "Top-Level Type Resolution"
-	StageLocalNodeResolution    CompilationStage = "Local Node Resolution"
+	StageLocalNodeResolution    CompilationStage = "Local Type Resolution"
 	StageSemanticAnalysis       CompilationStage = "Semantic Analysis"
 	StageCFGCreation            CompilationStage = "CFG Creation"
 	StageCFGAnalysis            CompilationStage = "CFG Analysis"
@@ -118,6 +118,14 @@ func (c *CompilerContext) SymbolName(symbol model.SymbolRef) string {
 
 func (c *CompilerContext) SymbolType(symbol model.SymbolRef) semtypes.SemType {
 	return c.env.GetSymbol(symbol).Type()
+}
+
+func (c *CompilerContext) SymbolLocation(symbol model.SymbolRef) diagnostics.Location {
+	return c.env.SymbolLocation(symbol)
+}
+
+func (c *CompilerContext) SetSymbolLocation(symbol model.SymbolRef, location diagnostics.Location) {
+	c.env.SetSymbolLocation(symbol, location)
 }
 
 func (c *CompilerContext) SymbolKind(symbol model.SymbolRef) model.SymbolKind {
@@ -212,6 +220,9 @@ func (c *CompilerContext) InitModuleStats(moduleName string) {
 	if !c.env.statsEnabled {
 		return
 	}
+	if c.moduleStats != nil {
+		return
+	}
 	c.moduleStats = &ModuleStats{ModuleName: moduleName}
 }
 
@@ -226,10 +237,23 @@ func (c *CompilerContext) EndStage() {
 	if !c.env.statsEnabled {
 		return
 	}
+	c.RecordStageDuration(c.stage.name, time.Since(c.stage.start))
+}
+
+func (c *CompilerContext) RecordStageDuration(name CompilationStage, duration time.Duration) {
+	if !c.CanRecordStageDuration() {
+		return
+	}
+	c.mu.Lock()
 	c.moduleStats.Stages = append(c.moduleStats.Stages, StageTiming{
-		Name:     c.stage.name,
-		Duration: time.Since(c.stage.start),
+		Name:     name,
+		Duration: duration,
 	})
+	c.mu.Unlock()
+}
+
+func (c *CompilerContext) CanRecordStageDuration() bool {
+	return c != nil && c.env.statsEnabled && c.moduleStats != nil
 }
 
 func (c *CompilerContext) GetModuleStats() *ModuleStats {

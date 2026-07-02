@@ -115,8 +115,8 @@ type AnnotationNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() *BLangIdentifier
-	SetName(name *BLangIdentifier)
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
 	GetTypeDescriptor() TypeDescriptor
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
@@ -148,8 +148,8 @@ type SimpleVariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() *BLangIdentifier
-	SetName(name *BLangIdentifier)
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
 }
 
 type ConstantNode interface {
@@ -167,6 +167,7 @@ type InvokableNode interface {
 	AddParameter(param SimpleVariableNode)
 	GetReturnTypeDescriptor() TypeDescriptor
 	SetReturnTypeDescriptor(typeDescriptor TypeDescriptor)
+	HasExplicitReturnTypeDescriptor() bool
 	GetBody() FunctionBodyNode
 	SetBody(body FunctionBodyNode)
 	HasBody() bool
@@ -186,7 +187,7 @@ type ClassDefinition interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() *BLangIdentifier
+	GetName() IdentifierNode
 	GetMethods() iter.Seq2[string, FunctionNode]
 	GetMethod(name string) FunctionNode
 	GetInitFunction() FunctionNode
@@ -199,6 +200,22 @@ type ServiceNode interface {
 	GetAttachedExprs() []BLangExpression
 	GetAbsolutePath() []*BLangIdentifier
 	GetAttachPointLiteral() LiteralNode
+}
+
+// Type-definition node (carries either a BLangTypeDefinition or a
+// BLangClassDefinition).
+type TypeDefinition interface {
+	AnnotatableNode
+	DocumentableNode
+	TopLevelNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetTypeData() TypeData
+	SetTypeData(typeData TypeData)
+	SetDeterminedType(ty semtypes.SemType)
+	GetCycleDepth() int
+	SetCycleDepth(depth int)
 }
 
 type TypeDescriptor interface {
@@ -326,7 +343,7 @@ type IndexBasedAccessNode interface {
 type FieldBasedAccessNode interface {
 	BLangExpression
 	GetExpression() BLangExpression
-	GetFieldName() *BLangIdentifier
+	GetFieldName() IdentifierNode
 }
 
 type ListConstructorExprNode interface {
@@ -352,8 +369,8 @@ type CommitExpressionNode interface {
 
 type SimpleVariableReferenceNode interface {
 	VariableReferenceNode
-	GetPackageAlias() *BLangIdentifier
-	GetVariableName() *BLangIdentifier
+	GetPackageAlias() IdentifierNode
+	GetVariableName() IdentifierNode
 }
 
 type LiteralNode interface {
@@ -480,8 +497,8 @@ type TypedescExpressionNode interface {
 
 type NamedArgNode interface {
 	BLangExpression
-	SetName(name *BLangIdentifier)
-	GetName() *BLangIdentifier
+	SetName(name IdentifierNode)
+	GetName() IdentifierNode
 	GetExpression() BLangExpression
 	SetExpression(expr BLangExpression)
 }
@@ -804,11 +821,9 @@ type MarkdownDocumentationNode interface {
 // Other interfaces.
 
 type IdentifierNode interface {
+	BLangNode
 	GetValue() string
-	SetValue(value string)
-	SetOriginalValue(value string)
 	IsLiteral() bool
-	SetLiteral(isLiteral bool)
 }
 
 type AnnotationAttachmentNode interface {
