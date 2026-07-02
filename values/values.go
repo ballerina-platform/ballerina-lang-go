@@ -36,7 +36,19 @@ type Function struct {
 // TypeDesc is the runtime representation of a typedesc value — a thin wrapper
 // around a semtype.
 type TypeDesc struct {
-	Type semtypes.SemType
+	Type        semtypes.SemType
+	Annotations AnnotationValues
+}
+
+// NewTypeDesc returns a fully initialized TypeDesc.
+func NewTypeDesc(ty semtypes.SemType, annotations AnnotationValues) *TypeDesc {
+	if annotations == nil {
+		annotations = NewAnnotationValues()
+	}
+	return &TypeDesc{
+		Type:        ty,
+		Annotations: annotations,
+	}
 }
 
 // FillerFactory produces a fresh filler value each time it is invoked.
@@ -115,6 +127,51 @@ func listFillerFactory(cx semtypes.Context, f semtypes.ListFiller) FillerFactory
 	}
 }
 
+// DeepClone returns an independent copy of mutable values, preserving cycles
+// and shared references within the cloned value graph.
+func DeepClone(v BalValue) BalValue {
+	return deepClone(v, make(map[any]BalValue))
+}
+
+func deepClone(v BalValue, clones map[any]BalValue) BalValue {
+	switch val := v.(type) {
+	case *Map:
+		if clone, ok := clones[val]; ok {
+			return clone
+		}
+		clone := NewMap(val.Type, val.atomic, val.isReadonly, nil)
+		clones[val] = clone
+		for _, key := range val.Keys() {
+			elem, _ := val.Get(key)
+			clone.putUnchecked(key, deepClone(elem, clones))
+		}
+		return clone
+	case *List:
+		if clone, ok := clones[val]; ok {
+			return clone
+		}
+		elems := make([]BalValue, len(val.elems))
+		clone := NewList(val.Type, val.atomic, val.isReadonly, val.filler, len(elems), elems)
+		clones[val] = clone
+		for i := range val.elems {
+			clone.elems[i] = deepClone(val.elems[i], clones)
+		}
+		return clone
+	case *TypeDesc:
+		if clone, ok := clones[val]; ok {
+			return clone
+		}
+		clone := NewTypeDesc(val.Type, nil)
+		clones[val] = clone
+		for key, annotation := range val.Annotations {
+			clone.Annotations[key] = deepClone(annotation, clones)
+		}
+		return clone
+	default:
+		return v
+	}
+}
+
 func SemTypeForValue(v BalValue) semtypes.SemType {
 	switch v := v.(type) {
 	case nil:
@@ -147,6 +204,70 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return semtypes.TYPEDESC
 	default:
 		return semtypes.ANY
+	}
+}
+
+// IsSerializableConstValue reports whether v can be emitted as a BIR constant value.
+func IsSerializableConstValue(v BalValue) bool {
+	return isSerializableConstValue(v, make(map[any]bool))
+}
+
+func isSerializableConstValue(v BalValue, seen map[any]bool) bool {
+	switch v := v.(type) {
+	case nil, bool, int, int64, int32, int16, int8, byte, float64, float32, string:
+		return true
+	case *string, *decimal.Decimal:
+		return v != nil
+	case *Map:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for _, key := range v.Keys() {
+			elem, _ := v.Get(key)
+			if !isSerializableConstValue(elem, seen) {
+				return false
+			}
+		}
+		return true
+	case *List:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for i := 0; i < v.Len(); i++ {
+			if !isSerializableConstValue(v.Get(i), seen) {
+				return false
+			}
+		}
+		return true
+	case *TypeDesc:
+		if v == nil {
+			return false
+		}
+		if seen[v] {
+			return false
+		}
+		seen[v] = true
+		defer delete(seen, v)
+		for _, value := range v.Annotations {
+			if !isSerializableConstValue(value, seen) {
+				return false
+			}
+		}
+		return true
+	case *RuntimeAnnotationValueRef:
+		return v != nil
+	default:
+		return false
 	}
 }
 

@@ -19,6 +19,7 @@ package ast
 import (
 	"fmt"
 	"iter"
+	"sort"
 	"strings"
 
 	"ballerina-lang-go/common"
@@ -27,6 +28,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 type BNodeWithSymbol interface {
@@ -70,17 +72,22 @@ type (
 	BLangAnnotation struct {
 		bLangNodeBase
 		Name                            *BLangIdentifier
+		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		typeDescriptor                  TypeDescriptor
 		attachPoints                    common.UnorderedSet[AttachPoint]
+		flags                           model.Flag
 	}
 
 	BLangAnnotationAttachment struct {
 		bLangNodeBase
-		Expr           BLangExpression
-		AnnotationName *BLangIdentifier
-		PkgAlias       *BLangIdentifier
+		Expr            BLangExpression
+		HasValue        bool
+		AnnotationName  *BLangIdentifier
+		PkgAlias        *BLangIdentifier
+		symbol          model.SymbolRef
+		AnnotationValue values.AnnotationValue
 	}
 
 	bLangFunctionBodyBase struct {
@@ -244,7 +251,7 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       SimpleVariableNode
-		returnTypeDescriptor            TypeDescriptor
+		returnTypeDescriptor            *BLangReturnTypeDescriptor
 		Body                            FunctionBodyNode
 		flags                           model.Flag
 		scope                           model.Scope
@@ -357,8 +364,13 @@ func (b *BLangTypeDefinition) SetPublic()        { b.flags |= model.FlagPublic }
 func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymous }
 func (b *BLangTypeDefinition) SetDistinct()      { b.flags |= model.FlagDistinct }
 
+func (b *BLangAnnotation) IsPublic() bool { return b.flags.Has(model.FlagPublic) }
+func (b *BLangAnnotation) IsConst() bool  { return b.flags.Has(model.FlagConstant) }
+func (b *BLangAnnotation) SetPublic()     { b.flags |= model.FlagPublic }
+func (b *BLangAnnotation) SetConst()      { b.flags |= model.FlagConstant }
+
 // Stub IsPublic for types with no flags
-func (b *BLangAnnotation) IsPublic() bool     { return false }
+func (b *BLangService) IsPublic() bool        { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
 func (b *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
@@ -425,8 +437,26 @@ func (n *BLangTypeDefinition) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
+func (n *BLangAnnotation) Symbol() model.SymbolRef {
+	return n.symbol
+}
+
+func (n *BLangAnnotation) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
+}
+
+func (n *BLangAnnotationAttachment) Symbol() model.SymbolRef {
+	return n.symbol
+}
+
+func (n *BLangAnnotationAttachment) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
+}
+
 var (
 	_ AnnotationAttachmentNode                    = &BLangAnnotationAttachment{}
+	_ BNodeWithSymbol                             = &BLangAnnotation{}
+	_ BNodeWithSymbol                             = &BLangAnnotationAttachment{}
 	_ ImportPackageNode                           = &BLangImportPackage{}
 	_ ClassDefinition                             = &BLangClassDefinition{}
 	_ NodeWithScope                               = &BLangClassDefinition{}
@@ -530,6 +560,27 @@ func (b *BLangAnnotation) SetTypeDescriptor(typeDescriptor TypeDescriptor) {
 		return
 	}
 	b.typeDescriptor = typeDescriptor.(BType)
+}
+
+// AddAttachPoint adds an attachment point and is safe on a zero-value annotation.
+func (b *BLangAnnotation) AddAttachPoint(attachPoint AttachPoint) {
+	b.attachPoints.Add(attachPoint)
+}
+
+func (b *BLangAnnotation) AttachPoints() []AttachPoint {
+	result := []AttachPoint{}
+	for attachPoint := range b.attachPoints.Values() {
+		result = append(result, attachPoint)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Point != result[j].Point {
+			// Sort by the canonical key (alphabetical) to keep ordering stable
+			// across the byte-valued Point enum.
+			return result[i].Point.String() < result[j].Point.String()
+		}
+		return !result[i].Source && result[j].Source
+	})
+	return result
 }
 
 func (b *BLangAnnotation) GetAnnotationAttachments() []AnnotationAttachmentNode {
@@ -1012,6 +1063,48 @@ func (b *bLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 	}
 }
 
+// BLangReturnTypeDescriptor is the return type descriptor of an invokable node.
+// It holds the return type and its annotation attachments as real AST data, so a
+// single node serves as both a type-descriptor holder and an AnnotatableNode.
+// This replaces the former ReturnTypeAnnotatable view, keeping the AST pure data
+// rather than synthesizing an annotatable adaptor on demand.
+type BLangReturnTypeDescriptor struct {
+	bLangNodeBase
+	TypeDescriptor TypeDescriptor
+	AnnAttachments []BLangAnnotationAttachment
+}
+
+func (r *BLangReturnTypeDescriptor) IsPublic() bool { return false }
+
+func (r *BLangReturnTypeDescriptor) AddAnnotationAttachment(ann AnnotationAttachmentNode) {
+	r.AnnAttachments = append(r.AnnAttachments, *ann.(*BLangAnnotationAttachment))
+}
+
+func (r *BLangReturnTypeDescriptor) GetAnnotationAttachments() []AnnotationAttachmentNode {
+	result := make([]AnnotationAttachmentNode, len(r.AnnAttachments))
+	for i := range r.AnnAttachments {
+		result[i] = &r.AnnAttachments[i]
+	}
+	return result
+}
+
+// ReturnTypeAnnotatableOf returns the invokable node's return type descriptor as
+// an AnnotatableNode (it carries the return type's annotation attachments), or
+// nil if the node has no return type descriptor.
+func ReturnTypeAnnotatableOf(fn InvokableNode) AnnotatableNode {
+	switch n := fn.(type) {
+	case *BLangFunction:
+		if n.returnTypeDescriptor != nil {
+			return n.returnTypeDescriptor
+		}
+	case *BLangResourceMethod:
+		if n.returnTypeDescriptor != nil {
+			return n.returnTypeDescriptor
+		}
+	}
+	return nil
+}
+
 func (b *bLangInvokableNodeBase) GetParameters() []SimpleVariableNode {
 	result := make([]SimpleVariableNode, len(b.RequiredParams))
 	for i := range b.RequiredParams {
@@ -1070,15 +1163,29 @@ func (b *bLangInvokableNodeBase) HasBody() bool {
 }
 
 func (b *bLangInvokableNodeBase) GetReturnTypeDescriptor() TypeDescriptor {
-	return b.returnTypeDescriptor
+	if b.returnTypeDescriptor == nil {
+		return nil
+	}
+	return b.returnTypeDescriptor.TypeDescriptor
 }
 
 func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor TypeDescriptor) {
 	if typeDescriptor == nil {
-		b.returnTypeDescriptor = nil
+		if b.returnTypeDescriptor != nil {
+			b.returnTypeDescriptor.TypeDescriptor = nil
+		}
 		return
 	}
-	b.returnTypeDescriptor = typeDescriptor.(BType)
+	if b.returnTypeDescriptor == nil {
+		b.returnTypeDescriptor = &BLangReturnTypeDescriptor{}
+	}
+	b.returnTypeDescriptor.TypeDescriptor = typeDescriptor.(BType)
+}
+
+// ReturnTypeDescriptorNode returns the return type descriptor node, which carries
+// the return type's annotation attachments, or nil if there is none.
+func (b *bLangInvokableNodeBase) ReturnTypeDescriptorNode() *BLangReturnTypeDescriptor {
+	return b.returnTypeDescriptor
 }
 
 func (b *bLangInvokableNodeBase) GetBody() FunctionBodyNode {

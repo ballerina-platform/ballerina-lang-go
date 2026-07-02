@@ -50,3 +50,7 @@ parser/testdata/**/*.json
 
 # Local lint tool binary
 /bin/golangci-lint
+
+# Coverage report and local agent/editor state
+coverage_report.html
+.claude/

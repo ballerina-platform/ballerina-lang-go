@@ -34,8 +34,24 @@ type ExternFunction struct {
 
 func NewBIRModule(ctx *extern.Context, pkg *bir.BIRPackage) *BIRModule {
 	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
+	for key, gv := range pkg.GlobalVars {
+		v, ok := safeFillerValue(ctx, gv)
+		if ok {
+			globals[key] = v
+		}
+	}
 	return &BIRModule{
 		Pkg:     pkg,
 		Globals: globals,
 	}
+}
+
+func safeFillerValue(ctx *extern.Context, gv bir.BIRGlobalVariableDcl) (value values.BalValue, ok bool) {
+	defer func() {
+		if recover() != nil {
+			value = nil
+			ok = false
+		}
+	}()
+	return values.FillerValue(ctx.TypeCtx, gv.GetType())
 }

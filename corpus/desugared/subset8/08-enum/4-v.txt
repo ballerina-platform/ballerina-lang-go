@@ -12,24 +12,13 @@
         (user-defined-type RED)
         (user-defined-type GREEN))
       (user-defined-type BLUE)))
-  (function init () ()
-    (block-function-body
-      (assignment
-        (simple-var-ref RED)
-        (literal RED))
-      (assignment
-        (simple-var-ref GREEN)
-        (literal green))
-      (assignment
-        (simple-var-ref BLUE)
-        (literal BLUE))))
   (function main () (
     (value-type null))
     (block-function-body
       (var-def
         (variable c (type
           (user-defined-type Color)) (expr
-          (simple-var-ref GREEN))))
+          (literal green))))
       (var-def
         (variable x (type
           (union-type

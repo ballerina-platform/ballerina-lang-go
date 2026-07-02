@@ -239,17 +239,39 @@ func canonicaliseInitFnBodies(e *sexp) {
 	}
 }
 
+func canonicalisePackageImports(e *sexp) {
+	if e.isAtom || len(e.list) == 0 || !isAtom(e.list[0], "package") {
+		return
+	}
+	imports := e.list[1:]
+	sort.SliceStable(imports, func(i, j int) bool {
+		left := imports[i]
+		right := imports[j]
+		leftIsImport := isImportPackageSExp(left)
+		rightIsImport := isImportPackageSExp(right)
+		if leftIsImport != rightIsImport {
+			return leftIsImport
+		}
+		if !leftIsImport {
+			return false
+		}
+		return printSExp(left) < printSExp(right)
+	})
+}
+
 func isInitFnSExp(e *sexp) bool {
 	if e.isAtom || len(e.list) < 2 {
 		return false
 	}
-	if !e.list[0].isAtom || e.list[0].atom != "function" {
-		return false
-	}
-	if !e.list[1].isAtom || e.list[1].atom != "init" {
-		return false
-	}
-	return true
+	return isAtom(e.list[0], "function") && isAtom(e.list[1], "init")
+}
+
+func isImportPackageSExp(e *sexp) bool {
+	return !e.isAtom && len(e.list) > 0 && isAtom(e.list[0], "import-package")
+}
+
+func isAtom(e *sexp, atom string) bool {
+	return e != nil && e.isAtom && e.atom == atom
 }
 
 func normalizeDesugaredAST(s string) string {
@@ -261,6 +283,7 @@ func normalizeDesugaredAST(s string) string {
 	if !ok {
 		return s
 	}
+	canonicalisePackageImports(root)
 	canonicaliseInitFnBodies(root)
 	return printSExp(root)
 }
