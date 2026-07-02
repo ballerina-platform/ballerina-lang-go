@@ -239,6 +239,11 @@ type (
 		symbolBase
 	}
 
+	ErrorTypeSymbol struct {
+		TypeSymbol
+		distinctTypeBase
+	}
+
 	// memberHolderBase carries direct + type-inclusion-inherited members
 	// (fields and optional rest-type for records; fields + methods for classes
 	// and object type aliases).
@@ -1102,6 +1107,14 @@ func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
 
 func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
 	return ObjectTypeSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, isPublic: isPublic},
+		},
+	}
+}
+
+func NewErrorTypeSymbol(name string, isPublic bool) ErrorTypeSymbol {
+	return ErrorTypeSymbol{
 		TypeSymbol: TypeSymbol{
 			symbolBase: symbolBase{name: name, isPublic: isPublic},
 		},

@@ -41,6 +41,7 @@ const (
 	symTagNetworkClass
 	symTagResourceMethod
 	symTagOpaque
+	symTagErrorType
 )
 
 const (
@@ -205,6 +206,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeRecordSymbol(buf, s)
 	case *model.ObjectTypeSymbol:
 		return sw.writeObjectTypeSymbol(buf, s)
+	case *model.ErrorTypeSymbol:
+		return sw.writeErrorTypeSymbol(buf, s)
 	case *model.TypeSymbol:
 		return sw.writeTypeSymbol(buf, s)
 	case *model.ValueSymbol:
@@ -226,6 +229,10 @@ func (sw *symbolWriter) writeSymbolBase(buf *bytes.Buffer, sym model.Symbol) err
 
 func (sw *symbolWriter) writeObjectSymbolBase(buf *bytes.Buffer, sym model.Symbol) error {
 	return sw.writeSymbolBaseWithType(buf, sym, sym.Type(), sw.writeObjectDefinitionType)
+}
+
+func (sw *symbolWriter) writeErrorSymbolBase(buf *bytes.Buffer, sym model.Symbol) error {
+	return sw.writeSymbolBaseWithType(buf, sym, sym.Type(), sw.writeErrorDefinitionType)
 }
 
 func (sw *symbolWriter) writeSymbolBaseWithType(buf *bytes.Buffer, sym model.Symbol, ty semtypes.SemType, writeType func(*bytes.Buffer, semtypes.SemType) error) error {
@@ -266,6 +273,16 @@ func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.Obje
 		return err
 	}
 	if err := sw.writeInclusionMembers(buf, sym.Members()); err != nil {
+		return err
+	}
+	return sw.writeDistinctTypeIDs(buf, sym.DistinctTypeIDs())
+}
+
+func (sw *symbolWriter) writeErrorTypeSymbol(buf *bytes.Buffer, sym *model.ErrorTypeSymbol) error {
+	if err := write(buf, symTagErrorType); err != nil {
+		return err
+	}
+	if err := sw.writeErrorSymbolBase(buf, sym); err != nil {
 		return err
 	}
 	return sw.writeDistinctTypeIDs(buf, sym.DistinctTypeIDs())
@@ -669,4 +686,11 @@ func (sw *symbolWriter) writeObjectDefinitionType(buf *bytes.Buffer, ty semtypes
 		return write(buf, int32(-1))
 	}
 	return write(buf, int32(sw.tp.PutObjectDefinition(ty)))
+}
+
+func (sw *symbolWriter) writeErrorDefinitionType(buf *bytes.Buffer, ty semtypes.SemType) error {
+	if semtypes.IsZero(ty) {
+		return write(buf, int32(-1))
+	}
+	return write(buf, int32(sw.tp.PutErrorDefinition(ty)))
 }
