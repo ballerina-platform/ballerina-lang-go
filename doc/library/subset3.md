@@ -3,11 +3,12 @@
 Subset 3 extends the released [subset 2](subset2.md) with the `avro` module —
 Avro binary serialization and deserialization driven by an Avro schema string —
 plus stream-based file read/write additions and byte channels in the `io`
-module, building on the language's new `stream` type, with client-side
-response data binding, XML payloads, and `anydata` resource returns for the
-`http` module, and the new `ballerina/protobuf` package, providing the protobuf
+module, building on the language's new `stream` type; client-side response
+data binding, XML payloads, and `anydata` resource returns for the `http`
+module; the new `ballerina/protobuf` package, providing the protobuf
 well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the
-scalar wrapper types) used by generated gRPC client/service code.
+scalar wrapper types) used by generated gRPC client/service code; and the new
+`file` module.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -221,3 +222,28 @@ resource function get album() returns xml {
 | `protobuf.types.duration`, `protobuf.types.empty`, `protobuf.types.struct`, `protobuf.types.timestamp`, `protobuf.types.wrappers` context record types | Supported |
 
 Not covered in this subset: arbitrary user-defined message record (de)serialization via the `@protobuf:Descriptor` annotation — blocked on `typeof` support rather than on the library — and the `.proto`-to-Ballerina code generator (`ballerina/grpc` and its tooling are not ported).
+
+## [file](https://github.com/ballerina-platform/module-ballerina-file/blob/master/docs/spec/spec.md)
+
+File, directory, and path manipulation utilities.
+
+| Feature | Notes |
+|---|---|
+| `create` / `remove` / `rename` / `copy` | Create, remove (non-recursive and recursive), rename/move, and copy (with `REPLACE_EXISTING`, `COPY_ATTRIBUTES`, `NO_FOLLOW_LINKS` options) files and directories |
+| `getMetaData` | File size, modification time, permissions, and type |
+| `readDir` | Read directory contents |
+| `createTemp` / `createTempDir` | Create a temporary file / directory |
+| `test` | Test file/directory properties: `EXISTS`, `IS_DIR`, `IS_SYMLINK`, `READABLE`, `WRITABLE` |
+| `getCurrentDir` | Get the current working directory |
+| `getAbsolutePath` / `isAbsolutePath` / `basename` / `parentPath` / `normalizePath` / `splitPath` / `joinPath` / `relativePath` | Cross-platform path manipulation |
+| `Listener` / `Service` | Directory change listener: attaches a service whose `onCreate`/`onModify`/`onDelete` remote methods are dispatched on filesystem changes under the configured `path` (optionally `recursive`) |
+
+`file:Error`'s `distinct` subtypes (`FileNotFoundError`, `PermissionError`, etc.)
+are declared as plain type aliases of `Error` instead — they are structurally
+identical at runtime, so `error is file:FileNotFoundError`-style checks don't
+narrow. `file:Service` is likewise declared as a plain (non-`distinct`)
+`service object {}` marker instead of jBallerina's `distinct service object
+{}`. Unlike jBallerina, `gracefulStop()` closes the underlying OS watch
+immediately (same as `immediateStop()`) rather than leaving it running until
+process exit, and `attach()` returns its "at least one resource required"
+validation error through its `error?` return type instead of throwing it.
