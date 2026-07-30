@@ -22,9 +22,9 @@ import (
 	goruntime "runtime"
 	"testing"
 
-	"ballerina-lang-go/runtime/extern"
-	"ballerina-lang-go/test_util/testharness"
-	"ballerina-lang-go/values"
+	"ballerina/runtime/extern"
+	"ballerina/test_util/testharness"
+	"ballerina/values"
 )
 
 // skipIfRoot skips permission-dependent tests when running as root, since
