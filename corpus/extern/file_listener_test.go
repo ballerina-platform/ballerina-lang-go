@@ -20,7 +20,7 @@ import (
 	goruntime "runtime"
 	"testing"
 
-	"ballerina-lang-go/test_util/testharness"
+	"ballerina/test_util/testharness"
 )
 
 // skipIfNoFileWatch skips on platforms without a native directory-watch
