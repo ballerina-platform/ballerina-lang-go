@@ -48,14 +48,14 @@ func goTimeToUtc(ctx *extern.Context, t time.Time) *values.List {
 	frac, _ := nanos.Quo(nanosPerSec)
 	bld := semtypes.NewListDefinition()
 	utcTy := bld.TupleTypeWrappedRo(ctx.Env.TypeEnv, semtypes.INT, semtypes.DECIMAL)
-	atomic := semtypes.ToListAtomicType(ctx.TypeCtx, utcTy)
+	atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), utcTy)
 	return values.NewList(utcTy, atomic, true, nil, 2, []values.BalValue{epochSec, frac})
 }
 
 func buildMetaData(ctx *extern.Context, info *pal.FileInfo) *values.Map {
 	mmd := semtypes.NewMappingDefinition()
 	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx, ty), false, []values.MapEntry{
+	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx(), ty), false, []values.MapEntry{
 		{Key: "absPath", Value: info.AbsPath},
 		{Key: "size", Value: info.Size},
 		{Key: "modifiedTime", Value: goTimeToUtc(ctx, info.ModifiedAt)},
@@ -236,7 +236,7 @@ func initFileModule(rt *runtime.Runtime) {
 				e := entry
 				items[i] = buildMetaData(ctx, &e)
 			}
-			atomic := semtypes.ToListAtomicType(ctx.TypeCtx, metaArrTy)
+			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), metaArrTy)
 			return values.NewList(metaArrTy, atomic, false, nil, 0, items), nil
 		})
 
