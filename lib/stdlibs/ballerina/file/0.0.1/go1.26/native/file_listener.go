@@ -214,7 +214,8 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.Wat
 	if len(services) == 0 {
 		return
 	}
-	ctx := rt.NewExternContext()
+	ctx := rt.AcquirePooledContext()
+	defer rt.ReleasePooledContext(ctx)
 	eventVal := buildFileEvent(ctx, ev)
 	for _, svcObj := range services {
 		handle, ok := ctx.LookupRemoteMethod(svcObj, methodName)
@@ -228,7 +229,7 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.Wat
 func buildFileEvent(ctx *extern.Context, ev pal.WatchEvent) *values.Map {
 	mmd := semtypes.NewMappingDefinition()
 	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx, ty), false, []values.MapEntry{
+	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx(), ty), false, []values.MapEntry{
 		{Key: "name", Value: ev.Path},
 		{Key: "operation", Value: fileEventOpNames[ev.Op]},
 	})
