@@ -17,6 +17,7 @@
 package native
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -202,6 +203,10 @@ func hasFileEventRemoteMethod(svcObj *values.Object) bool {
 // dispatchFileEvent invokes the matching remote method on every attached
 // service for a single filesystem event. Runs on the watch's own goroutine,
 // independent of any strand that called start/attach.
+//
+// A panic in one service's remote method aborts dispatch to the remaining
+// services for this event only (see recoverFileEventPanic) — the next event
+// dispatches normally on a freshly reset context.
 func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.WatchEvent) {
 	methodName, ok := fileEventRemoteMethodNames[ev.Op]
 	if !ok {
@@ -215,7 +220,11 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.Wat
 		return
 	}
 	ctx := rt.AcquirePooledContext()
+	// Release the pool slot last (LIFO): recoverFileEventPanic must run first,
+	// while ctx is still live and un-reset, so it can drain any lock left held
+	// by a panic mid-lock-block before the context goes back to the pool.
 	defer rt.ReleasePooledContext(ctx)
+	defer recoverFileEventPanic(rt, ctx, methodName, ev)
 	eventVal := buildFileEvent(ctx, ev)
 	for _, svcObj := range services {
 		handle, ok := ctx.LookupRemoteMethod(svcObj, methodName)
@@ -223,6 +232,38 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.Wat
 			continue
 		}
 		_, _ = ctx.InvokeMethod(handle, []values.BalValue{svcObj, eventVal})
+	}
+}
+
+// recoverFileEventPanic recovers a panic raised while dispatching a file
+// event, so a single misbehaving service doesn't crash the whole process
+// (this runs on the fsnotify watcher's dedicated goroutine, which has no
+// other recover on its call stack). Releases any lock ctx still holds first:
+// a Go-level panic (e.g. divide by zero) inside a Ballerina lock block skips
+// the matching LockEnd, and ctx's pooled-reuse reset does not itself unlock —
+// it only clears the held-lock bookkeeping — so skipping this would strand
+// the lock and deadlock every later event that touches the same lock
+// variable on this listener's single dispatch goroutine.
+func recoverFileEventPanic(rt *runtime.Runtime, ctx *extern.Context, methodName string, ev pal.WatchEvent) {
+	rec := recover()
+	if rec == nil {
+		return
+	}
+	ctx.ReleaseAllHeldLocks()
+	logMsg := fmt.Sprintf("error [ballerina/file]: panic while dispatching %s for %s: %s\n",
+		methodName, ev.Path, panicMessage(rec))
+	_, _ = rt.Platform().IO.Stderr([]byte(logMsg))
+}
+
+// panicMessage renders a recovered panic value as a message string.
+func panicMessage(r any) string {
+	switch v := r.(type) {
+	case *values.Error:
+		return v.Message
+	case error:
+		return v.Error()
+	default:
+		return fmt.Sprintf("%v", r)
 	}
 }
 

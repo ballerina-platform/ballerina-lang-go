@@ -18,7 +18,9 @@ package extern_test
 
 import (
 	goruntime "runtime"
+	"strings"
 	"testing"
+	"time"
 
 	"ballerina/test_util/testharness"
 )
@@ -80,4 +82,39 @@ func TestFileListenerInitError(t *testing.T) {
 func TestFileListenerStartError(t *testing.T) {
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-start-error-v"), testharness.NewTestPal(), nil)
+}
+
+// TestFileListenerRemoteMethodPanic exercises recovery from a panic inside a
+// remote method: onCreate panics mid-lock, and the listener must log the
+// panic to stderr, release the held lock, and keep dispatching later events
+// rather than crashing the process or deadlocking on the stranded lock.
+//
+// This bypasses the runExtern/.txtar-golden helper the other listener tests
+// use, since the recovery log line embeds a nondeterministic OS temp path
+// that the golden normalization doesn't account for; asserting directly on
+// pal.Stdout()/Stderr() avoids that.
+func TestFileListenerRemoteMethodPanic(t *testing.T) {
+	skipIfNoFileWatch(t)
+	pal := testharness.NewTestPal()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testharness.Run(t, fileCase("file-listener/file-listener-panic-v"), pal, nil)
+	}()
+	select {
+	case <-done:
+	case <-time.After(60 * time.Second):
+		t.Fatal("file listener deadlocked: held lock not released after remote-method panic")
+	}
+
+	if stdout := pal.Stdout(); stdout != "modified=true\ndeleted=true\n" {
+		t.Errorf("stdout = %q, want %q", stdout, "modified=true\ndeleted=true\n")
+	}
+	stderr := pal.Stderr()
+	if !strings.Contains(stderr, "error [ballerina/file]: panic while dispatching onCreate for ") {
+		t.Errorf("stderr missing panic log line, got: %q", stderr)
+	}
+	if !strings.Contains(stderr, "divide by zero") {
+		t.Errorf("stderr missing panic message, got: %q", stderr)
+	}
 }
