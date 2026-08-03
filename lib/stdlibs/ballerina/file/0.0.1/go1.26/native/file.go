@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ballerina-nutcracker/ballerina/decimal"
@@ -36,29 +35,47 @@ const (
 	moduleName = "file"
 )
 
+// fileTypes holds the semtypes the file module builds values with. Built
+// once per runtime in initFileModule, before the runtime freezes its type
+// env, so every value shares one interned atom instead of allocating a
+// fresh ephemeral atom on each call.
+type fileTypes struct {
+	metaArrTy  semtypes.SemType // MetaData[]
+	metaDataTy semtypes.SemType // MetaData record shape
+	utcTupleTy semtypes.SemType // readonly [int, decimal]
+}
+
+func newFileTypes(env semtypes.Env) fileTypes {
+	metaArrLd := semtypes.NewListDefinition()
+	metaMd := semtypes.NewMappingDefinition()
+	utcLd := semtypes.NewListDefinition()
+	return fileTypes{
+		metaArrTy:  metaArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.MAPPING),
+		metaDataTy: metaMd.DefineMappingTypeWrapped(env, nil, semtypes.STRING),
+		utcTupleTy: utcLd.TupleTypeWrappedRo(env, semtypes.INT, semtypes.DECIMAL),
+	}
+}
+
 func fileError(typeName, msg string) values.BalValue {
 	return values.NewError(semtypes.ERROR, msg, nil, typeName, nil)
 }
 
-func goTimeToUtc(ctx *extern.Context, t time.Time) *values.List {
-	t = t.UTC()
-	epochSec := t.Unix()
-	nanos := decimal.FromInt64(int64(t.Nanosecond()))
+func (t *fileTypes) goTimeToUtc(ctx *extern.Context, tm time.Time) *values.List {
+	tm = tm.UTC()
+	epochSec := tm.Unix()
+	nanos := decimal.FromInt64(int64(tm.Nanosecond()))
 	nanosPerSec := decimal.FromInt64(1_000_000_000)
 	frac, _ := nanos.Quo(nanosPerSec)
-	bld := semtypes.NewListDefinition()
-	utcTy := bld.TupleTypeWrappedRo(ctx.Env.TypeEnv, semtypes.INT, semtypes.DECIMAL)
-	atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), utcTy)
-	return values.NewList(utcTy, atomic, true, nil, 2, []values.BalValue{epochSec, frac})
+	atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), t.utcTupleTy)
+	return values.NewList(t.utcTupleTy, atomic, true, nil, 2, []values.BalValue{epochSec, frac})
 }
 
-func buildMetaData(ctx *extern.Context, info *pal.FileInfo) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx(), ty), false, []values.MapEntry{
+func (t *fileTypes) buildMetaData(ctx *extern.Context, info *pal.FileInfo) *values.Map {
+	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), t.metaDataTy)
+	return values.NewMap(t.metaDataTy, atomic, false, []values.MapEntry{
 		{Key: "absPath", Value: info.AbsPath},
 		{Key: "size", Value: info.Size},
-		{Key: "modifiedTime", Value: goTimeToUtc(ctx, info.ModifiedAt)},
+		{Key: "modifiedTime", Value: t.goTimeToUtc(ctx, info.ModifiedAt)},
 		{Key: "dir", Value: info.IsDir},
 		{Key: "readable", Value: info.IsReadable},
 		{Key: "writable", Value: info.IsWritable},
@@ -77,17 +94,7 @@ func absPath(rt *runtime.Runtime, path string) (string, error) {
 }
 
 func initFileModule(rt *runtime.Runtime) {
-	var (
-		once      sync.Once
-		metaArrTy semtypes.SemType
-	)
-	ensureTypes := func() {
-		once.Do(func() {
-			env := rt.GetTypeEnv()
-			bld := semtypes.NewListDefinition()
-			metaArrTy = bld.DefineListTypeWrappedWithEnvSemType(env, semtypes.MAPPING)
-		})
-	}
+	types := newFileTypes(rt.GetTypeEnv())
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "getCurrentDir",
 		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
@@ -207,12 +214,11 @@ func initFileModule(rt *runtime.Runtime) {
 				}
 				return fileError("FileSystemError", err.Error()), nil
 			}
-			return buildMetaData(ctx, info), nil
+			return types.buildMetaData(ctx, info), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "readDirRaw",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes()
 			path, _ := args[0].(string)
 			info, err := rt.Platform().FS.Stat(path)
 			if err != nil {
@@ -234,10 +240,10 @@ func initFileModule(rt *runtime.Runtime) {
 			items := make([]values.BalValue, len(entries))
 			for i, entry := range entries {
 				e := entry
-				items[i] = buildMetaData(ctx, &e)
+				items[i] = types.buildMetaData(ctx, &e)
 			}
-			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), metaArrTy)
-			return values.NewList(metaArrTy, atomic, false, nil, 0, items), nil
+			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.metaArrTy)
+			return values.NewList(types.metaArrTy, atomic, false, nil, 0, items), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "copy",
