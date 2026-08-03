@@ -30,6 +30,23 @@ public function main() returns error? {
     string rel = check file:relativePath("/tmp/a/b", "/tmp/a/b/c/d");
     io:println(rel);              // c/d
 }
+
+// Watch a directory for changes and dispatch onCreate/onModify/onDelete
+// remote methods to attached services.
+string watchedDir = check file:createTempDir();
+listener file:Listener watcher = check new ({path: watchedDir, recursive: false});
+
+service on watcher {
+    remote function onCreate(file:FileEvent m) {
+        io:println("created: ", m.name);
+    }
+    remote function onModify(file:FileEvent m) {
+        io:println("modified: ", m.name);
+    }
+    remote function onDelete(file:FileEvent m) {
+        io:println("deleted: ", m.name);
+    }
+}
 ```
 
 ## Go Native Interpreter Support Status
