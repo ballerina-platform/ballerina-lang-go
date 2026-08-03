@@ -56,7 +56,17 @@ var fileEventRemoteMethodNames = map[pal.WatchOp]string{
 	pal.WatchDelete: "onDelete",
 }
 
+// newFileEventType builds the FileEvent record shape. Built once per runtime
+// in initFileListenerModule, before the runtime freezes its type env — see
+// fileTypes in file.go for why this must be per-runtime, not a package var.
+func newFileEventType(env semtypes.Env) semtypes.SemType {
+	md := semtypes.NewMappingDefinition()
+	return md.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
+}
+
 func initFileListenerModule(rt *runtime.Runtime) {
+	eventTy := newFileEventType(rt.GetTypeEnv())
+
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "initListener",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
@@ -145,7 +155,7 @@ func initFileListenerModule(rt *runtime.Runtime) {
 				return nil, nil
 			}
 			handle, err := rt.Platform().FS.Watch(state.path, state.recursive, func(ev pal.WatchEvent) {
-				dispatchFileEvent(rt, state, ev)
+				dispatchFileEvent(rt, state, eventTy, ev)
 			})
 			if err != nil {
 				return fileError("FileSystemError", "Unable to initialize server connector: "+err.Error()), nil
@@ -207,7 +217,7 @@ func hasFileEventRemoteMethod(svcObj *values.Object) bool {
 // A panic in one service's remote method aborts dispatch to the remaining
 // services for this event only (see recoverFileEventPanic) — the next event
 // dispatches normally on a freshly reset context.
-func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.WatchEvent) {
+func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, eventTy semtypes.SemType, ev pal.WatchEvent) {
 	methodName, ok := fileEventRemoteMethodNames[ev.Op]
 	if !ok {
 		return
@@ -225,7 +235,7 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, ev pal.Wat
 	// by a panic mid-lock-block before the context goes back to the pool.
 	defer rt.ReleasePooledContext(ctx)
 	defer recoverFileEventPanic(rt, ctx, methodName, ev)
-	eventVal := buildFileEvent(ctx, ev)
+	eventVal := buildFileEvent(ctx, eventTy, ev)
 	for _, svcObj := range services {
 		handle, ok := ctx.LookupRemoteMethod(svcObj, methodName)
 		if !ok {
@@ -267,10 +277,9 @@ func panicMessage(r any) string {
 	}
 }
 
-func buildFileEvent(ctx *extern.Context, ev pal.WatchEvent) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.DefineMappingTypeWrapped(ctx.Env.TypeEnv, nil, semtypes.STRING)
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(ctx.TypeCtx(), ty), false, []values.MapEntry{
+func buildFileEvent(ctx *extern.Context, eventTy semtypes.SemType, ev pal.WatchEvent) *values.Map {
+	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), eventTy)
+	return values.NewMap(eventTy, atomic, false, []values.MapEntry{
 		{Key: "name", Value: ev.Path},
 		{Key: "operation", Value: fileEventOpNames[ev.Op]},
 	})
