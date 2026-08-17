@@ -118,7 +118,7 @@
     (expression-stmt
       (checked-expr
         (invocation file createDir (
-          (literal /tmp/bal-file-test-dir)))))
+          (literal /tmp/bal-file-test-dir) <default>))))
     (var-def
       (variable isDir (type
         (value-type boolean)) (expr
@@ -132,7 +132,7 @@
     (expression-stmt
       (checked-expr
         (invocation file remove (
-          (literal /tmp/bal-file-test-dir)))))
+          (literal /tmp/bal-file-test-dir) <default>))))
     (var-def
       (variable gone (type
         (value-type boolean)) (expr
@@ -164,16 +164,14 @@
     (expression-stmt
       (checked-expr
         (invocation file remove (
-          (literal /tmp/bal-file-test.txt)))))
+          (literal /tmp/bal-file-test.txt) <default>))))
     (var-def
       (variable tmp (type
         (value-type string)) (expr
         (checked-expr
           (invocation file createTemp (
-            (named-arg suffix
-              (literal .txt))
-            (named-arg prefix
-              (literal bal-))))))))
+            (literal .txt)
+            (literal bal-) <default>))))))
     (expression-stmt
       (invocation io println (
         (invocation file test (
@@ -182,14 +180,13 @@
     (expression-stmt
       (checked-expr
         (invocation file remove (
-          (simple-var-ref tmp)))))
+          (simple-var-ref tmp) <default>))))
     (var-def
       (variable tmpDir (type
         (value-type string)) (expr
         (checked-expr
-          (invocation file createTempDir (
-            (named-arg prefix
-              (literal bal-))))))))
+          (invocation file createTempDir ( <default>
+            (literal bal-) <default>))))))
     (expression-stmt
       (invocation io println (
         (invocation file test (
@@ -198,6 +195,6 @@
     (expression-stmt
       (checked-expr
         (invocation file remove (
-          (simple-var-ref tmpDir)))))
+          (simple-var-ref tmpDir) <default>))))
   )
 )

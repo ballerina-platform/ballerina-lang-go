@@ -442,65 +442,67 @@ main() -> nil|error{
     $desugar$28 = %180;
     %183 = ConstantLoad /does-not-exist
     %182 = + baseDir %183;
-    %184 = createTemp($desugar$27,$desugar$28,%182) -> bb90;
+    $desugar$29 = %182;
+    %185 = createTemp($desugar$27,$desugar$28,$desugar$29) -> bb90;
   }
   bb90 {
-    tempMissingDir = %184;
-    %186 = tempMissingDir is error
-    %187 = %186;
-    %188 = println(%187) -> bb91;
+    tempMissingDir = %185;
+    %187 = tempMissingDir is error
+    %188 = %187;
+    %189 = println(%188) -> bb91;
   }
   bb91 {
-    %189 = $default$6() -> bb92;
+    %190 = $default$6() -> bb92;
   }
   bb92 {
-    $desugar$29 = %189;
-    %191 = $default$7($desugar$29) -> bb93;
+    $desugar$30 = %190;
+    %192 = $default$7($desugar$30) -> bb93;
   }
   bb93 {
-    $desugar$30 = %191;
-    %194 = ConstantLoad /does-not-exist
-    %193 = + baseDir %194;
-    %195 = createTempDir($desugar$29,$desugar$30,%193) -> bb94;
+    $desugar$31 = %192;
+    %195 = ConstantLoad /does-not-exist
+    %194 = + baseDir %195;
+    $desugar$32 = %194;
+    %197 = createTempDir($desugar$30,$desugar$31,$desugar$32) -> bb94;
   }
   bb94 {
-    tempDirMissingDir = %195;
-    %197 = tempDirMissingDir is error
-    %198 = %197;
-    %199 = println(%198) -> bb95;
+    tempDirMissingDir = %197;
+    %199 = tempDirMissingDir is error
+    %200 = %199;
+    %201 = println(%200) -> bb95;
   }
   bb95 {
-    %200 = ConstantLoad RECURSIVE
-    %201 = remove(baseDir,%200) -> bb96;
+    %202 = ConstantLoad RECURSIVE
+    %203 = remove(baseDir,%202) -> bb96;
   }
   bb96 {
-    $desugar$31 = %201;
-    %203 = $desugar$31 is error
-    %203 ? bb97 : bb98;
+    $desugar$33 = %203;
+    %205 = $desugar$33 is error
+    %205 ? bb97 : bb98;
   }
   bb97 {
     PushScopeFrame 0
-    (1, %0) = (1, $desugar$31);
+    (1, %0) = (1, $desugar$33);
     PopScopeFrame
     return;
   }
   bb98 {
-    %204 = ConstantLoad EXISTS
-    %205 = test(baseDir,%204) -> bb99;
+    %206 = ConstantLoad EXISTS
+    %207 = test(baseDir,%206) -> bb99;
   }
   bb99 {
-    $desugar$32 = %205;
-    %207 = $desugar$32 is error
-    %207 ? bb100 : bb101;
+    $desugar$34 = %207;
+    %209 = $desugar$34 is error
+    %209 ? bb100 : bb101;
   }
   bb100 {
     PushScopeFrame 0
-    (1, %0) = (1, $desugar$32);
+    (1, %0) = (1, $desugar$34);
     PopScopeFrame
     return;
   }
   bb101 {
-    %208 = println($desugar$32) -> bb102;
+    %210 = println($desugar$34) -> bb102;
   }
   bb102 {
     return;

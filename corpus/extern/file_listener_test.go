@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"ballerina/test_util/testharness"
+	"github.com/ballerina-nutcracker/ballerina/test_util/testharness"
 )
 
 // skipIfNoFileWatch skips on platforms without a native directory-watch
