@@ -4,9 +4,8 @@
       (variable baseDir (type
         (value-type string)) (expr
         (checked-expr
-          (invocation file createTempDir (
-            (named-arg prefix
-              (literal bal-file3-))))))))
+          (invocation file createTempDir ( <default>
+            (literal bal-file3-) <default>))))))
     (var-def
       (variable emptyDir (type
         (value-type string)) (expr
@@ -22,11 +21,11 @@
     (expression-stmt
       (checked-expr
         (invocation file createDir (
-          (simple-var-ref emptyDir)))))
+          (simple-var-ref emptyDir) <default>))))
     (expression-stmt
       (checked-expr
         (invocation file createDir (
-          (simple-var-ref nonEmptyDir)))))
+          (simple-var-ref nonEmptyDir) <default>))))
     (expression-stmt
       (checked-expr
         (invocation file create (
@@ -208,7 +207,7 @@
     (expression-stmt
       (checked-expr
         (invocation file createDir (
-          (simple-var-ref copyDirSrc)))))
+          (simple-var-ref copyDirSrc) <default>))))
     (expression-stmt
       (checked-expr
         (invocation file create (
@@ -253,12 +252,9 @@
         (value-type string)) (expr
         (checked-expr
           (invocation file createTempDir (
-            (named-arg suffix
-              (literal -suffix))
-            (named-arg prefix
-              (literal bal-))
-            (named-arg dir
-              (simple-var-ref baseDir))))))))
+            (literal -suffix)
+            (literal bal-)
+            (simple-var-ref baseDir)))))))
     (expression-stmt
       (invocation io println (
         (checked-expr
@@ -330,7 +326,7 @@
     (expression-stmt
       (checked-expr
         (invocation file createDir (
-          (simple-var-ref nonEmptyForRemove)))))
+          (simple-var-ref nonEmptyForRemove) <default>))))
     (expression-stmt
       (checked-expr
         (invocation file create (
@@ -343,7 +339,7 @@
           (user-defined-type file Error)
           (value-type null))) (expr
         (invocation file remove (
-          (simple-var-ref nonEmptyForRemove))))))
+          (simple-var-ref nonEmptyForRemove) <default>)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is

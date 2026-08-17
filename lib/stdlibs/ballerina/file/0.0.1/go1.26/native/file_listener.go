@@ -61,7 +61,7 @@ var fileEventRemoteMethodNames = map[pal.WatchOp]string{
 // fileTypes in file.go for why this must be per-runtime, not a package var.
 func newFileEventType(env semtypes.Env) semtypes.SemType {
 	md := semtypes.NewMappingDefinition()
-	return md.DefineMappingTypeWrapped(env, nil, semtypes.STRING)
+	return md.Define(env, nil, semtypes.String)
 }
 
 func initFileListenerModule(rt *runtime.Runtime) {

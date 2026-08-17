@@ -50,14 +50,15 @@ func newFileTypes(env semtypes.Env) fileTypes {
 	metaMd := semtypes.NewMappingDefinition()
 	utcLd := semtypes.NewListDefinition()
 	return fileTypes{
-		metaArrTy:  metaArrLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.MAPPING),
-		metaDataTy: metaMd.DefineMappingTypeWrapped(env, nil, semtypes.STRING),
-		utcTupleTy: utcLd.TupleTypeWrappedRo(env, semtypes.INT, semtypes.DECIMAL),
+		metaArrTy:  metaArrLd.Define(env, nil, semtypes.ListRest(semtypes.Mapping)),
+		metaDataTy: metaMd.Define(env, nil, semtypes.String),
+		utcTupleTy: utcLd.Define(env, []semtypes.SemType{semtypes.Int, semtypes.Decimal},
+			semtypes.ListMutability(semtypes.CellMutabilityNone)),
 	}
 }
 
 func fileError(typeName, msg string) values.BalValue {
-	return values.NewError(semtypes.ERROR, msg, nil, typeName, nil)
+	return values.NewError(semtypes.Error, msg, nil, typeName, nil)
 }
 
 func (t *fileTypes) goTimeToUtc(ctx *extern.Context, tm time.Time) *values.List {

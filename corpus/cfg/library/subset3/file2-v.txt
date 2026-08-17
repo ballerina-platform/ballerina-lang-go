@@ -4,9 +4,8 @@
       (variable baseDir (type
         (value-type string)) (expr
         (checked-expr
-          (invocation file createTempDir (
-            (named-arg prefix
-              (literal bal-file2-))))))))
+          (invocation file createTempDir ( <default>
+            (literal bal-file2-) <default>))))))
     (var-def
       (variable f1 (type
         (value-type string)) (expr
@@ -163,7 +162,7 @@
           (user-defined-type file Error)
           (value-type null))) (expr
         (invocation file createDir (
-          (simple-var-ref baseDir))))))
+          (simple-var-ref baseDir) <default>)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -206,7 +205,7 @@
         (invocation file remove (
           (binary-expr +
             (simple-var-ref baseDir)
-            (literal /does-not-exist.txt)))))))
+            (literal /does-not-exist.txt)) <default>)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -222,7 +221,7 @@
           (user-defined-type file Error)
           (value-type null))) (expr
         (invocation file remove (
-          (simple-var-ref cwd))))))
+          (simple-var-ref cwd) <default>)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -278,7 +277,7 @@
         (invocation file createDir (
           (binary-expr +
             (simple-var-ref baseDir)
-            (literal /no/such/parent)))))))
+            (literal /no/such/parent)) <default>)))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -289,11 +288,10 @@
         (union-type
           (value-type string)
           (user-defined-type file Error))) (expr
-        (invocation file createTemp (
-          (named-arg dir
-            (binary-expr +
-              (simple-var-ref baseDir)
-              (literal /does-not-exist))))))))
+        (invocation file createTemp ( <default> <default>
+          (binary-expr +
+            (simple-var-ref baseDir)
+            (literal /does-not-exist)))))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
@@ -304,11 +302,10 @@
         (union-type
           (value-type string)
           (user-defined-type file Error))) (expr
-        (invocation file createTempDir (
-          (named-arg dir
-            (binary-expr +
-              (simple-var-ref baseDir)
-              (literal /does-not-exist))))))))
+        (invocation file createTempDir ( <default> <default>
+          (binary-expr +
+            (simple-var-ref baseDir)
+            (literal /does-not-exist)))))))
     (expression-stmt
       (invocation io println (
         (type-test-expr is
