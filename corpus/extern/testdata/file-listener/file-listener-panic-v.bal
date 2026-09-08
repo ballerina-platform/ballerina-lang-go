@@ -25,12 +25,12 @@ listener file:Listener dirListener = checkpanic new ({path: watchDir, recursive:
 
 isolated boolean modifyInvoked = false;
 isolated boolean deleteInvoked = false;
+isolated int zero = 0;
 
 service on dirListener {
     remote function onCreate(file:FileEvent m) {
         _ = m.operation;
         lock {
-            int zero = 0;
             int _ = 1 / zero;
         }
     }
