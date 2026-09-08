@@ -405,8 +405,8 @@ public class Entity {
 
     # Extracts body parts from a multipart entity.
     #
-    # + return - An array of body parts, or a `ParserError` if the entity is not a composite
-    # (`multipart/*` or `message/*`) media type, or the body cannot be decoded
+    # + return - An array of body parts, or a `ParserError` if the entity is not a
+    # `multipart/*` media type, or the body cannot be decoded
     public isolated function getBodyParts() returns Entity[]|ParserError {
         return externGetBodyParts(self);
     }

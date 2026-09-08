@@ -40,5 +40,14 @@ public function main() returns error? {
     mime:Entity noHeader = new;
     mime:Entity[]|mime:ParserError noHeaderResult = noHeader.getBodyParts();
     io:println(noHeaderResult is mime:ParserError); // @output true
+
+    // message/* has no boundary parameter to split on; not decoded as composite
+    mime:Entity messageEntity = new;
+    messageEntity.setByteArray("Subject: hi\r\n\r\nbody".toBytes(), "message/rfc822");
+    mime:Entity[]|mime:ParserError messageResult = messageEntity.getBodyParts();
+    io:println(messageResult is mime:ParserError); // @output true
+    if messageResult is mime:ParserError {
+        io:println(messageResult.message()); // @output Entity body is not a type of composite media type. Received content-type : message/rfc822
+    }
     return;
 }

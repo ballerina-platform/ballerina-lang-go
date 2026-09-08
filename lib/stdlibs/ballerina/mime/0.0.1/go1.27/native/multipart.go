@@ -142,7 +142,10 @@ func EntityListFromParts(ctx *extern.Context, parts []*values.Object) *values.Li
 }
 
 // MultipartBoundary parses a Content-Type header value and reports whether it names a
-// composite (multipart/* or message/*) media type, along with its boundary parameter.
+// multipart/* media type, along with its boundary parameter. message/* is deliberately
+// excluded: it has no boundary parameter (it's a single embedded message, not a
+// boundary-delimited part sequence), so decoding it needs a different parser than
+// DecodeMultipart's multipart.NewReader — out of scope here.
 func MultipartBoundary(contentType string) (baseType, boundary string, isComposite bool) {
 	if contentType == "" {
 		return "", "", false
@@ -152,7 +155,7 @@ func MultipartBoundary(contentType string) (baseType, boundary string, isComposi
 		return contentType, "", false
 	}
 	primaryType := strings.ToLower(strings.SplitN(mediaType, "/", 2)[0])
-	if primaryType != "multipart" && primaryType != "message" {
+	if primaryType != "multipart" {
 		return mediaType, "", false
 	}
 	return mediaType, params["boundary"], true
