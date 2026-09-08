@@ -5,4 +5,6 @@ Hello
 true
 100
 true
+true
+café
 -- stderr --

@@ -1,3 +1,19 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import ballerina/io;
 import ballerina/mime;
 
@@ -37,6 +53,22 @@ public function main() returns error? {
 
     string|byte[]|mime:DecodeError invalidDec = mime:base64Decode("not-valid-base64!!!");
     io:println(invalidDec is mime:DecodeError);
+
+    // charset controls how a string input is turned into bytes before encoding: 'é' is
+    // 2 bytes in UTF-8 but 1 byte in ISO-8859-1, so the two encodings must differ.
+    string|byte[]|mime:EncodeError utf8Enc = mime:base64Encode("café", "utf-8");
+    string|byte[]|mime:EncodeError isoEnc = mime:base64Encode("café", "iso-8859-1");
+    if utf8Enc is string && isoEnc is string {
+        io:println(utf8Enc != isoEnc);
+    }
+
+    // Decoding with the matching charset round-trips back to the original string.
+    if isoEnc is string {
+        string|byte[]|mime:DecodeError isoDec = mime:base64Decode(isoEnc, "iso-8859-1");
+        if isoDec is string {
+            io:println(isoDec);
+        }
+    }
 }
 // @output SGVsbG8=
 // @output Hello
@@ -44,3 +76,5 @@ public function main() returns error? {
 // @output true
 // @output 100
 // @output true
+// @output true
+// @output café

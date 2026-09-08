@@ -32,7 +32,10 @@ type jsonTypePair struct {
 
 // jsonTypesByEnv associates a weak pointer to a semtypes.Env with the canonical
 // json[]/map<json> semtypes built for it, self-cleaning once the Env is unreachable.
-var jsonTypesByEnv sync.Map // weak.Pointer[env-pointee] -> jsonTypePair
+var (
+	jsonTypesMu    sync.Mutex // serializes the build-and-store below; Load is lock-free
+	jsonTypesByEnv sync.Map   // weak.Pointer[env-pointee] -> jsonTypePair
+)
 
 // JSONListAndMapTypes returns the canonical json[]/map<json> semtypes for a context's
 // environment, memoized per environment. semtypes.ContextFrom builds a fresh Context
@@ -49,6 +52,16 @@ func JSONListAndMapTypes(ctx semtypes.Context) (semtypes.SemType, semtypes.SemTy
 	// package can only name weak.Pointer[...] for it via type inference, not explicitly —
 	// boxing lets the AddCleanup callback below stay a plain func(any).
 	key := any(weak.Make(env))
+	if v, ok := jsonTypesByEnv.Load(key); ok {
+		p := v.(jsonTypePair)
+		return p.listTy, p.mapTy
+	}
+	// Double-checked locking: two goroutines racing a cache miss for the same env must
+	// not each register their own atoms, so the build-and-store below is serialized and
+	// re-checks the cache before building. Contention is negligible — this runs once per
+	// env, not on the request path.
+	jsonTypesMu.Lock()
+	defer jsonTypesMu.Unlock()
 	if v, ok := jsonTypesByEnv.Load(key); ok {
 		p := v.(jsonTypePair)
 		return p.listTy, p.mapTy

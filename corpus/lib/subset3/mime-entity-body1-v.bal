@@ -56,9 +56,28 @@ public function main() {
     if emptyResult is mime:ParserError {
         io:println("parser error");
     }
+
+    // getJson() decodes only the first JSON value; trailing non-whitespace data is
+    // rejected rather than silently dropped.
+    mime:Entity trailingJsonEntity = new ();
+    trailingJsonEntity.setByteArray("{} false".toBytes(), "application/json");
+    json|mime:ParserError trailingJsonResult = trailingJsonEntity.getJson();
+    if trailingJsonResult is mime:ParserError {
+        io:println("trailing data rejected");
+    }
+
+    // Trailing whitespace after the JSON value is still accepted.
+    mime:Entity trailingWsEntity = new ();
+    trailingWsEntity.setByteArray("{}  \n".toBytes(), "application/json");
+    json|mime:ParserError trailingWsResult = trailingWsEntity.getJson();
+    if trailingWsResult is json {
+        io:println("trailing whitespace accepted");
+    }
 }
 // @output Hello World
 // @output 5
 // @output dispatched text
 // @output 4
 // @output parser error
+// @output trailing data rejected
+// @output trailing whitespace accepted

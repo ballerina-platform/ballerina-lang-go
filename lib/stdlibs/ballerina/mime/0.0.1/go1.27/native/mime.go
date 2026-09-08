@@ -21,10 +21,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime"
 	"strconv"
 	"strings"
 	"sync"
+
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/ianaindex"
 
 	"github.com/ballerina-nutcracker/ballerina/runtime"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
@@ -144,6 +148,16 @@ func mimeEncode(data []byte) string {
 	return sb.String()
 }
 
+// lookupCharset resolves an IANA charset name (e.g. "utf-8", "iso-8859-1") to its
+// x/text encoding, for transcoding a base64 payload's string form to/from raw bytes.
+func lookupCharset(charset string) (encoding.Encoding, error) {
+	enc, err := ianaindex.IANA.Encoding(charset)
+	if err != nil || enc == nil {
+		return nil, fmt.Errorf("unsupported charset: %s", charset)
+	}
+	return enc, nil
+}
+
 // mimeDecode strips MIME whitespace (\r, \n, space, tab) before decoding,
 // matching Java's Base64.getMimeDecoder() leniency.
 func mimeDecode(s string) ([]byte, error) {
@@ -243,6 +257,12 @@ func initMimeModule(rt *runtime.Runtime) {
 			dec.UseNumber()
 			if err := dec.Decode(&v); err != nil {
 				return mimeError("ParserError", "Error occurred while retrieving the json payload from the entity: "+err.Error()), nil
+			}
+			// Decode only consumes the first JSON value; a second Decode must hit EOF,
+			// otherwise trailing non-whitespace data (e.g. "{} false") was silently dropped.
+			var trailing json.RawMessage
+			if err := dec.Decode(&trailing); err != io.EOF {
+				return mimeError("ParserError", "Error occurred while retrieving the json payload from the entity: trailing characters after the JSON value"), nil
 			}
 			return values.GoToBalValue(ctx.TypeCtx(), v, jsonListType, jsonMapType), nil
 		})
@@ -438,8 +458,15 @@ func initMimeModule(rt *runtime.Runtime) {
 			}
 			switch v := args[0].(type) {
 			case string:
-				_ = charset
-				encoded := mimeEncode([]byte(v))
+				enc, err := lookupCharset(charset)
+				if err != nil {
+					return mimeError("EncodeError", err.Error()), nil
+				}
+				data, err := enc.NewEncoder().String(v)
+				if err != nil {
+					return mimeError("EncodeError", "base64 encoding failed: "+err.Error()), nil
+				}
+				encoded := mimeEncode([]byte(data))
 				return encoded, nil
 			case *values.List:
 				data := listToBytes(v)
@@ -460,12 +487,19 @@ func initMimeModule(rt *runtime.Runtime) {
 			}
 			switch v := args[0].(type) {
 			case string:
-				_ = charset
 				decoded, err := mimeDecode(v)
 				if err != nil {
 					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
 				}
-				return string(decoded), nil
+				dec, err := lookupCharset(charset)
+				if err != nil {
+					return mimeError("DecodeError", err.Error()), nil
+				}
+				out, err := dec.NewDecoder().String(string(decoded))
+				if err != nil {
+					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
+				}
+				return out, nil
 			case *values.List:
 				data := listToBytes(v)
 				decoded, err := mimeDecode(string(data))

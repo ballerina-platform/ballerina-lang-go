@@ -4,4 +4,6 @@ Entity body is not a type of composite media type. Received content-type : text/
 true
 Error occurred while extracting body parts from entity: no boundary parameter found in Content-Type
 true
+true
+Entity body is not a type of composite media type. Received content-type : message/rfc822
 -- stderr --

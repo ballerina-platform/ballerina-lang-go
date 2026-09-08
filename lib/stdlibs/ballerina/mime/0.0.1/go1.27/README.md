@@ -68,7 +68,7 @@ Support Levels:
 | Entity JSON body | Supported | `setJson`, `getJson` — `getJson()` also parses a text or byte[] body as JSON |
 | Entity byte array body | Supported | `setByteArray`, `getByteArray` — `getByteArray()` also encodes a text or JSON body to bytes |
 | Entity generic body dispatch | Supported | `setBody(string\|json\|byte[]\|Entity[])` |
-| Entity multipart body | Partially Supported | `setBodyParts`, `getBodyParts` — flat (single-level) multipart only; a part whose own body is itself multipart is not recursively decoded. Per-part `Content-Type` defaults to `text/plain` when the wire omits it, matching jBallerina. `getBodyPartsAsChannel` is not implemented — it returns `io:ReadableByteChannel`, an unrelated, still-unimplemented io type |
+| Entity multipart body | Partially Supported | `setBodyParts`, `getBodyParts` — flat (single-level) multipart only; a part whose own body is itself multipart is not recursively decoded. Per-part `Content-Type` defaults to `text/plain` when the wire omits it, matching jBallerina. Only `multipart/*` is decoded; `message/*` (e.g. `message/rfc822`) has no boundary parameter to split on and returns a `ParserError`. `getBodyPartsAsChannel` is not implemented — it returns `io:ReadableByteChannel`, an unrelated, still-unimplemented io type |
 | Base64 encoding and decoding | Supported | `base64Encode`, `base64Decode`, `base64EncodeBlob`, `base64DecodeBlob` |
 | Entity XML body | Not Yet Supported | `setXml`, `getXml` require XML type support |
 | Module-level error type | Partially Supported | `mime:Error` and all subtypes (`InvalidContentTypeError`, `ParserError`, `HeaderNotFoundError`, `EncodeError`, `DecodeError`, etc.) are plain `error` aliases; `distinct` type descriptor not yet supported |
