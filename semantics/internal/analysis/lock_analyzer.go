@@ -694,12 +694,13 @@ func validateIsolatedFunction(a analyzer, fn invokableSignatureNode) {
 //     parameters of an enclosing function) must be effectively final and
 //     have a type that is a subtype of `Isolated`. Closure boundaries validate
 //     captures explicitly before walking their bodies.
-func isIsolatedFunctionInner(a analyzer, node ast.BLangNode, scope *localScope) {
+func isIsolatedFunctionInner(a analyzer, node ast.BLangNode, scope *localScope) bool {
 	if scope == nil {
 		scope = newLocalScope(nil)
 	}
-	v := &isolatedFnVisitor{a: a, scope: scope}
+	v := &isolatedFnVisitor{a: a, scope: scope, isolated: true}
 	ast.Walk(v, node)
+	return v.isolated
 }
 
 // localScope is a lexical scope frame in a parent-linked chain.
@@ -729,8 +730,14 @@ func (s *localScope) lookup(sym model.SymbolRef) (varDeclMetadata, bool) {
 }
 
 type isolatedFnVisitor struct {
-	a     analyzer
-	scope *localScope
+	a        analyzer
+	scope    *localScope
+	isolated bool
+}
+
+func (visitor *isolatedFnVisitor) semanticErr(message string, loc diagnostics.Location) {
+	visitor.isolated = false
+	visitor.a.semanticErr(message, loc)
 }
 
 func (visitor *isolatedFnVisitor) Visit(n ast.BLangNode) ast.Visitor {
@@ -753,23 +760,23 @@ func (visitor *isolatedFnVisitor) Visit(n ast.BLangNode) ast.Visitor {
 			return nil
 		}
 		if !isIsolatedInvocationTarget(a, call) || !isIsolatedInvocation(a, call) {
-			a.semanticErr("start action is not isolated", node.GetPosition())
+			visitor.semanticErr("start action is not isolated", node.GetPosition())
 		}
 		visitor.walkInvocableOperands(call)
 		return nil
 	case *ast.BLangInvocation:
 		if loc, invalid := isolatedInvocationViolation(a, node); invalid {
-			a.semanticErr("invocation of a non-isolated function", loc)
+			visitor.semanticErr("invocation of a non-isolated function", loc)
 		}
 		return visitor
 	case *ast.BLangRemoteMethodCallAction, *ast.BLangClientResourceAccessAction:
 		if !isIsolatedInvocationTarget(a, node.(ast.Invocable)) {
-			a.semanticErr("invocation of a non-isolated function", n.GetPosition())
+			visitor.semanticErr("invocation of a non-isolated function", n.GetPosition())
 		}
 		return visitor
 	case *ast.BLangNewExpression:
 		if !checkIsolatedNew(visitor.a, node) {
-			a.semanticErr("non isolated initialization", n.GetPosition())
+			visitor.semanticErr("non isolated initialization", n.GetPosition())
 		}
 		return visitor
 	case *ast.BLangLambdaFunction:
@@ -914,7 +921,7 @@ func (visitor *isolatedFnVisitor) checkRead(ref *ast.BLangVarRef) {
 			semtypes.IsSubtype(tyCtx, md.Type, isolated) {
 			return
 		}
-		visitor.a.semanticErr("access of mutable variable", ref.GetPosition())
+		visitor.semanticErr("access of mutable variable", ref.GetPosition())
 		return
 	}
 	if ref.VariableName.GetValue() == "self" {
