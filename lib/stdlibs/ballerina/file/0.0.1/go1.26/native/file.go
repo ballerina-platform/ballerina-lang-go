@@ -359,11 +359,11 @@ func initFileModule(rt *runtime.Runtime) {
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			input, _ := args[0].(string)
 			index, _ := args[1].(int64)
-			length := int64(len([]rune(input)))
-			if index > length {
-				return fileError("GenericError", fmt.Sprintf("Character index %d is greater then path string length %d", index, length)), nil
-			}
 			runes := []rune(input)
+			length := int64(len(runes))
+			if index < 0 || index >= length {
+				return fileError("GenericError", fmt.Sprintf("Character index %d is out of range for path string of length %d", index, length)), nil
+			}
 			return string(runes[index : index+1]), nil
 		})
 
