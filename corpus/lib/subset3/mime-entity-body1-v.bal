@@ -73,6 +73,50 @@ public function main() {
     if trailingWsResult is json {
         io:println("trailing whitespace accepted");
     }
+
+    // setFileAsEntityBody sets the file as a lazy data source; default content-type
+    // is application/octet-stream, overridable like the other setters.
+    string filePath = "/tmp/bal_mime_entity_body_check.txt";
+    checkpanic io:fileWriteString(filePath, "content from a file");
+    mime:Entity fileEntity = new ();
+    fileEntity.setFileAsEntityBody(filePath);
+    io:println(fileEntity.getContentType());
+    string|mime:ParserError fileTextResult = fileEntity.getText();
+    if fileTextResult is string {
+        io:println(fileTextResult);
+    }
+
+    mime:Entity fileEntityWithType = new ();
+    fileEntityWithType.setFileAsEntityBody(filePath, "text/custom");
+    io:println(fileEntityWithType.getContentType());
+
+    // getByteArray() materializes a file-backed (channel) body too, not just getText().
+    byte[]|mime:ParserError fileBytesResult = fileEntityWithType.getByteArray();
+    if fileBytesResult is byte[] {
+        io:println(fileBytesResult.length());
+    }
+
+    // The file's content is read on demand, not at setFileAsEntityBody time: a
+    // change to the file between set and read is visible to the accessor,
+    // matching jBallerina's lazy byte-channel data source.
+    mime:Entity lazyEntity = new ();
+    lazyEntity.setFileAsEntityBody(filePath);
+    checkpanic io:fileWriteString(filePath, "overwritten content");
+    string|mime:ParserError lazyResult = lazyEntity.getText();
+    if lazyResult is string {
+        io:println(lazyResult);
+    }
+
+    // The underlying byte channel can only be drained once, so the first accessor to
+    // materialize it must cache the result on the entity (matching jBallerina's
+    // EntityBodyHandler.updateDataSource) rather than re-reading — an already-exhausted
+    // channel on the second read would otherwise silently yield an empty body.
+    string|mime:ParserError cachedResult = lazyEntity.getText();
+    io:println(cachedResult);
+    byte[]|mime:ParserError cachedBytesResult = lazyEntity.getByteArray();
+    if cachedBytesResult is byte[] {
+        io:println(cachedBytesResult.length());
+    }
 }
 // @output Hello World
 // @output 5
@@ -81,3 +125,10 @@ public function main() {
 // @output parser error
 // @output trailing data rejected
 // @output trailing whitespace accepted
+// @output application/octet-stream
+// @output content from a file
+// @output text/custom
+// @output 19
+// @output overwritten content
+// @output overwritten content
+// @output 19

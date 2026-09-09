@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 // ── Errors ───────────────────────────────────────────────────────────────────
 
 // Note: distinct error types are not yet supported; all subtypes are plain error aliases.
@@ -333,10 +335,12 @@ public class Entity {
 
     # Sets the body of this entity, dispatching by the runtime type of `entityBody`.
     #
-    # + entityBody - the body to set: text, JSON, byte array, or multipart body parts
-    public isolated function setBody(string|json|byte[]|Entity[] entityBody) {
+    # + entityBody - the body to set: text, XML, JSON, byte array, or multipart body parts
+    public isolated function setBody(string|xml|json|byte[]|Entity[] entityBody) {
         if entityBody is string {
             self.setText(entityBody);
+        } else if entityBody is xml {
+            self.setXml(entityBody);
         } else if entityBody is byte[] {
             self.setByteArray(entityBody);
         } else if entityBody is Entity[] {
@@ -344,6 +348,31 @@ public class Entity {
         } else if entityBody is json {
             self.setJson(entityBody);
         }
+    }
+
+    # Sets the entity body with the content of a given file. This method overrides any
+    # existing `content-type` header with the default content-type, which is
+    # `application/octet-stream`. This default value can be overridden by passing the
+    # content type as an optional parameter. The file is opened eagerly (a bad path
+    # panics here, matching jBallerina's `checkpanic io:openReadableFile`), but its
+    # content is not read until the body is actually materialized.
+    #
+    # + filePath - path of the file
+    # + contentType - the content type to set; defaults to `application/octet-stream`
+    public isolated function setFileAsEntityBody(string filePath, string contentType = "application/octet-stream") {
+        io:ReadableByteChannel byteChannel = checkpanic io:openReadableFile(filePath);
+        self.setByteChannel(byteChannel, contentType);
+    }
+
+    # Sets the entity body with the given byte channel content, as a lazy data source
+    # read on demand by whichever accessor (`getText`, `getJson`, `getXml`, `getByteArray`)
+    # first materializes the body.
+    #
+    # + byteChannel - the byte channel to set as the entity body
+    # + contentType - the content type to set; defaults to `application/octet-stream`
+    isolated function setByteChannel(io:ReadableByteChannel byteChannel, string contentType = "application/octet-stream") {
+        externSetByteChannel(self, byteChannel, contentType);
+        self.setHeader(CONTENT_TYPE, contentType);
     }
 
     # Sets the body of this entity as JSON.
@@ -360,6 +389,22 @@ public class Entity {
     # + return - the JSON body, or a `ParserError` if it cannot be parsed as JSON
     public isolated function getJson() returns json|ParserError {
         return externGetJson(self);
+    }
+
+    # Sets the body of this entity as XML.
+    #
+    # + xmlContent - the XML content to set
+    # + contentType - the content type to set; defaults to `application/xml`
+    public isolated function setXml(xml xmlContent, string contentType = "application/xml") {
+        externSetXml(self, xmlContent, contentType);
+        self.setHeader(CONTENT_TYPE, contentType);
+    }
+
+    # Extracts the entity body as XML, converting from a text or byte[] body if necessary.
+    #
+    # + return - the XML body, or a `ParserError` if it cannot be parsed as XML
+    public isolated function getXml() returns xml|ParserError {
+        return externGetXml(self);
     }
 
     # Sets the body of this entity as text.
@@ -497,9 +542,15 @@ public class Entity {
     }
 }
 
+isolated function externSetByteChannel(Entity entity, io:ReadableByteChannel byteChannel, string contentType) = external;
+
 isolated function externSetJson(Entity entity, json jsonContent, string contentType) = external;
 
 isolated function externGetJson(Entity entity) returns json|ParserError = external;
+
+isolated function externSetXml(Entity entity, xml xmlContent, string contentType) = external;
+
+isolated function externGetXml(Entity entity) returns xml|ParserError = external;
 
 isolated function externSetText(Entity entity, string textContent, string contentType) = external;
 
@@ -512,6 +563,10 @@ isolated function externGetByteArray(Entity entity) returns byte[]|ParserError =
 isolated function externSetBodyParts(Entity entity, Entity[] bodyParts, string contentType) = external;
 
 isolated function externGetBodyParts(Entity entity) returns Entity[]|ParserError = external;
+
+isolated function externBase64Encode((string|byte[]) contentToBeEncoded, string charset) returns (string|byte[]|EncodeError) = external;
+
+isolated function externBase64Decode((string|byte[]) contentToBeDecoded, string charset) returns (string|byte[]|DecodeError) = external;
 
 isolated function externParseInt(string s) returns int|error = external;
 
@@ -538,28 +593,70 @@ public isolated function getMediaType(string contentType) returns MediaType|Inva
 # + return - the parsed content disposition
 public isolated function getContentDispositionObject(string contentDisposition) returns ContentDisposition = external;
 
-# Encodes a string or byte array using MIME-compatible Base64 encoding.
+# Encodes a string, byte array, or byte channel using MIME-compatible Base64 encoding.
 #
-# + contentToBeEncoded - the string or byte array to encode
+# + contentToBeEncoded - the string, byte array, or byte channel to encode
 # + charset - the charset to use when the input is a string; defaults to `utf-8`
 # + return - the encoded value, in the same shape as the input, or an `EncodeError`
-public isolated function base64Encode((string|byte[]) contentToBeEncoded, string charset = "utf-8")
-        returns (string|byte[]|EncodeError) = external;
+public isolated function base64Encode((string|byte[]|io:ReadableByteChannel) contentToBeEncoded, string charset = "utf-8")
+        returns (string|byte[]|io:ReadableByteChannel|EncodeError) {
+    if contentToBeEncoded is io:ReadableByteChannel {
+        byte[]|io:Error content = contentToBeEncoded.readAll();
+        if content is io:Error {
+            return error EncodeError("base64 encoding failed: " + content.message());
+        }
+        var encoded = externBase64Encode(content, charset);
+        if encoded is byte[] {
+            io:ReadableByteChannel result = new;
+            io:Error? attachErr = result.attachBytes(encoded);
+            if attachErr is io:Error {
+                return error EncodeError("base64 encoding failed: " + attachErr.message());
+            }
+            return result;
+        }
+        if encoded is EncodeError {
+            return encoded;
+        }
+        return error EncodeError("base64 encoding failed");
+    }
+    return externBase64Encode(contentToBeEncoded, charset);
+}
 
-# Decodes a Base64-encoded string or byte array.
+# Decodes a Base64-encoded string, byte array, or byte channel.
 #
-# + contentToBeDecoded - the string or byte array to decode
+# + contentToBeDecoded - the string, byte array, or byte channel to decode
 # + charset - the charset to use when the input is a string; defaults to `utf-8`
 # + return - the decoded value, in the same shape as the input, or a `DecodeError`
-public isolated function base64Decode((string|byte[]) contentToBeDecoded, string charset = "utf-8")
-        returns (string|byte[]|DecodeError) = external;
+public isolated function base64Decode((string|byte[]|io:ReadableByteChannel) contentToBeDecoded, string charset = "utf-8")
+        returns (string|byte[]|io:ReadableByteChannel|DecodeError) {
+    if contentToBeDecoded is io:ReadableByteChannel {
+        byte[]|io:Error content = contentToBeDecoded.readAll();
+        if content is io:Error {
+            return error DecodeError("base64 decoding failed: " + content.message());
+        }
+        var decoded = externBase64Decode(content, charset);
+        if decoded is byte[] {
+            io:ReadableByteChannel result = new;
+            io:Error? attachErr = result.attachBytes(decoded);
+            if attachErr is io:Error {
+                return error DecodeError("base64 decoding failed: " + attachErr.message());
+            }
+            return result;
+        }
+        if decoded is DecodeError {
+            return decoded;
+        }
+        return error DecodeError("base64 decoding failed");
+    }
+    return externBase64Decode(contentToBeDecoded, charset);
+}
 
 # Encodes a byte array using MIME-compatible Base64 encoding.
 #
 # + valueToBeEncoded - the byte array to encode
 # + return - the encoded byte array, or an `EncodeError`
 public isolated function base64EncodeBlob(byte[] valueToBeEncoded) returns byte[]|EncodeError {
-    string|byte[]|EncodeError result = base64Encode(valueToBeEncoded);
+    var result = base64Encode(valueToBeEncoded);
     if result is byte[]|EncodeError {
         return result;
     }
@@ -571,7 +668,7 @@ public isolated function base64EncodeBlob(byte[] valueToBeEncoded) returns byte[
 # + valueToBeDecoded - the byte array to decode
 # + return - the decoded byte array, or a `DecodeError`
 public isolated function base64DecodeBlob(byte[] valueToBeDecoded) returns byte[]|DecodeError {
-    string|byte[]|DecodeError result = base64Decode(valueToBeDecoded);
+    var result = base64Decode(valueToBeDecoded);
     if result is byte[]|DecodeError {
         return result;
     }

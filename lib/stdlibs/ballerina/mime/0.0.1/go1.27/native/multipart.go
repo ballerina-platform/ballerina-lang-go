@@ -40,7 +40,7 @@ func entityMethodKeys() map[string]string {
 	names := []string{
 		"setContentType", "getContentType", "setContentId", "getContentId",
 		"setContentLength", "getContentLength", "setContentDisposition", "getContentDisposition",
-		"setBody", "setJson", "getJson", "setText", "getText", "setByteArray", "getByteArray",
+		"setBody", "setJson", "getJson", "setXml", "getXml", "setText", "getText", "setByteArray", "getByteArray",
 		"getHeader", "getHeaders", "getHeaderNames", "addHeader", "setHeader",
 		"removeHeader", "removeAllHeaders", "hasHeader", "setBodyParts", "getBodyParts",
 	}
@@ -248,7 +248,7 @@ func entityHeaderMap(obj *values.Object) map[string][]string {
 // not do this, matching jBallerina, where serializing a multipart entity to bytes is not
 // exposed through mime's public API either (jBallerina's HTTP transport layer does it
 // internally instead).
-func EncodeMultipart(parts []*values.Object, boundary string) (data []byte, usedBoundary string, err error) {
+func EncodeMultipart(ctx *extern.Context, parts []*values.Object, boundary string) (data []byte, usedBoundary string, err error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 	if boundary != "" {
@@ -262,7 +262,7 @@ func EncodeMultipart(parts []*values.Object, boundary string) (data []byte, used
 		if err != nil {
 			return nil, "", err
 		}
-		partData, err := BytesForBody(GetEntityBody(part))
+		partData, err := BytesForBody(ctx, part)
 		if err != nil {
 			return nil, "", err
 		}
