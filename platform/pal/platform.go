@@ -108,7 +108,10 @@ type (
 	}
 	HTTP struct {
 		// NewClient builds an outbound HTTP client (native: net/http; WASM: fetch).
-		NewClient func(cfg ClientConfig) HTTPClient
+		// Returns an error when cfg.TLS carries malformed CA/client certificate
+		// material rather than silently degrading (e.g. falling back to the
+		// system trust store).
+		NewClient func(cfg ClientConfig) (HTTPClient, error)
 		// Listen starts serving inbound requests to handler. On native it binds a
 		// TCP socket and runs http.Server.Serve; a WASM/web platform registers the
 		// handler with its JS host instead (no socket). Returns a handle whose

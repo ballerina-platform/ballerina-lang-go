@@ -154,8 +154,11 @@ func (l *limitedBodyReadCloser) Close() error { return l.rc.Close() }
 // NewHTTPClient is the pal.HTTP.NewClient factory for the native-CLI
 // platform. It builds a *http.Client configured from cfg and wraps it so the
 // runtime sees only the pal.HTTPClient interface.
-func NewHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
-	tlsConfig := buildTLSConfig(cfg.TLS)
+func NewHTTPClient(cfg pal.ClientConfig) (pal.HTTPClient, error) {
+	tlsConfig, err := buildTLSConfig(cfg.TLS)
+	if err != nil {
+		return nil, err
+	}
 	// Build a net.Dialer with a configurable connect timeout.
 	// TCP keep-alive is disabled (KeepAlive:-1) to match jBallerina's default
 	// socketConfig.keepAlive=false; HTTP-level connection reuse is handled by the Transport pool.
@@ -230,7 +233,7 @@ func NewHTTPClient(cfg pal.ClientConfig) pal.HTTPClient {
 			return nil
 		}
 	}
-	return &httpClient{client: c, maxEntityBodySize: cfg.ResponseLimits.MaxEntityBodySize}
+	return &httpClient{client: c, maxEntityBodySize: cfg.ResponseLimits.MaxEntityBodySize}, nil
 }
 
 // poolDefault returns d if non-zero, otherwise def.

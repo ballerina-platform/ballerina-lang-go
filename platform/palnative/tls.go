@@ -31,30 +31,32 @@ import (
 // buildTLSConfig assembles a *tls.Config from a pal.TLSConfig, resolving CA
 // pools, client certificates, SNI, cipher suites, and protocol version
 // bounds. Shared by every native-CLI PAL category that opens a TLS
-// connection.
-func buildTLSConfig(cfg pal.TLSConfig) *tls.Config {
+// connection. Fails closed on a malformed CA or client certificate: jBallerina's
+// own TLS setup (netty's SslContextBuilder.trustManager/keyManager) throws
+// immediately on invalid PEM material rather than silently falling back to
+// the system trust store or an unauthenticated connection.
+func buildTLSConfig(cfg pal.TLSConfig) (*tls.Config, error) {
 	tlsConfig := &tls.Config{InsecureSkipVerify: cfg.InsecureSkipVerify} //nolint:gosec
 	if len(cfg.CACertPEM) > 0 {
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM(cfg.CACertPEM) {
-			_, _ = fmt.Fprintf(os.Stderr, "ballerina: failed to parse CA certificate PEM (no valid certificates found); custom CA not loaded\n")
-		} else {
-			tlsConfig.RootCAs = pool
-			if !cfg.InsecureSkipVerify {
-				// Go 1.15+ requires SANs for hostname verification; many self-signed and
-				// Java-issued certs only set the CN field. When a custom CA is provided
-				// we do our own verification so CN-only certs are accepted as a fallback.
-				tlsConfig.InsecureSkipVerify = true //nolint:gosec
-				tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool, cfg.ServerName)
-			}
+			return nil, fmt.Errorf("failed to parse CA certificate PEM: no valid certificates found")
+		}
+		tlsConfig.RootCAs = pool
+		if !cfg.InsecureSkipVerify {
+			// Go 1.15+ requires SANs for hostname verification; many self-signed and
+			// Java-issued certs only set the CN field. When a custom CA is provided
+			// we do our own verification so CN-only certs are accepted as a fallback.
+			tlsConfig.InsecureSkipVerify = true //nolint:gosec
+			tlsConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(pool, cfg.ServerName)
 		}
 	}
 	if len(cfg.ClientCertPEM) > 0 && len(cfg.ClientKeyPEM) > 0 {
-		if cert, err := tls.X509KeyPair(cfg.ClientCertPEM, cfg.ClientKeyPEM); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "ballerina: tls.X509KeyPair failed (client certificate not loaded): %v\n", err)
-		} else {
-			tlsConfig.Certificates = []tls.Certificate{cert}
+		cert, err := tls.X509KeyPair(cfg.ClientCertPEM, cfg.ClientKeyPEM)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client certificate: %w", err)
 		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 	tlsConfig.ServerName = cfg.ServerName
 	tlsConfig.SessionTicketsDisabled = cfg.DisableSessionTickets
@@ -72,5 +74,5 @@ func buildTLSConfig(cfg pal.TLSConfig) *tls.Config {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: no valid cipher suites resolved from cfg.CipherSuiteNames %v; keeping secure defaults\n", cfg.CipherSuiteNames)
 		}
 	}
-	return tlsConfig
+	return tlsConfig, nil
 }

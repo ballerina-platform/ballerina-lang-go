@@ -61,7 +61,12 @@ func Dial(ctx context.Context, network, address, localAddr string, tlsCfg *pal.T
 			effectiveTLSCfg.ServerName = address
 		}
 	}
-	tlsConn := tls.Client(conn, buildTLSConfig(effectiveTLSCfg))
+	tlsConfig, err := buildTLSConfig(effectiveTLSCfg)
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	tlsConn := tls.Client(conn, tlsConfig)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		_ = conn.Close()
 		return nil, err
