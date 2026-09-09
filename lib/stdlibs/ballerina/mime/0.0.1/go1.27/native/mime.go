@@ -52,15 +52,19 @@ const (
 	BodyJSON
 	BodyBytes
 	BodyParts
+	BodyXML
+	BodyChannel
 )
 
 // EntityBody holds the body payload attached to a Ballerina Entity object.
 type EntityBody struct {
-	Kind  EntityBodyKind
-	Text  string
-	JSON  values.BalValue
-	Bytes []byte
-	Parts []*values.Object
+	Kind    EntityBodyKind
+	Text    string
+	JSON    values.BalValue
+	Bytes   []byte
+	Parts   []*values.Object
+	XML     values.XMLValue
+	Channel *values.Object
 }
 
 const entityBodyField = "$mimeBody"
@@ -84,11 +88,59 @@ func mimeError(typeName, msg string) values.BalValue {
 	return values.NewError(semtypes.Error, msg, nil, typeName, nil)
 }
 
+// readAllFromChannel drains an io:ReadableByteChannel object via its own readAll()
+// method, invoked through the interpreter's normal object dispatch. mime treats the
+// channel as any other Ballerina value rather than reaching into io's native
+// representation, matching jBallerina's lazy byte-channel data source: the channel
+// isn't read until the body is actually materialized by an accessor.
+func readAllFromChannel(ctx *extern.Context, channel *values.Object) ([]byte, error) {
+	handle, ok := ctx.LookupObjectMethod(channel, "readAll")
+	if !ok {
+		return nil, fmt.Errorf("byte channel does not support readAll")
+	}
+	result, err := ctx.InvokeMethod(handle, []values.BalValue{channel})
+	if err != nil {
+		return nil, err
+	}
+	if errVal, ok := result.(*values.Error); ok {
+		return nil, fmt.Errorf("%s", errVal.Message)
+	}
+	list, ok := result.(*values.List)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result from byte channel readAll")
+	}
+	return listToBytes(list), nil
+}
+
+// materializeBody drains a lazy byte-channel body and caches the result back onto the
+// entity as an ordinary byte[] body, matching jBallerina's own data-source caching
+// (EntityBodyHandler.updateDataSource): a byte channel can only be drained once, so the
+// first accessor to materialize it replaces the channel with the bytes read, letting
+// every later accessor call reuse the cached value instead of re-draining an
+// already-exhausted channel.
+func materializeBody(ctx *extern.Context, obj *values.Object) (*EntityBody, error) {
+	body := GetEntityBody(obj)
+	if body == nil || body.Kind != BodyChannel {
+		return body, nil
+	}
+	data, err := readAllFromChannel(ctx, body.Channel)
+	if err != nil {
+		return nil, err
+	}
+	cached := &EntityBody{Kind: BodyBytes, Bytes: data}
+	SetEntityBody(obj, cached)
+	return cached, nil
+}
+
 // BytesForBody returns the byte representation of an Entity's body regardless of which
 // setter populated it, matching jBallerina's model where every accessor lazily converts
 // from the entity's underlying data source rather than requiring an exact kind match.
 // Exported so sibling stdlibs (e.g. http, serializing multipart parts) can reuse it.
-func BytesForBody(body *EntityBody) ([]byte, error) {
+func BytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
+	body, err := materializeBody(ctx, obj)
+	if err != nil {
+		return nil, err
+	}
 	if body == nil {
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return nil, fmt.Errorf("Entity body is not a byte[] value")
@@ -100,6 +152,8 @@ func BytesForBody(body *EntityBody) ([]byte, error) {
 		return []byte(body.Text), nil
 	case BodyJSON:
 		return values.ToJSONByteArray(body.JSON)
+	case BodyXML:
+		return []byte(body.XML.XMLString()), nil
 	default:
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return nil, fmt.Errorf("Entity body is not a byte[] value")
@@ -108,7 +162,11 @@ func BytesForBody(body *EntityBody) ([]byte, error) {
 
 // stringForBody returns the string representation of an Entity's body regardless of
 // which setter populated it, mirroring BytesForBody for the text accessor.
-func stringForBody(body *EntityBody) (string, error) {
+func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
+	body, err := materializeBody(ctx, obj)
+	if err != nil {
+		return "", err
+	}
 	if body == nil {
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return "", fmt.Errorf("Entity body is not a text value")
@@ -124,10 +182,33 @@ func stringForBody(body *EntityBody) (string, error) {
 			return "", err
 		}
 		return string(b), nil
+	case BodyXML:
+		return body.XML.XMLString(), nil
 	default:
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return "", fmt.Errorf("Entity body is not a text value")
 	}
+}
+
+// xmlForBody returns the XML representation of an Entity's body regardless of which
+// setter populated it, mirroring stringForBody/BytesForBody for the XML accessor.
+// Whatever the body's string form is (text, byte[], or JSON's serialized form) gets
+// parsed as XML (jBallerina's io:fileReadXml-style lenient parsing), matching
+// jBallerina's own getXml, which always converts through the body's string form
+// rather than special-casing non-text kinds — a non-XML string simply fails to parse.
+func xmlForBody(ctx *extern.Context, obj *values.Object) (values.XMLValue, error) {
+	body, err := materializeBody(ctx, obj)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil && body.Kind == BodyXML {
+		return body.XML, nil
+	}
+	text, err := stringForBody(ctx, obj)
+	if err != nil {
+		return nil, err
+	}
+	return values.ParseAsXMLValue(ctx.TypeCtx(), text, values.XMLLenientMode)
 }
 
 // mimeEncode produces MIME-compatible base64 (76-char line length, \r\n separators),
@@ -228,6 +309,20 @@ func initMimeModule(rt *runtime.Runtime) {
 		})
 	}
 
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteChannel",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			obj, ok := args[0].(*values.Object)
+			if !ok {
+				return nil, fmt.Errorf("first argument must be an Entity object")
+			}
+			channel, ok := args[1].(*values.Object)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be a ReadableByteChannel object")
+			}
+			SetEntityBody(obj, &EntityBody{Kind: BodyChannel, Channel: channel})
+			return nil, nil
+		})
+
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetJson",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
@@ -248,7 +343,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			if body != nil && body.Kind == BodyJSON {
 				return body.JSON, nil
 			}
-			text, err := stringForBody(body)
+			text, err := stringForBody(ctx, obj)
 			if err != nil {
 				return mimeError("ParserError", "Entity body is not a JSON value"), nil
 			}
@@ -267,6 +362,33 @@ func initMimeModule(rt *runtime.Runtime) {
 			return values.GoToBalValue(ctx.TypeCtx(), v, jsonListType, jsonMapType), nil
 		})
 
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetXml",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			obj, ok := args[0].(*values.Object)
+			if !ok {
+				return nil, fmt.Errorf("first argument must be an Entity object")
+			}
+			xmlContent, ok := args[1].(values.XMLValue)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be an xml value")
+			}
+			SetEntityBody(obj, &EntityBody{Kind: BodyXML, XML: xmlContent})
+			return nil, nil
+		})
+
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetXml",
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			obj, ok := args[0].(*values.Object)
+			if !ok {
+				return nil, fmt.Errorf("first argument must be an Entity object")
+			}
+			xmlVal, err := xmlForBody(ctx, obj)
+			if err != nil {
+				return mimeError("ParserError", "Error occurred while extracting xml data from entity: "+err.Error()), nil
+			}
+			return xmlVal, nil
+		})
+
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetText",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
@@ -279,13 +401,12 @@ func initMimeModule(rt *runtime.Runtime) {
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetText",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			body := GetEntityBody(obj)
-			text, err := stringForBody(body)
+			text, err := stringForBody(ctx, obj)
 			if err != nil {
 				return mimeError("ParserError", "Entity body is not a text value"), nil
 			}
@@ -313,8 +434,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			body := GetEntityBody(obj)
-			data, err := BytesForBody(body)
+			data, err := BytesForBody(ctx, obj)
 			if err != nil {
 				return mimeError("ParserError", err.Error()), nil
 			}
@@ -448,7 +568,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			return result, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "base64Encode",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Encode",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			charset := "utf-8"
 			if len(args) > 1 {
@@ -477,7 +597,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			}
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "base64Decode",
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Decode",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			charset := "utf-8"
 			if len(args) > 1 {

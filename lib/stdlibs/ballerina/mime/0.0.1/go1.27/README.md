@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ballerina/mime` library provides utilities for working with MIME (Multipurpose Internet Mail Extensions) types and entities as defined by RFC 2045/2046. It covers media type parsing and construction, content disposition handling, entity header and body management (text, JSON, binary, and multipart), and Base64 encoding/decoding.
+The `ballerina/mime` library provides utilities for working with MIME (Multipurpose Internet Mail Extensions) types and entities as defined by RFC 2045/2046. It covers media type parsing and construction, content disposition handling, entity header and body management (text, XML, JSON, binary, and multipart), and Base64 encoding/decoding.
 
 ## Key Functionalities
 
@@ -10,9 +10,9 @@ The `ballerina/mime` library provides utilities for working with MIME (Multipurp
 - Parse and construct content disposition headers (`ContentDisposition`) including filename, name, and parameters.
 - Manage MIME entity headers: set, get, add, remove, and check presence.
 - Manage entity content metadata: content type, content ID, content length, and content disposition.
-- Set and retrieve entity body payloads as text, JSON, or byte arrays, with every accessor able to convert from whatever the body was actually set as.
+- Set and retrieve entity body payloads as text, XML, JSON, or byte arrays, with every accessor able to convert from whatever the body was actually set as. Set a body directly from a file.
 - Set and extract multipart (`multipart/form-data`, etc.) body parts as an `Entity[]`.
-- Perform Base64 encoding and decoding of strings and byte arrays using MIME-compatible line folding.
+- Perform Base64 encoding and decoding of strings, byte arrays, and byte channels using MIME-compatible line folding.
 - Predefined constants for common media type strings and header names.
 
 ## Examples
@@ -66,11 +66,12 @@ Support Levels:
 | Entity content metadata | Supported | `setContentType`, `getContentType`, `setContentId`, `getContentId`, `setContentLength`, `getContentLength`, `setContentDisposition`, `getContentDisposition` |
 | Entity text body | Supported | `setText`, `getText` — `getText()` also converts from a JSON or byte[] body, matching jBallerina's data-source model |
 | Entity JSON body | Supported | `setJson`, `getJson` — `getJson()` also parses a text or byte[] body as JSON |
+| Entity XML body | Supported | `setXml`, `getXml` — `getXml()` also parses a text or byte[] body as XML, matching jBallerina's data-source model |
 | Entity byte array body | Supported | `setByteArray`, `getByteArray` — `getByteArray()` also encodes a text or JSON body to bytes |
-| Entity generic body dispatch | Supported | `setBody(string\|json\|byte[]\|Entity[])` |
-| Entity multipart body | Partially Supported | `setBodyParts`, `getBodyParts` — flat (single-level) multipart only; a part whose own body is itself multipart is not recursively decoded. Per-part `Content-Type` defaults to `text/plain` when the wire omits it, matching jBallerina. `message/*` (e.g. `message/rfc822`) is accepted as a composite type, matching jBallerina (RFC 2046 classifies `multipart` and `message` as the two composite top-level types), but body-part decoding for it is not yet implemented — it returns a dedicated `ParserError` rather than being decoded as if it were boundary-delimited multipart content (it isn't; a `boundary` param present on a `message/*` value is ignored rather than risking a bogus split). `getBodyPartsAsChannel` is not implemented — it returns `io:ReadableByteChannel`, an unrelated, still-unimplemented io type |
-| Base64 encoding and decoding | Supported | `base64Encode`, `base64Decode`, `base64EncodeBlob`, `base64DecodeBlob` |
-| Entity XML body | Not Yet Supported | `setXml`, `getXml` require XML type support |
+| Entity body from a file | Supported | `setFileAsEntityBody(filePath, contentType)` — sets the file as a lazy data source, read on demand by whichever accessor materializes the body first, matching jBallerina. A failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
+| Entity generic body dispatch | Supported | `setBody(string\|xml\|json\|byte[]\|Entity[])` |
+| Entity multipart body | Partially Supported | `setBodyParts`, `getBodyParts` — flat (single-level) multipart only; a part whose own body is itself multipart is not recursively decoded. Per-part `Content-Type` defaults to `text/plain` when the wire omits it, matching jBallerina. `message/*` (e.g. `message/rfc822`) is accepted as a composite type, matching jBallerina (RFC 2046 classifies `multipart` and `message` as the two composite top-level types), but body-part decoding for it is not yet implemented — it returns a dedicated `ParserError` rather than being decoded as if it were boundary-delimited multipart content (it isn't; a `boundary` param present on a `message/*` value is ignored rather than risking a bogus split). `getBodyPartsAsChannel` — a package-private method in jBallerina's own `mime` module, not part of `Entity`'s public contract, and not called from anywhere in jBallerina's own `mime` or `http` implementations either — is out of scope |
+| Base64 encoding and decoding | Supported | `base64Encode`, `base64Decode`, `base64EncodeBlob`, `base64DecodeBlob` — `base64Encode`/`base64Decode` also accept an `io:ReadableByteChannel`, reading it fully and returning a freshly-constructed channel wrapping the result (charset is not applied to the channel form, matching jBallerina) |
 | Module-level error type | Partially Supported | `mime:Error` and all subtypes (`InvalidContentTypeError`, `ParserError`, `HeaderNotFoundError`, `EncodeError`, `DecodeError`, etc.) are plain `error` aliases; `distinct` type descriptor not yet supported |
 
 ### Notable Behavioural Changes
