@@ -294,7 +294,5 @@ Types: `mime:MediaType`, `mime:ContentDisposition`, `mime:Entity` (class); `mime
 | Entity body — text, JSON, XML, byte array | `setText`/`getText`, `setJson`/`getJson`, `setXml`/`getXml`, `setByteArray`/`getByteArray`; every accessor lazily converts from whatever the body was actually set as, matching jBallerina's data-source model |
 | `setBody(string\|xml\|json\|byte[]\|Entity[])` | Generic body dispatch by argument type |
 | `setFileAsEntityBody(filePath, contentType?)` | Sets the file as a lazy byte-channel data source, read on demand by whichever accessor materializes the body first, matching jBallerina; a failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
-| Multipart bodies | `setBodyParts`/`getBodyParts` — flat (single-level) multipart only, a part whose own body is itself multipart is not recursively decoded; `message/*` is accepted as a composite type (RFC 2046) but its body-part decoding is not yet implemented, returning a `ParserError` instead |
+| Multipart bodies | `setBodyParts`/`getBodyParts` — `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
 | `base64Encode`/`base64Decode`/`base64EncodeBlob`/`base64DecodeBlob` | Accept `string`, `byte[]`, or an `io:ReadableByteChannel` (read fully, result handed back as a freshly-constructed channel; charset does not apply to the channel form, matching jBallerina) |
-
-Not covered in this subset: `getBodyPartsAsChannel` — package-private in jBallerina's own `mime` module, not part of `Entity`'s public contract and unused even by jBallerina's own `mime`/`http` native implementations.
