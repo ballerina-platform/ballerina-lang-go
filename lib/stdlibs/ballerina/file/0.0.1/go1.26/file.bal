@@ -223,7 +223,7 @@ public type MetaData record {|
 // Path utilities  (from path.bal)
 // ---------------------------------------------------------------------------
 
-final boolean isWindows = os:getEnv("OS") != "";
+final boolean isWindows = os:getEnv("OS") == "Windows_NT";
 
 isolated function _initPathSep() returns string {
     if isWindows {
