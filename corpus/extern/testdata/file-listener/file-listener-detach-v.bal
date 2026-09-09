@@ -44,17 +44,33 @@ function init() returns error? {
 public function testMain() returns error? {
     string firstFile = check file:joinPath(watchDir, "one.txt");
     check file:create(firstFile);
-    runtime:sleep(0.3);
-    lock {
-        io:println("countAfterFirst=", createCount); // @output countAfterFirst=1
+    int countAfterFirst = 0;
+    int attempts = 0;
+    while attempts < 30 && countAfterFirst < 1 {
+        lock {
+            countAfterFirst = createCount;
+        }
+        if countAfterFirst < 1 {
+            runtime:sleep(0.1);
+        }
+        attempts += 1;
     }
+    io:println("countAfterFirst=", countAfterFirst); // @output countAfterFirst=1
 
     check dirListener.detach(watcherSvc);
 
     string secondFile = check file:joinPath(watchDir, "two.txt");
     check file:create(secondFile);
-    runtime:sleep(0.3);
-    lock {
-        io:println("countAfterDetach=", createCount); // @output countAfterDetach=1
+    // Detach is a negative assertion (no further dispatch), so there is no
+    // "done" condition to poll for; observe a bounded window instead of a
+    // single short sleep, giving a buggy still-attached watcher ample time
+    // to have shown up as an unwanted extra increment.
+    foreach int _ in 0 ..< 10 {
+        runtime:sleep(0.1);
     }
+    int countAfterDetach;
+    lock {
+        countAfterDetach = createCount;
+    }
+    io:println("countAfterDetach=", countAfterDetach); // @output countAfterDetach=1
 }

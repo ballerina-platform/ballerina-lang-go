@@ -55,31 +55,49 @@ public function testMain() returns error? {
     check dirListener.'start();
 
     check file:create(watchedFile);
-    runtime:sleep(0.3);
-    boolean createdSnapshot;
-    lock {
-        createdSnapshot = createInvoked;
-    }
-    string lastCreateNameSnapshot;
-    lock {
-        lastCreateNameSnapshot = lastCreateName;
+    boolean createdSnapshot = false;
+    string lastCreateNameSnapshot = "";
+    int attempts = 0;
+    while attempts < 30 && !createdSnapshot {
+        lock {
+            createdSnapshot = createInvoked;
+        }
+        lock {
+            lastCreateNameSnapshot = lastCreateName;
+        }
+        if !createdSnapshot {
+            runtime:sleep(0.1);
+        }
+        attempts += 1;
     }
     io:println("created=", createdSnapshot); // @output created=true
     io:println("createdPathMatches=", lastCreateNameSnapshot == watchedFile); // @output createdPathMatches=true
 
     check file:copy("testdata/file-listener/fixture.txt", watchedFile, file:REPLACE_EXISTING);
-    runtime:sleep(0.3);
-    boolean modifiedSnapshot;
-    lock {
-        modifiedSnapshot = modifyInvoked;
+    boolean modifiedSnapshot = false;
+    attempts = 0;
+    while attempts < 30 && !modifiedSnapshot {
+        lock {
+            modifiedSnapshot = modifyInvoked;
+        }
+        if !modifiedSnapshot {
+            runtime:sleep(0.1);
+        }
+        attempts += 1;
     }
     io:println("modified=", modifiedSnapshot); // @output modified=true
 
     check file:remove(watchedFile);
-    runtime:sleep(0.3);
-    boolean deletedSnapshot;
-    lock {
-        deletedSnapshot = deleteInvoked;
+    boolean deletedSnapshot = false;
+    attempts = 0;
+    while attempts < 30 && !deletedSnapshot {
+        lock {
+            deletedSnapshot = deleteInvoked;
+        }
+        if !deletedSnapshot {
+            runtime:sleep(0.1);
+        }
+        attempts += 1;
     }
     io:println("deleted=", deletedSnapshot); // @output deleted=true
 }
