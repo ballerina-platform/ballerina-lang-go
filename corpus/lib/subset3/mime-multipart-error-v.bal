@@ -41,13 +41,23 @@ public function main() returns error? {
     mime:Entity[]|mime:ParserError noHeaderResult = noHeader.getBodyParts();
     io:println(noHeaderResult is mime:ParserError); // @output true
 
-    // message/* has no boundary parameter to split on; not decoded as composite
+    // message/* is a composite type (RFC 2046) but body-part decoding for it isn't
+    // implemented yet, so it gets its own distinct, honest error rather than being
+    // reported as a fixable "missing boundary" configuration problem.
     mime:Entity messageEntity = new;
     messageEntity.setByteArray("Subject: hi\r\n\r\nbody".toBytes(), "message/rfc822");
     mime:Entity[]|mime:ParserError messageResult = messageEntity.getBodyParts();
     io:println(messageResult is mime:ParserError); // @output true
     if messageResult is mime:ParserError {
-        io:println(messageResult.message()); // @output Entity body is not a type of composite media type. Received content-type : message/rfc822
+        io:println(messageResult.message()); // @output message/* body part decoding is not yet supported. Received content-type : message/rfc822
     }
+
+    // A "boundary" param on message/* must still be rejected, not mistaken for real
+    // multipart content and split on.
+    mime:Entity messageWithBoundary = new;
+    messageWithBoundary.setByteArray("--x\r\nContent-Type: text/plain\r\n\r\nhi\r\n--x--".toBytes(),
+            "message/rfc822; boundary=x");
+    mime:Entity[]|mime:ParserError messageWithBoundaryResult = messageWithBoundary.getBodyParts();
+    io:println(messageWithBoundaryResult is mime:ParserError); // @output true
     return;
 }

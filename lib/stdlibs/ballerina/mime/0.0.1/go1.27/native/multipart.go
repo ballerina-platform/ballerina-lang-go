@@ -142,10 +142,10 @@ func EntityListFromParts(ctx *extern.Context, parts []*values.Object) *values.Li
 }
 
 // MultipartBoundary parses a Content-Type header value and reports whether it names a
-// multipart/* media type, along with its boundary parameter. message/* is deliberately
-// excluded: it has no boundary parameter (it's a single embedded message, not a
-// boundary-delimited part sequence), so decoding it needs a different parser than
-// DecodeMultipart's multipart.NewReader — out of scope here.
+// composite (multipart/* or message/*, per RFC 2046) media type, along with its
+// boundary parameter. message/* always reports an empty boundary regardless of the
+// Content-Type params: it isn't boundary-delimited, so a "boundary" param present on
+// one must never be handed to multipart.NewReader as if it were.
 func MultipartBoundary(contentType string) (baseType, boundary string, isComposite bool) {
 	if contentType == "" {
 		return "", "", false
@@ -155,15 +155,23 @@ func MultipartBoundary(contentType string) (baseType, boundary string, isComposi
 		return contentType, "", false
 	}
 	primaryType := strings.ToLower(strings.SplitN(mediaType, "/", 2)[0])
-	if primaryType != "multipart" {
+	switch primaryType {
+	case "multipart":
+		return mediaType, params["boundary"], true
+	case "message":
+		return mediaType, "", true
+	default:
 		return mediaType, "", false
 	}
-	return mediaType, params["boundary"], true
 }
 
 // DecodeMultipart splits a raw multipart body into per-part Entity values, defaulting
 // an absent per-part Content-Type to "text/plain" (matching jBallerina's underlying
 // MIME library default) and copying every part header verbatim.
+//
+// A missing boundary is a ParserError here; jBallerina instead silently returns an
+// empty Entity[] in this case (it never attempts to decode a manually-set byte array
+// as multipart at all — only an inbound request/response body is eligible there).
 func DecodeMultipart(ctx *extern.Context, data []byte, boundary string) ([]*values.Object, error) {
 	if boundary == "" {
 		return nil, fmt.Errorf("no boundary parameter found in Content-Type")
@@ -306,6 +314,10 @@ func initMultipartModule(rt *runtime.Runtime) {
 			baseType, boundary, isComposite := MultipartBoundary(contentType)
 			if !isComposite {
 				return mimeError("ParserError", "Entity body is not a type of composite media type. "+
+					"Received content-type : "+baseType), nil
+			}
+			if strings.HasPrefix(strings.ToLower(baseType), "message/") {
+				return mimeError("ParserError", "message/* body part decoding is not yet supported. "+
 					"Received content-type : "+baseType), nil
 			}
 			if body == nil || body.Kind != BodyBytes {
