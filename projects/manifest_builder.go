@@ -45,6 +45,7 @@ const (
 	keyReadme      = "readme"
 	keyModules     = "modules"
 	keyExport      = "export"
+	keyInclude     = "include"
 
 	keyDependency = "dependency"
 
@@ -79,6 +80,7 @@ type manifestBuilder struct {
 	readme           string
 	description      string
 	modules          []ManifestModule
+	include          []string
 	otherEntries     map[string]any
 }
 
@@ -111,6 +113,7 @@ func (b *manifestBuilder) Build() PackageManifest {
 		Authors:          b.authors,
 		Keywords:         b.keywords,
 		Modules:          b.modules,
+		Include:          b.include,
 		Repository:       b.repository,
 		BallerinaVersion: b.ballerinaVersion,
 		Visibility:       b.visibility,
@@ -133,6 +136,7 @@ func (b *manifestBuilder) parseFromTOML() {
 	b.repository = b.parseString(keyPackage + "." + keyRepository)
 	b.description = b.parseString(keyPackage + "." + keyDescription)
 	b.visibility = b.parseString(keyPackage + "." + keyVisibility)
+	b.include = b.parseStringArray(keyPackage + "." + keyInclude)
 	b.icon = b.parseString(keyPackage + "." + keyIcon)
 	b.validateIcon()
 	if explicitReadme, ok := b.toml.GetString(keyPackage + "." + keyReadme); ok {
