@@ -28,8 +28,10 @@ import (
 // resolveIncludePaths resolves the `include` glob patterns declared in
 // Ballerina.toml against root (a directory within fsys, per the fs.FS
 // convention "." denotes fsys's own root), returning root-relative paths
-// (slash-separated) of every matching file or directory. A pattern prefixed
-// with "!" removes previously matched paths instead of adding to them.
+// (slash-separated) of every matching file — a pattern matching a directory
+// is expanded to that directory's individual files, never returned as a
+// single directory entry. A pattern prefixed with "!" removes previously
+// matched paths instead of adding to them.
 // Java source: io.ballerina.projects.util.ProjectUtils#getPathsMatchingIncludePatterns
 func resolveIncludePaths(fsys fs.FS, patterns []string, root string) ([]string, error) {
 	var matched []string
@@ -77,17 +79,19 @@ func matchIncludePattern(fsys fs.FS, pattern, root string) ([]string, error) {
 			}
 			return nil
 		}
+		// A symlink is never matched or descended into: WalkDir reports it
+		// as a non-directory entry without following it, but addIncludeFile
+		// reads matched paths with fs.ReadFile, which does follow symlinks
+		// — collecting one here would let an include pattern archive a
+		// file from outside the project root.
+		if d.Type()&fs.ModeSymlink != 0 {
+			return nil
+		}
 		if re.MatchString(rel) && isCorrectIncludeMatch(rel, d.IsDir(), pattern) {
 			if d.IsDir() {
-				// Expand to the directory's individual files rather than
-				// keeping one directory entry, so a later "!" pattern can
-				// negate a specific file inside it — resolveIncludePaths
-				// only ever removes exact-path matches, so a negation
-				// against e.g. "assets/secret.txt" would otherwise never
-				// match a bare "assets" entry, and the caller (which
-				// recursively archives whatever directories are matched)
-				// would silently bundle the file the negation was meant to
-				// exclude.
+				// Expand rather than keep one directory entry, so a later
+				// "!" pattern (an exact-path match) can still negate one
+				// file inside it.
 				descendants, err := expandDirToFiles(fsys, root, rel)
 				if err != nil {
 					return err
@@ -119,6 +123,11 @@ func expandDirToFiles(fsys fs.FS, root, dirRel string) ([]string, error) {
 			if d.IsDir() {
 				return fs.SkipDir
 			}
+			return nil
+		}
+		// See the matching check in matchIncludePattern: a symlink must
+		// never be archived, since fs.ReadFile follows it at read time.
+		if d.Type()&fs.ModeSymlink != 0 {
 			return nil
 		}
 		if !d.IsDir() {
@@ -186,9 +195,16 @@ func writeGlobBody(sb *strings.Builder, runes []rune) error {
 		switch c := runes[i]; c {
 		case '*':
 			if i+1 < len(runes) && runes[i+1] == '*' {
-				sb.WriteString(".*")
-				i++
-				if i+1 < len(runes) && runes[i+1] == '/' {
+				if i+2 < len(runes) && runes[i+2] == '/' {
+					// "**/" matches zero or more complete path segments,
+					// each ending in "/" — a bare ".*" here would let "**"
+					// match a partial segment too, so "a/**/b" would
+					// wrongly match "a/notb" (".*" swallowing "not" with
+					// no "/" in between).
+					sb.WriteString("(?:.*/)?")
+					i += 2
+				} else {
+					sb.WriteString(".*")
 					i++
 				}
 			} else {

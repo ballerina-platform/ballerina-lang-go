@@ -81,10 +81,8 @@ func writeBala(pkg *Package, resolution *PackageResolution, outputDir string) (s
 // populateBalaArchive writes every entry of the bala layout into zw. The
 // caller is responsible for closing zw. written tracks every zip path
 // written so far across all stages, so a later stage (in practice, only
-// addIncludes) can silently skip a path some earlier stage already wrote —
-// matching Java's BalaWriter, which relies on ZipOutputStream throwing on
-// any duplicate entry name and swallows that specific exception only
-// around its own addIncludes call.
+// addIncludes) can silently skip a path some earlier stage already wrote,
+// mirroring Java's BalaWriter behavior.
 func populateBalaArchive(zw *zip.Writer, pkg *Package, resolution *PackageResolution) error {
 	written := make(map[string]bool)
 	if err := writeBalaToml(zw, pkg, written); err != nil {
@@ -216,18 +214,8 @@ func writeModuleSources(zw *zip.Writer, pkg *Package, written map[string]bool) e
 
 // addIncludes copies files matching the package manifest's `include` glob
 // patterns into zw, at the same path they occupy relative to the project
-// root. resolveIncludePaths already expands a directory match into its
-// individual files, so every path here is a file (never a directory) —
-// which is what lets a later "!" pattern negate one specific file inside an
-// otherwise-included directory. Reads go through the project's own fs.FS,
-// same as every other project source read — pkg.Project().SourceRoot() is a
-// path within that fs.FS (conventionally "."), not necessarily an
-// OS-walkable directory. written already holds every path the earlier
-// archive stages (toml files, module sources) wrote, so an include pattern
-// colliding with one of those — or with another include match — is
-// silently skipped rather than producing a bala with a duplicate zip entry.
-// Java source: io.ballerina.projects.BalaWriter#addIncludes, which achieves
-// the same outcome by catching ZipOutputStream's duplicate-entry exception.
+// root, skipping any path already recorded in written.
+// Java source: io.ballerina.projects.BalaWriter#addIncludes
 func addIncludes(zw *zip.Writer, pkg *Package, written map[string]bool) error {
 	patterns := pkg.Manifest().Include()
 	if len(patterns) == 0 {
