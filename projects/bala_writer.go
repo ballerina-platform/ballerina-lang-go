@@ -100,7 +100,7 @@ func populateBalaArchive(zw *zip.Writer, pkg *Package, resolution *PackageResolu
 	if err := addIncludes(zw, pkg, written); err != nil {
 		return err
 	}
-	if err := addBalaDocs(zw, pkg); err != nil {
+	if err := addBalaDocs(zw, pkg, written); err != nil {
 		return err
 	}
 	return nil
@@ -273,7 +273,7 @@ func writeZipEntry(zw *zip.Writer, zipPath string, content []byte, written map[s
 // implementation: if the package has no readme, nothing is bundled at all
 // — not even a lone icon.
 // Java source: io.ballerina.projects.BalaWriter#addPackageDoc
-func addBalaDocs(zw *zip.Writer, pkg *Package) error {
+func addBalaDocs(zw *zip.Writer, pkg *Package, written map[string]bool) error {
 	manifest := pkg.Manifest()
 	if manifest.Readme() == "" {
 		return nil
@@ -282,11 +282,11 @@ func addBalaDocs(zw *zip.Writer, pkg *Package) error {
 	fsys := pkg.Project().Environment().fs()
 	root := pkg.Project().SourceRoot()
 
-	if err := addBalaDoc(zw, fsys, root, manifest.Readme(), balaDocPath(manifest.Readme())); err != nil {
+	if err := addBalaDoc(zw, fsys, root, manifest.Readme(), balaDocPath(manifest.Readme()), written); err != nil {
 		return balaDocError(fmt.Sprintf("could not locate the readme file '%s'", manifest.Readme()), err)
 	}
 	if manifest.Icon() != "" {
-		if err := addBalaDoc(zw, fsys, root, manifest.Icon(), balaDocPath(manifest.Icon())); err != nil {
+		if err := addBalaDoc(zw, fsys, root, manifest.Icon(), balaDocPath(manifest.Icon()), written); err != nil {
 			return balaDocError(fmt.Sprintf("could not locate icon path '%s'", manifest.Icon()), err)
 		}
 	}
@@ -295,7 +295,7 @@ func addBalaDocs(zw *zip.Writer, pkg *Package) error {
 			continue
 		}
 		zipPath := balaModuleDocPath(mod.Name(), mod.Readme())
-		if err := addBalaDoc(zw, fsys, root, mod.Readme(), zipPath); err != nil {
+		if err := addBalaDoc(zw, fsys, root, mod.Readme(), zipPath, written); err != nil {
 			return balaDocError(fmt.Sprintf("could not locate the readme file '%s' for module '%s'", mod.Readme(), mod.Name()), err)
 		}
 	}
@@ -307,12 +307,12 @@ func addBalaDocs(zw *zip.Writer, pkg *Package) error {
 //
 // fs.FS rejects paths escaping the project (absolute, or ".."), failing
 // the pack instead of reading them — intentional, not a bug.
-func addBalaDoc(zw *zip.Writer, fsys fs.FS, root, relPath, zipPath string) error {
+func addBalaDoc(zw *zip.Writer, fsys fs.FS, root, relPath, zipPath string, written map[string]bool) error {
 	content, err := fs.ReadFile(fsys, joinRoot(root, relPath))
 	if err != nil {
 		return err
 	}
-	return writeZipEntry(zw, zipPath, content)
+	return writeZipEntry(zw, zipPath, content, written)
 }
 
 // balaDocError formats a doc-file read failure. For the common case (the

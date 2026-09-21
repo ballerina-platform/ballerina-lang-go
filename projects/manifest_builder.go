@@ -439,12 +439,3 @@ func (b *manifestBuilder) addDiagnostic(severity diagnostics.DiagnosticSeverity,
 	diag := diagnostics.NewDefaultDiagnostic(info, loc, nil)
 	b.diagnostics = append(b.diagnostics, diag)
 }
-
-// joinRoot re-attaches root to a root-relative path to produce an fsys path
-// suitable for fs.Stat/fs.ReadFile.
-func joinRoot(root, rel string) string {
-	if root == "" || root == "." {
-		return rel
-	}
-	return root + "/" + rel
-}
