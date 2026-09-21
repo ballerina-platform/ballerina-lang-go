@@ -61,7 +61,7 @@ main() -> nil{
     %42 = ConstantLoad child
     %43 = ConstantLoad x
     %44 = ConstantLoad 1
-    %45 = newMap {| x: int, never... |}{%43=%44}
+    %45 = newMap {| int... |}{%43=%44}
     %46 = newMap {| child: readonly&{| int... |}, {| int... |}... |}{%42=%45}
     groupedAlternative = %46;
     %48 = println(groupedAlternative) -> bb9;
