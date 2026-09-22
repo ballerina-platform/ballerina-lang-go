@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/ballerina-nutcracker/ballerina/ast"
+	"github.com/ballerina-nutcracker/ballerina/common/constants"
 	"github.com/ballerina-nutcracker/ballerina/context"
 	"github.com/ballerina-nutcracker/ballerina/model"
 	"github.com/ballerina-nutcracker/ballerina/semantics/internal/common"
@@ -145,11 +146,19 @@ type (
 		// every resolver nested inside one.
 		inFunction bool
 	}
+
+	// workerSymbolResolver hides a named worker's own name: a worker is not
+	// visible inside its own body.
+	workerSymbolResolver struct {
+		*blockSymbolResolver
+		workerName string
+	}
 )
 
 var (
 	_ symbolResolver   = &compilationUnitSymbolResolver{}
 	_ symbolResolver   = &blockSymbolResolver{}
+	_ symbolResolver   = &workerSymbolResolver{}
 	_ varStatusTracker = &varTracker{}
 )
 
@@ -322,8 +331,8 @@ func newScopedBlockResolver(parent symbolResolver, node ast.BLangNode, kind capt
 }
 
 func isInFunction(resolver symbolResolver) bool {
-	bs, ok := resolver.(*blockSymbolResolver)
-	return ok && bs.inFunction
+	bs := nearestBlockResolver(resolver)
+	return bs != nil && bs.inFunction
 }
 
 func (ms *compilationUnitSymbolResolver) GetSymbol(name string) (symbolLookup, bool) {
@@ -374,7 +383,7 @@ func (ms *compilationUnitSymbolResolver) TypeContext() semtypes.Context {
 }
 
 func (ms *moduleSymbolResolver) nextDefaultSymbolName() string {
-	name := fmt.Sprintf("$default$%d", ms.defaultCounter)
+	name := fmt.Sprintf("%s%d", constants.DefaultParamFunctionPrefix, ms.defaultCounter)
 	ms.defaultCounter++
 	return name
 }
@@ -416,6 +425,27 @@ func (bs *blockSymbolResolver) GetSymbol(name string) (symbolLookup, bool) {
 		lookup.captured = true
 	}
 	return lookup, ok
+}
+
+func (ws *workerSymbolResolver) GetSymbol(name string) (symbolLookup, bool) {
+	if name == ws.workerName {
+		return symbolLookup{ref: model.SymbolRef{}, kind: blockScopeKind, captured: false}, false
+	}
+	return ws.blockSymbolResolver.GetSymbol(name)
+}
+
+// nearestBlockResolver returns the nearest blockSymbolResolver at or above
+// resolver, seeing through decorators such as workerSymbolResolver that wrap a
+// block resolver without contributing a scope of their own.
+func nearestBlockResolver(resolver symbolResolver) *blockSymbolResolver {
+	switch r := resolver.(type) {
+	case *blockSymbolResolver:
+		return r
+	case *workerSymbolResolver:
+		return r.blockSymbolResolver
+	default:
+		return nil
+	}
 }
 
 func (bs *blockSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
@@ -1211,6 +1241,45 @@ func signatureParams(alloc symbolResolver, targetScope, ownerScope model.Scope, 
 	return params
 }
 
+// resolveBlockFunctionBody resolves the three regions of a block function body
+// in order: the default-worker initialization statements, the named worker
+// declarations, and the remaining default-worker statements. Worker names are
+// unavailable in the initialization region and available everywhere after it.
+func resolveBlockFunctionBody(resolver *blockSymbolResolver, body *ast.BLangBlockFunctionBody) {
+	for _, stmt := range body.InitStmts {
+		ast.Walk(resolver, stmt.(ast.BLangNode))
+	}
+	declareNamedWorkers(resolver, body.Workers)
+	for _, worker := range body.Workers {
+		resolveNamedWorker(resolver, worker)
+	}
+	for _, stmt := range body.Stmts {
+		ast.Walk(resolver, stmt.(ast.BLangNode))
+	}
+}
+
+// declareNamedWorkers declares every worker symbol before any worker body is
+// resolved, so a worker body can refer to peers declared before or after it.
+func declareNamedWorkers(resolver *blockSymbolResolver, workers []*ast.BLangNamedWorkerDeclaration) {
+	for _, worker := range workers {
+		name := worker.Name
+		if isShadowed(resolver, name) {
+			semanticError(resolver, "Variable already defined: "+name, worker.GetPosition())
+			continue
+		}
+		symbol := model.NewWorkerSymbol(name, worker.GetPosition())
+		addSymbolAndSetOnNode(resolver, name, symbol, worker)
+	}
+}
+
+func resolveNamedWorker(resolver *blockSymbolResolver, worker *ast.BLangNamedWorkerDeclaration) {
+	peers := &workerSymbolResolver{blockSymbolResolver: resolver, workerName: worker.Name}
+	workerResolver := newFunctionResolver(peers, worker)
+	worker.SetScope(workerResolver.scope)
+	ast.Walk(workerResolver, worker)
+	reportUnusedVariables(workerResolver.GetCtx(), workerResolver.getUnused())
+}
+
 func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockSymbolResolver, function *ast.BLangFunction) {
 	// Check for shadowing on parameters against the enclosing function scope
 	params := function.GetParameters()
@@ -1368,6 +1437,9 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return resolver
 	case *ast.BLangForeach:
 		resolveForeachSymbols(bs, n)
+		return nil
+	case *ast.BLangBlockFunctionBody:
+		resolveBlockFunctionBody(bs, n)
 		return nil
 	case *ast.BLangBlockStmt, *ast.BLangDo, *ast.BLangLock:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
@@ -1777,11 +1849,11 @@ func isShadowed(resolver *blockSymbolResolver, name string) bool {
 				return true
 			}
 		}
-		if next, ok := current.parent.(*blockSymbolResolver); ok {
-			current = next
-		} else {
+		next := nearestBlockResolver(current.parent)
+		if next == nil {
 			break
 		}
+		current = next
 	}
 	return false
 }
@@ -2363,8 +2435,8 @@ func resolveResourceMethod(functionResolver *blockSymbolResolver, rm *ast.BLangR
 
 func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
 	for {
-		bs, ok := resolver.(*blockSymbolResolver)
-		if !ok {
+		bs := nearestBlockResolver(resolver)
+		if bs == nil {
 			return nil
 		}
 		if classDef, ok := bs.node.(*ast.BLangClassDefinition); ok {
@@ -2376,8 +2448,8 @@ func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
 
 func getEnclosingClassBodyScope(resolver symbolResolver) (model.BlockLevelScope, bool) {
 	for {
-		bs, ok := resolver.(*blockSymbolResolver)
-		if !ok {
+		bs := nearestBlockResolver(resolver)
+		if bs == nil {
 			return nil, false
 		}
 		switch bs.node.(type) {
