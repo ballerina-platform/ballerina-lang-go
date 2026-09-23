@@ -110,22 +110,43 @@ func (c *PackageCompilation) compileModulesInternal() {
 			return false
 		}
 
-		// Phase 1: Parse, AST, symbol resolution, top-level type resolution.
+		// Phase 1a: Parse, AST build. No cross-module dependency, so this runs
+		// concurrently across the whole package regardless of topological order.
+		// Each goroutine has panic recovery to convert panics to diagnostics.
+		//
+		// Exception: --dump-tokens/--dump-st/--dump-ast write straight to stderr from
+		// inside parsing, with no ordering between modules. That's fine sequentially
+		// (today's deterministic golden-file order), but concurrent parsing would
+		// interleave dependency modules' dumped output nondeterministically. These
+		// flags are debug-only and not performance sensitive, so just parse
+		// sequentially when any of them is set, to keep dump output deterministic.
+		opts := c.compilationOptions
+		runPerModule(c.packageResolution.topologicallySortedModuleList,
+			!opts.DumpTokens() && !opts.DumpST() && !opts.DumpAST(),
+			func(m *moduleContext) {
+				m.compilerCtx.InitModuleStats(m.getModuleName().String())
+				if m.getCompilationState() != moduleCompilationStateLoadedFromSources {
+					// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
+					return
+				}
+				parseModule(m)
+			})
+
+		// Phase 1b: import resolution, symbol resolution, top-level type resolution.
 		// Sequential because symbol/type resolution of a module needs its dependencies
-		// to have published their public symbol spaces. We still run Phase 1 for every
+		// to have published their public symbol spaces. We still run Phase 1b for every
 		// module (even after some errored) so we collect all top-level diagnostics in
 		// one shot, but a dependent of an errored module is skipped to avoid cascading
 		// noise (its imports would not resolve).
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			if moduleCtx.getCompilationState() != moduleCompilationStateLoadedFromSources {
-				// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
 				continue
 			}
 			if dependencyErrored(moduleCtx) {
 				erroredModules[moduleCtx.getModuleID()] = struct{}{}
 				continue
 			}
-			resolveTypesAndSymbols(moduleCtx)
+			resolveSymbolsAndTypes(moduleCtx)
 			if moduleCtx.compilerCtx.HasErrors() {
 				erroredModules[moduleCtx.getModuleID()] = struct{}{}
 			}
@@ -142,37 +163,19 @@ func (c *PackageCompilation) compileModulesInternal() {
 			return
 		}
 
-		// Phase 2: local node resolution, semantic analysis, CFG, desugar, BIR
-		// (parallel - no cross-module dependencies).
-		// Each goroutine has panic recovery to convert panics to diagnostics.
-		var wg sync.WaitGroup
-		var panicsMu sync.Mutex
-		var panics []any
-		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
-			if moduleCtx.getCompilationState() != moduleCompilationStateLoadedFromSources {
-				continue
+		// Phase 2: local node resolution, semantic analysis, CFG, desugar (parallel -
+		// no cross-module dependencies). When GenerateCode is set, BIR generation runs
+		// in the same goroutine right after, pipelined with no barrier between the two.
+		generateCode := c.compilationOptions.GenerateCode()
+		runPerModule(c.packageResolution.topologicallySortedModuleList, true, func(m *moduleContext) {
+			if m.getCompilationState() != moduleCompilationStateLoadedFromSources {
+				return
 			}
-			wg.Add(1)
-			go func(m *moduleContext) {
-				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						panicsMu.Lock()
-						panics = append(panics, r)
-						panicsMu.Unlock()
-					}
-				}()
-				analyzeAndDesugar(m)
-			}(moduleCtx)
-		}
-		wg.Wait()
-
-		// Re-panic if any Phase 2 goroutine panicked.
-		// This preserves the original behavior where semantic errors cause panics.
-		if len(panics) > 0 {
-			// TODO: report diagnostics for panics instead of crashing the process.
-			panic(panics[0])
-		}
+			analyzeAndDesugar(m)
+			if generateCode && m.getCompilationState() == moduleCompilationStateCompiled {
+				generateCodeInternal(m)
+			}
+		})
 
 		// Collect diagnostics from all modules
 		c.collectModuleDiagnostics(&allDiagnostics)
@@ -181,6 +184,43 @@ func (c *PackageCompilation) compileModulesInternal() {
 	// TODO(P6): Run plugin code analysis (runPluginCodeAnalysis)
 
 	c.diagnosticResult = NewDiagnosticResult(allDiagnostics)
+}
+
+// runPerModule runs fn once per module. When concurrent is true, each call runs in its own
+// goroutine (with panic recovery, so one module's panic doesn't take down unrelated modules
+// still running); when false, fn runs sequentially in list order with the same recovery. After
+// every module finishes, the first captured panic (if any) is re-raised, preserving the
+// original behavior where a panic during compilation is fatal.
+func runPerModule(modules []*moduleContext, concurrent bool, fn func(*moduleContext)) {
+	var wg sync.WaitGroup
+	var panicsMu sync.Mutex
+	var panics []any
+	run := func(m *moduleContext) {
+		defer func() {
+			if r := recover(); r != nil {
+				panicsMu.Lock()
+				panics = append(panics, r)
+				panicsMu.Unlock()
+			}
+		}()
+		fn(m)
+	}
+	for _, moduleCtx := range modules {
+		if !concurrent {
+			run(moduleCtx)
+			continue
+		}
+		wg.Add(1)
+		go func(m *moduleContext) {
+			defer wg.Done()
+			run(m)
+		}(moduleCtx)
+	}
+	wg.Wait()
+	if len(panics) > 0 {
+		// TODO: report diagnostics for panics instead of crashing the process.
+		panic(panics[0])
+	}
 }
 
 // collectModuleDiagnostics appends per-module compilation diagnostics to dst,

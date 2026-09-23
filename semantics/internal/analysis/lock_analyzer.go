@@ -169,8 +169,23 @@ func resolveRestricted(a analyzer, lock *ast.BLangLock) bool {
 		return true
 	}
 	key, sym, ok := findRestrictedVariable(a, &lock.Body)
+	if ok && key == "" {
+		// No restricted variable referenced — e.g. a lock guarding only calls to
+		// isolated functions. BIR-gen still needs a non-empty key to bracket the
+		// lock, and different such locks must not collide on the same key (or
+		// they'd serialize against each other for no reason). The lock's own
+		// source position is deterministic across runs (this key is embedded
+		// verbatim in generated BIR) and unique per lock statement.
+		key = lockOnlyKey(lock)
+	}
 	lock.LockKey, lock.RestrictedSymbol = key, sym
 	return ok
+}
+
+// lockOnlyKey returns a unique key for a lock statement that guards no
+// restricted variable.
+func lockOnlyKey(lock *ast.BLangLock) string {
+	return "$lock." + lock.GetPosition().String()
 }
 
 // validateLockInvocations enforces all invocations within lock statement must be to isolated functions.
