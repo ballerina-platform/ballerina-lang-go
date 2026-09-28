@@ -53,3 +53,28 @@ func TestSecondsToSleepDuration(t *testing.T) {
 		})
 	}
 }
+
+// TestSleepDeadline guards the clamped max duration from wrapping the deadline
+// negative once added to a positive monotonic clock reading.
+func TestSleepDeadline(t *testing.T) {
+	tests := []struct {
+		name string
+		now  time.Duration
+		dur  time.Duration
+		want time.Duration
+	}{
+		{"typical addition", 5 * time.Second, time.Second, 6 * time.Second},
+		{"zero duration", 5 * time.Second, 0, 5 * time.Second},
+		{"max duration saturates", 5 * time.Second, math.MaxInt64, math.MaxInt64},
+		{"max duration at clock zero", 0, math.MaxInt64, math.MaxInt64},
+		{"sum exactly at the limit", math.MaxInt64 - 1, 1, math.MaxInt64},
+		{"sum one past the limit saturates", math.MaxInt64 - 1, 2, math.MaxInt64},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sleepDeadline(tc.now, tc.dur); got != tc.want {
+				t.Errorf("sleepDeadline(%v, %v) = %v, want %v", tc.now, tc.dur, got, tc.want)
+			}
+		})
+	}
+}

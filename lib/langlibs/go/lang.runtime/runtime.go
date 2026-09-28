@@ -34,7 +34,7 @@ const (
 func runtimeSleep(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	seconds := args[0].(*decimal.Decimal)
 	dur := secondsToSleepDuration(seconds.Float64())
-	deadline := ctx.Env.Platform.Time.MonotonicNow() + dur
+	deadline := sleepDeadline(ctx.Env.Platform.Time.MonotonicNow(), dur)
 	// Hand the thread back on every pass, the same way the wait actions poll
 	// (see waitAllFutures). Blocking on a timer between yields would hold this
 	// strand's turn for the whole timer, stalling every other strand sharing
@@ -64,6 +64,15 @@ func secondsToSleepDuration(seconds float64) time.Duration {
 		return math.MaxInt64
 	}
 	return time.Duration(nanos)
+}
+
+// sleepDeadline returns now+dur, saturating at the max duration instead of
+// wrapping negative, which would end the sleep immediately.
+func sleepDeadline(now, dur time.Duration) time.Duration {
+	if dur > 0 && now > math.MaxInt64-dur {
+		return math.MaxInt64
+	}
+	return now + dur
 }
 
 func init() {
