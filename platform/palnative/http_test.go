@@ -18,7 +18,15 @@ package palnative
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -240,6 +248,97 @@ func TestNewHTTPClient_TLSVerificationFails(t *testing.T) {
 	}
 	if err == nil {
 		t.Fatal("expected TLS verification error for self-signed cert, got nil")
+	}
+}
+
+// newSelfSignedCert returns a self-signed CA-capable server certificate and its PEM.
+func newSelfSignedCert(t *testing.T, commonName string, dnsNames []string) (tls.Certificate, []byte) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: commonName},
+		DNSNames:              dnsNames,
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("CreateCertificate: %v", err)
+	}
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key},
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+// TestNewHTTPClient_CustomCAWithoutServerName verifies that with a custom CA and no
+// configured ServerName, the hostname is verified against the request URL's host.
+func TestNewHTTPClient_CustomCAWithoutServerName(t *testing.T) {
+	tests := []struct {
+		desc     string
+		cn       string
+		dnsNames []string
+	}{
+		{"SAN certificate", "", []string{"localhost"}},
+		{"CN-only certificate", "localhost", nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			cert, caPEM := newSelfSignedCert(t, tc.cn, tc.dnsNames)
+			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}))
+			server.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+			server.StartTLS()
+			defer server.Close()
+			_, port, _ := net.SplitHostPort(server.Listener.Addr().String())
+
+			client, err := NewHTTPClient(pal.ClientConfig{TLS: pal.TLSConfig{CACertPEM: caPEM}})
+			if err != nil {
+				t.Fatalf("NewHTTPClient: %v", err)
+			}
+			status, _, body, err := client.Execute(context.Background(), "GET", "https://localhost:"+port+"/", nil, 0, "", nil)
+			if body != nil {
+				_ = body.Close()
+			}
+			if err != nil {
+				t.Fatalf("expected hostname verification against the URL host to succeed, got: %v", err)
+			}
+			if status != 200 {
+				t.Errorf("expected status 200, got %d", status)
+			}
+		})
+	}
+}
+
+// TestNewHTTPClient_CustomCAHostnameMismatch verifies that falling back to the URL
+// host still rejects a certificate issued for a different name.
+func TestNewHTTPClient_CustomCAHostnameMismatch(t *testing.T) {
+	cert, caPEM := newSelfSignedCert(t, "", []string{"other.example"})
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	server.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+	server.StartTLS()
+	defer server.Close()
+	_, port, _ := net.SplitHostPort(server.Listener.Addr().String())
+
+	client, err := NewHTTPClient(pal.ClientConfig{TLS: pal.TLSConfig{CACertPEM: caPEM}})
+	if err != nil {
+		t.Fatalf("NewHTTPClient: %v", err)
+	}
+	_, _, body, err := client.Execute(context.Background(), "GET", "https://localhost:"+port+"/", nil, 0, "", nil)
+	if body != nil {
+		_ = body.Close()
+	}
+	if err == nil {
+		t.Fatal("expected hostname mismatch error, got nil")
 	}
 }
 
