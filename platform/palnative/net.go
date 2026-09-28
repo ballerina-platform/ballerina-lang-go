@@ -66,18 +66,7 @@ func Dial(ctx context.Context, network, address, localAddr string, tlsCfg *pal.T
 		_ = conn.Close()
 		return nil, err
 	}
-	handshakeCtx := ctx
-	if tlsCfg.HandshakeTimeout > 0 {
-		var cancel context.CancelFunc
-		handshakeCtx, cancel = context.WithTimeout(ctx, tlsCfg.HandshakeTimeout)
-		defer cancel()
-	}
-	tlsConn := tls.Client(conn, tlsConfig)
-	if err := tlsConn.HandshakeContext(handshakeCtx); err != nil {
-		_ = tlsConn.Close()
-		return nil, err
-	}
-	return tlsConn, nil
+	return tlsClientHandshake(ctx, conn, tlsConfig, tlsCfg.HandshakeTimeout)
 }
 
 // ListenTCP is the pal.Net.Listen factory for the native-CLI platform. It

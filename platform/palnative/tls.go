@@ -20,13 +20,32 @@
 package palnative
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"os"
+	"time"
 
 	"github.com/ballerina-nutcracker/ballerina/platform/pal"
 )
+
+// tlsClientHandshake upgrades conn to TLS, bounding the handshake by timeout
+// when positive, and closes the connection if the handshake fails.
+func tlsClientHandshake(ctx context.Context, conn net.Conn, cfg *tls.Config, timeout time.Duration) (*tls.Conn, error) {
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+	tlsConn := tls.Client(conn, cfg)
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		_ = tlsConn.Close()
+		return nil, err
+	}
+	return tlsConn, nil
+}
 
 // buildTLSConfig assembles a *tls.Config from a pal.TLSConfig, resolving CA
 // pools, client certificates, SNI, cipher suites, and protocol version

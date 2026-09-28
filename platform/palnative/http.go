@@ -184,6 +184,27 @@ func NewHTTPClient(cfg pal.ClientConfig) (pal.HTTPClient, error) {
 		// Response header size limit (jBallerina default 8192, always set explicitly).
 		MaxResponseHeaderBytes: cfg.ResponseLimits.MaxHeaderSize,
 	}
+	if tlsConfig.VerifyConnection != nil {
+		// The shared callback can't see which host a pooled connection dials, so
+		// non-proxied HTTPS connections rebind it to the dialed host here.
+		// Cloning at dial time picks up the ALPN protocols the transport adds.
+		transport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			connTLSConfig := transport.TLSClientConfig.Clone()
+			if connTLSConfig.ServerName == "" {
+				connTLSConfig.ServerName = host
+			}
+			connTLSConfig.VerifyConnection = tlsVerifyConnectionWithCNFallback(connTLSConfig.RootCAs, connTLSConfig.ServerName)
+			conn, err := dialer.DialContext(ctx, network, addr)
+			if err != nil {
+				return nil, err
+			}
+			return tlsClientHandshake(ctx, conn, connTLSConfig, cfg.TLS.HandshakeTimeout)
+		}
+	}
 	if cfg.Proxy.Host != "" {
 		proxyURL := &url.URL{
 			Scheme: "http",
@@ -276,16 +297,19 @@ func resolveCipherSuites(names []string) []uint16 {
 // when no SANs are present. Go 1.15+ disabled CN-only hostname verification (RFC 6125 §2.3),
 // but many self-signed and Java-issued certificates still rely on it.
 //
-// The hostname is checked against expectedServerName when set, else cs.ServerName.
-// cs.ServerName alone is insufficient: Go never sends SNI for IP literals (RFC 6066), so
-// it is empty when dialing a bare IP. expectedServerName alone is insufficient too:
-// http.Transport derives the name from the request URL on its own cloned config, after
-// this callback was built, so it is empty for a client without secureSocket.serverName.
+// The hostname is checked against expectedServerName when set, else cs.ServerName, which
+// Go leaves empty for IP literals since it never sends SNI for them (RFC 6066). Callers
+// that know the dialed host pass it as expectedServerName; the cs.ServerName fallback only
+// serves proxied HTTPS, where http.Transport runs the handshake itself. An empty name is
+// rejected: matching it would accept any trusted certificate with no SANs and an empty CN.
 func tlsVerifyConnectionWithCNFallback(rootCAs *x509.CertPool, expectedServerName string) func(tls.ConnectionState) error {
 	return func(cs tls.ConnectionState) error {
 		serverName := expectedServerName
 		if serverName == "" {
 			serverName = cs.ServerName
+		}
+		if serverName == "" {
+			return fmt.Errorf("x509: cannot verify certificate hostname: no server name")
 		}
 		opts := x509.VerifyOptions{
 			Roots:         rootCAs,
