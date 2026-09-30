@@ -10,7 +10,7 @@ Support % is computed as `round(Supported / Total * 100)`, where *Total* is the 
 |---------------------------------------------------|---|---|---|---|
 | [avro](../../lib/stdlibs/ballerina/avro/0.0.1/go1.27/README.md)               | 15 | 1 | 0 | 94% |
 | [crypto](../../lib/stdlibs/ballerina/crypto/0.0.1/go1.27/README.md)           | 26 | 1 | 5 | 81% |
-| [file](../../lib/stdlibs/ballerina/file/0.0.1/go1.26/README.md)               | 21 | 0 | 0 | 100% |
+| [file](../../lib/stdlibs/ballerina/file/0.0.1/go1.27/README.md)               | 21 | 0 | 0 | 100% |
 | [http](../../lib/stdlibs/ballerina/http/0.0.1/go1.27/README.md)               | 28 | 7 | 38 | 38% |
 | [io](../../lib/stdlibs/ballerina/io/0.0.1/go1.27/README.md)                   | 19 | 4 | 4 | 70% |
 | [log](../../lib/stdlibs/ballerina/log/0.0.1/go1.27/README.md)                 | 7 | 2 | 15 | 29% |
