@@ -46,14 +46,23 @@ type fileTypes struct {
 }
 
 func newFileTypes(env semtypes.Env) fileTypes {
-	metaArrLd := semtypes.NewListDefinition()
-	metaMd := semtypes.NewMappingDefinition()
 	utcLd := semtypes.NewListDefinition()
+	metaMd := semtypes.NewMappingDefinition()
+	metaArrLd := semtypes.NewListDefinition()
+	utcTupleTy := utcLd.Define(env, []semtypes.SemType{semtypes.Int, semtypes.Decimal},
+		semtypes.ListMutability(semtypes.CellMutabilityNone))
+	metaDataTy := metaMd.Define(env, []semtypes.Field{
+		semtypes.FieldFrom("absPath", semtypes.String, false, false),
+		semtypes.FieldFrom("size", semtypes.Int, false, false),
+		semtypes.FieldFrom("modifiedTime", utcTupleTy, false, false),
+		semtypes.FieldFrom("dir", semtypes.Boolean, false, false),
+		semtypes.FieldFrom("readable", semtypes.Boolean, false, false),
+		semtypes.FieldFrom("writable", semtypes.Boolean, false, false),
+	}, semtypes.Never)
 	return fileTypes{
-		metaArrTy:  metaArrLd.Define(env, nil, semtypes.ListRest(semtypes.Mapping)),
-		metaDataTy: metaMd.Define(env, nil, semtypes.String),
-		utcTupleTy: utcLd.Define(env, []semtypes.SemType{semtypes.Int, semtypes.Decimal},
-			semtypes.ListMutability(semtypes.CellMutabilityNone)),
+		metaArrTy:  metaArrLd.Define(env, nil, semtypes.ListRest(metaDataTy)),
+		metaDataTy: metaDataTy,
+		utcTupleTy: utcTupleTy,
 	}
 }
 
