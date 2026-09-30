@@ -138,7 +138,27 @@ func TestFileNativeSymlinkResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	dirTarget := filepath.Join(root, "dir-target")
+	if err := os.Mkdir(dirTarget, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dirTarget, "a.txt"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dirLinkParent := filepath.Join(root, "dir-link-parent")
+	if err := os.Mkdir(dirLinkParent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dirLink := filepath.Join(dirLinkParent, "dir-link")
+	if err := os.Symlink(filepath.Join("..", "dir-target"), dirLink); err != nil {
+		t.Fatal(err)
+	}
+
 	externs := []testharness.ExternRegistration{
+		{Org: "$anon", Module: "file-symlink-v", FuncName: "dirLinkPath",
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return dirLink, nil
+			}},
 		{Org: "$anon", Module: "file-symlink-v", FuncName: "symlinkPath",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return link, nil

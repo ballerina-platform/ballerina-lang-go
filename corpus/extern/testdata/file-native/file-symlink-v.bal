@@ -26,6 +26,10 @@ isolated function symlinkPath() returns string = external;
 // pointing at the literal target "target-file.txt".
 isolated function symlinkDirPath() returns string = external;
 
+// dirLinkPath: the only entry of its parent directory, a symlink to a
+// directory holding a single file "a.txt".
+isolated function dirLinkPath() returns string = external;
+
 public function testMain() returns error? {
     string link = symlinkPath();
 
@@ -46,4 +50,16 @@ public function testMain() returns error? {
     check file:copy(symlinkDir, dirCopyDest, file:NO_FOLLOW_LINKS);
     string copiedLink = check file:joinPath(dirCopyDest, "link");
     io:println(check file:test(copiedLink, file:IS_SYMLINK)); // @output true
+
+    // readDir reports a symlinked directory using its target's metadata
+    string dirLink = dirLinkPath();
+    file:MetaData[] entries = check file:readDir(check file:parentPath(dirLink));
+    io:println(entries.length(), " ", entries[0].dir); // @output 1 true
+
+    // following a symlinked directory copies it as an empty directory, as
+    // jBallerina's Files.copy does, rather than copying the target's contents
+    string dirLinkCopy = check file:joinPath(check file:parentPath(dirLink), "dir-link-copy");
+    check file:copy(dirLink, dirLinkCopy);
+    io:println(check file:test(dirLinkCopy, file:IS_DIR)); // @output true
+    io:println(check file:test(check file:joinPath(dirLinkCopy, "a.txt"), file:EXISTS)); // @output false
 }

@@ -256,7 +256,9 @@ func Lstat(path string) (*pal.FileInfo, error) {
 	return &info, nil
 }
 
-// ReadDir returns metadata for each entry of the directory at path.
+// ReadDir returns metadata for each entry of the directory at path. Like
+// jBallerina, entries that are symbolic links report their target's metadata,
+// and a dangling link fails the whole listing.
 func ReadDir(path string) ([]pal.FileInfo, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -264,14 +266,12 @@ func ReadDir(path string) ([]pal.FileInfo, error) {
 	}
 	result := make([]pal.FileInfo, 0, len(entries))
 	for _, entry := range entries {
-		childPath := filepath.Join(path, entry.Name())
-		fi, err := entry.Info()
+		info, err := Stat(filepath.Join(path, entry.Name()))
 		if err != nil {
-			continue
+			return nil, err
 		}
-		info := newFileInfo(childPath, fi)
-		info.IsSymlink = fi.Mode()&os.ModeSymlink != 0
-		result = append(result, info)
+		info.IsSymlink = entry.Type()&os.ModeSymlink != 0
+		result = append(result, *info)
 	}
 	return result, nil
 }
@@ -339,20 +339,10 @@ func CopyFS(src, dst string, opts pal.CopyOptions) error {
 	if err != nil {
 		return err
 	}
-	if srcInfo.Mode()&os.ModeSymlink != 0 && opts.NoFollowLinks {
-		target, err := os.Readlink(src)
-		if err != nil {
-			return err
-		}
-		if opts.ReplaceExisting {
-			os.Remove(dst) //nolint:errcheck
-		}
-		return os.Symlink(target, dst)
-	}
 	if srcInfo.IsDir() {
 		return copyDir(src, dst, opts)
 	}
-	return copyFile(src, dst, opts)
+	return copyEntry(src, dst, srcInfo, opts)
 }
 
 func copyDir(src, dst string, opts pal.CopyOptions) error {
@@ -375,18 +365,47 @@ func copyDir(src, dst string, opts pal.CopyOptions) error {
 		if err != nil {
 			return err
 		}
-		if info.Mode()&os.ModeSymlink != 0 && opts.NoFollowLinks {
-			linkTarget, err := os.Readlink(path)
-			if err != nil {
-				return err
-			}
-			if opts.ReplaceExisting {
-				os.Remove(target) //nolint:errcheck
-			}
-			return os.Symlink(linkTarget, target)
-		}
-		return copyFile(path, target, opts)
+		return copyEntry(path, target, info, opts)
 	})
+}
+
+// copyEntry copies a single non-directory entry. As with Java's Files.copy,
+// which jBallerina uses, a followed symlink to a directory produces an empty
+// directory rather than a copy of the target's contents.
+func copyEntry(src, dst string, info os.FileInfo, opts pal.CopyOptions) error {
+	if info.Mode()&os.ModeSymlink == 0 {
+		return copyFile(src, dst, opts)
+	}
+	if opts.NoFollowLinks {
+		return copySymlink(src, dst, opts)
+	}
+	targetInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if targetInfo.IsDir() {
+		return copyEmptyDir(dst, opts)
+	}
+	return copyFile(src, dst, opts)
+}
+
+func copySymlink(src, dst string, opts pal.CopyOptions) error {
+	target, err := os.Readlink(src)
+	if err != nil {
+		return err
+	}
+	if opts.ReplaceExisting {
+		os.Remove(dst) //nolint:errcheck
+	}
+	return os.Symlink(target, dst)
+}
+
+func copyEmptyDir(dst string, opts pal.CopyOptions) error {
+	err := os.Mkdir(dst, 0o755)
+	if err != nil && opts.ReplaceExisting && os.IsExist(err) {
+		return nil
+	}
+	return err
 }
 
 func copyFile(src, dst string, opts pal.CopyOptions) error {
