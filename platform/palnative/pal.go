@@ -377,58 +377,56 @@ func CreateTempDir(prefix, suffix, dir string) (string, error) {
 }
 
 func CopyFS(src, dst string, opts pal.CopyOptions) error {
-	srcInfo, err := os.Lstat(src)
+	return copyEntry(src, dst, opts, nil)
+}
+
+// copyEntry copies src to dst. Unless NoFollowLinks is set, a symlink is
+// copied as its target, so a symlinked directory is copied as a full tree.
+// jBallerina instead produces an empty directory there, because its tree walk
+// never follows links; that is a bug, and the README records the difference.
+func copyEntry(src, dst string, opts pal.CopyOptions, ancestors []os.FileInfo) error {
+	info, err := os.Lstat(src)
 	if err != nil {
 		return err
 	}
-	if srcInfo.IsDir() {
-		return copyDir(src, dst, opts)
-	}
-	return copyEntry(src, dst, srcInfo, opts)
-}
-
-func copyDir(src, dst string, opts pal.CopyOptions) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
+	if info.Mode()&os.ModeSymlink != 0 {
+		if opts.NoFollowLinks {
+			return copySymlink(src, dst, opts)
+		}
+		if info, err = os.Stat(src); err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			if mkErr := os.MkdirAll(target, 0o755); mkErr != nil && !os.IsExist(mkErr) {
-				return mkErr
-			}
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		return copyEntry(path, target, info, opts)
-	})
-}
-
-// copyEntry copies a single non-directory entry. As with Java's Files.copy,
-// which jBallerina uses, a followed symlink to a directory produces an empty
-// directory rather than a copy of the target's contents.
-func copyEntry(src, dst string, info os.FileInfo, opts pal.CopyOptions) error {
-	if info.Mode()&os.ModeSymlink == 0 {
-		return copyFile(src, dst, opts)
 	}
-	if opts.NoFollowLinks {
-		return copySymlink(src, dst, opts)
-	}
-	targetInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	if targetInfo.IsDir() {
-		return copyEmptyDir(dst, opts)
+	if info.IsDir() {
+		return copyDir(src, dst, info, opts, ancestors)
 	}
 	return copyFile(src, dst, opts)
+}
+
+// copyDir copies the directory src into dst, merging into dst if it already
+// exists. ancestors holds the directories being copied above src, so a
+// followed symlink that loops back to one of them fails instead of recursing
+// forever.
+func copyDir(src, dst string, info os.FileInfo, opts pal.CopyOptions, ancestors []os.FileInfo) error {
+	for _, ancestor := range ancestors {
+		if os.SameFile(ancestor, info) {
+			return &os.PathError{Op: "copy", Path: src, Err: errors.New("symbolic link loop")}
+		}
+	}
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	ancestors = append(ancestors, info)
+	for _, entry := range entries {
+		if err := copyEntry(filepath.Join(src, entry.Name()), filepath.Join(dst, entry.Name()), opts, ancestors); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func copySymlink(src, dst string, opts pal.CopyOptions) error {
@@ -444,17 +442,10 @@ func copySymlink(src, dst string, opts pal.CopyOptions) error {
 	return os.Symlink(target, dst)
 }
 
-func copyEmptyDir(dst string, opts pal.CopyOptions) error {
-	err := os.Mkdir(dst, 0o755)
-	if err != nil && opts.ReplaceExisting && os.IsExist(err) {
-		return nil
-	}
-	return err
-}
-
-// copyFile follows Java's Files.copy: copying a file onto itself, including
-// through a hard link, is a no-op, and a destination symlink is replaced
-// rather than written through, which could otherwise truncate the source.
+// copyFile follows Java's Files.copy, which jBallerina uses: copying a file
+// onto itself, including through a hard link, is a no-op, and an existing
+// destination is deleted before the copy rather than overwritten in place, so
+// the copy never writes through a destination symlink or hard link.
 func copyFile(src, dst string, opts pal.CopyOptions) error {
 	info, err := os.Stat(src)
 	if err != nil {
@@ -467,10 +458,8 @@ func copyFile(src, dst string, opts pal.CopyOptions) error {
 		if !opts.ReplaceExisting {
 			return &os.PathError{Op: "copy", Path: dst, Err: os.ErrExist}
 		}
-		if dstInfo.Mode()&os.ModeSymlink != 0 {
-			if err := os.Remove(dst); err != nil {
-				return err
-			}
+		if err := os.Remove(dst); err != nil {
+			return err
 		}
 	}
 	if err := copyContents(src, dst); err != nil {

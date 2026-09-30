@@ -30,6 +30,13 @@ isolated function symlinkDirPath() returns string = external;
 // directory holding a single file "a.txt".
 isolated function dirLinkPath() returns string = external;
 
+// treeWithDirLinkPath: a real directory holding "sub-link", a symlink to the
+// same directory dirLinkPath points at.
+isolated function treeWithDirLinkPath() returns string = external;
+
+// loopDirPath: a real directory holding "self", a symlink to itself.
+isolated function loopDirPath() returns string = external;
+
 public function testMain() returns error? {
     string link = symlinkPath();
 
@@ -56,10 +63,24 @@ public function testMain() returns error? {
     file:MetaData[] entries = check file:readDir(check file:parentPath(dirLink));
     io:println(entries.length(), " ", entries[0].dir); // @output 1 true
 
-    // following a symlinked directory copies it as an empty directory, as
-    // jBallerina's Files.copy does, rather than copying the target's contents
+    // following a symlinked directory copies the target's tree; jBallerina
+    // produces an empty directory here, a bug the README records
     string dirLinkCopy = check file:joinPath(check file:parentPath(dirLink), "dir-link-copy");
     check file:copy(dirLink, dirLinkCopy);
-    io:println(check file:test(dirLinkCopy, file:IS_DIR)); // @output true
-    io:println(check file:test(check file:joinPath(dirLinkCopy, "a.txt"), file:EXISTS)); // @output false
+    io:println(check file:test(dirLinkCopy, file:IS_SYMLINK)); // @output false
+    io:println(check file:test(check file:joinPath(dirLinkCopy, "a.txt"), file:EXISTS)); // @output true
+
+    // a symlinked subdirectory inside a copied tree is followed the same way
+    string tree = treeWithDirLinkPath();
+    string treeCopy = check file:joinPath(check file:parentPath(tree), "tree-copy");
+    check file:copy(tree, treeCopy);
+    string copiedSub = check file:joinPath(treeCopy, "sub-link");
+    io:println(check file:test(copiedSub, file:IS_SYMLINK)); // @output false
+    io:println(check file:test(check file:joinPath(copiedSub, "a.txt"), file:EXISTS)); // @output true
+
+    // following a symlink that loops back to an ancestor fails instead of
+    // recursing forever
+    string loop = loopDirPath();
+    file:Error? loopErr = file:copy(loop, check file:joinPath(check file:parentPath(loop), "loop-copy"));
+    io:println(loopErr is file:Error); // @output true
 }
