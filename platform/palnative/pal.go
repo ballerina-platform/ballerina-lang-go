@@ -29,6 +29,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ballerina-nutcracker/ballerina/platform/pal"
@@ -99,6 +100,7 @@ func NewPlatform() (pal.Platform, func()) {
 				return os.OpenFile(path, flag, 0o644)
 			},
 			Getwd: os.Getwd,
+			Abs:   Abs,
 			Mkdir: func(path string) error {
 				return os.Mkdir(path, 0o755)
 			},
@@ -234,6 +236,45 @@ func (p *nativeProcess) Kill() {
 }
 
 // FS helpers
+
+// Abs makes path absolute against the working directory. Like Java's
+// Path.toAbsolutePath, which jBallerina uses, it drops redundant separators
+// but keeps "." and ".." segments, since collapsing ".." textually changes the
+// meaning of a path through a symlink. On Windows a rooted path without a
+// drive, such as \foo, resolves against the working directory's drive.
+func Abs(path string) (string, error) {
+	path = filepath.FromSlash(path)
+	if !filepath.IsAbs(path) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		if filepath.VolumeName(path) == "" && len(path) > 0 && os.IsPathSeparator(path[0]) {
+			path = filepath.VolumeName(cwd) + path
+		} else {
+			path = cwd + string(filepath.Separator) + path
+		}
+	}
+	return dropRedundantSeparators(path), nil
+}
+
+func dropRedundantSeparators(path string) string {
+	volume := filepath.VolumeName(path)
+	var b strings.Builder
+	b.WriteString(volume)
+	rest := path[len(volume):]
+	for i := 0; i < len(rest); i++ {
+		if i > 0 && os.IsPathSeparator(rest[i]) && os.IsPathSeparator(rest[i-1]) {
+			continue
+		}
+		b.WriteByte(rest[i])
+	}
+	result := b.String()
+	if len(result) > len(volume)+1 && os.IsPathSeparator(result[len(result)-1]) {
+		result = result[:len(result)-1]
+	}
+	return result
+}
 
 // Stat returns metadata for path, following symbolic links. Exposed at package
 // level so test harnesses can wrap it with their own path mapping.

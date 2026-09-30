@@ -70,8 +70,11 @@ type (
 		OpenReadable func(path string) (io.ReadCloser, error)
 		// OpenWritable opens path for streaming writes, truncating unless appendMode
 		// is set. Close flushes and releases the handle.
-		OpenWritable  func(path string, appendMode bool) (io.WriteCloser, error)
-		Getwd         func() (string, error)
+		OpenWritable func(path string, appendMode bool) (io.WriteCloser, error)
+		Getwd        func() (string, error)
+		// Abs makes path absolute against the working directory without
+		// resolving "." or ".." segments, like Java's Path.toAbsolutePath.
+		Abs           func(path string) (string, error)
 		Mkdir         func(path string) error
 		MkdirAll      func(path string) error
 		Remove        func(path string) error
