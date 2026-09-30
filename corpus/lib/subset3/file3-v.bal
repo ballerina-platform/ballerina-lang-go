@@ -18,6 +18,7 @@
 import ballerina/file;
 import ballerina/io;
 import ballerina/lang.runtime;
+import ballerina/os;
 
 public function main() returns error? {
     string baseDir = check file:createTempDir(prefix = "bal-file3-");
@@ -67,6 +68,15 @@ public function main() returns error? {
     io:println(absWithParentRef.substring(0, cwd.length()) == cwd); // @output true
     string relPart = absWithParentRef.substring(cwd.length() + 1);
     io:println(relPart == "a/../b" || relPart == "a\\..\\b"); // @output true
+
+    // a path rooted without a drive resolves against the working directory's
+    // drive on Windows, as Java's toAbsolutePath does (\foo -> C:\foo); on
+    // POSIX the backslash is an ordinary character, so it stays relative
+    string rootedNoDrive = check file:getAbsolutePath("\\foo");
+    string expectedRooted = os:getEnv("OS") == "Windows_NT"
+        ? cwd.substring(0, 2) + "\\foo"
+        : cwd + "/\\foo";
+    io:println(rootedNoDrive == expectedRooted); // @output true
 
     // getMetaData and readDir values carry the declared MetaData record type,
     // so type tests hold and fields accept values of their declared types
