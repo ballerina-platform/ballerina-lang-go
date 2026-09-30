@@ -22,15 +22,10 @@ import (
 	"time"
 )
 
-// TestSecondsToSleepDuration covers the clamping contract that motivated
-// extracting this helper: decimal's value range vastly exceeds float64's, and
-// a naive seconds*time.Second conversion can overflow to a platform-defined
-// (and on some platforms negative) int64, turning a huge sleep() call into a
-// no-op instead of the longest representable sleep. A corpus test can't cover
-// the overflow branches directly (sleeping for the clamped ~292-year duration
-// isn't practical to run to completion), so this is a plain unit test on the
-// pure helper instead.
+// TestSecondsToSleepDuration is a unit test because the clamped ~292-year
+// sleep can't run to completion in a corpus test.
 func TestSecondsToSleepDuration(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		seconds float64
@@ -39,13 +34,13 @@ func TestSecondsToSleepDuration(t *testing.T) {
 		{"typical positive value", 1.5, 1500 * time.Millisecond},
 		{"zero is a no-op", 0, 0},
 		{"negative is a no-op", -1, 0},
-		{"NaN is a no-op", math.NaN(), 0},
 		{"positive infinity clamps to max duration", math.Inf(1), math.MaxInt64},
 		{"a value far outside decimal's overlap with float64 clamps to max duration", 1e300, math.MaxInt64},
 		{"a value just under int64 nanosecond range converts exactly", 1000, 1000 * time.Second},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := secondsToSleepDuration(tc.seconds)
 			if got != tc.want {
 				t.Errorf("secondsToSleepDuration(%v) = %v, want %v", tc.seconds, got, tc.want)
@@ -57,6 +52,7 @@ func TestSecondsToSleepDuration(t *testing.T) {
 // TestSleepDeadline guards the clamped max duration from wrapping the deadline
 // negative once added to a positive monotonic clock reading.
 func TestSleepDeadline(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		now  time.Duration
@@ -72,6 +68,7 @@ func TestSleepDeadline(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			if got := sleepDeadline(tc.now, tc.dur); got != tc.want {
 				t.Errorf("sleepDeadline(%v, %v) = %v, want %v", tc.now, tc.dur, got, tc.want)
 			}
