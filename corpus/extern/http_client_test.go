@@ -396,6 +396,7 @@ public function main() returns error? {
 // error, rather than silently falling back to the system trust store (which
 // would defeat the custom-CA pinning the config asked for).
 func TestHttpClientMalformedCACert(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	certFile := filepath.Join(tmpDir, "ca.pem")
 	if err := os.WriteFile(certFile, []byte("not a valid PEM certificate"), 0600); err != nil {
@@ -425,6 +426,44 @@ public function main() returns error? {
 		Name:         "http-client-malformed-ca-cert-v",
 		InputPath:    tmpBalFile,
 		ExpectedPath: filepath.Join(expectedDir, "http-client-malformed-ca-cert-v.txtar"),
+	}
+	runExtern(t, tc, newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
+}
+
+// TestHttpClientMalformedClientKey verifies that a secureSocket.key pair whose
+// content isn't valid PEM fails Client.init with an error, rather than
+// connecting without the client certificate the config asked for.
+func TestHttpClientMalformedClientKey(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	keyPairFile := filepath.Join(tmpDir, "client.pem")
+	if err := os.WriteFile(keyPairFile, []byte("not a valid PEM certificate or key"), 0600); err != nil {
+		t.Fatalf("writing malformed key pair file: %v", err)
+	}
+
+	keyPairFileSlash := filepath.ToSlash(keyPairFile)
+	balContent := fmt.Sprintf(`
+import ballerina/http;
+import ballerina/io;
+
+public function main() returns error? {
+    http:Client|error c = new ("http://testserver", {
+        secureSocket: {key: {certFile: "%s", keyFile: "%s"}}
+    });
+    io:println(c is error); // @output true
+    return;
+}
+`, keyPairFileSlash, keyPairFileSlash)
+
+	tmpBalFile := filepath.Join(tmpDir, "http-client-malformed-client-key-v.bal")
+	if err := os.WriteFile(tmpBalFile, []byte(balContent), 0644); err != nil {
+		t.Fatalf("writing bal file: %v", err)
+	}
+
+	tc := test_util.TestCase{
+		Name:         "http-client-malformed-client-key-v",
+		InputPath:    tmpBalFile,
+		ExpectedPath: filepath.Join(expectedDir, "http-client-malformed-client-key-v.txtar"),
 	}
 	runExtern(t, tc, newHTTPPal(palnative.NewHTTPClient).withRealFS(), nil)
 }
