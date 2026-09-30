@@ -36,5 +36,5 @@ public function main() {
 // @output form-data
 // @output file
 // @output test.txt
-// @output attachment; filename=report.pdf
-// @output attachment; filename="my report.pdf"
+// @output attachment;filename="report.pdf"
+// @output attachment;filename="my report.pdf"

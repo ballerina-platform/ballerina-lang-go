@@ -19,13 +19,10 @@ package native
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"strconv"
 	"strings"
-	"sync"
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
@@ -41,46 +38,91 @@ const (
 	moduleName = "mime"
 )
 
-// EntityBodyKind identifies the type of body content stored on an Entity.
-// Exported so sibling stdlibs (e.g. http) that construct or read mime:Entity
-// values natively can do so without duplicating this representation.
-type EntityBodyKind int
+type bodyKind int
 
 const (
-	BodyNone EntityBodyKind = iota
-	BodyText
-	BodyJSON
-	BodyBytes
-	BodyParts
-	BodyXML
-	BodyChannel
+	bodyText bodyKind = iota
+	bodyJSON
+	bodyBytes
+	bodyParts
+	bodyXML
+	bodyChannel
 )
 
-// EntityBody holds the body payload attached to a Ballerina Entity object.
-type EntityBody struct {
-	Kind    EntityBodyKind
-	Text    string
-	JSON    values.BalValue
-	Bytes   []byte
-	Parts   []*values.Object
-	XML     values.XMLValue
-	Channel *values.Object
+// entityBody holds the body payload attached to a Ballerina Entity object.
+type entityBody struct {
+	kind    bodyKind
+	text    string
+	json    values.BalValue
+	bytes   []byte
+	parts   *values.List
+	xml     values.XMLValue
+	channel *values.Object
 }
 
 const entityBodyField = "$mimeBody"
 
-// GetEntityBody returns the native body state attached to a mime:Entity object, or nil if unset.
-func GetEntityBody(obj *values.Object) *EntityBody {
+type mimeTypes struct {
+	byteArrayTy   semtypes.SemType
+	byteArrayAtom *semtypes.ListAtomicType
+	stringMapTy   semtypes.SemType
+	stringMapAtom *semtypes.MappingAtomicType
+	jsonListTy    semtypes.SemType
+	jsonListAtom  *semtypes.ListAtomicType
+	jsonMapTy     semtypes.SemType
+	jsonMapAtom   *semtypes.MappingAtomicType
+}
+
+func newMimeTypes(env semtypes.Env) *mimeTypes {
+	tc := semtypes.ContextFrom(env)
+	jsonTy := semtypes.CreateJSON(tc)
+	byteArrayLd := semtypes.NewListDefinition()
+	stringMapMd := semtypes.NewMappingDefinition()
+	jsonListLd := semtypes.NewListDefinition()
+	jsonMapMd := semtypes.NewMappingDefinition()
+	byteArrayTy := byteArrayLd.Define(env, nil, semtypes.ListRest(semtypes.Byte))
+	stringMapTy := stringMapMd.Define(env, nil, semtypes.String)
+	jsonListTy := jsonListLd.Define(env, nil, semtypes.ListRest(jsonTy))
+	jsonMapTy := jsonMapMd.Define(env, nil, jsonTy)
+	return &mimeTypes{
+		byteArrayTy:   byteArrayTy,
+		byteArrayAtom: semtypes.ToListAtomicType(env, byteArrayTy),
+		stringMapTy:   stringMapTy,
+		stringMapAtom: semtypes.ToMappingAtomicType(tc, stringMapTy),
+		jsonListTy:    jsonListTy,
+		jsonListAtom:  semtypes.ToListAtomicType(env, jsonListTy),
+		jsonMapTy:     jsonMapTy,
+		jsonMapAtom:   semtypes.ToMappingAtomicType(tc, jsonMapTy),
+	}
+}
+
+func (t *mimeTypes) byteList(data []byte) *values.List {
+	items := make([]values.BalValue, len(data))
+	for i, b := range data {
+		items[i] = int64(b)
+	}
+	return values.NewList(t.byteArrayTy, t.byteArrayAtom, false, nil, 0, items)
+}
+
+func (t *mimeTypes) stringMap(params []headerParam) *values.Map {
+	entries := make([]values.MapEntry, len(params))
+	for i, p := range params {
+		entries[i] = values.MapEntry{Key: p.name, Value: p.value}
+	}
+	return values.NewMap(t.stringMapTy, t.stringMapAtom, false, entries)
+}
+
+// getEntityBody returns the native body state attached to a mime:Entity object, or nil if unset.
+func getEntityBody(obj *values.Object) *entityBody {
 	v, ok := obj.Get(entityBodyField)
 	if !ok {
 		return nil
 	}
-	b, _ := v.(*EntityBody)
+	b, _ := v.(*entityBody)
 	return b
 }
 
-// SetEntityBody attaches native body state to a mime:Entity object.
-func SetEntityBody(obj *values.Object, body *EntityBody) {
+func setEntityBody(obj *values.Object, body *entityBody) {
 	obj.Put(entityBodyField, body)
 }
 
@@ -88,22 +130,27 @@ func mimeError(typeName, msg string) values.BalValue {
 	return values.NewError(semtypes.Error, msg, nil, typeName, nil)
 }
 
-// readAllFromChannel drains an io:ReadableByteChannel object via its own readAll()
-// method, invoked through the interpreter's normal object dispatch. mime treats the
-// channel as any other Ballerina value rather than reaching into io's native
-// representation, matching jBallerina's lazy byte-channel data source: the channel
-// isn't read until the body is actually materialized by an accessor.
-func readAllFromChannel(ctx *extern.Context, channel *values.Object) ([]byte, error) {
-	handle, ok := ctx.LookupObjectMethod(channel, "readAll")
+// invokeChannelMethod calls a no-argument io:ReadableByteChannel method through the
+// interpreter's normal object dispatch, so mime never reaches into io's native state.
+func invokeChannelMethod(ctx *extern.Context, channel *values.Object, name string) (values.BalValue, error) {
+	handle, ok := ctx.LookupObjectMethod(channel, name)
 	if !ok {
-		return nil, fmt.Errorf("byte channel does not support readAll")
+		return nil, fmt.Errorf("byte channel does not support %s", name)
 	}
 	result, err := ctx.InvokeMethod(handle, []values.BalValue{channel})
 	if err != nil {
 		return nil, err
 	}
 	if errVal, ok := result.(*values.Error); ok {
-		return nil, fmt.Errorf("%s", errVal.Message)
+		return nil, errors.New(errVal.Message)
+	}
+	return result, nil
+}
+
+func readAllFromChannel(ctx *extern.Context, channel *values.Object) ([]byte, error) {
+	result, err := invokeChannelMethod(ctx, channel, "readAll")
+	if err != nil {
+		return nil, err
 	}
 	list, ok := result.(*values.List)
 	if !ok {
@@ -112,56 +159,54 @@ func readAllFromChannel(ctx *extern.Context, channel *values.Object) ([]byte, er
 	return listToBytes(list), nil
 }
 
-// materializeBody drains a lazy byte-channel body and caches the result back onto the
-// entity as an ordinary byte[] body, matching jBallerina's own data-source caching
-// (EntityBodyHandler.updateDataSource): a byte channel can only be drained once, so the
-// first accessor to materialize it replaces the channel with the bytes read, letting
-// every later accessor call reuse the cached value instead of re-draining an
-// already-exhausted channel.
-func materializeBody(ctx *extern.Context, obj *values.Object) (*EntityBody, error) {
-	body := GetEntityBody(obj)
-	if body == nil || body.Kind != BodyChannel {
+// materializeBody drains and closes a lazy byte-channel body, caching the bytes back
+// onto the entity (jBallerina's EntityBodyHandler does the same): a channel can only
+// be drained once, so later accessors must reuse the cached value.
+func materializeBody(ctx *extern.Context, obj *values.Object) (*entityBody, error) {
+	body := getEntityBody(obj)
+	if body == nil || body.kind != bodyChannel {
 		return body, nil
 	}
-	data, err := readAllFromChannel(ctx, body.Channel)
-	if err != nil {
-		return nil, err
+	data, readErr := readAllFromChannel(ctx, body.channel)
+	_, closeErr := invokeChannelMethod(ctx, body.channel, "close")
+	if readErr != nil {
+		return nil, readErr
 	}
-	cached := &EntityBody{Kind: BodyBytes, Bytes: data}
-	SetEntityBody(obj, cached)
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	cached := &entityBody{kind: bodyBytes, bytes: data}
+	setEntityBody(obj, cached)
 	return cached, nil
 }
 
-// BytesForBody returns the byte representation of an Entity's body regardless of which
+// bytesForBody returns the byte representation of an Entity's body regardless of which
 // setter populated it, matching jBallerina's model where every accessor lazily converts
-// from the entity's underlying data source rather than requiring an exact kind match.
-// Exported so sibling stdlibs (e.g. http, serializing multipart parts) can reuse it.
-func BytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
+// from the entity's underlying data source. An absent or multipart body reads as empty.
+func bytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
 	body, err := materializeBody(ctx, obj)
 	if err != nil {
 		return nil, err
 	}
 	if body == nil {
-		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
-		return nil, fmt.Errorf("Entity body is not a byte[] value")
+		return []byte{}, nil
 	}
-	switch body.Kind {
-	case BodyBytes:
-		return body.Bytes, nil
-	case BodyText:
-		return []byte(body.Text), nil
-	case BodyJSON:
-		return values.ToJSONByteArray(body.JSON)
-	case BodyXML:
-		return []byte(body.XML.XMLString()), nil
+	switch body.kind {
+	case bodyBytes:
+		return body.bytes, nil
+	case bodyText:
+		return []byte(body.text), nil
+	case bodyJSON:
+		return values.ToJSONByteArray(body.json)
+	case bodyXML:
+		return []byte(body.xml.XMLString()), nil
 	default:
-		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
-		return nil, fmt.Errorf("Entity body is not a byte[] value")
+		return []byte{}, nil
 	}
 }
 
 // stringForBody returns the string representation of an Entity's body regardless of
-// which setter populated it, mirroring BytesForBody for the text accessor.
+// which setter populated it, mirroring bytesForBody for the text accessor.
 func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 	body, err := materializeBody(ctx, obj)
 	if err != nil {
@@ -171,44 +216,62 @@ func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return "", fmt.Errorf("Entity body is not a text value")
 	}
-	switch body.Kind {
-	case BodyText:
-		return body.Text, nil
-	case BodyBytes:
-		return string(body.Bytes), nil
-	case BodyJSON:
-		b, err := values.ToJSONByteArray(body.JSON)
+	switch body.kind {
+	case bodyText:
+		return body.text, nil
+	case bodyBytes:
+		return string(body.bytes), nil
+	case bodyJSON:
+		b, err := values.ToJSONByteArray(body.json)
 		if err != nil {
 			return "", err
 		}
 		return string(b), nil
-	case BodyXML:
-		return body.XML.XMLString(), nil
+	case bodyXML:
+		return body.xml.XMLString(), nil
 	default:
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return "", fmt.Errorf("Entity body is not a text value")
 	}
 }
 
-// xmlForBody returns the XML representation of an Entity's body regardless of which
-// setter populated it, mirroring stringForBody/BytesForBody for the XML accessor.
-// Whatever the body's string form is (text, byte[], or JSON's serialized form) gets
-// parsed as XML (jBallerina's io:fileReadXml-style lenient parsing), matching
-// jBallerina's own getXml, which always converts through the body's string form
-// rather than special-casing non-text kinds — a non-XML string simply fails to parse.
+// xmlForBody parses the body's string form as an XML document, matching jBallerina's
+// getXml: an empty body is an empty sequence, otherwise exactly one root element is required.
 func xmlForBody(ctx *extern.Context, obj *values.Object) (values.XMLValue, error) {
 	body, err := materializeBody(ctx, obj)
 	if err != nil {
 		return nil, err
 	}
-	if body != nil && body.Kind == BodyXML {
-		return body.XML, nil
+	if body != nil && body.kind == bodyXML {
+		return body.xml, nil
 	}
 	text, err := stringForBody(ctx, obj)
 	if err != nil {
 		return nil, err
 	}
-	return values.ParseAsXMLValue(ctx.TypeCtx(), text, values.XMLLenientMode)
+	xmlVal, err := values.ParseAsXMLValue(ctx.TypeCtx(), text, values.XMLLenientMode)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(text) != "" && !hasSingleRootElement(xmlVal) {
+		return nil, errors.New("xml content must have exactly one root element")
+	}
+	return xmlVal, nil
+}
+
+func hasSingleRootElement(xmlVal values.XMLValue) bool {
+	elements := 0
+	for _, item := range xmlVal.IterItems() {
+		switch item := item.(type) {
+		case *values.XMLElement:
+			elements++
+		case *values.XMLText:
+			if strings.TrimSpace(item.XMLString()) != "" {
+				return false
+			}
+		}
+	}
+	return elements == 1
 }
 
 // mimeEncode produces MIME-compatible base64 (76-char line length, \r\n separators),
@@ -239,8 +302,8 @@ func lookupCharset(charset string) (encoding.Encoding, error) {
 	return enc, nil
 }
 
-// mimeDecode strips MIME whitespace (\r, \n, space, tab) before decoding,
-// matching Java's Base64.getMimeDecoder() leniency.
+// mimeDecode strips MIME whitespace (\r, \n, space, tab) and accepts missing `=`
+// padding before decoding, matching Java's Base64.getMimeDecoder() leniency.
 func mimeDecode(s string) ([]byte, error) {
 	cleaned := strings.Map(func(r rune) rune {
 		if r == '\r' || r == '\n' || r == ' ' || r == '\t' {
@@ -248,7 +311,7 @@ func mimeDecode(s string) ([]byte, error) {
 		}
 		return r
 	}, s)
-	return base64.StdEncoding.DecodeString(cleaned)
+	return base64.RawStdEncoding.DecodeString(strings.TrimRight(cleaned, "="))
 }
 
 // listToBytes converts a Ballerina byte[] to a Go []byte.
@@ -260,55 +323,15 @@ func listToBytes(list *values.List) []byte {
 	return b
 }
 
-// bytesToList converts a []byte to a Ballerina byte[] list value.
-func bytesToList(ctx *extern.Context, data []byte) *values.List {
-	items := make([]values.BalValue, len(data))
-	for i, b := range data {
-		items[i] = int64(b)
-	}
-	bld := semtypes.NewListDefinition()
-	ty := bld.Define(ctx.Env.TypeEnv, nil, semtypes.ListRest(semtypes.Byte))
-	return values.NewList(ty, semtypes.ToListAtomicType(ctx.TypeEnv(), ty), false, nil, 0, items)
-}
-
-// buildParamsMap creates a Ballerina map<string> from a Go string map.
-func buildParamsMap(tc semtypes.Context, env semtypes.Env, params map[string]string) *values.Map {
-	mmd := semtypes.NewMappingDefinition()
-	ty := mmd.Define(env, nil, semtypes.String)
-	entries := make([]values.MapEntry, 0, len(params))
-	for k, v := range params {
-		entries = append(entries, values.MapEntry{Key: k, Value: v})
-	}
-	return values.NewMap(ty, semtypes.ToMappingAtomicType(tc, ty), false, entries)
-}
-
-// formatParam quotes a parameter value if it contains chars that require quoting.
-func formatParam(val string) string {
-	for _, c := range val {
-		if c == ' ' || c == ',' || c == ';' || c == '"' || c == '\\' || c == '(' || c == ')' || c == '<' || c == '>' || c == '@' || c == ':' || c == '/' || c == '[' || c == ']' || c == '?' || c == '=' {
-			escaped := strings.ReplaceAll(val, `\`, `\\`)
-			escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-			return `"` + escaped + `"`
-		}
-	}
-	return val
-}
-
 func initMimeModule(rt *runtime.Runtime) {
-	env := rt.GetTypeEnv()
-	jsonListType, jsonMapType := JSONListAndMapTypes(semtypes.ContextFrom(env))
+	t := newMimeTypes(rt.GetTypeEnv())
+	registerBodyExterns(rt, t)
+	registerHeaderExterns(rt, t)
+	registerBase64Externs(rt, t)
+	registerMultipartExterns(rt)
+}
 
-	var (
-		once          sync.Once
-		byteArrayType semtypes.SemType
-	)
-	ensureTypes := func(ctx *extern.Context) {
-		once.Do(func() {
-			bld := semtypes.NewListDefinition()
-			byteArrayType = bld.Define(ctx.Env.TypeEnv, nil, semtypes.ListRest(semtypes.Byte))
-		})
-	}
-
+func registerBodyExterns(rt *runtime.Runtime, t *mimeTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteChannel",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
@@ -319,7 +342,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("second argument must be a ReadableByteChannel object")
 			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyChannel, Channel: channel})
+			setEntityBody(obj, &entityBody{kind: bodyChannel, channel: channel})
 			return nil, nil
 		})
 
@@ -329,7 +352,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyJSON, JSON: args[1]})
+			setEntityBody(obj, &entityBody{kind: bodyJSON, json: args[1]})
 			return nil, nil
 		})
 
@@ -339,27 +362,19 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			body := GetEntityBody(obj)
-			if body != nil && body.Kind == BodyJSON {
-				return body.JSON, nil
+			body := getEntityBody(obj)
+			if body != nil && body.kind == bodyJSON {
+				return body.json, nil
 			}
 			text, err := stringForBody(ctx, obj)
 			if err != nil {
 				return mimeError("ParserError", "Entity body is not a JSON value"), nil
 			}
-			var v interface{}
-			dec := json.NewDecoder(strings.NewReader(text))
-			dec.UseNumber()
-			if err := dec.Decode(&v); err != nil {
+			v, err := t.parseJSON(text)
+			if err != nil {
 				return mimeError("ParserError", "Error occurred while retrieving the json payload from the entity: "+err.Error()), nil
 			}
-			// Decode only consumes the first JSON value; a second Decode must hit EOF,
-			// otherwise trailing non-whitespace data (e.g. "{} false") was silently dropped.
-			var trailing json.RawMessage
-			if err := dec.Decode(&trailing); err != io.EOF {
-				return mimeError("ParserError", "Error occurred while retrieving the json payload from the entity: trailing characters after the JSON value"), nil
-			}
-			return values.GoToBalValue(ctx.TypeCtx(), v, jsonListType, jsonMapType), nil
+			return v, nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetXml",
@@ -372,7 +387,7 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("second argument must be an xml value")
 			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyXML, XML: xmlContent})
+			setEntityBody(obj, &entityBody{kind: bodyXML, xml: xmlContent})
 			return nil, nil
 		})
 
@@ -396,7 +411,7 @@ func initMimeModule(rt *runtime.Runtime) {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
 			text, _ := args[1].(string)
-			SetEntityBody(obj, &EntityBody{Kind: BodyText, Text: text})
+			setEntityBody(obj, &entityBody{kind: bodyText, text: text})
 			return nil, nil
 		})
 
@@ -414,7 +429,7 @@ func initMimeModule(rt *runtime.Runtime) {
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteArray",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
@@ -423,26 +438,21 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("second argument must be a byte array")
 			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyBytes, Bytes: listToBytes(list)})
+			setEntityBody(obj, &entityBody{kind: bodyBytes, bytes: listToBytes(list)})
 			return nil, nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetByteArray",
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			ensureTypes(ctx)
 			obj, ok := args[0].(*values.Object)
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			data, err := BytesForBody(ctx, obj)
+			data, err := bytesForBody(ctx, obj)
 			if err != nil {
 				return mimeError("ParserError", err.Error()), nil
 			}
-			items := make([]values.BalValue, len(data))
-			for i, b := range data {
-				items[i] = int64(b)
-			}
-			return values.NewList(byteArrayType, semtypes.ToListAtomicType(ctx.TypeEnv(), byteArrayType), false, nil, 0, items), nil
+			return t.byteList(data), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externIntToString",
@@ -466,75 +476,48 @@ func initMimeModule(rt *runtime.Runtime) {
 			}
 			return n, nil
 		})
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "getMediaType",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			contentType, ok := args[0].(string)
+// registerHeaderExterns fills MediaType/ContentDisposition objects that the .bal side
+// constructs with `new`, so they carry their real class type for `is` checks.
+func registerHeaderExterns(rt *runtime.Runtime, t *mimeTypes) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseMediaType",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			obj, ok := args[0].(*values.Object)
 			if !ok {
-				return nil, fmt.Errorf("argument must be a string")
+				return nil, fmt.Errorf("first argument must be a MediaType object")
 			}
-			mediatype, params, err := mime.ParseMediaType(contentType)
-			if err != nil {
+			contentType, ok := args[1].(string)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be a string")
+			}
+			mt, ok := parseMediaType(contentType)
+			if !ok {
 				return mimeError("InvalidContentTypeError", "Invalid content-type: "+contentType), nil
 			}
-			primaryType := ""
-			subType := ""
-			suffix := ""
-			parts := strings.SplitN(mediatype, "/", 2)
-			if len(parts) >= 1 {
-				primaryType = parts[0]
-			}
-			if len(parts) == 2 {
-				subParts := strings.SplitN(parts[1], "+", 2)
-				subType = subParts[0]
-				if len(subParts) == 2 {
-					suffix = subParts[1]
-				}
-			}
-			paramsMap := buildParamsMap(ctx.TypeCtx(), ctx.Env.TypeEnv, params)
-			return values.NewObject(
-				semtypes.Object,
-				map[string]values.BalValue{
-					"primaryType": primaryType,
-					"subType":     subType,
-					"suffix":      suffix,
-					"parameters":  paramsMap,
-				},
-				map[string]string{
-					"getBaseType": "ballerina/mime:MediaType.getBaseType",
-					"toString":    "ballerina/mime:MediaType.toString",
-				},
-				nil,
-				nil,
-			), nil
+			obj.Put("primaryType", mt.primaryType)
+			obj.Put("subType", mt.subType)
+			obj.Put("suffix", mt.suffix)
+			obj.Put("parameters", t.stringMap(mt.params))
+			return nil, nil
 		})
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "getContentDispositionObject",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			contentDisposition, ok := args[0].(string)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseContentDisposition",
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			obj, ok := args[0].(*values.Object)
 			if !ok {
-				return nil, fmt.Errorf("argument must be a string")
+				return nil, fmt.Errorf("first argument must be a ContentDisposition object")
 			}
-			disposition, params, _ := mime.ParseMediaType(contentDisposition)
-			fileName := params["filename"]
-			name := params["name"]
-			delete(params, "filename")
-			delete(params, "name")
-			paramsMap := buildParamsMap(ctx.TypeCtx(), ctx.Env.TypeEnv, params)
-			return values.NewObject(
-				semtypes.Object,
-				map[string]values.BalValue{
-					"fileName":    fileName,
-					"disposition": disposition,
-					"name":        name,
-					"parameters":  paramsMap,
-				},
-				map[string]string{
-					"toString": "ballerina/mime:ContentDisposition.toString",
-				},
-				nil,
-				nil,
-			), nil
+			value, ok := args[1].(string)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be a string")
+			}
+			cd := parseContentDisposition(value)
+			obj.Put("disposition", cd.disposition)
+			obj.Put("name", cd.name)
+			obj.Put("fileName", cd.fileName)
+			obj.Put("parameters", t.stringMap(cd.params))
+			return nil, nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "convertContentDispositionToString",
@@ -543,39 +526,36 @@ func initMimeModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("argument must be a ContentDisposition object")
 			}
-			dispVal, _ := obj.Get("disposition")
-			disposition, _ := dispVal.(string)
-			if disposition == "" {
-				return "", nil
-			}
-			result := disposition
-			nameVal, _ := obj.Get("name")
-			if name, ok := nameVal.(string); ok && name != "" {
-				result += "; name=" + formatParam(name)
-			}
-			fileNameVal, _ := obj.Get("fileName")
-			if fileName, ok := fileNameVal.(string); ok && fileName != "" {
-				result += "; filename=" + formatParam(fileName)
-			}
-			paramsVal, _ := obj.Get("parameters")
-			if paramsMap, ok := paramsVal.(*values.Map); ok {
-				for _, k := range paramsMap.Keys() {
-					v, _ := paramsMap.Get(k)
-					vStr, _ := v.(string)
-					result += "; " + k + "=" + formatParam(vStr)
-				}
-			}
-			return result, nil
+			return contentDispositionOf(obj).String(), nil
 		})
+}
 
+func contentDispositionOf(obj *values.Object) contentDisposition {
+	stringField := func(name string) string {
+		v, _ := obj.Get(name)
+		s, _ := v.(string)
+		return s
+	}
+	cd := contentDisposition{
+		disposition: stringField("disposition"),
+		name:        stringField("name"),
+		fileName:    stringField("fileName"),
+	}
+	paramsVal, _ := obj.Get("parameters")
+	if params, ok := paramsVal.(*values.Map); ok {
+		for _, k := range params.Keys() {
+			v, _ := params.Get(k)
+			s, _ := v.(string)
+			cd.params = append(cd.params, headerParam{name: k, value: s})
+		}
+	}
+	return cd
+}
+
+func registerBase64Externs(rt *runtime.Runtime, t *mimeTypes) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Encode",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			charset := "utf-8"
-			if len(args) > 1 {
-				if cs, ok := args[1].(string); ok {
-					charset = cs
-				}
-			}
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			charset := charsetArg(args)
 			switch v := args[0].(type) {
 			case string:
 				enc, err := lookupCharset(charset)
@@ -586,25 +566,17 @@ func initMimeModule(rt *runtime.Runtime) {
 				if err != nil {
 					return mimeError("EncodeError", "base64 encoding failed: "+err.Error()), nil
 				}
-				encoded := mimeEncode([]byte(data))
-				return encoded, nil
+				return mimeEncode([]byte(data)), nil
 			case *values.List:
-				data := listToBytes(v)
-				encodedStr := mimeEncode(data)
-				return bytesToList(ctx, []byte(encodedStr)), nil
+				return t.byteList([]byte(mimeEncode(listToBytes(v)))), nil
 			default:
 				return mimeError("EncodeError", "unsupported content type for base64 encoding"), nil
 			}
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Decode",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			charset := "utf-8"
-			if len(args) > 1 {
-				if cs, ok := args[1].(string); ok {
-					charset = cs
-				}
-			}
+		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+			charset := charsetArg(args)
 			switch v := args[0].(type) {
 			case string:
 				decoded, err := mimeDecode(v)
@@ -621,16 +593,24 @@ func initMimeModule(rt *runtime.Runtime) {
 				}
 				return out, nil
 			case *values.List:
-				data := listToBytes(v)
-				decoded, err := mimeDecode(string(data))
+				decoded, err := mimeDecode(string(listToBytes(v)))
 				if err != nil {
 					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
 				}
-				return bytesToList(ctx, decoded), nil
+				return t.byteList(decoded), nil
 			default:
 				return mimeError("DecodeError", "unsupported content type for base64 decoding"), nil
 			}
 		})
+}
+
+func charsetArg(args []values.BalValue) string {
+	if len(args) > 1 {
+		if cs, ok := args[1].(string); ok {
+			return cs
+		}
+	}
+	return "utf-8"
 }
 
 func init() {

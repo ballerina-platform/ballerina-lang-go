@@ -49,12 +49,11 @@ public function main() {
         io:println(crossKindResult.length());
     }
 
-    // A freshly-constructed entity with no body set at all is the one case that
-    // still produces a ParserError.
+    // An entity with no body reads as an empty byte array, matching jBallerina.
     mime:Entity emptyEntity = new ();
     byte[]|mime:ParserError emptyResult = emptyEntity.getByteArray();
-    if emptyResult is mime:ParserError {
-        io:println("parser error");
+    if emptyResult is byte[] {
+        io:println(emptyResult.length());
     }
 
     // getJson() decodes only the first JSON value; trailing non-whitespace data is
@@ -122,7 +121,7 @@ public function main() {
 // @output 5
 // @output dispatched text
 // @output 4
-// @output parser error
+// @output 0
 // @output trailing data rejected
 // @output trailing whitespace accepted
 // @output application/octet-stream

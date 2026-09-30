@@ -44,7 +44,7 @@ public function main() returns error? {
 // @output application/json
 // @output UTF-8
 // @output application
-// @output svg
+// @output svg+xml
 // @output xml
-// @output application/svg
+// @output application/svg+xml
 // @output invalid content type

@@ -19,72 +19,24 @@ package native
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime"
 	"mime/multipart"
 	"net/textproto"
+	"slices"
 	"strings"
 
 	"github.com/ballerina-nutcracker/ballerina/runtime"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
-	"github.com/ballerina-nutcracker/ballerina/semtypes"
 	"github.com/ballerina-nutcracker/ballerina/values"
 )
 
-// entityMethodKeys lists every public Entity method, keyed by name, pointing at its
-// qualified BIR lookup key. Shared by every native path that constructs a fresh
-// Entity value (this file's multipart decoder, and sibling stdlibs via NewEntity)
-// so a natively-built Entity dispatches identically to one built via `new Entity()`.
-func entityMethodKeys() map[string]string {
-	names := []string{
-		"setContentType", "getContentType", "setContentId", "getContentId",
-		"setContentLength", "getContentLength", "setContentDisposition", "getContentDisposition",
-		"setBody", "setJson", "getJson", "setXml", "getXml", "setText", "getText", "setByteArray", "getByteArray",
-		"getHeader", "getHeaders", "getHeaderNames", "addHeader", "setHeader",
-		"removeHeader", "removeAllHeaders", "hasHeader", "setBodyParts", "getBodyParts",
-	}
-	keys := make(map[string]string, len(names))
-	for _, n := range names {
-		keys[n] = "ballerina/mime:Entity." + n
-	}
-	return keys
-}
-
-func stringListSemType(ctx *extern.Context) semtypes.SemType {
-	bld := semtypes.NewListDefinition()
-	return bld.Define(ctx.Env.TypeEnv, nil, semtypes.ListRest(semtypes.String))
-}
-
-func stringListMapSemType(ctx *extern.Context, elemType semtypes.SemType) semtypes.SemType {
-	mmd := semtypes.NewMappingDefinition()
-	return mmd.Define(ctx.Env.TypeEnv, nil, elemType)
-}
-
-// NewEntity constructs a fresh mime:Entity-shaped native object with the same
-// zero-state as `.bal`-level `new Entity()`. Exported so sibling stdlibs (e.g.
-// http) that need to construct Entity values natively — e.g. multipart body
-// parts decoded from a raw request/response body — can reuse this shape
-// instead of duplicating the method-key table.
-func NewEntity(ctx *extern.Context) *values.Object {
-	stringListType := stringListSemType(ctx)
-	headerMapType := stringListMapSemType(ctx, stringListType)
-	emptyHeaderMap := values.NewMap(headerMapType, semtypes.ToMappingAtomicType(ctx.TypeCtx(), headerMapType), false, nil)
-	emptyHeaderNames := values.NewList(stringListType, semtypes.ToListAtomicType(ctx.TypeEnv(), stringListType), false, nil, 0, nil)
-	return values.NewObject(
-		semtypes.Object,
-		map[string]values.BalValue{
-			"cType":        nil,
-			"cId":          "",
-			"cLength":      int64(0),
-			"cDisposition": nil,
-			"headerMap":    emptyHeaderMap,
-			"headerNames":  emptyHeaderNames,
-		},
-		entityMethodKeys(),
-		nil,
-		nil,
-	)
+type decodedPart struct {
+	header textproto.MIMEHeader
+	body   []byte
 }
 
 // entityHeaderValue reads the first value of a header from an Entity's own headerMap
@@ -110,43 +62,12 @@ func entityHeaderValue(obj *values.Object, headerName string) (string, bool) {
 	return s, ok
 }
 
-// setEntityHeaders replaces an Entity's headerMap/headerNames fields from a parsed
-// MIME header set, preserving multi-value headers and original header-name casing.
-func setEntityHeaders(ctx *extern.Context, obj *values.Object, header textproto.MIMEHeader) {
-	stringListType := stringListSemType(ctx)
-	headerMapType := stringListMapSemType(ctx, stringListType)
-	entries := make([]values.MapEntry, 0, len(header))
-	names := make([]values.BalValue, 0, len(header))
-	for key, vals := range header {
-		items := make([]values.BalValue, len(vals))
-		for i, v := range vals {
-			items[i] = v
-		}
-		valueList := values.NewList(stringListType, semtypes.ToListAtomicType(ctx.TypeEnv(), stringListType), false, nil, 0, items)
-		entries = append(entries, values.MapEntry{Key: strings.ToLower(key), Value: valueList})
-		names = append(names, key)
-	}
-	obj.Put("headerMap", values.NewMap(headerMapType, semtypes.ToMappingAtomicType(ctx.TypeCtx(), headerMapType), false, entries))
-	obj.Put("headerNames", values.NewList(stringListType, semtypes.ToListAtomicType(ctx.TypeEnv(), stringListType), false, nil, 0, names))
-}
-
-// EntityListFromParts builds a Ballerina Entity[] list value from native part objects.
-func EntityListFromParts(ctx *extern.Context, parts []*values.Object) *values.List {
-	items := make([]values.BalValue, len(parts))
-	for i, p := range parts {
-		items[i] = p
-	}
-	bld := semtypes.NewListDefinition()
-	ty := bld.Define(ctx.Env.TypeEnv, nil, semtypes.ListRest(semtypes.Object))
-	return values.NewList(ty, semtypes.ToListAtomicType(ctx.TypeEnv(), ty), false, nil, 0, items)
-}
-
-// MultipartBoundary parses a Content-Type header value and reports whether it names a
+// multipartBoundary parses a Content-Type header value and reports whether it names a
 // composite (multipart/* or message/*, per RFC 2046) media type, along with its
 // boundary parameter. message/* always reports an empty boundary regardless of the
 // Content-Type params: it isn't boundary-delimited, so a "boundary" param present on
 // one must never be handed to multipart.NewReader as if it were.
-func MultipartBoundary(contentType string) (baseType, boundary string, isComposite bool) {
+func multipartBoundary(contentType string) (baseType, boundary string, isComposite bool) {
 	if contentType == "" {
 		return "", "", false
 	}
@@ -165,22 +86,22 @@ func MultipartBoundary(contentType string) (baseType, boundary string, isComposi
 	}
 }
 
-// DecodeMultipart splits a raw multipart body into per-part Entity values, defaulting
+// decodeMultipart splits a raw multipart body into per-part Entity values, defaulting
 // an absent per-part Content-Type to "text/plain" (matching jBallerina's underlying
 // MIME library default) and copying every part header verbatim.
 //
 // A missing boundary is a ParserError here; jBallerina instead silently returns an
 // empty Entity[] in this case (it never attempts to decode a manually-set byte array
 // as multipart at all — only an inbound request/response body is eligible there).
-func DecodeMultipart(ctx *extern.Context, data []byte, boundary string) ([]*values.Object, error) {
+func decodeMultipart(ctx *extern.Context, data []byte, boundary string) (*values.List, error) {
 	if boundary == "" {
 		return nil, fmt.Errorf("no boundary parameter found in Content-Type")
 	}
 	reader := multipart.NewReader(bytes.NewReader(data), boundary)
-	var parts []*values.Object
+	var decoded []decodedPart
 	for {
 		part, err := reader.NextPart()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -189,114 +110,73 @@ func DecodeMultipart(ctx *extern.Context, data []byte, boundary string) ([]*valu
 		if part.Header.Get("Content-Type") == "" {
 			part.Header.Set("Content-Type", "text/plain")
 		}
-		bodyBytes, err := io.ReadAll(part)
+		body, err := io.ReadAll(part)
 		if err != nil {
 			return nil, err
 		}
-		partObj := NewEntity(ctx)
-		setEntityHeaders(ctx, partObj, part.Header)
-		SetEntityBody(partObj, &EntityBody{Kind: BodyBytes, Bytes: bodyBytes})
-		parts = append(parts, partObj)
+		decoded = append(decoded, decodedPart{header: part.Header, body: body})
+	}
+	parts, err := newBodyParts(ctx, len(decoded))
+	if err != nil {
+		return nil, err
+	}
+	for i, d := range decoded {
+		partObj := parts.Get(i).(*values.Object)
+		if err := addEntityHeaders(ctx, partObj, d.header); err != nil {
+			return nil, err
+		}
+		setEntityBody(partObj, &entityBody{kind: bodyBytes, bytes: d.body})
 	}
 	return parts, nil
 }
 
-// entityHeaderMap reads an Entity's headerMap/headerNames fields back into a Go header map,
-// preserving original header-name casing (the reverse of setEntityHeaders).
-func entityHeaderMap(obj *values.Object) map[string][]string {
-	result := make(map[string][]string)
-	namesVal, ok := obj.Get("headerNames")
+// newBodyParts calls the private .bal newBodyParts helper so the parts and the list
+// holding them carry their real Entity/Entity[] types.
+func newBodyParts(ctx *extern.Context, count int) (*values.List, error) {
+	handle, ok := ctx.LookupFunction(orgName, moduleName, "newBodyParts")
 	if !ok {
-		return result
+		return nil, fmt.Errorf("mime: internal helper function newBodyParts not found")
 	}
-	names, ok := namesVal.(*values.List)
+	result, err := ctx.InvokeFunction(handle, []values.BalValue{int64(count)})
+	if err != nil {
+		return nil, err
+	}
+	parts, ok := result.(*values.List)
 	if !ok {
-		return result
+		return nil, fmt.Errorf("mime: newBodyParts returned an unexpected value")
 	}
-	hmVal, ok := obj.Get("headerMap")
-	if !ok {
-		return result
-	}
-	hm, ok := hmVal.(*values.Map)
-	if !ok {
-		return result
-	}
-	for i := range names.Len() {
-		name, _ := names.Get(i).(string)
-		v, ok := hm.Get(strings.ToLower(name))
-		if !ok {
-			continue
-		}
-		list, ok := v.(*values.List)
-		if !ok {
-			continue
-		}
-		vals := make([]string, list.Len())
-		for j := range list.Len() {
-			s, _ := list.Get(j).(string)
-			vals[j] = s
-		}
-		result[name] = vals
-	}
-	return result
+	return parts, nil
 }
 
-// EncodeMultipart serializes body parts into multipart-encoded wire bytes. If boundary is
-// empty, one is generated; the boundary actually used is always returned so the caller can
-// record the final Content-Type. Exported for sibling stdlibs (http) that need to serialize a
-// multipart body for wire transmission — mime's own Entity.getByteArray() intentionally does
-// not do this, matching jBallerina, where serializing a multipart entity to bytes is not
-// exposed through mime's public API either (jBallerina's HTTP transport layer does it
-// internally instead).
-func EncodeMultipart(ctx *extern.Context, parts []*values.Object, boundary string) (data []byte, usedBoundary string, err error) {
-	var buf bytes.Buffer
-	w := multipart.NewWriter(&buf)
-	if boundary != "" {
-		if err := w.SetBoundary(boundary); err != nil {
-			return nil, "", err
+// addEntityHeaders adds each part header through Entity.addHeader, in sorted name
+// order since textproto.MIMEHeader does not keep the wire order.
+func addEntityHeaders(ctx *extern.Context, obj *values.Object, header textproto.MIMEHeader) error {
+	handle, ok := ctx.LookupObjectMethod(obj, "addHeader")
+	if !ok {
+		return fmt.Errorf("mime: Entity.addHeader not found")
+	}
+	for _, name := range slices.Sorted(maps.Keys(header)) {
+		for _, value := range header[name] {
+			if _, err := ctx.InvokeMethod(handle, []values.BalValue{obj, name, value}); err != nil {
+				return err
+			}
 		}
 	}
-	for _, part := range parts {
-		header := textproto.MIMEHeader(entityHeaderMap(part))
-		pw, err := w.CreatePart(header)
-		if err != nil {
-			return nil, "", err
-		}
-		partData, err := BytesForBody(ctx, part)
-		if err != nil {
-			return nil, "", err
-		}
-		if _, err := pw.Write(partData); err != nil {
-			return nil, "", err
-		}
-	}
-	usedBoundary = w.Boundary()
-	if err := w.Close(); err != nil {
-		return nil, "", err
-	}
-	return buf.Bytes(), usedBoundary, nil
+	return nil
 }
 
-func initMultipartModule(rt *runtime.Runtime) {
+func registerMultipartExterns(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetBodyParts",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			obj, ok := args[0].(*values.Object)
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			list, ok := args[1].(*values.List)
+			parts, ok := args[1].(*values.List)
 			if !ok {
 				return nil, fmt.Errorf("second argument must be an Entity array")
 			}
-			parts := make([]*values.Object, list.Len())
-			for i := range list.Len() {
-				part, ok := list.Get(i).(*values.Object)
-				if !ok {
-					return nil, fmt.Errorf("body part at index %d is not an Entity object", i)
-				}
-				parts[i] = part
-			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyParts, Parts: parts})
+			setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
 			return nil, nil
 		})
 
@@ -306,12 +186,12 @@ func initMultipartModule(rt *runtime.Runtime) {
 			if !ok {
 				return nil, fmt.Errorf("first argument must be an Entity object")
 			}
-			body := GetEntityBody(obj)
-			if body != nil && body.Kind == BodyParts {
-				return EntityListFromParts(ctx, body.Parts), nil
+			body := getEntityBody(obj)
+			if body != nil && body.kind == bodyParts {
+				return body.parts, nil
 			}
 			contentType, _ := entityHeaderValue(obj, "content-type")
-			baseType, boundary, isComposite := MultipartBoundary(contentType)
+			baseType, boundary, isComposite := multipartBoundary(contentType)
 			if !isComposite {
 				return mimeError("ParserError", "Entity body is not a type of composite media type. "+
 					"Received content-type : "+baseType), nil
@@ -320,19 +200,15 @@ func initMultipartModule(rt *runtime.Runtime) {
 				return mimeError("ParserError", "message/* body part decoding is not yet supported. "+
 					"Received content-type : "+baseType), nil
 			}
-			if body == nil || body.Kind != BodyBytes {
+			if body == nil || body.kind != bodyBytes {
 				return mimeError("ParserError", "Entity body is not a type of composite media type. "+
 					"Received content-type : "+baseType), nil
 			}
-			parts, err := DecodeMultipart(ctx, body.Bytes, boundary)
+			parts, err := decodeMultipart(ctx, body.bytes, boundary)
 			if err != nil {
 				return mimeError("ParserError", "Error occurred while extracting body parts from entity: "+err.Error()), nil
 			}
-			SetEntityBody(obj, &EntityBody{Kind: BodyParts, Parts: parts})
-			return EntityListFromParts(ctx, parts), nil
+			setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
+			return parts, nil
 		})
-}
-
-func init() {
-	runtime.RegisterModuleInitializer(initMultipartModule)
 }
