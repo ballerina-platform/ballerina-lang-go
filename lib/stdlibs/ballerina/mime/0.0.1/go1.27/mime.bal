@@ -172,6 +172,9 @@ public class ContentDisposition {
     # Additional parameters of the content disposition.
     public map<string> parameters = {};
 
+    public isolated function init() {
+    }
+
     # Converts this `ContentDisposition` to its wire representation.
     #
     # + return - the string representation of this content disposition
@@ -193,6 +196,9 @@ public class MediaType {
     public string suffix = "";
     # Additional parameters of the media type, e.g. `charset`.
     public map<string> parameters = {};
+
+    public isolated function init() {
+    }
 
     # Returns the base type, i.e. `primaryType/subType`, without any parameters.
     #
@@ -475,7 +481,7 @@ public class Entity {
         if value is () {
             return error HeaderNotFoundError("Http header does not exist");
         }
-        return [...value];
+        return value;
     }
 
     # Returns the names of all headers set on this entity, in their original casing.
@@ -542,6 +548,15 @@ public class Entity {
     }
 }
 
+isolated function newBodyParts(int count) returns Entity[] {
+    Entity[] parts = [];
+    foreach int _ in 0 ..< count {
+        Entity part = new;
+        parts.push(part);
+    }
+    return parts;
+}
+
 isolated function externSetByteChannel(Entity entity, io:ReadableByteChannel byteChannel, string contentType) = external;
 
 isolated function externSetJson(Entity entity, json jsonContent, string contentType) = external;
@@ -585,13 +600,25 @@ isolated function getCaseSensitiveHeaderName(string[] headerNames, string header
 #
 # + contentType - the content type string to parse
 # + return - the parsed media type, or an `InvalidContentTypeError` if it cannot be parsed
-public isolated function getMediaType(string contentType) returns MediaType|InvalidContentTypeError = external;
+public isolated function getMediaType(string contentType) returns MediaType|InvalidContentTypeError {
+    MediaType mediaType = new;
+    check externParseMediaType(mediaType, contentType);
+    return mediaType;
+}
+
+isolated function externParseMediaType(MediaType mediaType, string contentType) returns InvalidContentTypeError? = external;
 
 # Parses a `Content-Disposition` header value into a `ContentDisposition`.
 #
 # + contentDisposition - the content disposition string to parse
 # + return - the parsed content disposition
-public isolated function getContentDispositionObject(string contentDisposition) returns ContentDisposition = external;
+public isolated function getContentDispositionObject(string contentDisposition) returns ContentDisposition {
+    ContentDisposition result = new;
+    externParseContentDisposition(result, contentDisposition);
+    return result;
+}
+
+isolated function externParseContentDisposition(ContentDisposition result, string contentDisposition) = external;
 
 # Encodes a string, byte array, or byte channel using MIME-compatible Base64 encoding.
 #
