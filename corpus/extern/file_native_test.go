@@ -183,3 +183,37 @@ func TestFileNativeSymlinkResolve(t *testing.T) {
 	}
 	runExtern(t, fileCase("file-native/file-symlink-v"), testharness.NewTestPal(), externs)
 }
+
+// TestFileNativeCopySameFile exercises copy onto the source itself, a hard
+// link to it, and a symlink to it. The file module can create none of these
+// aliases, so the Go test builds them.
+func TestFileNativeCopySameFile(t *testing.T) {
+	t.Parallel()
+	skipIfWindows(t)
+	root := t.TempDir()
+	src := filepath.Join(root, "source.txt")
+	if err := os.WriteFile(src, []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hardLink := filepath.Join(root, "hard.txt")
+	if err := os.Link(src, hardLink); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link.txt")
+	if err := os.Symlink("source.txt", link); err != nil {
+		t.Fatal(err)
+	}
+
+	pathExtern := func(name, path string) testharness.ExternRegistration {
+		return testharness.ExternRegistration{Org: "$anon", Module: "file-copy-same-v", FuncName: name,
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return path, nil
+			}}
+	}
+	externs := []testharness.ExternRegistration{
+		pathExtern("sourcePath", src),
+		pathExtern("hardLinkPath", hardLink),
+		pathExtern("symlinkPath", link),
+	}
+	runExtern(t, fileCase("file-native/file-copy-same-v"), testharness.NewTestPal(), externs)
+}

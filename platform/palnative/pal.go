@@ -452,10 +452,25 @@ func copyEmptyDir(dst string, opts pal.CopyOptions) error {
 	return err
 }
 
+// copyFile follows Java's Files.copy: copying a file onto itself, including
+// through a hard link, is a no-op, and a destination symlink is replaced
+// rather than written through, which could otherwise truncate the source.
 func copyFile(src, dst string, opts pal.CopyOptions) error {
-	if !opts.ReplaceExisting {
-		if _, err := os.Lstat(dst); err == nil {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if dstInfo, err := os.Lstat(dst); err == nil {
+		if os.SameFile(info, dstInfo) {
+			return nil
+		}
+		if !opts.ReplaceExisting {
 			return &os.PathError{Op: "copy", Path: dst, Err: os.ErrExist}
+		}
+		if dstInfo.Mode()&os.ModeSymlink != 0 {
+			if err := os.Remove(dst); err != nil {
+				return err
+			}
 		}
 	}
 	if err := copyContents(src, dst); err != nil {
@@ -463,10 +478,6 @@ func copyFile(src, dst string, opts pal.CopyOptions) error {
 	}
 	if !opts.CopyAttributes {
 		return nil
-	}
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
 	}
 	if err := os.Chmod(dst, info.Mode().Perm()); err != nil {
 		return err
