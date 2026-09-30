@@ -44,6 +44,7 @@ func skipIfNoFileWatch(t *testing.T) {
 // TestFileListenerEvents exercises the create/modify/delete dispatch of a
 // single file:Listener service against a real OS-level directory watch.
 func TestFileListenerEvents(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-events-v"), testharness.NewTestPal(), nil)
 }
@@ -51,6 +52,7 @@ func TestFileListenerEvents(t *testing.T) {
 // TestFileListenerTouch exercises a timestamp-only change, which fsnotify
 // reports as Chmod, being dispatched to onModify.
 func TestFileListenerTouch(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	externs := []testharness.ExternRegistration{
 		{Org: "$anon", Module: "file-listener-touch-v", FuncName: "touchFile",
@@ -65,6 +67,7 @@ func TestFileListenerTouch(t *testing.T) {
 // TestFileListenerRecursive exercises dynamic recursive registration: a
 // subdirectory created after start is itself watched for further events.
 func TestFileListenerRecursive(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-recursive-v"), testharness.NewTestPal(), nil)
 }
@@ -72,6 +75,7 @@ func TestFileListenerRecursive(t *testing.T) {
 // TestFileListenerMultiService exercises dispatch to every service attached
 // to the same listener.
 func TestFileListenerMultiService(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-multi-service-v"), testharness.NewTestPal(), nil)
 }
@@ -79,6 +83,7 @@ func TestFileListenerMultiService(t *testing.T) {
 // TestFileListenerDetach exercises attach/detach: a detached service must
 // stop receiving events.
 func TestFileListenerDetach(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-detach-v"), testharness.NewTestPal(), nil)
 }
@@ -86,12 +91,14 @@ func TestFileListenerDetach(t *testing.T) {
 // TestFileListenerAttachError exercises the attach-time validation requiring
 // at least one of onCreate/onModify/onDelete.
 func TestFileListenerAttachError(t *testing.T) {
+	t.Parallel()
 	runExtern(t, fileCase("file-listener/file-listener-attach-error-v"), testharness.NewTestPal(), nil)
 }
 
 // TestFileListenerInitError exercises Listener init validation: empty path,
 // non-existent directory, and a path that is not a directory.
 func TestFileListenerInitError(t *testing.T) {
+	t.Parallel()
 	runExtern(t, fileCase("file-listener/file-listener-init-error-v"), testharness.NewTestPal(), nil)
 }
 
@@ -99,6 +106,7 @@ func TestFileListenerInitError(t *testing.T) {
 // directory is removed between init and start, so the OS-level watch add
 // fails.
 func TestFileListenerStartError(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-start-error-v"), testharness.NewTestPal(), nil)
 }
@@ -113,6 +121,7 @@ func TestFileListenerStartError(t *testing.T) {
 // that the golden normalization doesn't account for; asserting directly on
 // pal.Stdout()/Stderr() avoids that.
 func TestFileListenerRemoteMethodPanic(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	pal := testharness.NewTestPal()
 	done := make(chan struct{})
@@ -161,6 +170,7 @@ func (p watchErrorPal) Platform() pal.Platform {
 // stderr while later events keep dispatching. Like the panic test, it asserts
 // directly on stderr because the log line embeds a temp path.
 func TestFileListenerWatchError(t *testing.T) {
+	t.Parallel()
 	skipIfNoFileWatch(t)
 	p := watchErrorPal{TestPal: testharness.NewTestPal()}
 	testharness.Run(t, fileCase("file-listener/file-listener-events-v"), p, nil)

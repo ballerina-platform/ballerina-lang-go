@@ -23,13 +23,16 @@ string watchedFile = checkpanic file:joinPath(watchDir, "sample.txt");
 
 listener file:Listener dirListener = checkpanic new ({path: watchDir, recursive: false});
 
+isolated boolean createInvoked = false;
 isolated boolean modifyInvoked = false;
 isolated boolean deleteInvoked = false;
 isolated int zero = 0;
 
 service on dirListener {
     remote function onCreate(file:FileEvent m) {
-        _ = m.operation;
+        lock {
+            createInvoked = m.operation == "create";
+        }
         lock {
             int _ = 1 / zero;
         }
@@ -48,21 +51,41 @@ service on dirListener {
 
 public function testMain() returns error? {
     check file:create(watchedFile);
-    runtime:sleep(0.3);
+    _ = waitFor(isCreateInvoked);
 
     check file:copy("testdata/file-listener/fixture.txt", watchedFile, file:REPLACE_EXISTING);
-    runtime:sleep(0.3);
-    boolean modifiedSnapshot;
-    lock {
-        modifiedSnapshot = modifyInvoked;
-    }
-    io:println("modified=", modifiedSnapshot); // @output modified=true
+    io:println("modified=", waitFor(isModifyInvoked)); // @output modified=true
 
     check file:remove(watchedFile);
-    runtime:sleep(0.3);
-    boolean deletedSnapshot;
-    lock {
-        deletedSnapshot = deleteInvoked;
+    io:println("deleted=", waitFor(isDeleteInvoked)); // @output deleted=true
+}
+
+function waitFor(function () returns boolean condition) returns boolean {
+    int attempts = 0;
+    while attempts < 30 {
+        if condition() {
+            return true;
+        }
+        runtime:sleep(0.1);
+        attempts += 1;
     }
-    io:println("deleted=", deletedSnapshot); // @output deleted=true
+    return false;
+}
+
+function isCreateInvoked() returns boolean {
+    lock {
+        return createInvoked;
+    }
+}
+
+function isModifyInvoked() returns boolean {
+    lock {
+        return modifyInvoked;
+    }
+}
+
+function isDeleteInvoked() returns boolean {
+    lock {
+        return deleteInvoked;
+    }
 }

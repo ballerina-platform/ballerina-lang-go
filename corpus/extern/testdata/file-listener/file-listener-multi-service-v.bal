@@ -49,23 +49,35 @@ service on dirListener {
 public function testMain() returns error? {
     string filePath = check file:joinPath(watchDir, "sample.txt");
     check file:create(filePath);
-    runtime:sleep(0.3);
-    boolean firstSnapshot;
-    lock {
-        firstSnapshot = firstInvoked;
-    }
-    boolean secondSnapshotAfterCreate;
-    lock {
-        secondSnapshotAfterCreate = secondInvoked;
-    }
-    io:println("first=", firstSnapshot); // @output first=true
-    io:println("secondAfterCreate=", secondSnapshotAfterCreate); // @output secondAfterCreate=false
+    io:println("first=", waitFor(isFirstInvoked)); // @output first=true
+    // Both services are dispatched for the same create event, so once the
+    // first has run the second has already been skipped.
+    io:println("secondAfterCreate=", isSecondInvoked()); // @output secondAfterCreate=false
 
     check file:copy("testdata/file-listener/fixture.txt", filePath, file:REPLACE_EXISTING);
-    runtime:sleep(0.3);
-    boolean secondSnapshotAfterModify;
-    lock {
-        secondSnapshotAfterModify = secondInvoked;
+    io:println("secondAfterModify=", waitFor(isSecondInvoked)); // @output secondAfterModify=true
+}
+
+function waitFor(function () returns boolean condition) returns boolean {
+    int attempts = 0;
+    while attempts < 30 {
+        if condition() {
+            return true;
+        }
+        runtime:sleep(0.1);
+        attempts += 1;
     }
-    io:println("secondAfterModify=", secondSnapshotAfterModify); // @output secondAfterModify=true
+    return false;
+}
+
+function isFirstInvoked() returns boolean {
+    lock {
+        return firstInvoked;
+    }
+}
+
+function isSecondInvoked() returns boolean {
+    lock {
+        return secondInvoked;
+    }
 }

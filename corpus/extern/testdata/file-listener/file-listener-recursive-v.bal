@@ -36,15 +36,24 @@ service on dirListener {
 public function testMain() returns error? {
     string subDir = check file:joinPath(watchDir, "nested");
     check file:createDir(subDir);
-    runtime:sleep(0.3);
-    lock {
-        io:println("subDirCreateCount=", createCount); // @output subDirCreateCount=1
-    }
+    io:println("subDirCreateCount=", waitForCreateCount(1)); // @output subDirCreateCount=1
 
     string nestedFile = check file:joinPath(subDir, "inner.txt");
     check file:create(nestedFile);
-    runtime:sleep(0.3);
-    lock {
-        io:println("nestedFileCreateCount=", createCount); // @output nestedFileCreateCount=2
+    io:println("nestedFileCreateCount=", waitForCreateCount(2)); // @output nestedFileCreateCount=2
+}
+
+function waitForCreateCount(int expected) returns int {
+    int count = 0;
+    int attempts = 0;
+    while attempts < 30 && count < expected {
+        lock {
+            count = createCount;
+        }
+        if count < expected {
+            runtime:sleep(0.1);
+        }
+        attempts += 1;
     }
+    return count;
 }
