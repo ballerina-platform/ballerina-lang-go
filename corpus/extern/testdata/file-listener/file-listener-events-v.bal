@@ -30,11 +30,13 @@ isolated string lastCreateName = "";
 
 service on dirListener {
     remote function onCreate(file:FileEvent m) {
-        lock {
-            createInvoked = m.operation == "create";
-        }
+        // Set the name before the flag: the test reads the flag first, so a
+        // set flag guarantees the name is already visible.
         lock {
             lastCreateName = m.name;
+        }
+        lock {
+            createInvoked = m.operation == "create";
         }
     }
     remote function onModify(file:FileEvent m) {

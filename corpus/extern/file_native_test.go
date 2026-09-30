@@ -68,6 +68,7 @@ func mustChmod(t *testing.T, path string, mode os.FileMode) {
 // a real, restricted-permission directory on disk — not reachable through
 // pure .bal setup since the file module exposes no chmod-equivalent.
 func TestFileNativePermissionErrors(t *testing.T) {
+	t.Parallel()
 	skipIfWindows(t)
 	skipIfRoot(t)
 
@@ -129,6 +130,7 @@ func TestFileNativePermissionErrors(t *testing.T) {
 // symlink — the file module has no symlink-creation function to build one
 // from pure .bal.
 func TestFileNativeSymlinkResolve(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "target-file.txt"), nil, 0o644); err != nil {
 		t.Fatal(err)
