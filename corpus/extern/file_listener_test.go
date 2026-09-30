@@ -17,12 +17,14 @@
 package extern_test
 
 import (
+	"errors"
 	"os"
 	goruntime "runtime"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/ballerina-nutcracker/ballerina/platform/pal"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
 	"github.com/ballerina-nutcracker/ballerina/test_util/testharness"
 	"github.com/ballerina-nutcracker/ballerina/values"
@@ -133,5 +135,41 @@ func TestFileListenerRemoteMethodPanic(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "divide by zero") {
 		t.Errorf("stderr missing panic message, got: %q", stderr)
+	}
+}
+
+// watchErrorPal reports a watch failure as soon as a directory watch starts,
+// standing in for an fsnotify queue overflow, which can't be forced reliably.
+type watchErrorPal struct {
+	testharness.TestPal
+}
+
+func (p watchErrorPal) Platform() pal.Platform {
+	base := p.TestPal.Platform()
+	watch := base.FS.Watch
+	base.FS.Watch = func(path string, recursive bool, handler pal.WatchHandler) (pal.WatchHandle, error) {
+		handle, err := watch(path, recursive, handler)
+		if err == nil {
+			handler(pal.WatchEvent{Err: errors.New("event queue overflow")})
+		}
+		return handle, err
+	}
+	return base
+}
+
+// TestFileListenerWatchError exercises a watch failure being logged to
+// stderr while later events keep dispatching. Like the panic test, it asserts
+// directly on stderr because the log line embeds a temp path.
+func TestFileListenerWatchError(t *testing.T) {
+	skipIfNoFileWatch(t)
+	p := watchErrorPal{TestPal: testharness.NewTestPal()}
+	testharness.Run(t, fileCase("file-listener/file-listener-events-v"), p, nil)
+
+	want := "created=true\ncreatedPathMatches=true\nmodified=true\ndeleted=true\n"
+	if stdout := p.Stdout(); stdout != want {
+		t.Errorf("stdout = %q, want %q", stdout, want)
+	}
+	if stderr := p.Stderr(); !strings.Contains(stderr, "failed: event queue overflow") {
+		t.Errorf("stderr missing watch error log line, got: %q", stderr)
 	}
 }

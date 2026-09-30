@@ -59,10 +59,11 @@ func dispatchWatchEvents(w *fsnotify.Watcher, recursive bool, handler pal.WatchH
 			if op, ok := translateWatchOp(event.Op); ok {
 				handler(pal.WatchEvent{Path: event.Name, Op: op})
 			}
-		case _, ok := <-w.Errors:
+		case err, ok := <-w.Errors:
 			if !ok {
 				return
 			}
+			handler(pal.WatchEvent{Err: err})
 		}
 	}
 }
