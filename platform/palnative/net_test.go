@@ -29,6 +29,7 @@ import (
 // TestDial_HandshakeTimeout verifies that Dial bounds the TLS handshake by
 // TLSConfig.HandshakeTimeout and closes the connection when it expires.
 func TestDial_HandshakeTimeout(t *testing.T) {
+	t.Parallel()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)

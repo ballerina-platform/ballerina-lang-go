@@ -282,6 +282,7 @@ func newSelfSignedCert(t *testing.T, commonName string, dnsNames []string, ipAdd
 // configured ServerName, the certificate is verified against the request URL's host,
 // including IP-literal hosts for which no SNI is sent.
 func TestNewHTTPClient_CustomCAWithoutServerName(t *testing.T) {
+	t.Parallel()
 	loopback := net.ParseIP("127.0.0.1")
 	tests := []struct {
 		desc        string
@@ -301,6 +302,7 @@ func TestNewHTTPClient_CustomCAWithoutServerName(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
 			cert, caPEM := newSelfSignedCert(t, tc.cn, tc.dnsNames, tc.ips...)
 			var gotProto string
 			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -346,6 +348,7 @@ func TestNewHTTPClient_CustomCAWithoutServerName(t *testing.T) {
 // TestTLSVerifyConnection_EmptyServerName verifies that the callback refuses to match
 // when neither a configured nor an SNI server name is available.
 func TestTLSVerifyConnection_EmptyServerName(t *testing.T) {
+	t.Parallel()
 	cert, caPEM := newSelfSignedCert(t, "", nil)
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(caPEM)

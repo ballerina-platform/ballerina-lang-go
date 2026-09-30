@@ -189,10 +189,7 @@ func NewHTTPClient(cfg pal.ClientConfig) (pal.HTTPClient, error) {
 		// non-proxied HTTPS connections rebind it to the dialed host here.
 		// Cloning at dial time picks up the ALPN protocols the transport adds.
 		transport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			host, _, err := net.SplitHostPort(addr)
-			if err != nil {
-				return nil, err
-			}
+			host, _, _ := net.SplitHostPort(addr)
 			connTLSConfig := transport.TLSClientConfig.Clone()
 			if connTLSConfig.ServerName == "" {
 				connTLSConfig.ServerName = host

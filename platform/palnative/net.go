@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Native-CLI implementation of the pal.Net contract: a raw TCP(+TLS) dialer
-// and listener for non-HTTP wire protocols (e.g. ldap, tcp). NewPlatform (in
-// pal.go) wires Dial/Listen into pal.Net.
+// Native-CLI implementation of the pal.Net contract: raw TCP(+TLS) and UDP
+// sockets for non-HTTP wire protocols (e.g. ldap, tcp). NewPlatform (in
+// pal.go) wires them into pal.Net.
 
 package palnative
 
