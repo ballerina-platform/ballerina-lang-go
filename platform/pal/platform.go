@@ -293,9 +293,12 @@ const (
 )
 
 // WatchEvent carries a single filesystem change notification from FS.Watch.
+// When Err is set the event reports a watch failure instead, such as dropped
+// events after a queue overflow, and Path and Op are unset.
 type WatchEvent struct {
 	Path string
 	Op   WatchOp
+	Err  error
 }
 
 // WatchHandler receives filesystem change notifications from FS.Watch. It is

@@ -199,6 +199,11 @@ func hasFileEventRemoteMethod(svcObj *values.Object) bool {
 // services for this event only (see recoverFileEventPanic) — the next event
 // dispatches normally on a freshly reset context.
 func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, eventTy semtypes.SemType, ev pal.WatchEvent) {
+	if ev.Err != nil {
+		logMsg := fmt.Sprintf("error [ballerina/file]: directory watch on %s failed: %s\n", state.path, ev.Err)
+		_, _ = rt.Platform().IO.Stderr([]byte(logMsg))
+		return
+	}
 	methodName, ok := fileEventRemoteMethodNames[ev.Op]
 	if !ok {
 		return
