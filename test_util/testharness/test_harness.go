@@ -331,64 +331,13 @@ func (p *testPal) Platform() pal.Platform {
 				return f.Close()
 			},
 			Stat: func(path string) (*pal.FileInfo, error) {
-				normalized := normalizePath(path)
-				fi, err := os.Stat(normalized)
-				if err != nil {
-					return nil, err
-				}
-				absPath, _ := filepath.Abs(normalized)
-				return &pal.FileInfo{
-					AbsPath:    absPath,
-					Size:       fi.Size(),
-					ModifiedAt: fi.ModTime(),
-					IsDir:      fi.IsDir(),
-					IsSymlink:  false,
-					IsReadable: palnative.IsReadable(normalized, fi),
-					IsWritable: palnative.IsWritable(normalized, fi),
-				}, nil
+				return palnative.Stat(normalizePath(path))
 			},
 			Lstat: func(path string) (*pal.FileInfo, error) {
-				normalized := normalizePath(path)
-				fi, err := os.Lstat(normalized)
-				if err != nil {
-					return nil, err
-				}
-				absPath, _ := filepath.Abs(normalized)
-				return &pal.FileInfo{
-					AbsPath:    absPath,
-					Size:       fi.Size(),
-					ModifiedAt: fi.ModTime(),
-					IsDir:      fi.IsDir(),
-					IsSymlink:  fi.Mode()&os.ModeSymlink != 0,
-					IsReadable: palnative.IsReadable(normalized, fi),
-					IsWritable: palnative.IsWritable(normalized, fi),
-				}, nil
+				return palnative.Lstat(normalizePath(path))
 			},
 			ReadDir: func(path string) ([]pal.FileInfo, error) {
-				normalized := normalizePath(path)
-				entries, err := os.ReadDir(normalized)
-				if err != nil {
-					return nil, err
-				}
-				result := make([]pal.FileInfo, 0, len(entries))
-				for _, entry := range entries {
-					childPath := filepath.Join(normalized, entry.Name())
-					fi, err := entry.Info()
-					if err != nil {
-						continue
-					}
-					absPath, _ := filepath.Abs(childPath)
-					result = append(result, pal.FileInfo{
-						AbsPath:    absPath,
-						Size:       fi.Size(),
-						ModifiedAt: fi.ModTime(),
-						IsDir:      fi.IsDir(),
-						IsSymlink:  fi.Mode()&os.ModeSymlink != 0,
-						IsReadable: palnative.IsReadable(childPath, fi),
-						IsWritable: palnative.IsWritable(childPath, fi),
-					})
-				}
-				return result, nil
+				return palnative.ReadDir(normalizePath(path))
 			},
 			Copy: func(src, dst string, opts pal.CopyOptions) error {
 				return palnative.CopyFS(normalizePath(src), normalizePath(dst), opts)

@@ -114,63 +114,9 @@ func NewPlatform() (pal.Platform, func()) {
 				}
 				return f.Close()
 			},
-			Stat: func(path string) (*pal.FileInfo, error) {
-				fi, err := os.Stat(path)
-				if err != nil {
-					return nil, err
-				}
-				absPath, _ := filepath.Abs(path)
-				return &pal.FileInfo{
-					AbsPath:    absPath,
-					Size:       fi.Size(),
-					ModifiedAt: fi.ModTime(),
-					IsDir:      fi.IsDir(),
-					IsSymlink:  false,
-					IsReadable: IsReadable(path, fi),
-					IsWritable: IsWritable(path, fi),
-				}, nil
-			},
-			Lstat: func(path string) (*pal.FileInfo, error) {
-				fi, err := os.Lstat(path)
-				if err != nil {
-					return nil, err
-				}
-				absPath, _ := filepath.Abs(path)
-				return &pal.FileInfo{
-					AbsPath:    absPath,
-					Size:       fi.Size(),
-					ModifiedAt: fi.ModTime(),
-					IsDir:      fi.IsDir(),
-					IsSymlink:  fi.Mode()&os.ModeSymlink != 0,
-					IsReadable: IsReadable(path, fi),
-					IsWritable: IsWritable(path, fi),
-				}, nil
-			},
-			ReadDir: func(path string) ([]pal.FileInfo, error) {
-				entries, err := os.ReadDir(path)
-				if err != nil {
-					return nil, err
-				}
-				result := make([]pal.FileInfo, 0, len(entries))
-				for _, entry := range entries {
-					childPath := filepath.Join(path, entry.Name())
-					fi, err := entry.Info()
-					if err != nil {
-						continue
-					}
-					absPath, _ := filepath.Abs(childPath)
-					result = append(result, pal.FileInfo{
-						AbsPath:    absPath,
-						Size:       fi.Size(),
-						ModifiedAt: fi.ModTime(),
-						IsDir:      fi.IsDir(),
-						IsSymlink:  fi.Mode()&os.ModeSymlink != 0,
-						IsReadable: IsReadable(childPath, fi),
-						IsWritable: IsWritable(childPath, fi),
-					})
-				}
-				return result, nil
-			},
+			Stat:          Stat,
+			Lstat:         Lstat,
+			ReadDir:       ReadDir,
 			Copy:          CopyFS,
 			CreateTemp:    CreateTemp,
 			CreateTempDir: CreateTempDir,
@@ -287,6 +233,60 @@ func (p *nativeProcess) Kill() {
 }
 
 // FS helpers
+
+// Stat returns metadata for path, following symbolic links. Exposed at package
+// level so test harnesses can wrap it with their own path mapping.
+func Stat(path string) (*pal.FileInfo, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	info := newFileInfo(path, fi)
+	return &info, nil
+}
+
+// Lstat returns metadata for path without following a final symbolic link.
+func Lstat(path string) (*pal.FileInfo, error) {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	info := newFileInfo(path, fi)
+	info.IsSymlink = fi.Mode()&os.ModeSymlink != 0
+	return &info, nil
+}
+
+// ReadDir returns metadata for each entry of the directory at path.
+func ReadDir(path string) ([]pal.FileInfo, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]pal.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		childPath := filepath.Join(path, entry.Name())
+		fi, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		info := newFileInfo(childPath, fi)
+		info.IsSymlink = fi.Mode()&os.ModeSymlink != 0
+		result = append(result, info)
+	}
+	return result, nil
+}
+
+func newFileInfo(path string, fi os.FileInfo) pal.FileInfo {
+	absPath, _ := filepath.Abs(path)
+	return pal.FileInfo{
+		AbsPath:    absPath,
+		Size:       fi.Size(),
+		ModifiedAt: fi.ModTime(),
+		IsDir:      fi.IsDir(),
+		IsReadable: IsReadable(path, fi),
+		IsWritable: IsWritable(path, fi),
+	}
+}
 
 func IsReadable(path string, _ os.FileInfo) bool {
 	f, err := os.Open(path)
