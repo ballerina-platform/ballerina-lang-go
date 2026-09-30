@@ -102,18 +102,12 @@ func initFileListenerModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "registerListener",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			svcObj, ok := args[1].(*values.Object)
-			if !ok {
-				return values.NewErrorWithMessage("Listener attach: expected a service object"), nil
-			}
+			svcObj := args[1].(*values.Object)
 			if !hasFileEventRemoteMethod(svcObj) {
 				return fileError("GenericError", "At least a single resource required from following: "+
 					"onCreate ,onDelete ,onModify. Parameter should be of type - file:FileEvent"), nil
 			}
-			state, ok := listenerState(self)
-			if !ok {
-				return values.NewErrorWithMessage("Listener attach: listener not initialised"), nil
-			}
+			state := listenerState(self)
 			state.mu.Lock()
 			state.services = append(state.services, svcObj)
 			state.mu.Unlock()
@@ -123,11 +117,8 @@ func initFileListenerModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "deregisterListener",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			svcObj, _ := args[1].(*values.Object)
-			state, ok := listenerState(self)
-			if !ok {
-				return nil, nil
-			}
+			svcObj := args[1].(*values.Object)
+			state := listenerState(self)
 			state.mu.Lock()
 			defer state.mu.Unlock()
 			for i, s := range state.services {
@@ -145,14 +136,10 @@ func initFileListenerModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "startListener",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			state, ok := listenerState(self)
-			if !ok {
-				return values.NewErrorWithMessage("Listener start: listener not initialised"), nil
-			}
+			state := listenerState(self)
 			state.mu.Lock()
-			alreadyStarted := state.watch != nil
-			state.mu.Unlock()
-			if alreadyStarted {
+			defer state.mu.Unlock()
+			if state.watch != nil {
 				return nil, nil
 			}
 			handle, err := rt.Platform().FS.Watch(state.path, state.recursive, func(ev pal.WatchEvent) {
@@ -161,9 +148,7 @@ func initFileListenerModule(rt *runtime.Runtime) {
 			if err != nil {
 				return fileError("FileSystemError", "Unable to initialize server connector: "+err.Error()), nil
 			}
-			state.mu.Lock()
 			state.watch = handle
-			state.mu.Unlock()
 			return nil, nil
 		})
 
@@ -175,10 +160,7 @@ func initFileListenerModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "stopListener",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
-			state, ok := listenerState(self)
-			if !ok {
-				return nil, nil
-			}
+			state := listenerState(self)
 			state.mu.Lock()
 			watch := state.watch
 			state.watch = nil
@@ -190,13 +172,11 @@ func initFileListenerModule(rt *runtime.Runtime) {
 		})
 }
 
-func listenerState(self *values.Object) (*fileListenerState, bool) {
-	stateVal, ok := self.Get("$state")
-	if !ok {
-		return nil, false
-	}
-	state, ok := stateVal.(*fileListenerState)
-	return state, ok
+// listenerState returns the state initListener stored on self. It is always
+// present: a Listener whose init failed is never reachable from Ballerina code.
+func listenerState(self *values.Object) *fileListenerState {
+	stateVal, _ := self.Get("$state")
+	return stateVal.(*fileListenerState)
 }
 
 // hasFileEventRemoteMethod reports whether svcObj declares at least one of

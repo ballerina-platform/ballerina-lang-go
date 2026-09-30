@@ -340,7 +340,7 @@ func initFileModule(rt *runtime.Runtime) {
 				}
 				return info.IsWritable, nil
 			default:
-				return fileError("InvalidOperationError", "Unsupported test option."), nil
+				panic("unreachable: unknown TestOption " + option)
 			}
 		})
 
