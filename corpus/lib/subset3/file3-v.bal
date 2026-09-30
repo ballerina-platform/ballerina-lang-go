@@ -68,6 +68,16 @@ public function main() returns error? {
     string relPart = absWithParentRef.substring(cwd.length() + 1);
     io:println(relPart == "a/../b" || relPart == "a\\..\\b"); // @output true
 
+    // getMetaData and readDir values carry the declared MetaData record type,
+    // so type tests hold and fields accept values of their declared types
+    file:MetaData srcMeta = check file:getMetaData(copySrc);
+    any srcMetaAny = srcMeta;
+    io:println(srcMetaAny is file:MetaData); // @output true
+    any dirEntries = check file:readDir(baseDir);
+    io:println(dirEntries is file:MetaData[]); // @output true
+    srcMeta.size = 42;
+    io:println(srcMeta.size); // @output 42
+
     // COPY_ATTRIBUTES keeps the source's modified time; the pause ensures a
     // copy that dropped it would carry a visibly later timestamp
     string mtimeSrc = baseDir + "/mtime-src.txt";

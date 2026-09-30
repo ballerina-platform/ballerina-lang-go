@@ -25,6 +25,7 @@ listener file:Listener dirListener = checkpanic new ({path: watchDir, recursive:
 
 isolated boolean createInvoked = false;
 isolated boolean modifyInvoked = false;
+isolated boolean createEventIsFileEvent = false;
 
 // touchFile updates the file's modified time without writing to it; the file
 // module has no function that does this.
@@ -32,6 +33,10 @@ isolated function touchFile(string path) = external;
 
 service on dirListener {
     remote function onCreate(file:FileEvent m) {
+        any event = m;
+        lock {
+            createEventIsFileEvent = event is file:FileEvent;
+        }
         lock {
             createInvoked = m.operation == "create";
         }
@@ -46,6 +51,9 @@ service on dirListener {
 public function testMain() returns error? {
     check file:create(watchedFile);
     io:println("created=", waitFor(isCreateInvoked)); // @output created=true
+    lock {
+        io:println("isFileEvent=", createEventIsFileEvent); // @output isFileEvent=true
+    }
 
     touchFile(watchedFile);
     io:println("modifiedByTouch=", waitFor(isModifyInvoked)); // @output modifiedByTouch=true
