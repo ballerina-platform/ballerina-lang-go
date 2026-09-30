@@ -1036,7 +1036,7 @@ public isolated function remove(string path, DirOption option = NON_RECURSIVE) r
 public isolated function rename(string oldPath, string newPath) returns Error? = external;
 
 # Creates a file in the specified file path.
-# Truncates if the file already exists in the given path.
+# Returns an `InvalidOperationError` if the file already exists.
 #
 # + path - String value of the file path
 # + return - A `file:Error` if file creation failed
