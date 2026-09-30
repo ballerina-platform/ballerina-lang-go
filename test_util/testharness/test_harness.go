@@ -308,6 +308,9 @@ func (p *testPal) Platform() pal.Platform {
 				return os.OpenFile(path, flag, 0o644)
 			},
 			Getwd: os.Getwd,
+			Abs: func(path string) (string, error) {
+				return palnative.Abs(normalizePath(path))
+			},
 			Mkdir: func(path string) error {
 				return os.Mkdir(normalizePath(path), 0o755)
 			},

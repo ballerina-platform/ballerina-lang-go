@@ -17,9 +17,9 @@
 package native
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
 	"time"
 
 	"github.com/ballerina-nutcracker/ballerina/decimal"
@@ -83,17 +83,6 @@ func (t *fileTypes) buildMetaData(ctx *extern.Context, info *pal.FileInfo) *valu
 	})
 }
 
-func absPath(rt *runtime.Runtime, path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path), nil
-	}
-	cwd, err := rt.Platform().FS.Getwd()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Clean(filepath.Join(cwd, path)), nil
-}
-
 func initFileModule(rt *runtime.Runtime) {
 	types := newFileTypes(rt.GetTypeEnv())
 
@@ -119,10 +108,10 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return nil, nil
 			}
-			if os.IsExist(err) {
+			if errors.Is(err, fs.ErrExist) {
 				return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+dir), nil
 			}
-			if os.IsPermission(err) {
+			if errors.Is(err, fs.ErrPermission) {
 				return fileError("PermissionError", "Permission denied. Failed to create the file: "+dir), nil
 			}
 			return fileError("FileSystemError", "IO error while creating the file "+dir), nil
@@ -136,16 +125,16 @@ func initFileModule(rt *runtime.Runtime) {
 			if cwdErr != nil {
 				return fileError("FileSystemError", "Error while deleting the file/directory: "+cwdErr.Error()), nil
 			}
-			absTarget, _ := absPath(rt, path)
-			if absTarget == filepath.Clean(cwd) {
-				return fileError("InvalidOperationError", "Cannot delete the current working directory "+cwd), nil
-			}
-			_, statErr := rt.Platform().FS.Stat(path)
+			info, statErr := rt.Platform().FS.Stat(path)
 			if statErr != nil {
-				if os.IsNotExist(statErr) {
+				if errors.Is(statErr, fs.ErrNotExist) {
+					absTarget, _ := rt.Platform().FS.Abs(path)
 					return fileError("FileNotFoundError", "File not found: "+absTarget), nil
 				}
 				return fileError("FileSystemError", "Error while deleting the file/directory: "+statErr.Error()), nil
+			}
+			if info.AbsPath == cwd {
+				return fileError("InvalidOperationError", "Cannot delete the current working directory "+cwd), nil
 			}
 			var err error
 			if option == "RECURSIVE" {
@@ -156,7 +145,7 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return nil, nil
 			}
-			if os.IsPermission(err) {
+			if errors.Is(err, fs.ErrPermission) {
 				return fileError("PermissionError", "Error while deleting the file/directory: "+err.Error()), nil
 			}
 			return fileError("FileSystemError", "Error while deleting the file/directory: "+err.Error()), nil
@@ -168,8 +157,8 @@ func initFileModule(rt *runtime.Runtime) {
 			newPath, _ := args[1].(string)
 			_, statErr := rt.Platform().FS.Stat(oldPath)
 			if statErr != nil {
-				if os.IsNotExist(statErr) {
-					absOld, _ := absPath(rt, oldPath)
+				if errors.Is(statErr, fs.ErrNotExist) {
+					absOld, _ := rt.Platform().FS.Abs(oldPath)
 					return fileError("FileNotFoundError", "File not found: "+absOld), nil
 				}
 			}
@@ -177,10 +166,10 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return nil, nil
 			}
-			if os.IsExist(err) {
+			if errors.Is(err, fs.ErrExist) {
 				return fileError("InvalidOperationError", "File already exists in the new path "+newPath), nil
 			}
-			if os.IsPermission(err) {
+			if errors.Is(err, fs.ErrPermission) {
 				return fileError("PermissionError", err.Error()), nil
 			}
 			return fileError("FileSystemError", err.Error()), nil
@@ -193,13 +182,13 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return nil, nil
 			}
-			if os.IsExist(err) {
+			if errors.Is(err, fs.ErrExist) {
 				return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+path), nil
 			}
-			if os.IsPermission(err) {
+			if errors.Is(err, fs.ErrPermission) {
 				return fileError("PermissionError", "Permission denied. Failed to create the file: "+path), nil
 			}
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return fileError("FileSystemError", "The file does not exist in path "+path), nil
 			}
 			return fileError("FileSystemError", "IO error occurred while creating the file "+path), nil
@@ -210,7 +199,7 @@ func initFileModule(rt *runtime.Runtime) {
 			path, _ := args[0].(string)
 			info, err := rt.Platform().FS.Stat(path)
 			if err != nil {
-				if os.IsNotExist(err) {
+				if errors.Is(err, fs.ErrNotExist) {
 					return fileError("FileNotFoundError", "File not found: "+path), nil
 				}
 				return fileError("FileSystemError", err.Error()), nil
@@ -223,7 +212,7 @@ func initFileModule(rt *runtime.Runtime) {
 			path, _ := args[0].(string)
 			info, err := rt.Platform().FS.Stat(path)
 			if err != nil {
-				if os.IsNotExist(err) {
+				if errors.Is(err, fs.ErrNotExist) {
 					return fileError("FileNotFoundError", "File not found: "+path), nil
 				}
 				return fileError("FileSystemError", err.Error()), nil
@@ -233,7 +222,7 @@ func initFileModule(rt *runtime.Runtime) {
 			}
 			entries, err := rt.Platform().FS.ReadDir(path)
 			if err != nil {
-				if os.IsPermission(err) {
+				if errors.Is(err, fs.ErrPermission) {
 					return fileError("PermissionError", err.Error()), nil
 				}
 				return fileError("FileSystemError", err.Error()), nil
@@ -263,14 +252,14 @@ func initFileModule(rt *runtime.Runtime) {
 				}
 			}
 			_, statErr := rt.Platform().FS.Stat(src)
-			if statErr != nil && os.IsNotExist(statErr) {
+			if statErr != nil && errors.Is(statErr, fs.ErrNotExist) {
 				return fileError("FileNotFoundError", "File not found: "+src), nil
 			}
 			err := rt.Platform().FS.Copy(src, dst, opts)
 			if err == nil {
 				return nil, nil
 			}
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return fileError("FileNotFoundError", "The target directory does not exist: "+err.Error()), nil
 			}
 			return fileError("FileSystemError", "An error occurred when copying the file/s: "+err.Error()), nil
@@ -370,7 +359,7 @@ func initFileModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "getAbsolutePath",
 		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			path, _ := args[0].(string)
-			abs, err := absPath(rt, path)
+			abs, err := rt.Platform().FS.Abs(path)
 			if err != nil {
 				return fileError("InvalidPathError", "Invalid path "+path), nil
 			}
@@ -384,10 +373,10 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return target, nil
 			}
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return fileError("FileNotFoundError", "File does not exist at "+path), nil
 			}
-			if os.IsPermission(err) {
+			if errors.Is(err, fs.ErrPermission) {
 				return fileError("SecurityError", "Security error for "+path), nil
 			}
 			// On most systems, EINVAL means "not a symlink".

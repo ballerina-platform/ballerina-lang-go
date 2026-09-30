@@ -17,8 +17,9 @@
 package native
 
 import (
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"sync"
 
 	"github.com/ballerina-nutcracker/ballerina/model"
@@ -86,7 +87,7 @@ func initFileListenerModule(rt *runtime.Runtime) {
 			}
 			info, err := rt.Platform().FS.Stat(path)
 			if err != nil {
-				if os.IsNotExist(err) {
+				if errors.Is(err, fs.ErrNotExist) {
 					return fileError("FileSystemError", "Folder does not exist: "+path), nil
 				}
 				return fileError("FileSystemError", err.Error()), nil

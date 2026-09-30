@@ -61,6 +61,13 @@ public function main() returns error? {
     check file:copy(copySrc, copyNoFollowDest, file:NO_FOLLOW_LINKS);
     io:println(check file:test(copyNoFollowDest, file:EXISTS)); // @output true
 
+    // getAbsolutePath prefixes the working directory but keeps ".." segments
+    string absWithParentRef = check file:getAbsolutePath("a/../b");
+    string cwd = check file:getCurrentDir();
+    io:println(absWithParentRef.substring(0, cwd.length()) == cwd); // @output true
+    string relPart = absWithParentRef.substring(cwd.length() + 1);
+    io:println(relPart == "a/../b" || relPart == "a\\..\\b"); // @output true
+
     // COPY_ATTRIBUTES keeps the source's modified time; the pause ensures a
     // copy that dropped it would carry a visibly later timestamp
     string mtimeSrc = baseDir + "/mtime-src.txt";
