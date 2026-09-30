@@ -22,6 +22,7 @@ package palnative
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -395,7 +396,9 @@ func copySymlink(src, dst string, opts pal.CopyOptions) error {
 		return err
 	}
 	if opts.ReplaceExisting {
-		os.Remove(dst) //nolint:errcheck
+		if err := os.Remove(dst); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
 	}
 	return os.Symlink(target, dst)
 }
@@ -414,6 +417,23 @@ func copyFile(src, dst string, opts pal.CopyOptions) error {
 			return &os.PathError{Op: "copy", Path: dst, Err: os.ErrExist}
 		}
 	}
+	if err := copyContents(src, dst); err != nil {
+		return err
+	}
+	if !opts.CopyAttributes {
+		return nil
+	}
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := os.Chmod(dst, info.Mode().Perm()); err != nil {
+		return err
+	}
+	return os.Chtimes(dst, time.Time{}, info.ModTime())
+}
+
+func copyContents(src, dst string) (err error) {
 	srcF, err := os.Open(src)
 	if err != nil {
 		return err
@@ -423,14 +443,11 @@ func copyFile(src, dst string, opts pal.CopyOptions) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = dstF.Close() }()
-	if _, err := io.Copy(dstF, srcF); err != nil {
-		return err
-	}
-	if opts.CopyAttributes {
-		if info, err := os.Stat(src); err == nil {
-			os.Chmod(dst, info.Mode()) //nolint:errcheck
+	defer func() {
+		if cerr := dstF.Close(); cerr != nil && err == nil {
+			err = cerr
 		}
-	}
-	return nil
+	}()
+	_, err = io.Copy(dstF, srcF)
+	return err
 }

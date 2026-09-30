@@ -17,6 +17,7 @@
 
 import ballerina/file;
 import ballerina/io;
+import ballerina/lang.runtime;
 
 public function main() returns error? {
     string baseDir = check file:createTempDir(prefix = "bal-file3-");
@@ -59,6 +60,17 @@ public function main() returns error? {
     string copyNoFollowDest = baseDir + "/copy-nofollow-dest.txt";
     check file:copy(copySrc, copyNoFollowDest, file:NO_FOLLOW_LINKS);
     io:println(check file:test(copyNoFollowDest, file:EXISTS)); // @output true
+
+    // COPY_ATTRIBUTES keeps the source's modified time; the pause ensures a
+    // copy that dropped it would carry a visibly later timestamp
+    string mtimeSrc = baseDir + "/mtime-src.txt";
+    check file:create(mtimeSrc);
+    runtime:sleep(1.1);
+    string mtimeDest = baseDir + "/mtime-dest.txt";
+    check file:copy(mtimeSrc, mtimeDest, file:COPY_ATTRIBUTES);
+    file:MetaData mtimeSrcMeta = check file:getMetaData(mtimeSrc);
+    file:MetaData mtimeDestMeta = check file:getMetaData(mtimeDest);
+    io:println(mtimeSrcMeta.modifiedTime == mtimeDestMeta.modifiedTime); // @output true
 
     // copy to a destination whose parent directory doesn't exist fails
     file:Error? copyNoParent = file:copy(copySrc, baseDir + "/no-such-parent/dst.txt");
