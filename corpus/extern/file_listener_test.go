@@ -21,6 +21,7 @@ import (
 	"os"
 	goruntime "runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -147,7 +148,8 @@ func TestFileListenerRemoteMethodPanic(t *testing.T) {
 	}
 }
 
-// watchErrorPal reports a watch failure as soon as a directory watch starts,
+// watchErrorPal reports a watch failure from its own goroutine, as the native
+// watcher does, as soon as a directory watch starts,
 // standing in for an fsnotify queue overflow, which can't be forced reliably.
 type watchErrorPal struct {
 	testharness.TestPal
@@ -159,7 +161,7 @@ func (p watchErrorPal) Platform() pal.Platform {
 	base.FS.Watch = func(path string, recursive bool, handler pal.WatchHandler) (pal.WatchHandle, error) {
 		handle, err := watch(path, recursive, handler)
 		if err == nil {
-			handler(pal.WatchEvent{Err: errors.New("event queue overflow")})
+			go handler(pal.WatchEvent{Err: errors.New("event queue overflow")})
 		}
 		return handle, err
 	}
@@ -182,4 +184,44 @@ func TestFileListenerWatchError(t *testing.T) {
 	if stderr := p.Stderr(); !strings.Contains(stderr, "failed: event queue overflow") {
 		t.Errorf("stderr missing watch error log line, got: %q", stderr)
 	}
+}
+
+// recordingWatchPal keeps every handler passed to FS.Watch so a test can
+// replay an event through a watch that has since been stopped.
+type recordingWatchPal struct {
+	testharness.TestPal
+	mu       *sync.Mutex
+	handlers *[]pal.WatchHandler
+}
+
+func (p recordingWatchPal) Platform() pal.Platform {
+	base := p.TestPal.Platform()
+	watch := base.FS.Watch
+	base.FS.Watch = func(path string, recursive bool, handler pal.WatchHandler) (pal.WatchHandle, error) {
+		p.mu.Lock()
+		*p.handlers = append(*p.handlers, handler)
+		p.mu.Unlock()
+		return watch(path, recursive, handler)
+	}
+	return base
+}
+
+// TestFileListenerStaleEvent exercises an event that a stopped watch had
+// already received: it must not reach the services, whether the listener
+// stays stopped or has been restarted with a new watch.
+func TestFileListenerStaleEvent(t *testing.T) {
+	t.Parallel()
+	skipIfNoFileWatch(t)
+	p := recordingWatchPal{TestPal: testharness.NewTestPal(), mu: &sync.Mutex{}, handlers: &[]pal.WatchHandler{}}
+	externs := []testharness.ExternRegistration{
+		{Org: "$anon", Module: "file-listener-stale-event-v", FuncName: "replayOnFirstWatch",
+			Impl: func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				p.mu.Lock()
+				first := (*p.handlers)[0]
+				p.mu.Unlock()
+				first(pal.WatchEvent{Path: args[0].(string), Op: pal.WatchCreate})
+				return nil, nil
+			}},
+	}
+	runExtern(t, fileCase("file-listener/file-listener-stale-event-v"), p, externs)
 }

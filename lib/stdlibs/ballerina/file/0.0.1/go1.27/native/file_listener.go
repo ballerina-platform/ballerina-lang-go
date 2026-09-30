@@ -40,6 +40,9 @@ type fileListenerState struct {
 	recursive bool
 	services  []*values.Object
 	watch     pal.WatchHandle
+	// generation identifies the active watch. Start and stop advance it, so an
+	// event a closed or replaced watch had already queued is dropped.
+	generation uint64
 }
 
 // fileEventOpNames maps a pal.WatchOp to the FileEvent.operation string.
@@ -145,8 +148,10 @@ func initFileListenerModule(rt *runtime.Runtime) {
 			if state.watch != nil {
 				return nil, nil
 			}
+			state.generation++
+			generation := state.generation
 			handle, err := rt.Platform().FS.Watch(state.path, state.recursive, func(ev pal.WatchEvent) {
-				dispatchFileEvent(rt, state, eventTy, ev)
+				dispatchFileEvent(rt, state, generation, eventTy, ev)
 			})
 			if err != nil {
 				return fileError("FileSystemError", "Unable to initialize server connector: "+err.Error()), nil
@@ -167,6 +172,7 @@ func initFileListenerModule(rt *runtime.Runtime) {
 			state.mu.Lock()
 			watch := state.watch
 			state.watch = nil
+			state.generation++
 			state.mu.Unlock()
 			if watch != nil {
 				_ = watch.Close()
@@ -201,7 +207,15 @@ func hasFileEventRemoteMethod(svcObj *values.Object) bool {
 // A panic in one service's remote method aborts dispatch to the remaining
 // services for this event only (see recoverFileEventPanic) — the next event
 // dispatches normally on a freshly reset context.
-func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, eventTy semtypes.SemType, ev pal.WatchEvent) {
+func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, generation uint64, eventTy semtypes.SemType, ev pal.WatchEvent) {
+	state.mu.Lock()
+	if state.generation != generation {
+		state.mu.Unlock()
+		return
+	}
+	services := make([]*values.Object, len(state.services))
+	copy(services, state.services)
+	state.mu.Unlock()
 	if ev.Err != nil {
 		logMsg := fmt.Sprintf("error [ballerina/file]: directory watch on %s failed: %s\n", state.path, ev.Err)
 		_, _ = rt.Platform().IO.Stderr([]byte(logMsg))
@@ -211,10 +225,6 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, eventTy se
 	if !ok {
 		return
 	}
-	state.mu.Lock()
-	services := make([]*values.Object, len(state.services))
-	copy(services, state.services)
-	state.mu.Unlock()
 	if len(services) == 0 {
 		return
 	}
