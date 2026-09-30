@@ -17,12 +17,15 @@
 package extern_test
 
 import (
+	"os"
 	goruntime "runtime"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
 	"github.com/ballerina-nutcracker/ballerina/test_util/testharness"
+	"github.com/ballerina-nutcracker/ballerina/values"
 )
 
 // skipIfNoFileWatch skips on platforms without a native directory-watch
@@ -41,6 +44,20 @@ func skipIfNoFileWatch(t *testing.T) {
 func TestFileListenerEvents(t *testing.T) {
 	skipIfNoFileWatch(t)
 	runExtern(t, fileCase("file-listener/file-listener-events-v"), testharness.NewTestPal(), nil)
+}
+
+// TestFileListenerTouch exercises a timestamp-only change, which fsnotify
+// reports as Chmod, being dispatched to onModify.
+func TestFileListenerTouch(t *testing.T) {
+	skipIfNoFileWatch(t)
+	externs := []testharness.ExternRegistration{
+		{Org: "$anon", Module: "file-listener-touch-v", FuncName: "touchFile",
+			Impl: func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+				later := time.Now().Add(time.Hour)
+				return nil, os.Chtimes(args[0].(string), later, later)
+			}},
+	}
+	runExtern(t, fileCase("file-listener/file-listener-touch-v"), testharness.NewTestPal(), externs)
 }
 
 // TestFileListenerRecursive exercises dynamic recursive registration: a

@@ -89,12 +89,13 @@ func addWatchDirs(w *fsnotify.Watcher, root string, recursive bool) error {
 // reported as a delete of the old path — the new path arrives as a separate
 // Create event on the destination watch, mirroring how Java's WatchService
 // (used by jBallerina's directory listener) reports a same-directory move as
-// a delete-then-create pair.
+// a delete-then-create pair. An attribute change such as a timestamp update
+// is reported as a modify, as Java's WatchService does on Linux.
 func translateWatchOp(op fsnotify.Op) (pal.WatchOp, bool) {
 	switch {
 	case op&fsnotify.Create != 0:
 		return pal.WatchCreate, true
-	case op&fsnotify.Write != 0:
+	case op&(fsnotify.Write|fsnotify.Chmod) != 0:
 		return pal.WatchModify, true
 	case op&fsnotify.Remove != 0 || op&fsnotify.Rename != 0:
 		return pal.WatchDelete, true
