@@ -63,7 +63,8 @@ func mustChmod(t *testing.T, path string, mode os.FileMode) {
 }
 
 // TestFileNativePermissionErrors exercises the permission-denied branches of
-// createDir/create/rename/remove/normalizePath(SYMLINK)/readDir that require
+// createDir/create/rename/remove/normalizePath(SYMLINK)/readDir, and the
+// directory writability checks of test(WRITABLE)/getMetaData, that require
 // a real, restricted-permission directory on disk — not reachable through
 // pure .bal setup since the file module exposes no chmod-equivalent.
 func TestFileNativePermissionErrors(t *testing.T) {
@@ -96,6 +97,12 @@ func TestFileNativePermissionErrors(t *testing.T) {
 	}
 	mustChmod(t, noAccess, 0o000) // stat-able via its (accessible) parent, not listable
 
+	othersWritable := filepath.Join(root, "others-writable")
+	if err := os.Mkdir(othersWritable, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustChmod(t, othersWritable, 0o577) // r-xrwxrwx: write bits set, but not for the owner
+
 	externs := []testharness.ExternRegistration{
 		{Org: "$anon", Module: "file-permission-v", FuncName: "noWriteParentDir",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
@@ -108,6 +115,10 @@ func TestFileNativePermissionErrors(t *testing.T) {
 		{Org: "$anon", Module: "file-permission-v", FuncName: "noAccessDir",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return noAccess, nil
+			}},
+		{Org: "$anon", Module: "file-permission-v", FuncName: "othersWritableDir",
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return othersWritable, nil
 			}},
 	}
 	runExtern(t, fileCase("file-native/file-permission-v"), testharness.NewTestPal(), externs)

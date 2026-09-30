@@ -299,7 +299,7 @@ func IsReadable(path string, _ os.FileInfo) bool {
 
 func IsWritable(path string, fi os.FileInfo) bool {
 	if fi.IsDir() {
-		return fi.Mode().Perm()&0o222 != 0
+		return isDirWritable(path)
 	}
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
