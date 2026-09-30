@@ -167,7 +167,30 @@ func TestFileNativeSymlinkResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tree := filepath.Join(root, "tree")
+	if err := os.Mkdir(tree, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "dir-target"), filepath.Join(tree, "sub-link")); err != nil {
+		t.Fatal(err)
+	}
+	loop := filepath.Join(root, "loop")
+	if err := os.Mkdir(loop, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(".", filepath.Join(loop, "self")); err != nil {
+		t.Fatal(err)
+	}
+
 	externs := []testharness.ExternRegistration{
+		{Org: "$anon", Module: "file-symlink-v", FuncName: "treeWithDirLinkPath",
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return tree, nil
+			}},
+		{Org: "$anon", Module: "file-symlink-v", FuncName: "loopDirPath",
+			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+				return loop, nil
+			}},
 		{Org: "$anon", Module: "file-symlink-v", FuncName: "dirLinkPath",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return dirLink, nil
@@ -184,10 +207,11 @@ func TestFileNativeSymlinkResolve(t *testing.T) {
 	runExtern(t, fileCase("file-native/file-symlink-v"), testharness.NewTestPal(), externs)
 }
 
-// TestFileNativeCopySameFile exercises copy onto the source itself, a hard
-// link to it, and a symlink to it. The file module can create none of these
-// aliases, so the Go test builds them.
-func TestFileNativeCopySameFile(t *testing.T) {
+// TestFileNativeCopyReplace exercises copy onto the source itself, a hard
+// link to it, a symlink to it, and a hard-linked destination replaced with
+// REPLACE_EXISTING. The file module can create none of these links, so the Go
+// test builds them.
+func TestFileNativeCopyReplace(t *testing.T) {
 	t.Parallel()
 	skipIfWindows(t)
 	root := t.TempDir()
@@ -204,8 +228,17 @@ func TestFileNativeCopySameFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	replaceDst := filepath.Join(root, "replace-dst.txt")
+	if err := os.WriteFile(replaceDst, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	replaceDstHardLink := filepath.Join(root, "replace-dst-hard.txt")
+	if err := os.Link(replaceDst, replaceDstHardLink); err != nil {
+		t.Fatal(err)
+	}
+
 	pathExtern := func(name, path string) testharness.ExternRegistration {
-		return testharness.ExternRegistration{Org: "$anon", Module: "file-copy-same-v", FuncName: name,
+		return testharness.ExternRegistration{Org: "$anon", Module: "file-copy-replace-v", FuncName: name,
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return path, nil
 			}}
@@ -214,6 +247,8 @@ func TestFileNativeCopySameFile(t *testing.T) {
 		pathExtern("sourcePath", src),
 		pathExtern("hardLinkPath", hardLink),
 		pathExtern("symlinkPath", link),
+		pathExtern("replaceDstPath", replaceDst),
+		pathExtern("replaceDstHardLinkPath", replaceDstHardLink),
 	}
-	runExtern(t, fileCase("file-native/file-copy-same-v"), testharness.NewTestPal(), externs)
+	runExtern(t, fileCase("file-native/file-copy-replace-v"), testharness.NewTestPal(), externs)
 }

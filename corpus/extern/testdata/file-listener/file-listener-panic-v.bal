@@ -53,7 +53,7 @@ public function testMain() returns error? {
     check file:create(watchedFile);
     _ = waitFor(isCreateInvoked);
 
-    check file:copy("testdata/file-listener/fixture.txt", watchedFile, file:REPLACE_EXISTING);
+    check io:fileWriteString(watchedFile, "modified");
     io:println("modified=", waitFor(isModifyInvoked)); // @output modified=true
 
     check file:remove(watchedFile);

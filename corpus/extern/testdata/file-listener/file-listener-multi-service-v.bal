@@ -54,7 +54,7 @@ public function testMain() returns error? {
     // first has run the second has already been skipped.
     io:println("secondAfterCreate=", isSecondInvoked()); // @output secondAfterCreate=false
 
-    check file:copy("testdata/file-listener/fixture.txt", filePath, file:REPLACE_EXISTING);
+    check io:fileWriteString(filePath, "modified");
     io:println("secondAfterModify=", waitFor(isSecondInvoked)); // @output secondAfterModify=true
 }
 

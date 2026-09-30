@@ -75,7 +75,7 @@ public function testMain() returns error? {
     io:println("created=", createdSnapshot); // @output created=true
     io:println("createdPathMatches=", lastCreateNameSnapshot == watchedFile); // @output createdPathMatches=true
 
-    check file:copy("testdata/file-listener/fixture.txt", watchedFile, file:REPLACE_EXISTING);
+    check io:fileWriteString(watchedFile, "modified");
     boolean modifiedSnapshot = false;
     attempts = 0;
     while attempts < 30 && !modifiedSnapshot {

@@ -26,6 +26,12 @@ isolated function hardLinkPath() returns string = external;
 // symlinkPath: a symlink whose target is the source file.
 isolated function symlinkPath() returns string = external;
 
+// replaceDstPath: a regular file holding "old\n", sharing its inode with
+// replaceDstHardLinkPath.
+isolated function replaceDstPath() returns string = external;
+
+isolated function replaceDstHardLinkPath() returns string = external;
+
 public function testMain() returns error? {
     string src = sourcePath();
 
@@ -43,4 +49,21 @@ public function testMain() returns error? {
     check file:copy(src, link, file:REPLACE_EXISTING);
     io:println((check file:getMetaData(src)).size); // @output 6
     io:println(check file:test(link, file:IS_SYMLINK)); // @output false
+
+    // like Java's Files.copy, REPLACE_EXISTING deletes the destination before
+    // copying, so other hard links to it keep the old content
+    string dst = replaceDstPath();
+    check file:copy(src, dst, file:REPLACE_EXISTING);
+    io:println((check file:getMetaData(dst)).size, " ", (check file:getMetaData(replaceDstHardLinkPath())).size); // @output 6 4
+
+    // an empty directory at the destination is replaced; a non-empty one is not
+    string emptyDir = check file:joinPath(check file:parentPath(src), "empty-dir");
+    check file:createDir(emptyDir);
+    check file:copy(src, emptyDir, file:REPLACE_EXISTING);
+    io:println(check file:test(emptyDir, file:IS_DIR)); // @output false
+    string fullDir = check file:joinPath(check file:parentPath(src), "full-dir");
+    check file:createDir(fullDir);
+    check file:create(check file:joinPath(fullDir, "inside.txt"));
+    file:Error? fullDirErr = file:copy(src, fullDir, file:REPLACE_EXISTING);
+    io:println(fullDirErr is file:Error); // @output true
 }
