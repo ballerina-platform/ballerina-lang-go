@@ -63,8 +63,7 @@ func mustChmod(t *testing.T, path string, mode os.FileMode) {
 }
 
 // TestFileNativePermissionErrors exercises the permission-denied branches of
-// createDir/create/rename/remove/normalizePath(SYMLINK)/readDir, and the
-// directory writability checks of test(WRITABLE)/getMetaData, that require
+// createDir/create/rename/remove/normalizePath(SYMLINK)/readDir that require
 // a real, restricted-permission directory on disk — not reachable through
 // pure .bal setup since the file module exposes no chmod-equivalent.
 func TestFileNativePermissionErrors(t *testing.T) {
@@ -98,12 +97,6 @@ func TestFileNativePermissionErrors(t *testing.T) {
 	}
 	mustChmod(t, noAccess, 0o000) // stat-able via its (accessible) parent, not listable
 
-	othersWritable := filepath.Join(root, "others-writable")
-	if err := os.Mkdir(othersWritable, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	mustChmod(t, othersWritable, 0o577) // r-xrwxrwx: write bits set, but not for the owner
-
 	externs := []testharness.ExternRegistration{
 		{Org: "$anon", Module: "file-permission-v", FuncName: "noWriteParentDir",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
@@ -117,12 +110,35 @@ func TestFileNativePermissionErrors(t *testing.T) {
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return noAccess, nil
 			}},
-		{Org: "$anon", Module: "file-permission-v", FuncName: "othersWritableDir",
+	}
+	runExtern(t, fileCase("file-native/file-permission-v"), testharness.NewTestPal(), externs)
+}
+
+// TestFileNativeDirWritableByOwner checks that test(WRITABLE)/getMetaData
+// report a directory's writability for the calling user rather than any write
+// bit. Skipped on non-unix targets (e.g. WASM) where there is no access(2) or
+// uid, so the check falls back to the mode bits.
+func TestFileNativeDirWritableByOwner(t *testing.T) {
+	t.Parallel()
+	skipIfWindows(t)
+	skipIfRoot(t)
+	if goruntime.GOOS == "js" || goruntime.GOOS == "wasip1" {
+		t.Skip("skipping: no per-user access check on WASM")
+	}
+
+	othersWritable := filepath.Join(t.TempDir(), "others-writable")
+	if err := os.Mkdir(othersWritable, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustChmod(t, othersWritable, 0o577) // r-xrwxrwx: write bits set, but not for the owner
+
+	externs := []testharness.ExternRegistration{
+		{Org: "$anon", Module: "file-writable-v", FuncName: "othersWritableDir",
 			Impl: func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 				return othersWritable, nil
 			}},
 	}
-	runExtern(t, fileCase("file-native/file-permission-v"), testharness.NewTestPal(), externs)
+	runExtern(t, fileCase("file-native/file-writable-v"), testharness.NewTestPal(), externs)
 }
 
 // TestFileNativeSymlinkResolve exercises the successful branch of
