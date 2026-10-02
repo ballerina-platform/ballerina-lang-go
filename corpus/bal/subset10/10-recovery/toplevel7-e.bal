@@ -22,7 +22,7 @@ public function f(Bad b) {
     _ = b;
 }
 
-public Bad g = new; // @error cascades from the failed class
+public Bad g = new; // unresolved class prerequisites skip the initializer
 
 public function main() {
 }
