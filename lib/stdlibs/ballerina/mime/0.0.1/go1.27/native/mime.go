@@ -372,7 +372,7 @@ func registerBodyExterns(rt *runtime.Runtime, t *mimeTypes) {
 			}
 			v, err := t.parseJSON(text)
 			if err != nil {
-				return mimeError("ParserError", "Error occurred while retrieving the json payload from the entity: "+err.Error()), nil
+				return mimeError("ParserError", "Error occurred while extracting json data from entity: "+err.Error()), nil
 			}
 			return v, nil
 		})

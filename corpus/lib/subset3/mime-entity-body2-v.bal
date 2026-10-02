@@ -27,9 +27,16 @@ public function main() {
     json[] arr = <json[]>parsed["x"];
     io:println(arr[0] is decimal, " ", arr[1] is int); // @output true true
 
+    mime:Entity zeroEntity = new;
+    zeroEntity.setText("[-0,-0.0,-0e3,0,0.0]");
+    json[] zeros = <json[]>checkpanic zeroEntity.getJson();
+    io:println(zeros); // @output [-0.0,-0.0,-0.0,0,0]
+    io:println(zeros[0] is float, " ", zeros[3] is int, " ", zeros[4] is decimal); // @output true true true
+
     mime:Entity badJson = new;
     badJson.setText("{\"a\" 1}");
     io:println(badJson.getJson() is mime:ParserError); // @output true
+    io:println((<error>badJson.getJson()).message().substring(0, 53)); // @output Error occurred while extracting json data from entity
 
     // getXml needs a single root element; an empty body is an empty xml sequence.
     io:println(xmlResult("hello")); // @output error
