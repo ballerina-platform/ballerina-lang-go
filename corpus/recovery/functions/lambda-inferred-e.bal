@@ -19,6 +19,6 @@ function consumeFunction(function() returns int callable) returns int => callabl
 
 function inferredBody() {
     function(int) returns int inferred = value => value + missingInferred; // @error
-    consume(inferred(1));
-    consume(2);
+    consume(inferred(1)); // @error expression value must be assigned
+    consume(2); // @error expression value must be assigned
 }
