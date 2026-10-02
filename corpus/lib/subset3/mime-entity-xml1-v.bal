@@ -34,6 +34,15 @@ public function main() returns error? {
         io:println(check string:fromBytes(r1Bytes)); // @output <hello>world</hello>
     }
 
+    // getText() returns the XML body as a JSON string; '/' is escaped only alongside other escapes.
+    string r1Text = check e1.getText();
+    io:println(r1Text, " ", r1Text.length()); // @output "<hello>world</hello>" 22
+    mime:Entity quoted = new;
+    quoted.setXml(xml `<a href="x"><b/>café	"q"\</a>`);
+    io:println(check quoted.getText()); // @output "<a href=\"x\"><b\/>café\t\"q\"\\<\/a>"
+    byte[] quotedBytes = check quoted.getByteArray();
+    io:println(check string:fromBytes(quotedBytes)); // @output <a href="x"><b/>café	"q"\</a>
+
     // setBody's xml arm dispatches to setXml
     mime:Entity e2 = new;
     e2.setBody(xml `<a><b/></a>`);

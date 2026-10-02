@@ -228,11 +228,46 @@ func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 		}
 		return string(b), nil
 	case bodyXML:
-		return body.xml.XMLString(), nil
+		return jsonQuoteXMLText(body.xml.XMLString()), nil
 	default:
 		//nolint:staticcheck // error text mirrors jBallerina's runtime message verbatim
 		return "", fmt.Errorf("Entity body is not a text value")
 	}
+}
+
+// jsonQuoteXMLText reproduces jBallerina's text form of an XML body: the serialized XML
+// as a JSON string, where '/' is escaped only if some other character needs escaping.
+func jsonQuoteXMLText(s string) string {
+	if !strings.ContainsFunc(s, needsJSONEscape) {
+		return `"` + s + `"`
+	}
+	var sb strings.Builder
+	sb.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '"', '\\', '/':
+			sb.WriteByte('\\')
+			sb.WriteRune(r)
+		case '\t':
+			sb.WriteString(`\t`)
+		case '\n':
+			sb.WriteString(`\n`)
+		case '\r':
+			sb.WriteString(`\r`)
+		default:
+			if r < 0x20 {
+				fmt.Fprintf(&sb, `\u%04x`, r)
+			} else {
+				sb.WriteRune(r)
+			}
+		}
+	}
+	sb.WriteByte('"')
+	return sb.String()
+}
+
+func needsJSONEscape(r rune) bool {
+	return r == '"' || r == '\\' || r < 0x20
 }
 
 // xmlForBody parses the body's string form as an XML document, matching jBallerina's
