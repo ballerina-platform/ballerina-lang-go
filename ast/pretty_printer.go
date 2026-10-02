@@ -316,8 +316,6 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printBadNode("bad-expr-or-action")
 	case *BLangBadTypeNode:
 		p.printBadNode("bad-type")
-	case *BLangBadIdentifier:
-		p.printBadNode("bad-identifier")
 	default:
 		if p.Fallback != nil {
 			p.Fallback(p, node)
@@ -818,9 +816,6 @@ func (p *PrettyPrinter) printVarRef(node *BLangVarRef) {
 }
 
 func printableIdentifierValue(identifier IdentifierNode) string {
-	if _, ok := identifier.(*BLangBadIdentifier); ok {
-		return "<BAD>"
-	}
 	return identifier.GetValue()
 }
 
