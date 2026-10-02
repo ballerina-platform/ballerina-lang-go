@@ -20,8 +20,8 @@ Support % is computed as `round(Supported / Total * 100)`, where *Total* is the 
 | [random](../../lib/stdlibs/ballerina/random/0.0.1/go1.27/README.md)           | 3 | 1 | 1 | 60% |
 | [time](../../lib/stdlibs/ballerina/time/0.0.1/go1.27/README.md)               | 29 | 3 | 0 | 91% |
 | [url](../../lib/stdlibs/ballerina/url/0.0.1/go1.27/README.md)                 | 3 | 0 | 1 | 75% |
-| [uuid](../../lib/stdlibs/ballerina/uuid/0.0.1/go1.27/README.md)               | 19 | 1 | 0 | 95% |
-| **Total**                                         | **197** | **23** | **64** | **69%** |
+| [uuid](../../lib/stdlibs/ballerina/uuid/0.0.1/go1.27/README.md)               | 20 | 0 | 0 | 100% |
+| **Total**                                         | **198** | **22** | **64** | **70%** |
 
 ## Notable Behavioural Changes
 
@@ -96,7 +96,8 @@ Consolidated from each package's README. Only permanent, architectural Go-level 
 
 ### uuid
 
-- **Type 1 UUID node identifier — random bytes instead of MAC address.** jBallerina uses the MAC address of the host machine as the node identifier in type 1 UUIDs; the Go-native version generates a random 6-byte node ID per RFC 4122 §4.5 for portability and privacy. The UUID is still valid and passes `validate()`.
+- **Type 1 UUID node identifier — random bytes instead of MAC address.** jBallerina uses the MAC address of the host machine as the node identifier in type 1 UUIDs; the Go-native version generates a random 6-byte node ID with the multicast bit set per RFC 4122 §4.5 for portability and privacy. The UUID is still valid and passes `validate()`.
 - **Byte-array UUID conversion validates length.** jBallerina's `toString(byte[])` and `toRecord(byte[])` do not validate that the input array is exactly 16 bytes before indexing it, so a malformed array either panics (too short) or is silently truncated (too long); the Go-native version validates the length explicitly and returns a graceful `uuid:Error` for both cases.
+- **`toString` rejects a `Uuid` record whose `node` exceeds 48 bits.** jBallerina formats the oversized node verbatim and returns a string that is not a valid UUID; the Go-native version returns a `uuid:Error` instead.
 
 The remaining packages (`math.vector`, `url`) have **no** notable behavioural changes compared to the original jBallerina implementation for their currently supported features.

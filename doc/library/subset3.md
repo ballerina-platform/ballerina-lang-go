@@ -240,6 +240,3 @@ Predefined `NamespaceUUID` constants (`NAME_SPACE_DNS`, `NAME_SPACE_URL`,
 `NAME_SPACE_OID`, `NAME_SPACE_X500`, `NAME_SPACE_NIL`) are available for type
 3/5 generation. The `Uuid` record is `readonly` with `int:Unsigned32` /
 `int:Unsigned16` / `int:Unsigned8` fields, matching jBallerina's contract.
-
-`uuid:Error` is a plain `error` alias; the `distinct` error subtype is not yet
-supported.

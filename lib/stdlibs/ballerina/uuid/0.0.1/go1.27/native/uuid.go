@@ -64,6 +64,7 @@ func initUUIDModule(rt *runtime.Runtime) {
 			if _, err := rand.Read(node[:]); err != nil {
 				return nil, fmt.Errorf("uuid v1: failed to generate node: %w", err)
 			}
+			node[0] |= 0x01 // multicast bit marks a random node (RFC 4122 §4.5)
 			nodeInt := uint64(node[0])<<40 | uint64(node[1])<<32 | uint64(node[2])<<24 |
 				uint64(node[3])<<16 | uint64(node[4])<<8 | uint64(node[5])
 
@@ -104,7 +105,7 @@ func parseHexUintExtern(_ *extern.Context, args []values.BalValue) (values.BalVa
 	s := args[0].(string)
 	n, err := strconv.ParseUint(s, 16, 64)
 	if err != nil {
-		return values.NewErrorWithMessage("invalid hex string: \"" + s + "\""), nil
+		panic("uuid: invalid hex string: " + s)
 	}
 	return int64(n), nil
 }

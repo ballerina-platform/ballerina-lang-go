@@ -14,9 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
 import ballerina/uuid;
 
 public function main() {
     // validate returns boolean, not assignable to int
     int x = uuid:validate("anything"); // @error
+    io:println(x);
 }
