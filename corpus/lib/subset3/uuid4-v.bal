@@ -15,8 +15,6 @@
 // under the License.
 
 import ballerina/io;
-
-import ballerina/io;
 import ballerina/uuid;
 
 public function main() returns error? {
