@@ -15,10 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
 import ballerina/mime;
 
 public function main() {
     mime:Entity e = new;
+    string path = "/tmp/definitely_does_not_exist_bal_mime_test.xyz";
     // jBallerina panics here too: setFileAsEntityBody checkpanics on a failed file open.
-    e.setFileAsEntityBody("/tmp/definitely_does_not_exist_bal_mime_test.xyz"); // @panic no such file or directory
+    // The OS-specific tail of the message differs per platform, so only the stable prefix and path are asserted.
+    error? r = trap e.setFileAsEntityBody(path);
+    io:println(r is error); // @output true
+    if r is error {
+        io:println(r.message().includes("error while opening file '" + path + "'")); // @output true
+    }
 }
