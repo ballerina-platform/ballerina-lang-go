@@ -334,8 +334,8 @@ public isolated function toString(byte[]|Uuid uuid) returns string|error {
         return getUuidFromBytes(uuid);
     }
     Uuid u = uuid;
-    if u.node > 0xFFFFFFFFFFFF {
-        return error Error("Invalid UUID record provided, node must fit in 48 bits");
+    if u.node < 0 || u.node > 0xFFFFFFFFFFFF {
+        return error Error("Invalid UUID record provided, node must be an unsigned 48-bit integer");
     }
     return constructComponent(u.timeLow.toHexString(), 8) + "-" +
         constructComponent(u.timeMid.toHexString(), 4) + "-" +
