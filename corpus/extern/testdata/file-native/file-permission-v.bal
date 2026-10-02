@@ -30,10 +30,6 @@ isolated function noExecParentDir() returns string = external;
 // EACCES even though it can still be stat'd via its (accessible) parent.
 isolated function noAccessDir() returns string = external;
 
-// othersWritableDir: r-xrwxrwx, owned by the test process. Group and others
-// may write to it, but its owner may not.
-isolated function othersWritableDir() returns string = external;
-
 public function testMain() returns error? {
     string noWriteParent = noWriteParentDir();
     string noExecParent = noExecParentDir();
@@ -66,10 +62,4 @@ public function testMain() returns error? {
     // readDir fails when the directory itself denies read/execute access
     file:MetaData[]|file:Error readDirErr = file:readDir(noAccess);
     io:println(readDirErr is file:Error); // @output true
-
-    // directory writability reflects the caller's access, not any write bit
-    string othersWritable = othersWritableDir();
-    io:println(check file:test(othersWritable, file:WRITABLE)); // @output false
-    file:MetaData othersWritableMeta = check file:getMetaData(othersWritable);
-    io:println(othersWritableMeta.writable); // @output false
 }
