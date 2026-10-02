@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 
@@ -30,7 +31,8 @@ import (
 )
 
 // parseJSON decodes text the way jBallerina's getJson does: object keys keep their
-// source order, and a number with a fraction or exponent becomes a decimal.
+// source order, a negative zero becomes float -0.0, and any other number with a
+// fraction or exponent becomes a decimal.
 func (t *mimeTypes) parseJSON(text string) (values.BalValue, error) {
 	dec := json.NewDecoder(strings.NewReader(text))
 	dec.UseNumber()
@@ -101,6 +103,9 @@ func (t *mimeTypes) decodeJSONObject(dec *json.Decoder) (values.BalValue, error)
 
 func jsonNumberToBal(n json.Number) (values.BalValue, error) {
 	s := n.String()
+	if isNegativeZero(s) {
+		return math.Copysign(0, -1), nil
+	}
 	if !strings.ContainsAny(s, ".eE") {
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 			return i, nil
@@ -111,4 +116,12 @@ func jsonNumberToBal(n json.Number) (values.BalValue, error) {
 		return nil, fmt.Errorf("number out of range: %s", s)
 	}
 	return d, nil
+}
+
+func isNegativeZero(s string) bool {
+	if !strings.HasPrefix(s, "-") {
+		return false
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	return err == nil && f == 0
 }
