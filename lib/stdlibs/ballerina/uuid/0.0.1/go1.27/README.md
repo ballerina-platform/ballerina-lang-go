@@ -69,9 +69,10 @@ Support Levels:
 | UUID record type | Supported | `Uuid` record with all six fields (`timeLow`, `timeMid`, `timeHiAndVersion`, `clockSeqHiAndReserved`, `clockSeqLo`, `node`) |
 | Version enum | Supported | `Version` with values `V1`, `V3`, `V4`, `V5` |
 | Predefined namespace UUID constants | Supported | `NamespaceUUID` enum: `NAME_SPACE_DNS`, `NAME_SPACE_URL`, `NAME_SPACE_OID`, `NAME_SPACE_X500`, `NAME_SPACE_NIL` |
-| Module-level error type | Partially Supported | `uuid:Error` is a plain `error` alias; `distinct` type descriptor not yet supported |
+| Module-level error type | Supported | `uuid:Error` is a `distinct error` |
 
 ### Notable Behavioural Changes
 
-- **Type 1 UUID node identifier — random bytes instead of MAC address.** jBallerina uses the MAC address of the host machine as the node identifier in type 1 UUIDs; the Go-native version generates a random 6-byte node ID per RFC 4122 §4.5 for portability and privacy. The UUID is still valid and passes `validate()`.
+- **Type 1 UUID node identifier — random bytes instead of MAC address.** jBallerina uses the MAC address of the host machine as the node identifier in type 1 UUIDs; the Go-native version generates a random 6-byte node ID with the multicast bit set per RFC 4122 §4.5 for portability and privacy. The UUID is still valid and passes `validate()`.
 - **Byte-array UUID conversion validates length.** jBallerina's `toString(byte[])` and `toRecord(byte[])` do not validate that the input array is exactly 16 bytes before indexing it, so a malformed array either panics (too short) or is silently truncated (too long); the Go-native version validates the length explicitly and returns a graceful `uuid:Error` for both cases.
+- **`toString` rejects a `Uuid` record whose `node` exceeds 48 bits.** jBallerina formats the oversized node verbatim and returns a string that is not a valid UUID; the Go-native version returns a `uuid:Error` instead.

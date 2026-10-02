@@ -19,7 +19,7 @@ import ballerina/crypto;
 import ballerina/lang.'int as ints;
 
 // Represents UUID module related errors.
-public type Error error;
+public type Error distinct error;
 
 // String representing the nil UUID.
 const string NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -41,7 +41,7 @@ public type Uuid readonly & record {
 };
 
 // Represents the UUID versions.
-// V1 - UUID generated using the MAC address of the computer and the time of generation
+// V1 - UUID generated using the time of generation and a random node identifier
 // V3 - UUID generated using MD5 hashing and application-provided text string
 // V4 - UUID generated using a pseudo-random number generator
 // V5 - UUID generated using SHA-1 hashing and application-provided text string
@@ -334,6 +334,9 @@ public isolated function toString(byte[]|Uuid uuid) returns string|error {
         return getUuidFromBytes(uuid);
     }
     Uuid u = uuid;
+    if u.node > 0xFFFFFFFFFFFF {
+        return error Error("Invalid UUID record provided, node must fit in 48 bits");
+    }
     return constructComponent(u.timeLow.toHexString(), 8) + "-" +
         constructComponent(u.timeMid.toHexString(), 4) + "-" +
         constructComponent(u.timeHiAndVersion.toHexString(), 4) + "-" +
