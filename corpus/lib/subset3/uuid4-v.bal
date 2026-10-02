@@ -31,6 +31,25 @@ public function main() returns error? {
     });
     io:println(r is uuid:Error); // @output true
 
+    r = uuid:toString({
+        timeLow: 1,
+        timeMid: 2,
+        timeHiAndVersion: 0x1003,
+        clockSeqHiAndReserved: 0x80,
+        clockSeqLo: 4,
+        node: -1
+    });
+    io:println(r is uuid:Error); // @output true
+
+    io:println(check uuid:toString({
+        timeLow: 1,
+        timeMid: 2,
+        timeHiAndVersion: 3,
+        clockSeqHiAndReserved: 4,
+        clockSeqLo: 5,
+        node: 6
+    })); // @output 00000001-0002-0003-0405-000000000006
+
     uuid:Uuid rec = check uuid:createType1AsRecord();
     io:println((rec.node >> 40) & 1); // @output 1
 }
