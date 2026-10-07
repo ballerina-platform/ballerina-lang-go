@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions type-cast-expr optional-type-descriptor union-type-descriptor local-var-decl-stmt floating-point-literal function-call-expr
 // @productions type-cast-expr union-type-descriptor nil-type-descriptor local-var-decl-stmt floating-point-literal function-call-expr
 import ballerina/io;
 
