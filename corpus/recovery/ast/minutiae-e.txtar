@@ -18,7 +18,7 @@
 // doc
 function _() {} // @error
 function foo() {
-    { int '_ = 1; int good = 2; } // @error
+    { int ' = 1; int good = 2; } // @error
     int later = 3;
 }
 function valid() {}
@@ -30,11 +30,11 @@ function valid() {}
     (value-type (position <built-in>) null))
     (block-function-body (position 19:16 23:1)
       (block-stmt (position 20:1 21:1)
-        (bad-stmt (position 20:7 20:19))
-        (var-def (position 20:19 20:33)
-          (variable (position 20:19 20:33) good (type
-            (value-type (position 20:19 20:23) int)) (expr
-            (literal (position 20:30 20:31) 2)))))
+        (bad-stmt (position 20:7 20:18))
+        (var-def (position 20:18 20:32)
+          (variable (position 20:18 20:32) good (type
+            (value-type (position 20:18 20:22) int)) (expr
+            (literal (position 20:29 20:30) 2)))))
       (var-def (position 21:1 22:1)
         (variable (position 21:1 22:1) later (type
           (value-type (position 21:1 21:9) int)) (expr

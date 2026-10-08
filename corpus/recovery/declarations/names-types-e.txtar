@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int '_ = 1; // @error
+int ' = 1; // @error
 type _ int; // @error
 type Broken mod:_; // @error
 type Nested map<mod:_>[]; // @error
 function types() {
-    int '_ = 1; // @error
+    int ' = 1; // @error
     int = 2; // @error
     mod:_ local = 3; // @error
     int later = 4; // @error unused surviving sibling
