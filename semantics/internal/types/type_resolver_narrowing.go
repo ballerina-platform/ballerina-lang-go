@@ -298,17 +298,14 @@ type prefixBinding struct {
 // and resolveDefaultExpression, each of which returns the chain the construction
 // leaves behind rather than the body's own.
 func accumPrefix(t typeResolver, chain, ancestor *binding, accum map[model.SymbolRef]prefixBinding, groups *[]model.CaptureGroupRef) semtypes.SemType {
-	var accumDefault semtypes.SemType
 	for c := chain; c != ancestor; c = c.prev {
 		if c.isCaptureEntry() {
 			*groups = append(*groups, c.captures)
 			continue
 		}
 		if !semtypes.IsZero(c.defaultType) {
-			if semtypes.IsZero(accumDefault) {
-				accumDefault = c.defaultType
-			}
-			continue
+			// An unreachable marker overrides every narrowing below it (spec issue #1029).
+			return c.defaultType
 		}
 		if _, seen := accum[c.ref]; seen {
 			continue
@@ -319,7 +316,7 @@ func accumPrefix(t typeResolver, chain, ancestor *binding, accum map[model.Symbo
 			assignmentPositions: c.assignmentPositions,
 		}
 	}
-	return accumDefault
+	return semtypes.SemType{}
 }
 
 // ancestorBinding is the contribution of a side that introduces no refinement of
@@ -487,6 +484,22 @@ func singletonResultEffect(chain *binding, ty semtypes.SemType) (expressionEffec
 		return expressionEffect{ifTrue: &binding{defaultType: semtypes.Never, prev: chain}, ifFalse: chain}, true
 	}
 	return expressionEffect{}, false
+}
+
+// singletonCompositionEffect is singletonResultEffect for a logical composition.
+// The possible outcome keeps the composed chain, since it carries what the
+// evaluated operands left behind, such as their captures.
+func singletonCompositionEffect(chain *binding, ty semtypes.SemType, composed expressionEffect) (expressionEffect, bool) {
+	effect, isSingleton := singletonResultEffect(chain, ty)
+	if !isSingleton {
+		return expressionEffect{}, false
+	}
+	if isSingletonBool(ty, true) {
+		effect.ifTrue = composed.ifTrue
+	} else {
+		effect.ifFalse = composed.ifFalse
+	}
+	return effect, true
 }
 
 func defaultExpressionEffect(chain *binding) expressionEffect {
