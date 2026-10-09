@@ -316,7 +316,7 @@ func (s *toStringState) bddStreamToString(bdd bdd) string {
 }
 
 func (s *toStringState) streamAtomToString(atom atom) string {
-	if atom == atomListTwoElement {
+	if atom == atomListStreamTop {
 		return "stream"
 	}
 	key := atom.canonicalKey()
@@ -328,6 +328,9 @@ func (s *toStringState) streamAtomToString(atom atom) string {
 	atomic := s.cx.ListAtomType(atom)
 	valueTy := CellInnerVal(listMemberAt(atomic.members, atomic.rest, 0))
 	completionTy := CellInnerVal(listMemberAt(atomic.members, atomic.rest, 1))
+	if IsSameType(s.cx, valueTy, Val) && IsSameType(s.cx, completionTy, Union(Error, Nil)) {
+		return "stream"
+	}
 	if IsSameType(s.cx, completionTy, Nil) {
 		return "stream<" + s.semTypeToString(valueTy) + ">"
 	}
