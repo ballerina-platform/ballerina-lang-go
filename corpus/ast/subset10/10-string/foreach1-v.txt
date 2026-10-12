@@ -1,0 +1,65 @@
+(compilation-unit
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable c (type
+            (user-defined-type string Char))))
+        (literal abc)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (var-def
+        (variable s (type
+          (value-type string)) (expr
+          (literal héy))))
+      (foreach
+        (var-def
+          (variable c (type
+            (value-type string))))
+        (simple-var-ref s)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (foreach
+        (var-def
+          (variable c))
+        (literal )
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (var-def
+        (variable acc (type
+          (value-type string)) (expr
+          (literal ))))
+      (foreach
+        (var-def
+          (variable c))
+        (literal a-b-c)
+        (block-stmt
+          (if
+            (binary-expr ==
+              (simple-var-ref c)
+              (literal -))
+            (block-stmt
+              (continue)) ())
+          (block-stmt
+            (if
+              (binary-expr ==
+                (simple-var-ref c)
+                (literal c))
+              (block-stmt
+                (break)) ())
+            (block-stmt
+              (compound-assignment +
+                (simple-var-ref acc)
+                (simple-var-ref c))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref acc)))))))

@@ -330,17 +330,21 @@ func visitForEach(cx *functionContext, stmt *ast.BLangForeach) desugaredNode[ast
 		rangeExpr := stmt.Collection.(*ast.BLangBinaryExpr)
 		return desugarForEachOnRange(cx, rangeExpr, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
-	tyCtx := semtypes.ContextFrom(cx.typeEnv())
-	if semtypes.IsSubtype(tyCtx, stmt.Collection.GetDeterminedType(), semtypes.List) {
-		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	tyCtx := cx.typeCtx()
+	collectionTy := stmt.Collection.GetDeterminedType()
+	if semtypes.IsSubtype(tyCtx, collectionTy, semtypes.List) {
+		return desugarForEachByIndex(cx, "array", stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
-	if semtypes.IsSubtype(tyCtx, stmt.Collection.GetDeterminedType(), semtypes.Mapping) {
+	if semtypes.IsSubtype(tyCtx, collectionTy, semtypes.String) {
+		return desugarForEachByIndex(cx, "string", stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	}
+	if semtypes.IsSubtype(tyCtx, collectionTy, semtypes.Mapping) {
 		return desugarForEachOnMap(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
 	return desugarForEachOnIterable(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 }
 
-func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[ast.StatementNode] {
+func desugarForEachByIndex(cx *functionContext, langLibModule string, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[ast.StatementNode] {
 	var initStmts []ast.StatementNode
 
 	basePos := collection.GetPosition()
@@ -392,7 +396,7 @@ func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpre
 	idxVarRef.SetDeterminedType(semtypes.Int)
 
 	// Step 3: length variable ($desugar$M = length(collVar))
-	lengthInvocation := createLengthInvocation(cx, collVarRef)
+	lengthInvocation := createLengthInvocation(cx, langLibModule, collVarRef)
 
 	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.Int, model.SymbolKindVariable, basePos)
 	lenVarName := newIdentifier(lenName)
@@ -462,8 +466,8 @@ func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpre
 	}
 }
 
-func createLengthInvocation(cx *functionContext, collection ast.BLangExpression) *ast.BLangInvocation {
-	pkgName := "lang.array"
+func createLengthInvocation(cx *functionContext, langLibModule string, collection ast.BLangExpression) *ast.BLangInvocation {
+	pkgName := "lang." + langLibModule
 	basePos := collection.GetPosition()
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
@@ -478,12 +482,12 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 
 	orgIdent := newIdentifier("ballerina")
 	pkgLangIdent := ast.BLangIdentifier{Value: "lang"}
-	pkgArrayIdent := ast.BLangIdentifier{Value: "array"}
+	pkgModuleIdent := ast.BLangIdentifier{Value: langLibModule}
 	aliasIdent := newIdentifier(pkgName)
 
 	imp := ast.BLangImportPackage{
 		OrgName:      orgIdent,
-		PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgArrayIdent},
+		PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgModuleIdent},
 		Alias:        aliasIdent,
 	}
 	setPositionIfMissing(&imp, basePos)
@@ -574,7 +578,7 @@ func desugarForEachOnMap(cx *functionContext, collection ast.BLangActionOrExpres
 	idxVarRef.SetDeterminedType(semtypes.Int)
 
 	// Step 4: length variable ($desugar$N = lang.array:length(keysVar))
-	lengthInvocation := createLengthInvocation(cx, keysVarRef)
+	lengthInvocation := createLengthInvocation(cx, "array", keysVarRef)
 
 	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.Int, model.SymbolKindVariable, basePos)
 	lenVarName := newIdentifier(lenName)

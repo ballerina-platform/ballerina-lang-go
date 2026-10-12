@@ -5145,6 +5145,8 @@ func resolveForeachVariableType(t typeResolver, collection ast.BLangActionOrExpr
 		return semtypes.MappingMemberTypeInnerVal(ctx, collectionTy, semtypes.String), true
 	case semtypes.IsSubtype(ctx, collectionTy, semtypes.XML):
 		return semtypes.XMLItemType(collectionTy), true
+	case semtypes.IsSubtype(ctx, collectionTy, semtypes.String):
+		return semtypes.Char, true
 	default:
 		iterableTy, ok := common.IterableType(t.compilerContext(), t.symbolType)
 		if !ok {

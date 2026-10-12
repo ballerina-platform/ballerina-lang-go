@@ -1215,7 +1215,7 @@ func createQueryLengthRef(
 	source ast.BLangExpression,
 	pos diagnostics.Location,
 ) (*ast.BLangVarRef, bool) {
-	lengthInvocation := createLengthInvocation(cx, source)
+	lengthInvocation := createLengthInvocation(cx, "array", source)
 	if lengthInvocation == nil {
 		return nil, false
 	}

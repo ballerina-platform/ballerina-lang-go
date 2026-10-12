@@ -1,0 +1,150 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang string (as lang.string))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (literal abc))))
+      (var-def
+        (variable $desugar$1 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation lang.string length (
+            (simple-var-ref $desugar$0))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$1)
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (var-def
+            (variable c (type
+              (user-defined-type string Char)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$0)
+                (simple-var-ref $desugar$1)))))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))
+          (assignment
+            (simple-var-ref $desugar$1)
+            (binary-expr +
+              (simple-var-ref $desugar$1)
+              (numeric-literal 1)))))
+      (var-def
+        (variable s (type
+          (value-type string)) (expr
+          (literal héy))))
+      (var-def
+        (variable $desugar$3 (expr
+          (simple-var-ref s))))
+      (var-def
+        (variable $desugar$4 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$5 (expr
+          (invocation lang.string length (
+            (simple-var-ref $desugar$3))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$4)
+          (simple-var-ref $desugar$5))
+        (block-stmt
+          (var-def
+            (variable c (type
+              (value-type string)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$3)
+                (simple-var-ref $desugar$4)))))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))
+          (assignment
+            (simple-var-ref $desugar$4)
+            (binary-expr +
+              (simple-var-ref $desugar$4)
+              (numeric-literal 1)))))
+      (var-def
+        (variable $desugar$6 (expr
+          (literal ))))
+      (var-def
+        (variable $desugar$7 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$8 (expr
+          (invocation lang.string length (
+            (simple-var-ref $desugar$6))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$7)
+          (simple-var-ref $desugar$8))
+        (block-stmt
+          (var-def
+            (variable c (expr
+              (index-based-access
+                (simple-var-ref $desugar$6)
+                (simple-var-ref $desugar$7)))))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))
+          (assignment
+            (simple-var-ref $desugar$7)
+            (binary-expr +
+              (simple-var-ref $desugar$7)
+              (numeric-literal 1)))))
+      (var-def
+        (variable acc (type
+          (value-type string)) (expr
+          (literal ))))
+      (var-def
+        (variable $desugar$9 (expr
+          (literal a-b-c))))
+      (var-def
+        (variable $desugar$10 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$11 (expr
+          (invocation lang.string length (
+            (simple-var-ref $desugar$9))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$10)
+          (simple-var-ref $desugar$11))
+        (block-stmt
+          (var-def
+            (variable c (expr
+              (index-based-access
+                (simple-var-ref $desugar$9)
+                (simple-var-ref $desugar$10)))))
+          (if
+            (binary-expr ==
+              (simple-var-ref c)
+              (literal -))
+            (block-stmt
+              (assignment
+                (simple-var-ref $desugar$10)
+                (binary-expr +
+                  (simple-var-ref $desugar$10)
+                  (numeric-literal 1)))
+              (continue)) ())
+          (block-stmt
+            (if
+              (binary-expr ==
+                (simple-var-ref c)
+                (literal c))
+              (block-stmt
+                (break)) ())
+            (block-stmt
+              (compound-assignment +
+                (simple-var-ref acc)
+                (simple-var-ref c))))
+          (assignment
+            (simple-var-ref $desugar$10)
+            (binary-expr +
+              (simple-var-ref $desugar$10)
+              (numeric-literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref acc)))))))
