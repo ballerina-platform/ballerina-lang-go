@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: foreach collection must be subtype of object:Iterable
+  --> foreach4-e.bal:19:22
+   |
+19 |     foreach var _ in ns { // @error
+   |                      ^^

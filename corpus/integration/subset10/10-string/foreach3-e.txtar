@@ -1,0 +1,19 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got string:Char
+  --> foreach3-e.bal:24:17
+   |
+24 |         int _ = c; // @error
+   |                 ^
+
+error[SEMANTIC_ERROR]: invalid variable type "a"
+  --> foreach3-e.bal:18:13
+   |
+18 |     foreach "a" _ in "ab" { // @error
+   |             ^^^^^
+
+error[SEMANTIC_ERROR]: invalid variable type boolean|int
+  --> foreach3-e.bal:20:13
+   |
+20 |     foreach boolean|int _ in "x" { // @error
+   |             ^^^^^^^^^^^^^

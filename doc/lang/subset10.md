@@ -41,7 +41,7 @@
 - [Return](https://ballerina.io/spec/lang/master/#return-stmt)
 - [Panic](https://ballerina.io/spec/lang/master/#panic-stmt)
 - [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
-  - Currently only supports range, list, map and XML subtypes, and [iterable objects](https://ballerina.io/spec/lang/master/#section_5.8.2)
+  - Currently only supports range, list, map, string and XML subtypes, and [iterable objects](https://ballerina.io/spec/lang/master/#section_5.8.2)
 - [Match statement](https://ballerina.io/spec/lang/master/#match-stmt)
   - Currently only supports [const-pattern](https://ballerina.io/spec/lang/master/#const-pattern) and [wildcard-match-pattern](https://ballerina.io/spec/lang/master/#wildcard-match-pattern)
 

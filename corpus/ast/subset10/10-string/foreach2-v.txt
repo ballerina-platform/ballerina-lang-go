@@ -1,0 +1,240 @@
+(compilation-unit
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (const HI () (
+    (literal hi!)))
+  (type-definition Pair
+    (union-type
+      (finite-type
+        (literal ab))
+      (finite-type
+        (literal cd))))
+  (variable calls (type
+    (value-type int)) (expr
+    (literal 0)))
+  (function getStr () (
+    (value-type string))
+    (block-function-body
+      (compound-assignment +
+        (simple-var-ref calls)
+        (literal 1))
+      (return
+        (literal xyz))))
+  (function count (
+    (variable s (type
+      (value-type string)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable n (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable _))
+        (simple-var-ref s)
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref n)
+            (literal 1))))
+      (return
+        (simple-var-ref n))))
+  (function firstVowel (
+    (variable s (type
+      (value-type string)))) (
+    (union-type
+      (user-defined-type string Char)
+      (value-type null)))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable c))
+        (simple-var-ref s)
+        (block-stmt
+          (if
+            (binary-expr ||
+              (binary-expr ==
+                (simple-var-ref c)
+                (literal a))
+              (binary-expr ==
+                (simple-var-ref c)
+                (literal e)))
+            (block-stmt
+              (return
+                (simple-var-ref c))) ())
+          (block-stmt)))
+      (return
+        (literal <nil>))))
+  (function printChars (
+    (variable x (type
+      (union-type
+        (value-type string)
+        (value-type int))))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref x)
+          (value-type string))
+        (block-stmt
+          (foreach
+            (var-def
+              (variable c))
+            (simple-var-ref x)
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (simple-var-ref c))))))) ())
+      (block-stmt)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable c))
+        (simple-var-ref HI)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (var-def
+        (variable p (type
+          (user-defined-type Pair)) (expr
+          (literal cd))))
+      (foreach
+        (var-def
+          (variable c (type
+            (user-defined-type string Char))))
+        (simple-var-ref p)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (var-def
+        (variable ch (type
+          (user-defined-type string Char)) (expr
+          (literal z))))
+      (foreach
+        (var-def
+          (variable c))
+        (simple-var-ref ch)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (foreach
+        (var-def
+          (variable c))
+        (invocation getStr ())
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref calls))))
+      (foreach
+        (var-def
+          (variable c))
+        (literal a😀b𝄞)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c)
+              (literal  )
+              (invocation length expr:
+                (simple-var-ref c) ()))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation count (
+            (literal héllo😀))))))
+      (var-def
+        (variable src (type
+          (value-type string)) (expr
+          (literal ab))))
+      (foreach
+        (var-def
+          (variable c))
+        (simple-var-ref src)
+        (block-stmt
+          (assignment
+            (simple-var-ref src)
+            (binary-expr +
+              (simple-var-ref src)
+              (literal z)))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref c))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref src))))
+      (foreach
+        (var-def
+          (variable a))
+        (literal 12)
+        (block-stmt
+          (foreach
+            (var-def
+              (variable b))
+            (literal xy)
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (binary-expr +
+                    (simple-var-ref a)
+                    (simple-var-ref b)))))))))
+      (var-def
+        (variable fs (type
+          (array-type
+            (function-type () (
+              (value-type string))) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (foreach
+        (var-def
+          (variable c))
+        (literal mn)
+        (block-stmt
+          (expression-stmt
+            (invocation push expr:
+              (simple-var-ref fs) (
+              (lambda
+                (function $anonFunc$_0 () (
+                  (value-type string))
+                  (block-function-body
+                    (return
+                      (simple-var-ref c))))))))))
+      (foreach
+        (var-def
+          (variable f))
+        (simple-var-ref fs)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f ()))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation firstVowel (
+            (literal xyez))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (invocation firstVowel (
+              (literal xyz)))
+            (value-type null)))))
+      (expression-stmt
+        (invocation printChars (
+          (literal pq))))
+      (expression-stmt
+        (invocation printChars (
+          (literal 3))))
+      (foreach
+        (var-def
+          (variable c (type
+            (value-type any))))
+        (literal o)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (type-test-expr is
+                (simple-var-ref c)
+                (user-defined-type string Char))))))))))

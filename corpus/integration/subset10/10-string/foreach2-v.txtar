@@ -1,0 +1,31 @@
+-- stdout --
+h
+i
+!
+c
+d
+z
+x
+y
+z
+1
+a 1
+😀 1
+b 1
+𝄞 1
+6
+a
+b
+abzz
+1x
+1y
+2x
+2y
+m
+n
+e
+true
+p
+q
+true
+-- stderr --
