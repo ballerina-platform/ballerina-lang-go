@@ -825,6 +825,8 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		ca.semanticErr("continue statement not allowed in constant expression", n.GetPosition())
 		return nil
 	case ast.TypeDescriptor:
+		// Array lengths and field defaults belong to the type, not the constant expression.
+		return ca.parentAnalyzer().Visit(node)
 	case *ast.BLangTypeDefinition:
 		// We have set the type at constructor
 		return nil
@@ -1991,6 +1993,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangRecordType:
 		validateRecordFieldDefaults(a, n)
+		walkRecordFieldTypes(a, n)
 		return nil
 	case *ast.BLangObjectType:
 		if !n.Isolated {
@@ -2302,6 +2305,18 @@ func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 		}
 		fieldTy := field.Type.(ast.BLangNode).GetDeterminedType()
 		analyzeActionOrExpression(a, field.Default.Expr, fieldTy)
+	}
+}
+
+// walkRecordFieldTypes analyzes the type descriptors of a record's fields so
+// that record types nested inside them get their own defaults validated. The
+// default expressions themselves are left to validateRecordFieldDefaults.
+func walkRecordFieldTypes[A analyzer](a A, node *ast.BLangRecordType) {
+	for _, field := range node.Fields() {
+		ast.Walk(a, field.Type.(ast.BLangNode))
+	}
+	if node.RestType != nil {
+		ast.Walk(a, node.RestType.(ast.BLangNode))
 	}
 }
 
