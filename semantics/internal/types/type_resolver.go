@@ -1946,6 +1946,8 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.StatementNod
 		return statementEffect{nil, true}, true
 	case *ast.BLangBlockStmt:
 		return resolveBlockStatements(t, chain, s.Stmts), true
+	case *ast.BLangFork:
+		return resolveFork(t, chain, s)
 	case *ast.BLangLock:
 		restoreContext := setIsolatedContext(t, true)
 		effect := resolveBlockStatements(t, chain, s.Body.Stmts)
@@ -2431,6 +2433,18 @@ func resolveBlockFunctionBody(t typeResolver, chain *binding, body *ast.BLangBlo
 	children = append(children, newDefaultWorkerResolution(t, regionChain, region))
 	resolveWorkerRegionChildren(t, children)
 	body.SetDeterminedType(semtypes.Never)
+}
+
+// resolveFork resolves the fork's workers and returns the effect of the fork on
+// the enclosing worker: every worker's captures are in effect after it, as
+// after a lambda.
+func resolveFork(t typeResolver, chain *binding, fork *ast.BLangFork) (statementEffect, bool) {
+	forkChain, returnTypes, ok := declareWorkerRegionTypes(t, chain, fork.Region)
+	if !ok {
+		return defaultStmtEffect(chain), false
+	}
+	resolveWorkerRegionChildren(t, newRegionWorkerResolutions(t, forkChain, fork.Region, returnTypes))
+	return statementEffect{forkChain, false}, true
 }
 
 // declareWorkerRegionTypes declares the future<T> type of every named worker

@@ -1293,6 +1293,16 @@ func declareRegionWorkers(resolver *blockSymbolResolver, region *ast.WorkerRegio
 	return newWorkerMessageGroup(region, !inModuleLevelFunction(resolver))
 }
 
+// resolveFork declares the fork's workers in the enclosing block, so the
+// statements after the fork see them, and resolves them as a region of their
+// own: the enclosing worker is not a peer of the fork's workers.
+func resolveFork(bs *blockSymbolResolver, fork *ast.BLangFork) {
+	region := fork.Region
+	group := declareRegionWorkers(bs, region)
+	resolveRegionWorkers(bs, region, group)
+	pairWorkerMessages(bs, group)
+}
+
 func resolveRegionWorkers(resolver *blockSymbolResolver, region *ast.WorkerRegion, group *workerMessageGroup) {
 	for _, worker := range region.Workers {
 		resolveNamedWorker(resolver, worker, group)
@@ -1506,6 +1516,9 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangBlockFunctionBody:
 		resolveBlockFunctionBody(bs, n)
+		return nil
+	case *ast.BLangFork:
+		resolveFork(bs, n)
 		return nil
 	case *ast.BLangBlockStmt, *ast.BLangDo, *ast.BLangLock:
 		return newBlockSymbolResolverWithBlockScope(bs, n)

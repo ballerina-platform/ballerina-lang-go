@@ -47,6 +47,9 @@ type nodeBuilder struct {
 	currentCompUnit      *ast.BLangCompilationUnit
 	cx                   *context.CompilerContext
 	mode                 nodeBuilderMode
+	// forkCount is the number of forks built so far in the function body
+	// being built.
+	forkCount int
 }
 
 func (n *nodeBuilder) de() *diagnostics.DiagnosticEnv {
@@ -1921,11 +1924,6 @@ func (n *nodeBuilder) generateAndAddBLangStatements(statementNodes st.NodeList[s
 		if currentStatement.HasDiagnostics() && n.mode != nodeBuilderModeRecover {
 			continue
 		}
-		if currentStatement.Kind() == st.FORK_STATEMENT {
-			forkStmt := currentStatement.(*st.ForkStatementNode)
-			n.generateForkStatements(forkStmt)
-			continue
-		}
 		// If there is an `if` statement without an `else`, all the statements following that `if` statement
 		// are added to a new block statement.
 		if ifElseStmt, ok := currentStatement.(*st.IfElseStatementNode); ok && ifElseStmt.ElseBody() == nil {
@@ -2183,8 +2181,12 @@ func (n *nodeBuilder) transformLockStatement(lockStatementNode *st.LockStatement
 }
 
 func (n *nodeBuilder) transformForkStatement(forkStatementNode *st.ForkStatementNode) ast.BLangNode {
-	n.unimplemented("fork statements are not supported", forkStatementNode)
-	return n.badStmt(forkStatementNode)
+	namePrefix := "fork" + strconv.Itoa(n.forkCount)
+	n.forkCount++
+	workers := n.generateNamedWorkerDeclarations(forkStatementNode.NamedWorkerDeclarations())
+	fork := &ast.BLangFork{Region: &ast.WorkerRegion{Workers: workers, NamePrefix: namePrefix}}
+	fork.SetPosition(n.getPosition(forkStatementNode))
+	return fork
 }
 
 func (n *nodeBuilder) transformForEachStatement(forEachStatementNode *st.ForEachStatementNode) ast.BLangNode {
@@ -3079,13 +3081,16 @@ func (n *nodeBuilder) transformModuleXMLNamespaceDeclaration(moduleXMLNamespaceD
 }
 
 func (n *nodeBuilder) transformFunctionBodyBlock(functionBodyBlockNode *st.FunctionBodyBlockNode) ast.BLangNode {
+	enclosingForkCount := n.forkCount
+	n.forkCount = 0
+	defer func() { n.forkCount = enclosingForkCount }()
 	bLFuncBody := &ast.BLangBlockFunctionBody{}
 	statements := []ast.StatementNode{}
 	stmtList := statements
 	if namedWorkerDeclarator := functionBodyBlockNode.NamedWorkerDeclarator(); namedWorkerDeclarator != nil {
 		bLFuncBody.InitStmts = n.generateBLangStatements(
 			namedWorkerDeclarator.WorkerInitStatements(), namedWorkerDeclarator)
-		if workers := n.generateNamedWorkerDeclarations(namedWorkerDeclarator); len(workers) > 0 {
+		if workers := n.generateNamedWorkerDeclarations(namedWorkerDeclarator.NamedWorkerDeclarations()); len(workers) > 0 {
 			bLFuncBody.Region = &ast.WorkerRegion{Workers: workers}
 		}
 	}
@@ -3115,19 +3120,14 @@ func newDefaultWorker(stmts []ast.StatementNode, bodyPos diagnostics.Location) *
 }
 
 func (n *nodeBuilder) generateNamedWorkerDeclarations(
-	namedWorkerDeclarator *st.NamedWorkerDeclarator,
+	declarations st.NodeList[*st.NamedWorkerDeclarationNode],
 ) []*ast.BLangNamedWorkerDeclaration {
-	declarations := namedWorkerDeclarator.NamedWorkerDeclarations()
 	workers := make([]*ast.BLangNamedWorkerDeclaration, 0, declarations.Size())
 	for declaration := range declarations.Iterator() {
 		workers = append(workers,
 			n.transformNamedWorkerDeclaration(declaration).(*ast.BLangNamedWorkerDeclaration))
 	}
 	return workers
-}
-
-func (n *nodeBuilder) generateForkStatements(forkStatementNode *st.ForkStatementNode) {
-	n.unimplemented("fork statements are not supported", forkStatementNode)
 }
 
 func (n *nodeBuilder) transformNamedWorkerDeclaration(namedWorkerDeclarationNode *st.NamedWorkerDeclarationNode) ast.BLangNode {

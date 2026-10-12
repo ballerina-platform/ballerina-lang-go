@@ -2195,6 +2195,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			ast.Walk(la, n.OnFailClause)
 		}
 		return nil
+	case *ast.BLangFork:
+		analyzeWorkerRegion(a, n.Region)
+		return nil
 	case *ast.BLangLock:
 		if enclosingLockAnalyzer(a) != nil {
 			a.semanticErr("lock statement cannot be nested inside another lock statement", n.GetPosition())
