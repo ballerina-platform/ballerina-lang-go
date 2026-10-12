@@ -696,8 +696,9 @@ func validateIsolatedFunction(a analyzer, fn invokableSignatureNode) {
 //     unless they are isolated. (we detect that they are in lock statements in normal semantic analysis)
 //  4. Captures of outer-scope locally-declared variables (including
 //     parameters of an enclosing function) must be effectively final and
-//     have a type that is a subtype of `Isolated`. Closure boundaries validate
-//     captures explicitly before walking their bodies.
+//     have a type that is a subtype of `Isolated`. Closure boundaries (lambdas
+//     and named workers) validate captures explicitly before walking their
+//     bodies.
 func isIsolatedFunctionInner(a analyzer, node ast.BLangNode, scope *localScope) {
 	if scope == nil {
 		scope = newLocalScope(nil)
@@ -779,6 +780,9 @@ func (visitor *isolatedFnVisitor) Visit(n ast.BLangNode) ast.Visitor {
 	case *ast.BLangLambdaFunction:
 		visitor.walkLambda(node)
 		return nil
+	case *ast.BLangNamedWorkerDeclaration:
+		visitor.walkNamedWorker(node)
+		return nil
 	case *ast.BLangXMLStepExpression:
 		// Type resolution always lowers step expressions before analysis runs.
 		ast.Walk(visitor, node.LoweredExpression)
@@ -811,7 +815,7 @@ func (visitor *isolatedFnVisitor) walkInvocableOperands(call ast.Invocable) {
 
 func (visitor *isolatedFnVisitor) walkLambda(node *ast.BLangLambdaFunction) {
 	fn := node.Function
-	validateIsolatedCapture(visitor.a, visitor.scope, fn.GetBody().(ast.BLangNode))
+	validateIsolatedCapture(visitor.a, visitor.scope, fn.GetBody().(ast.BLangNode), "lambda")
 	inner := newLocalScope(visitor.scope)
 	for _, param := range fn.RequiredParams {
 		sym := param.Symbol()
@@ -827,17 +831,30 @@ func (visitor *isolatedFnVisitor) walkLambda(node *ast.BLangLambdaFunction) {
 	ast.Walk(visitor, fn.GetBody().(ast.BLangNode))
 }
 
+func (visitor *isolatedFnVisitor) walkNamedWorker(node *ast.BLangNamedWorkerDeclaration) {
+	for i := range node.AnnAttachments {
+		ast.Walk(visitor, &node.AnnAttachments[i])
+	}
+	ast.Walk(visitor, node.ReturnType)
+	validateIsolatedCapture(visitor.a, visitor.scope, node.Body, "worker")
+	prev := visitor.scope
+	visitor.scope = newLocalScope(prev)
+	defer func() { visitor.scope = prev }()
+	ast.Walk(visitor, node.Body)
+}
+
 // validateIsolatedCapture validates that every reference inside `body` to a
 // variable visible in `outer` is final and has a type that is a subtype of
-// `Isolated`. Used at every closure boundary (nested lambdas, record-field
-// defaults, default-param exprs).
-func validateIsolatedCapture(a analyzer, outer *localScope, body ast.BLangNode) {
+// `Isolated`. Used at every closure boundary (nested lambdas, named workers,
+// record-field defaults, default-param exprs). `boundary` names the closure
+// kind in diagnostics.
+func validateIsolatedCapture(a analyzer, outer *localScope, body ast.BLangNode, boundary string) {
 	if outer == nil {
 		return
 	}
 	tyCtx := a.tyCtx()
 	isolated := semtypes.CreateIsolated(tyCtx)
-	v := &captureVisitor{a: a, outer: outer, isolated: isolated}
+	v := &captureVisitor{a: a, outer: outer, isolated: isolated, boundary: boundary}
 	ast.Walk(v, body)
 }
 
@@ -845,6 +862,7 @@ type captureVisitor struct {
 	a        analyzer
 	outer    *localScope
 	isolated semtypes.SemType
+	boundary string
 }
 
 func (v *captureVisitor) Visit(n ast.BLangNode) ast.Visitor {
@@ -852,14 +870,14 @@ func (v *captureVisitor) Visit(n ast.BLangNode) ast.Visitor {
 		return v
 	}
 	switch n.(type) {
-	case *ast.BLangLambdaFunction, *ast.BLangFunction:
+	case *ast.BLangLambdaFunction, *ast.BLangFunction, *ast.BLangNamedWorkerDeclaration:
 		return nil
 	}
 	if ref, ok := n.(*ast.BLangVarRef); ok {
 		unnarrowed := v.a.ctx().UnnarrowedSymbol(ref.Symbol())
 		if md, found := v.outer.lookup(unnarrowed); found {
 			if !md.Final || !semtypes.IsSubtype(v.a.tyCtx(), md.Type, v.isolated) {
-				v.a.semanticErr("invalid capture of mutable variable in isolated lambda", ref.GetPosition())
+				v.a.semanticErr("invalid capture of mutable variable in isolated "+v.boundary, ref.GetPosition())
 			}
 		}
 	}

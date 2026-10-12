@@ -655,7 +655,7 @@ func validateIsolatedDefaultParams[A analyzer](a A, locals *localScope, function
 		// We turn defaultable parameters to closures and for isolated functions those closures need to be isolated.
 		// The function's own params (already in fa.locals) are visible as captures to each default expression.
 		expr := param.Expr.(ast.BLangNode)
-		validateIsolatedCapture(a, locals, expr)
+		validateIsolatedCapture(a, locals, expr, "lambda")
 		isIsolatedFunctionInner(a, expr, locals)
 	}
 }
@@ -1531,7 +1531,7 @@ func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool 
 	fa.isLambda = true
 	fn := expr.Function
 	if fn.IsIsolated() && fn.Body != nil && !enclosingFunctionIsIsolated(a) {
-		validateIsolatedCapture(a, enclosingBodyLocals(a), fn.Body.(ast.BLangNode))
+		validateIsolatedCapture(a, enclosingBodyLocals(a), fn.Body.(ast.BLangNode), "lambda")
 	}
 	// Walk params + body directly rather than the BLangFunction node
 	// itself; otherwise the walker's first visit on BLangFunction would
@@ -2517,7 +2517,7 @@ func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 			continue
 		}
 		expr := field.Default.Expr.(ast.BLangNode)
-		validateIsolatedCapture(a, parent, expr)
+		validateIsolatedCapture(a, parent, expr, "lambda")
 		isIsolatedFunctionInner(a, expr, parent)
 		// A field default is lowered to a closure run at each record
 		// construction, so its expressions are evaluated repeatedly.
