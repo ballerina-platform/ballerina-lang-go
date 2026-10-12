@@ -1254,31 +1254,34 @@ func resolveBlockFunctionBody(resolver *blockSymbolResolver, body *ast.BLangBloc
 	for _, stmt := range body.InitStmts {
 		ast.Walk(resolver, stmt.(ast.BLangNode))
 	}
-	declareNamedWorkers(resolver, body)
-	for _, worker := range body.Workers {
-		resolveNamedWorker(resolver, worker)
-	}
 	for _, stmt := range body.Stmts {
 		ast.Walk(resolver, stmt.(ast.BLangNode))
 	}
-	if len(body.Workers) > 0 {
-		pairWorkerMessages(resolver, resolver.messageGroup)
-	}
-}
-
-// declareNamedWorkers declares every worker symbol before any worker body is
-// resolved, so a worker body can refer to peers declared before or after it.
-// A body with named workers also gets a default worker symbol.
-func declareNamedWorkers(resolver *blockSymbolResolver, body *ast.BLangBlockFunctionBody) {
-	if len(body.Workers) == 0 {
+	if body.Region == nil {
 		return
 	}
-	// The name can't be written in source, so there is no shadowing check: a
-	// lambda with its own workers nested in a body with workers declares another.
-	resolver.AddSymbol(constants.DefaultWorkerName, model.NewWorkerSymbol(constants.DefaultWorkerName, body.GetPosition()))
-	lookup, _ := resolver.GetSymbol(constants.DefaultWorkerName)
-	body.DefaultWorker = lookup.ref
-	for _, worker := range body.Workers {
+	group := declareRegionWorkers(resolver, body.Region)
+	defaultWorker := body.Region.DefaultWorker
+	resolver.messageGroup = group
+	resolver.messageWorker = defaultWorker.Symbol()
+	resolveRegionWorkers(resolver, body.Region, group)
+	for _, stmt := range defaultWorker.Stmts {
+		ast.Walk(resolver, stmt.(ast.BLangNode))
+	}
+	pairWorkerMessages(resolver, group)
+}
+
+// declareRegionWorkers declares every worker symbol of region before any
+// worker body is resolved, so a worker body can refer to peers declared before
+// or after it, and returns the region's message group.
+func declareRegionWorkers(resolver *blockSymbolResolver, region *ast.WorkerRegion) *workerMessageGroup {
+	if region.DefaultWorker != nil {
+		// The name can't be written in source, so there is no shadowing check: a
+		// lambda with its own workers nested in a body with workers declares another.
+		symbol := model.NewWorkerSymbol(constants.DefaultWorkerName, region.Workers[0].GetPosition())
+		addSymbolAndSetOnNode(resolver, constants.DefaultWorkerName, symbol, region.DefaultWorker)
+	}
+	for _, worker := range region.Workers {
 		name := worker.Name
 		if isShadowed(resolver, name) {
 			semanticError(resolver, "Variable already defined: "+name, worker.GetPosition())
@@ -1287,8 +1290,13 @@ func declareNamedWorkers(resolver *blockSymbolResolver, body *ast.BLangBlockFunc
 		symbol := model.NewWorkerSymbol(name, worker.GetPosition())
 		addSymbolAndSetOnNode(resolver, name, symbol, worker)
 	}
-	resolver.messageGroup = newWorkerMessageGroup(body, !inModuleLevelFunction(resolver))
-	resolver.messageWorker = body.DefaultWorker
+	return newWorkerMessageGroup(region, !inModuleLevelFunction(resolver))
+}
+
+func resolveRegionWorkers(resolver *blockSymbolResolver, region *ast.WorkerRegion, group *workerMessageGroup) {
+	for _, worker := range region.Workers {
+		resolveNamedWorker(resolver, worker, group)
+	}
 }
 
 // inModuleLevelFunction reports whether resolver is inside the body of a
@@ -1328,10 +1336,10 @@ func isNamedFunction(node ast.BLangNode) bool {
 	}
 }
 
-func resolveNamedWorker(resolver *blockSymbolResolver, worker *ast.BLangNamedWorkerDeclaration) {
+func resolveNamedWorker(resolver *blockSymbolResolver, worker *ast.BLangNamedWorkerDeclaration, group *workerMessageGroup) {
 	peers := &workerSymbolResolver{blockSymbolResolver: resolver, workerName: worker.Name}
 	workerResolver := newFunctionResolver(peers, worker)
-	workerResolver.messageGroup = resolver.messageGroup
+	workerResolver.messageGroup = group
 	workerResolver.messageWorker = worker.Symbol()
 	worker.SetScope(workerResolver.scope)
 	ast.Walk(workerResolver, worker)

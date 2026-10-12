@@ -83,6 +83,16 @@ type (
 		// deferred initialization of their final locals is unimplemented
 		// (https://github.com/ballerina-nutcracker/ballerina/issues/952).
 		isLambda bool
+		// workerRegions maps each worker of a region registered in this body
+		// to the reference table of its region.
+		workerRegions map[model.SymbolRef]*workerRegionRefs
+	}
+
+	// workerRegionRefs tracks the value references to the workers of one region.
+	workerRegionRefs struct {
+		// owner is the analyzer current at the region's start point.
+		owner analyzer
+		refs  map[model.SymbolRef]*ast.BLangVarRef
 	}
 
 	functionAnalyzer struct {
@@ -91,11 +101,6 @@ type (
 		// enclosingClass is set when the function is a method of a class or
 		// service body. nil for free functions.
 		enclosingClass *enclosingClassBody
-		// workerRefs maps each named worker declared in this function's body
-		// to the one value reference already seen for it, nil until one is.
-		// Seeded from the body's worker declarations, so a lookup miss means
-		// the worker belongs to another function.
-		workerRefs map[model.SymbolRef]*ast.BLangVarRef
 	}
 
 	// workerAnalyzer analyzes a named worker body. A worker has its own return
@@ -585,8 +590,9 @@ type invokableSignatureNode interface {
 func initializeInvokableAnalyzer(parent analyzer, function invokableSignatureNode, enclosing *enclosingClassBody, locals *localScope) *functionAnalyzer {
 	fa := &functionAnalyzer{
 		bodyAnalyzer: bodyAnalyzer{
-			analyzerBase: analyzerBase{parent: parent},
-			locals:       locals,
+			analyzerBase:  analyzerBase{parent: parent},
+			locals:        locals,
+			workerRegions: make(map[model.SymbolRef]*workerRegionRefs),
 		},
 		function:       function,
 		enclosingClass: enclosing,
@@ -1557,26 +1563,55 @@ func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool 
 // in execution order: the default worker's initialization statements, the named
 // worker bodies, and the remaining default-worker statements.
 func analyzeBlockFunctionBody(owner bodyOwner, body *ast.BLangBlockFunctionBody) {
-	if len(body.Workers) > 0 {
-		fa, ok := owner.(*functionAnalyzer)
-		if !ok {
+	if body.Region != nil {
+		if _, ok := owner.(*functionAnalyzer); !ok {
 			owner.internalErr("named workers outside a function body", body.GetPosition())
 			return
-		}
-		fa.workerRefs = make(map[model.SymbolRef]*ast.BLangVarRef, len(body.Workers))
-		for _, worker := range body.Workers {
-			fa.workerRefs[worker.Symbol()] = nil
 		}
 	}
 	for _, stmt := range body.InitStmts {
 		ast.Walk(owner, stmt.(ast.BLangNode))
 	}
-	for _, worker := range body.Workers {
-		analyzeNamedWorker(owner, worker)
-	}
 	for _, stmt := range body.Stmts {
 		ast.Walk(owner, stmt.(ast.BLangNode))
 	}
+	if body.Region != nil {
+		analyzeWorkerRegion(owner, body.Region)
+		for _, stmt := range body.Region.DefaultWorker.Stmts {
+			ast.Walk(owner, stmt.(ast.BLangNode))
+		}
+	}
+}
+
+// analyzeWorkerRegion registers the reference table of region in the nearest
+// enclosing body, owned by the analyzer current at the region's start point,
+// and analyzes each worker body.
+func analyzeWorkerRegion(owner analyzer, region *ast.WorkerRegion) {
+	body := enclosingBody(owner)
+	if body == nil {
+		owner.internalErr("worker region outside a function body", owner.loc())
+		return
+	}
+	regionRefs := &workerRegionRefs{owner: owner, refs: make(map[model.SymbolRef]*ast.BLangVarRef)}
+	for _, worker := range region.Workers {
+		body.workerRegions[worker.Symbol()] = regionRefs
+	}
+	for _, worker := range region.Workers {
+		analyzeNamedWorker(owner, worker)
+	}
+}
+
+// lookupWorkerRegion returns the reference table of the region declaring
+// worker, searched through the enclosing bodies.
+func lookupWorkerRegion(a analyzer, worker model.SymbolRef) (*workerRegionRefs, bool) {
+	for current := a; current != nil; current = current.parentAnalyzer() {
+		if owner, ok := current.(bodyOwner); ok {
+			if region, ok := owner.bodyState().workerRegions[worker]; ok {
+				return region, true
+			}
+		}
+	}
+	return nil, false
 }
 
 // analyzeNamedWorker analyzes a worker body with its own return context. The
@@ -1584,9 +1619,10 @@ func analyzeBlockFunctionBody(owner bodyOwner, body *ast.BLangBlockFunctionBody)
 func analyzeNamedWorker(a analyzer, worker *ast.BLangNamedWorkerDeclaration) {
 	wa := &workerAnalyzer{
 		bodyAnalyzer: bodyAnalyzer{
-			analyzerBase: analyzerBase{parent: a},
-			retTy:        semtypes.FutureEventualType(a.tyCtx(), a.ctx().SymbolType(worker.Symbol())),
-			locals:       newLocalScope(enclosingBodyLocals(a)),
+			analyzerBase:  analyzerBase{parent: a},
+			retTy:         semtypes.FutureEventualType(a.tyCtx(), a.ctx().SymbolType(worker.Symbol())),
+			locals:        newLocalScope(enclosingBodyLocals(a)),
+			workerRegions: make(map[model.SymbolRef]*workerRegionRefs),
 		},
 		worker: worker,
 	}
@@ -1598,7 +1634,7 @@ func analyzeNamedWorker(a analyzer, worker *ast.BLangNamedWorkerDeclaration) {
 
 // checkWorkerReference reports whether a reference to a worker name is valid. A
 // worker may be referenced as a value at most once per execution of the
-// function body that declares it, so both a second reference and a reference
+// region that declares it, so both a second reference and a reference
 // that may execute repeatedly are rejected. Rejecting unwinds the enclosing
 // analysis.
 func checkWorkerReference(a analyzer, ref *ast.BLangVarRef) bool {
@@ -1609,31 +1645,33 @@ func checkWorkerReference(a analyzer, ref *ast.BLangVarRef) bool {
 	if a.ctx().GetSymbol(sym).Kind() != model.SymbolKindWorker {
 		return true
 	}
-	// A reference repeats if it sits in a region that runs many times per call,
-	// or in a closure over a worker declared further out. A worker body is
-	// transparent: it runs exactly once per call of the declaring function.
+	region, ok := lookupWorkerRegion(a, sym)
+	if !ok {
+		a.internalErr("worker referenced outside any region that declares it", ref.GetPosition())
+		return false
+	}
+	// A reference repeats if it sits in a loop or a closure between it and the
+	// region's start point. A worker body is transparent: it runs exactly once
+	// per execution of the region.
 	repeatable := false
 	for current := a; current != nil; current = current.parentAnalyzer() {
-		switch owner := current.(type) {
-		case *repeatedRegionAnalyzer:
-			repeatable = true
-		case *functionAnalyzer:
-			seen, declaresWorker := owner.workerRefs[sym]
-			if !declaresWorker {
-				repeatable = true
-				continue
-			}
-			if seen != nil {
+		if current == region.owner {
+			if region.refs[sym] != nil {
 				return invalidWorkerReference(a, sym, ref, "is referenced more than once")
 			}
 			if repeatable {
 				return invalidWorkerReference(a, sym, ref, "may be evaluated more than once")
 			}
-			owner.workerRefs[sym] = ref
+			region.refs[sym] = ref
 			return true
 		}
+		switch current.(type) {
+		case *repeatedRegionAnalyzer, *functionAnalyzer:
+			repeatable = true
+		}
 	}
-	return true
+	a.internalErr("worker referenced outside the region that declares it", ref.GetPosition())
+	return false
 }
 
 func invalidWorkerReference(a analyzer, sym model.SymbolRef, ref *ast.BLangVarRef, reason string) bool {
