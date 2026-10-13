@@ -41,6 +41,13 @@ public function main() returns error? {
     uuid:Version|uuid:Error ver = check uuid:getVersion(known);
     io:println(ver == uuid:V4); // @output true
 
+    // getVersion rejects the nil UUID (version nibble = 0) and malformed strings
+    io:println(uuid:getVersion(uuid:nilAsString()) is uuid:Error); // @output true
+    io:println(uuid:getVersion("not-a-uuid") is uuid:Error); // @output true
+
+    // toBytes accepts a Uuid record
+    io:println(check uuid:toBytes(rec)); // @output [85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]
+
     // toString / toRecord reject byte arrays that aren't exactly 16 bytes
     byte[] shortArr = [5, 12, 16, 35];
     string|error shortToString = uuid:toString(shortArr);
