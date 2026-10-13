@@ -56,6 +56,8 @@ public function testMain() returns error? {
 
     check io:fileWriteString(filePath, "modified");
     io:println("secondAfterModify=", waitFor(isSecondInvoked)); // @output secondAfterModify=true
+
+    check file:remove(watchDir, file:RECURSIVE);
 }
 
 function waitFor(function () returns boolean condition) returns boolean {

@@ -58,6 +58,8 @@ public function testMain() returns error? {
 
     check file:remove(watchedFile);
     io:println("deleted=", waitFor(isDeleteInvoked)); // @output deleted=true
+
+    check file:remove(watchDir, file:RECURSIVE);
 }
 
 function waitFor(function () returns boolean condition) returns boolean {

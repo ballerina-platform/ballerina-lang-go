@@ -51,6 +51,8 @@ public function testMain() returns error? {
 
     check file:create(lateFile);
     io:println("newWatch=", waitForCreateCount(1)); // @output newWatch=1
+
+    check file:remove(watchDir, file:RECURSIVE);
 }
 
 function currentCreateCount() returns int {
