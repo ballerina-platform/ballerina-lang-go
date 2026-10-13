@@ -14,14 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Exercises the native (palnative) FS.* closures NewPlatform wires up for
-// ballerina/file (Getwd/Mkdir/MkdirAll/Remove/RemoveAll/Rename/CreateFile/
-// Stat/Lstat/ReadDir/Copy/CreateTemp/CreateTempDir/Readlink) end-to-end
-// through the real `bal` binary, so their coverage flows into the palnative
-// profile. In-process corpus tests run under NewTestPal, which re-wires each
-// of these closures itself (see test_harness.go) and never invokes
-// NewPlatform's own copies, or the createParentDirs helper only reachable
-// through them.
+// Exercises NewPlatform's FS wiring via the real binary.
 import ballerina/file;
 import ballerina/io;
 

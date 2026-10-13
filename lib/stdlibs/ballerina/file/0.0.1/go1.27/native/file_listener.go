@@ -244,15 +244,8 @@ func dispatchFileEvent(rt *runtime.Runtime, state *fileListenerState, generation
 	}
 }
 
-// recoverFileEventPanic recovers a panic raised while dispatching a file
-// event, so a single misbehaving service doesn't crash the whole process
-// (this runs on the fsnotify watcher's dedicated goroutine, which has no
-// other recover on its call stack). Releases any lock ctx still holds first:
-// a Go-level panic (e.g. divide by zero) inside a Ballerina lock block skips
-// the matching LockEnd, and ctx's pooled-reuse reset does not itself unlock —
-// it only clears the held-lock bookkeeping — so skipping this would strand
-// the lock and deadlock every later event that touches the same lock
-// variable on this listener's single dispatch goroutine.
+// recoverFileEventPanic releases the locks ctx still holds before it returns
+// to the pool, since a panic skips LockEnd and the pool's reset does not unlock.
 func recoverFileEventPanic(rt *runtime.Runtime, ctx *extern.Context, methodName string, ev pal.WatchEvent) {
 	rec := recover()
 	if rec == nil {
