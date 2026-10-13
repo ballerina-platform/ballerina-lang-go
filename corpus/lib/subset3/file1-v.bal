@@ -61,27 +61,29 @@ public function main() returns error? {
     io:println(absPath.length() > 0);
 
     // createDir, test, remove
-    check file:createDir("/tmp/bal-file-test-dir");
-    boolean isDir = check file:test("/tmp/bal-file-test-dir", file:IS_DIR);
+    string baseDir = check file:createTempDir(prefix = "bal-file1-");
+    string testDir = baseDir + "/test-dir";
+    check file:createDir(testDir);
+    boolean isDir = check file:test(testDir, file:IS_DIR);
     io:println(isDir);
-    check file:remove("/tmp/bal-file-test-dir");
-    boolean gone = check file:test("/tmp/bal-file-test-dir", file:EXISTS);
+    check file:remove(testDir);
+    boolean gone = check file:test(testDir, file:EXISTS);
     io:println(gone);
 
     // create, getMetaData, remove
-    check file:create("/tmp/bal-file-test.txt");
-    file:MetaData meta = check file:getMetaData("/tmp/bal-file-test.txt");
+    string testFile = baseDir + "/test.txt";
+    check file:create(testFile);
+    file:MetaData meta = check file:getMetaData(testFile);
     io:println(meta.dir);
     io:println(meta.readable);
-    check file:remove("/tmp/bal-file-test.txt");
+    check file:remove(testFile);
 
     // createTemp / createTempDir
-    string tmp = check file:createTemp(suffix = ".txt", prefix = "bal-");
+    string tmp = check file:createTemp(suffix = ".txt", prefix = "bal-", dir = baseDir);
     io:println(file:test(tmp, file:EXISTS));
     check file:remove(tmp);
-    string tmpDir = check file:createTempDir(prefix = "bal-");
-    io:println(file:test(tmpDir, file:IS_DIR));
-    check file:remove(tmpDir);
+    io:println(file:test(baseDir, file:IS_DIR));
+    check file:remove(baseDir);
 }
 
 // @output true
