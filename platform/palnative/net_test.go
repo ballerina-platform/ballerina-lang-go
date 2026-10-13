@@ -18,6 +18,7 @@ package palnative
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"net"
 	"testing"
@@ -66,6 +67,42 @@ func TestDial_HandshakeTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected clean EOF on the peer, got: %v", err)
 		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("client connection was not closed after the handshake failed")
+	}
+}
+
+// TestDial_HandshakeFailureClosesConn verifies that Dial closes the connection
+// when the TLS handshake fails for a reason other than the handshake timeout.
+func TestDial_HandshakeFailureClosesConn(t *testing.T) {
+	t.Parallel()
+	cert, caPEM := newSelfSignedCert(t, "", []string{"other.example"})
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	peerClosed := make(chan struct{})
+	go func() {
+		defer close(peerClosed)
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		_ = tls.Server(conn, &tls.Config{Certificates: []tls.Certificate{cert}}).Handshake()
+		// The client may close with unread server data, so EOF or a reset both count.
+		_, _ = io.Copy(io.Discard, conn)
+	}()
+
+	_, err = Dial(context.Background(), "tcp", ln.Addr().String(), "", &pal.TLSConfig{CACertPEM: caPEM})
+	if err == nil {
+		t.Fatal("expected hostname verification error, got nil")
+	}
+
+	select {
+	case <-peerClosed:
 	case <-time.After(5 * time.Second):
 		t.Fatal("client connection was not closed after the handshake failed")
 	}
