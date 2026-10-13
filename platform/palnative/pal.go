@@ -109,7 +109,7 @@ func NewPlatform() (pal.Platform, func()) {
 			},
 			Remove:    os.Remove,
 			RemoveAll: os.RemoveAll,
-			Rename:    os.Rename,
+			Rename:    Rename,
 			CreateFile: func(path string) error {
 				f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 				if err != nil {
@@ -274,6 +274,19 @@ func dropRedundantSeparators(path string) string {
 		result = result[:len(result)-1]
 	}
 	return result
+}
+
+// Rename follows Java's Files.move without REPLACE_EXISTING, which jBallerina
+// uses: an existing target fails with ErrExist, and moving a file onto itself
+// is a no-op.
+func Rename(oldPath, newPath string) error {
+	if dstInfo, err := os.Lstat(newPath); err == nil {
+		if srcInfo, err := os.Lstat(oldPath); err == nil && os.SameFile(srcInfo, dstInfo) {
+			return nil
+		}
+		return &os.LinkError{Op: "rename", Old: oldPath, New: newPath, Err: os.ErrExist}
+	}
+	return os.Rename(oldPath, newPath)
 }
 
 // Stat returns metadata for path, following symbolic links. Exposed at package

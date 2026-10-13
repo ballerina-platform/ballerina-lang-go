@@ -38,6 +38,17 @@ public function main() returns error? {
     file:Error? renameNoParent = file:rename(renameSrc, baseDir + "/no/such/parent/dst.txt");
     io:println(renameNoParent is file:Error); // @output true
 
+    // rename onto an existing file fails and keeps both files
+    string renameTarget = baseDir + "/rename-target.txt";
+    check file:create(renameTarget);
+    file:Error? renameOntoFile = file:rename(renameSrc, renameTarget);
+    io:println(renameOntoFile is file:Error); // @output true
+    io:println(check file:test(renameSrc, file:EXISTS)); // @output true
+
+    // rename onto itself is a no-op
+    check file:rename(renameSrc, renameSrc);
+    io:println(check file:test(renameSrc, file:EXISTS)); // @output true
+
     // create fails when the parent directory doesn't exist
     file:Error? createNoParent = file:create(baseDir + "/no-such-parent/file.txt");
     io:println(createNoParent is file:Error); // @output true
