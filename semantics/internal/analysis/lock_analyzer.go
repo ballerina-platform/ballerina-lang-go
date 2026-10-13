@@ -173,13 +173,68 @@ func resolveRestricted(a analyzer, lock *ast.BLangLock) bool {
 	return ok
 }
 
+// rejectForksInLock reports every fork statement inside node, a function
+// lexically inside a lock statement, and whether there was none.
+func rejectForksInLock(a analyzer, node ast.BLangNode) bool {
+	ok := true
+	everyNode(a, node, func(_ analyzer, inner ast.BLangNode) bool {
+		switch n := inner.(type) {
+		case *ast.BLangLock:
+			// A nested lock reports the forks in its own body.
+			return false
+		case *ast.BLangFork:
+			reportForkInLock(a, n)
+			ok = false
+		}
+		return true
+	})
+	return ok
+}
+
+// rejectUnsupportedForksInLock reports every fork statement inside fn, a
+// method of an object constructor lexically inside a lock statement, as
+// unimplemented, and whether there was none.
+func rejectUnsupportedForksInLock(a analyzer, fn *ast.BLangFunction) bool {
+	ok := true
+	everyNode(a, fn, func(_ analyzer, inner ast.BLangNode) bool {
+		switch n := inner.(type) {
+		case *ast.BLangLock:
+			// A nested lock reports the forks in its own body.
+			return false
+		case *ast.BLangFork:
+			a.ctx().Unimplemented("fork statements in an object constructor inside a lock statement are not supported", n.GetPosition())
+			ok = false
+		}
+		return true
+	})
+	return ok
+}
+
+func reportForkInLock(a analyzer, fork *ast.BLangFork) {
+	a.semanticErr("cannot use a fork statement inside a lock statement", fork.GetPosition())
+}
+
 // validateLockInvocations enforces all invocations within lock statement must be to isolated functions.
 func validateLockInvocations(a analyzer, body ast.BLangNode) bool {
 	ok := true
+	// Lambdas passed to isolated parameters are validated as lock bodies, so
+	// the forks in them are already reported.
+	validated := make(map[*ast.BLangLambdaFunction]struct{})
 	everyNode(a, body, func(_ analyzer, inner ast.BLangNode) bool {
 		switch n := inner.(type) {
-		case *ast.BLangLambdaFunction, *ast.BLangFunction:
+		case *ast.BLangLambdaFunction:
+			if _, done := validated[n]; !done && !rejectForksInLock(a, n) {
+				ok = false
+			}
 			return false
+		case *ast.BLangFunction:
+			if !rejectUnsupportedForksInLock(a, n) {
+				ok = false
+			}
+			return false
+		case *ast.BLangFork:
+			reportForkInLock(a, n)
+			ok = false
 		case *ast.BLangStartAction:
 			a.semanticErr("cannot start strand inside a lock statement", n.GetPosition())
 			ok = false
@@ -190,6 +245,7 @@ func validateLockInvocations(a analyzer, body ast.BLangNode) bool {
 				ok = false
 			}
 			for _, lambda := range isolatedParamLambdas(a.ctx(), n) {
+				validated[lambda] = struct{}{}
 				if !validateLockInvocations(a, lambda.Function.Body.(ast.BLangNode)) {
 					ok = false
 				}
