@@ -85,9 +85,9 @@ type (
 		Now          func() time.Time
 		MonotonicNow func() time.Duration
 	}
-	// Net abstracts raw TCP(+TLS) socket dialing and listening for non-HTTP
-	// wire protocols (e.g. ldap, tcp). HTTP-based stdlibs must keep using
-	// pal.HTTP instead.
+	// Net abstracts raw TCP(+TLS) and UDP socket dialing and listening for
+	// non-HTTP wire protocols (e.g. ldap, tcp, udp). HTTP-based stdlibs must
+	// keep using pal.HTTP instead.
 	Net struct {
 		// Dial opens a TCP connection to address, optionally binding to
 		// localAddr first (empty = OS-chosen) and optionally upgrading to
