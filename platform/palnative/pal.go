@@ -332,7 +332,7 @@ func ReadDir(path string) ([]pal.FileInfo, error) {
 }
 
 func newFileInfo(path string, fi os.FileInfo) pal.FileInfo {
-	absPath, _ := filepath.Abs(path)
+	absPath, _ := Abs(path)
 	return pal.FileInfo{
 		AbsPath:    absPath,
 		Size:       fi.Size(),
