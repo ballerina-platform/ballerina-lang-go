@@ -100,7 +100,8 @@ public function main() returns error? {
     io:println(mutateErr is error); // @output true
 
     // COPY_ATTRIBUTES keeps the source's modified time; the pause ensures a
-    // copy that dropped it would carry a visibly later timestamp
+    // copy that dropped it would carry a later second. Only seconds are
+    // compared since js/wasm sets file times at whole-second precision.
     string mtimeSrc = baseDir + "/mtime-src.txt";
     check file:create(mtimeSrc);
     runtime:sleep(1.1);
@@ -108,7 +109,7 @@ public function main() returns error? {
     check file:copy(mtimeSrc, mtimeDest, file:COPY_ATTRIBUTES);
     file:MetaData mtimeSrcMeta = check file:getMetaData(mtimeSrc);
     file:MetaData mtimeDestMeta = check file:getMetaData(mtimeDest);
-    io:println(mtimeSrcMeta.modifiedTime == mtimeDestMeta.modifiedTime); // @output true
+    io:println(mtimeSrcMeta.modifiedTime[0] == mtimeDestMeta.modifiedTime[0]); // @output true
 
     // copy to a destination whose parent directory doesn't exist fails
     file:Error? copyNoParent = file:copy(copySrc, baseDir + "/no-such-parent/dst.txt");
