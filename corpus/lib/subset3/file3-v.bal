@@ -89,15 +89,15 @@ public function main() returns error? {
         : cwd + "/\\foo";
     io:println(rootedNoDrive == expectedRooted); // @output true
 
-    // getMetaData and readDir values carry the declared MetaData record type,
-    // so type tests hold and fields accept values of their declared types
-    file:MetaData srcMeta = check file:getMetaData(copySrc);
+    // getMetaData and readDir return frozen values of the declared MetaData type
+    file:MetaData & readonly srcMeta = check file:getMetaData(copySrc);
     any srcMetaAny = srcMeta;
-    io:println(srcMetaAny is file:MetaData); // @output true
+    io:println(srcMetaAny is file:MetaData & readonly); // @output true
     any dirEntries = check file:readDir(baseDir);
-    io:println(dirEntries is file:MetaData[]); // @output true
-    srcMeta.size = 42;
-    io:println(srcMeta.size); // @output 42
+    io:println(dirEntries is file:MetaData[] & readonly); // @output true
+    file:MetaData mutableMeta = srcMeta;
+    error? mutateErr = trap setSize(mutableMeta, 42);
+    io:println(mutateErr is error); // @output true
 
     // COPY_ATTRIBUTES keeps the source's modified time; the pause ensures a
     // copy that dropped it would carry a visibly later timestamp
@@ -152,4 +152,8 @@ public function main() returns error? {
     io:println(removeNonEmptyErr is file:Error); // @output true
 
     check file:remove(baseDir, file:RECURSIVE);
+}
+
+function setSize(file:MetaData meta, int size) {
+    meta.size = size;
 }
