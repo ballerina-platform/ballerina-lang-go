@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"golang.org/x/text/encoding"
@@ -201,7 +200,10 @@ func bytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
 	case bodyText:
 		return []byte(body.text), nil
 	case bodyJSON:
-		return values.ToJSONByteArray(body.json)
+		if body.json == nil {
+			return []byte{}, nil
+		}
+		return []byte(formatJSON(body.json, ",")), nil
 	case bodyXML:
 		return []byte(body.xml.XMLString()), nil
 	default:
@@ -226,22 +228,65 @@ func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 	case bodyBytes:
 		return string(body.bytes), nil
 	case bodyJSON:
-		b, err := values.ToJSONByteArray(body.json)
-		if err != nil {
-			return "", err
+		if body.json == nil {
+			//nolint:staticcheck // cause text mirrors jBallerina's verbatim
+			return "", errors.New("String payload is null")
 		}
-		return string(b), nil
+		return formatJSON(body.json, ", "), nil
 	case bodyXML:
-		return jsonQuoteXMLText(body.xml.XMLString()), nil
+		return jsonQuote(body.xml.XMLString()), nil
 	default:
 		//nolint:staticcheck // cause text mirrors jBallerina's verbatim
 		return "", errors.New("String payload is null")
 	}
 }
 
-// jsonQuoteXMLText reproduces jBallerina's text form of an XML body: the serialized XML
-// as a JSON string, where '/' is escaped only if some other character needs escaping.
-func jsonQuoteXMLText(s string) string {
+// formatJSON serializes a JSON body as jBallerina does: keys in insertion order, numbers in
+// Ballerina notation, and a top-level string unquoted. sep separates members and elements.
+func formatJSON(v values.BalValue, sep string) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	var sb strings.Builder
+	writeJSON(&sb, v, sep)
+	return sb.String()
+}
+
+func writeJSON(sb *strings.Builder, v values.BalValue, sep string) {
+	switch v := v.(type) {
+	case nil:
+		sb.WriteString("null")
+	case string:
+		sb.WriteString(jsonQuote(v))
+	case *values.Map:
+		sb.WriteByte('{')
+		for i, k := range v.Keys() {
+			if i > 0 {
+				sb.WriteString(sep)
+			}
+			sb.WriteString(jsonQuote(k))
+			sb.WriteByte(':')
+			member, _ := v.Get(k)
+			writeJSON(sb, member, sep)
+		}
+		sb.WriteByte('}')
+	case *values.List:
+		sb.WriteByte('[')
+		for i := range v.Len() {
+			if i > 0 {
+				sb.WriteString(sep)
+			}
+			writeJSON(sb, v.Get(i), sep)
+		}
+		sb.WriteByte(']')
+	default:
+		sb.WriteString(values.String(v, nil))
+	}
+}
+
+// jsonQuote reproduces jBallerina's JSON string quoting, where '/' is escaped only if some
+// other character needs escaping.
+func jsonQuote(s string) string {
 	if !strings.ContainsFunc(s, needsJSONEscape) {
 		return `"` + s + `"`
 	}
@@ -364,209 +409,156 @@ func listToBytes(list *values.List) []byte {
 
 func initMimeModule(rt *runtime.Runtime) {
 	t := newMimeTypes(rt.GetTypeEnv())
-	registerBodyExterns(rt, t)
-	registerHeaderExterns(rt, t)
-	registerBase64Externs(rt, t)
-	registerMultipartExterns(rt)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteChannel", setByteChannelExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetJson", setJSONExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetJson", getJSONExtern(t))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetXml", setXMLExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetXml", getXMLExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetText", setTextExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetText", getTextExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteArray", setByteArrayExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetByteArray", getByteArrayExtern(t))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetBodyParts", setBodyPartsExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetBodyParts", getBodyPartsExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseMediaType", parseMediaTypeExtern(t))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseContentDisposition", parseContentDispositionExtern(t))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "convertContentDispositionToString", contentDispositionToStringExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Encode", base64EncodeExtern(t))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Decode", base64DecodeExtern(t))
 }
 
-func registerBodyExterns(rt *runtime.Runtime, t *mimeTypes) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteChannel",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			channel, ok := args[1].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be a ReadableByteChannel object")
-			}
-			setEntityBody(obj, &entityBody{kind: bodyChannel, channel: channel})
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetJson",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			setEntityBody(obj, &entityBody{kind: bodyJSON, json: args[1]})
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetJson",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			body := getEntityBody(obj)
-			if body != nil && body.kind == bodyJSON {
-				return body.json, nil
-			}
-			text, err := stringForBody(ctx, obj)
-			if err != nil {
-				return mimeErrorWithCause("ParserError", "Error occurred while extracting json data from entity", err), nil
-			}
-			v, err := t.parseJSON(text)
-			if err != nil {
-				return mimeErrorWithCause("ParserError", "Error occurred while extracting json data from entity", err), nil
-			}
-			return v, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetXml",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			xmlContent, ok := args[1].(values.XMLValue)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be an xml value")
-			}
-			setEntityBody(obj, &entityBody{kind: bodyXML, xml: xmlContent})
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetXml",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			xmlVal, err := xmlForBody(ctx, obj)
-			if err != nil {
-				return mimeErrorWithCause("ParserError", "Error occurred while extracting xml data from entity", err), nil
-			}
-			return xmlVal, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetText",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			text, _ := args[1].(string)
-			setEntityBody(obj, &entityBody{kind: bodyText, text: text})
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetText",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			text, err := stringForBody(ctx, obj)
-			if err != nil {
-				return mimeErrorWithCause("ParserError", "Error occurred while extracting text data from entity", err), nil
-			}
-			return text, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetByteArray",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			list, ok := args[1].(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be a byte array")
-			}
-			setEntityBody(obj, &entityBody{kind: bodyBytes, bytes: listToBytes(list)})
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetByteArray",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			data, err := bytesForBody(ctx, obj)
-			if err != nil {
-				return mimeError("ParserError", err.Error()), nil
-			}
-			return t.byteList(data), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externIntToString",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			n, ok := args[0].(int64)
-			if !ok {
-				return nil, fmt.Errorf("argument must be an int")
-			}
-			return strconv.FormatInt(n, 10), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseInt",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			s, ok := args[0].(string)
-			if !ok {
-				return nil, fmt.Errorf("argument must be a string")
-			}
-			n, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				return values.NewErrorWithMessage("'int' from string: invalid number format: " + s), nil
-			}
-			return n, nil
-		})
+func setByteChannelExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		channel, _ := args[1].(*values.Object)
+		setEntityBody(obj, &entityBody{kind: bodyChannel, channel: channel})
+		return nil, nil
+	}
 }
 
-// registerHeaderExterns fills MediaType/ContentDisposition objects that the .bal side
-// constructs with `new`, so they carry their real class type for `is` checks.
-func registerHeaderExterns(rt *runtime.Runtime, t *mimeTypes) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseMediaType",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be a MediaType object")
-			}
-			contentType, ok := args[1].(string)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be a string")
-			}
-			mt, err := parseMediaType(contentType)
-			if err != nil {
-				return mimeError("InvalidContentTypeError", err.Error()), nil
-			}
-			obj.Put("primaryType", mt.primaryType)
-			obj.Put("subType", mt.subType)
-			obj.Put("suffix", mt.suffix)
-			obj.Put("parameters", t.stringMap(mt.params))
-			return nil, nil
-		})
+func setJSONExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		setEntityBody(obj, &entityBody{kind: bodyJSON, json: args[1]})
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseContentDisposition",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be a ContentDisposition object")
-			}
-			value, ok := args[1].(string)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be a string")
-			}
-			cd := parseContentDisposition(value)
-			obj.Put("disposition", cd.disposition)
-			obj.Put("name", cd.name)
-			obj.Put("fileName", cd.fileName)
-			obj.Put("parameters", t.stringMap(cd.params))
-			return nil, nil
-		})
+func getJSONExtern(t *mimeTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		body := getEntityBody(obj)
+		if body != nil && body.kind == bodyJSON {
+			return body.json, nil
+		}
+		text, err := stringForBody(ctx, obj)
+		if err != nil {
+			return mimeErrorWithCause("ParserError", "Error occurred while extracting json data from entity", err), nil
+		}
+		v, err := t.parseJSON(text)
+		if err != nil {
+			return mimeErrorWithCause("ParserError", "Error occurred while extracting json data from entity", err), nil
+		}
+		return v, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "convertContentDispositionToString",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("argument must be a ContentDisposition object")
-			}
-			return contentDispositionOf(obj).String(), nil
-		})
+func setXMLExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		xmlContent, _ := args[1].(values.XMLValue)
+		setEntityBody(obj, &entityBody{kind: bodyXML, xml: xmlContent})
+		return nil, nil
+	}
+}
+
+func getXMLExtern() extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		xmlVal, err := xmlForBody(ctx, obj)
+		if err != nil {
+			return mimeErrorWithCause("ParserError", "Error occurred while extracting xml data from entity", err), nil
+		}
+		return xmlVal, nil
+	}
+}
+
+func setTextExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		text, _ := args[1].(string)
+		setEntityBody(obj, &entityBody{kind: bodyText, text: text})
+		return nil, nil
+	}
+}
+
+func getTextExtern() extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		text, err := stringForBody(ctx, obj)
+		if err != nil {
+			return mimeErrorWithCause("ParserError", "Error occurred while extracting text data from entity", err), nil
+		}
+		return text, nil
+	}
+}
+
+func setByteArrayExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		list, _ := args[1].(*values.List)
+		setEntityBody(obj, &entityBody{kind: bodyBytes, bytes: listToBytes(list)})
+		return nil, nil
+	}
+}
+
+func getByteArrayExtern(t *mimeTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		data, err := bytesForBody(ctx, obj)
+		if err != nil {
+			return mimeError("ParserError", err.Error()), nil
+		}
+		return t.byteList(data), nil
+	}
+}
+
+// parseMediaTypeExtern fills a MediaType object that the .bal side constructs with `new`,
+// so it carries its real class type for `is` checks.
+func parseMediaTypeExtern(t *mimeTypes) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		contentType, _ := args[1].(string)
+		mt, err := parseMediaType(contentType)
+		if err != nil {
+			return mimeError("InvalidContentTypeError", err.Error()), nil
+		}
+		obj.Put("primaryType", mt.primaryType)
+		obj.Put("subType", mt.subType)
+		obj.Put("suffix", mt.suffix)
+		obj.Put("parameters", t.stringMap(mt.params))
+		return nil, nil
+	}
+}
+
+func parseContentDispositionExtern(t *mimeTypes) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		value, _ := args[1].(string)
+		cd := parseContentDisposition(value)
+		obj.Put("disposition", cd.disposition)
+		obj.Put("name", cd.name)
+		obj.Put("fileName", cd.fileName)
+		obj.Put("parameters", t.stringMap(cd.params))
+		return nil, nil
+	}
+}
+
+func contentDispositionToStringExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		return contentDispositionOf(obj).String(), nil
+	}
 }
 
 func contentDispositionOf(obj *values.Object) contentDisposition {
@@ -591,65 +583,50 @@ func contentDispositionOf(obj *values.Object) contentDisposition {
 	return cd
 }
 
-func registerBase64Externs(rt *runtime.Runtime, t *mimeTypes) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Encode",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			charset := charsetArg(args)
-			switch v := args[0].(type) {
-			case string:
-				enc, err := lookupCharset(charset)
-				if err != nil {
-					return mimeError("EncodeError", err.Error()), nil
-				}
-				data, err := enc.NewEncoder().String(v)
-				if err != nil {
-					return mimeError("EncodeError", "base64 encoding failed: "+err.Error()), nil
-				}
-				return mimeEncode([]byte(data)), nil
-			case *values.List:
-				return t.byteList([]byte(mimeEncode(listToBytes(v)))), nil
-			default:
-				return mimeError("EncodeError", "unsupported content type for base64 encoding"), nil
-			}
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externBase64Decode",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			charset := charsetArg(args)
-			switch v := args[0].(type) {
-			case string:
-				decoded, err := mimeDecode(v)
-				if err != nil {
-					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
-				}
-				dec, err := lookupCharset(charset)
-				if err != nil {
-					return mimeError("DecodeError", err.Error()), nil
-				}
-				out, err := dec.NewDecoder().String(string(decoded))
-				if err != nil {
-					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
-				}
-				return out, nil
-			case *values.List:
-				decoded, err := mimeDecode(string(listToBytes(v)))
-				if err != nil {
-					return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
-				}
-				return t.byteList(decoded), nil
-			default:
-				return mimeError("DecodeError", "unsupported content type for base64 decoding"), nil
-			}
-		})
+func base64EncodeExtern(t *mimeTypes) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		charset, _ := args[1].(string)
+		if v, ok := args[0].(*values.List); ok {
+			return t.byteList([]byte(mimeEncode(listToBytes(v)))), nil
+		}
+		v, _ := args[0].(string)
+		enc, err := lookupCharset(charset)
+		if err != nil {
+			return mimeError("EncodeError", err.Error()), nil
+		}
+		data, err := enc.NewEncoder().String(v)
+		if err != nil {
+			return mimeError("EncodeError", "base64 encoding failed: "+err.Error()), nil
+		}
+		return mimeEncode([]byte(data)), nil
+	}
 }
 
-func charsetArg(args []values.BalValue) string {
-	if len(args) > 1 {
-		if cs, ok := args[1].(string); ok {
-			return cs
+func base64DecodeExtern(t *mimeTypes) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		charset, _ := args[1].(string)
+		if v, ok := args[0].(*values.List); ok {
+			decoded, err := mimeDecode(string(listToBytes(v)))
+			if err != nil {
+				return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
+			}
+			return t.byteList(decoded), nil
 		}
+		v, _ := args[0].(string)
+		decoded, err := mimeDecode(v)
+		if err != nil {
+			return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
+		}
+		dec, err := lookupCharset(charset)
+		if err != nil {
+			return mimeError("DecodeError", err.Error()), nil
+		}
+		out, err := dec.NewDecoder().String(string(decoded))
+		if err != nil {
+			return mimeError("DecodeError", "base64 decoding failed: "+err.Error()), nil
+		}
+		return out, nil
 	}
-	return "utf-8"
 }
 
 func init() {

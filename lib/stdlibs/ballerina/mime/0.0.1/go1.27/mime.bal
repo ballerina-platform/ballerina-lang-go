@@ -301,7 +301,7 @@ public class Entity {
     # + contentLength - the content length to set
     public isolated function setContentLength(int contentLength) {
         self.cLength = contentLength;
-        self.setHeader(CONTENT_LENGTH, externIntToString(contentLength));
+        self.setHeader(CONTENT_LENGTH, contentLength.toString());
     }
 
     # Returns the content length of this entity, or `-1` if not set.
@@ -316,7 +316,7 @@ public class Entity {
         if contentLength == "" {
             return -1;
         }
-        return externParseInt(contentLength);
+        return int:fromString(contentLength);
     }
 
     # Sets the content disposition of this entity.
@@ -377,6 +377,7 @@ public class Entity {
     # + byteChannel - the byte channel to set as the entity body
     # + contentType - the content type to set; defaults to `application/octet-stream`
     isolated function setByteChannel(io:ReadableByteChannel byteChannel, string contentType = "application/octet-stream") {
+        validateContentType(contentType);
         externSetByteChannel(self, byteChannel, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -386,6 +387,7 @@ public class Entity {
     # + jsonContent - the JSON content to set
     # + contentType - the content type to set; defaults to `application/json`
     public isolated function setJson(json jsonContent, string contentType = "application/json") {
+        validateContentType(contentType);
         externSetJson(self, jsonContent, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -402,6 +404,7 @@ public class Entity {
     # + xmlContent - the XML content to set
     # + contentType - the content type to set; defaults to `application/xml`
     public isolated function setXml(xml xmlContent, string contentType = "application/xml") {
+        validateContentType(contentType);
         externSetXml(self, xmlContent, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -418,6 +421,7 @@ public class Entity {
     # + textContent - the text content to set
     # + contentType - the content type to set; defaults to `text/plain`
     public isolated function setText(string textContent, string contentType = "text/plain") {
+        validateContentType(contentType);
         externSetText(self, textContent, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -434,6 +438,7 @@ public class Entity {
     # + blobContent - the byte array content to set
     # + contentType - the content type to set; defaults to `application/octet-stream`
     public isolated function setByteArray(byte[] blobContent, string contentType = "application/octet-stream") {
+        validateContentType(contentType);
         externSetByteArray(self, blobContent, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -450,6 +455,7 @@ public class Entity {
     # + bodyParts - The body parts to be set
     # + contentType - Optional MIME type; defaults to `multipart/form-data`
     public isolated function setBodyParts(Entity[] bodyParts, string contentType = MULTIPART_FORM_DATA) {
+        validateContentType(contentType);
         externSetBodyParts(self, bodyParts, contentType);
         self.setHeader(CONTENT_TYPE, contentType);
     }
@@ -583,9 +589,9 @@ isolated function externBase64Encode((string|byte[]) contentToBeEncoded, string 
 
 isolated function externBase64Decode((string|byte[]) contentToBeDecoded, string charset) returns (string|byte[]|DecodeError) = external;
 
-isolated function externParseInt(string s) returns int|error = external;
-
-isolated function externIntToString(int n) returns string = external;
+isolated function validateContentType(string contentType) {
+    _ = checkpanic getMediaType(contentType);
+}
 
 isolated function getCaseSensitiveHeaderName(string[] headerNames, string headerName) returns string? {
     foreach string name in headerNames {
