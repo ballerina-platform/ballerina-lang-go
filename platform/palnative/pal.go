@@ -338,12 +338,12 @@ func newFileInfo(path string, fi os.FileInfo) pal.FileInfo {
 		Size:       fi.Size(),
 		ModifiedAt: fi.ModTime(),
 		IsDir:      fi.IsDir(),
-		IsReadable: IsReadable(path, fi),
-		IsWritable: IsWritable(path, fi),
+		IsReadable: isReadable(path),
+		IsWritable: isWritable(path, fi),
 	}
 }
 
-func IsReadable(path string, _ os.FileInfo) bool {
+func isReadable(path string) bool {
 	f, err := os.Open(path)
 	if err != nil {
 		return false
@@ -352,7 +352,7 @@ func IsReadable(path string, _ os.FileInfo) bool {
 	return true
 }
 
-func IsWritable(path string, fi os.FileInfo) bool {
+func isWritable(path string, fi os.FileInfo) bool {
 	if fi.IsDir() {
 		return isDirWritable(path)
 	}
