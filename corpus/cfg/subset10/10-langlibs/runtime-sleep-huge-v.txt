@@ -1,0 +1,30 @@
+(main
+  (bb0 () ()
+    (assignment
+      (wildcard-binding-pattern)
+      (start-action
+        (invocation sleeper (
+          (literal 1E+300)))))
+    (assignment
+      (wildcard-binding-pattern)
+      (start-action
+        (invocation sleeper (
+          (literal 99999999999)))))
+    (expression-stmt
+      (invocation runtime sleep (
+        (literal 0.05))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref woke))))
+  )
+)
+(sleeper
+  (bb0 () ()
+    (expression-stmt
+      (invocation runtime sleep (
+        (simple-var-ref seconds))))
+    (assignment
+      (simple-var-ref woke)
+      (literal true))
+  )
+)
