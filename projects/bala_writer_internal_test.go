@@ -39,13 +39,9 @@ func TestWriteZipEntry_RecordsWrittenPath(t *testing.T) {
 	}
 }
 
-// TestAddIncludeFile_SkipsPathWrittenByEarlierStage covers the fix for the
-// cross-category duplicate-entry divergence from Java's BalaWriter: an
-// include pattern matching a path some earlier archive stage (module
-// sources, docs, toml files) already wrote must be silently skipped, not
-// written a second time. The fsys deliberately doesn't contain relPath, so
-// if addIncludeFile failed to skip, the fs.ReadFile call would error and
-// fail this test.
+// TestAddIncludeFile_SkipsPathWrittenByEarlierStage checks that an include path
+// an earlier stage already wrote is skipped. fsys omits relPath, so any read
+// attempt fails the test.
 func TestAddIncludeFile_SkipsPathWrittenByEarlierStage(t *testing.T) {
 	t.Parallel()
 	var buf zipBufferForTest
