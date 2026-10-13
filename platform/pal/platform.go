@@ -74,11 +74,13 @@ type (
 		Getwd        func() (string, error)
 		// Abs makes path absolute against the working directory without
 		// resolving "." or ".." segments, like Java's Path.toAbsolutePath.
-		Abs           func(path string) (string, error)
-		Mkdir         func(path string) error
-		MkdirAll      func(path string) error
-		Remove        func(path string) error
-		RemoveAll     func(path string) error
+		Abs       func(path string) (string, error)
+		Mkdir     func(path string) error
+		MkdirAll  func(path string) error
+		Remove    func(path string) error
+		RemoveAll func(path string) error
+		// Rename moves oldPath to newPath, failing with fs.ErrExist if newPath
+		// already exists.
 		Rename        func(oldPath, newPath string) error
 		CreateFile    func(path string) error
 		Stat          func(path string) (*FileInfo, error)

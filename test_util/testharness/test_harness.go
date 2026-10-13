@@ -324,7 +324,7 @@ func (p *testPal) Platform() pal.Platform {
 				return os.RemoveAll(normalizePath(path))
 			},
 			Rename: func(oldPath, newPath string) error {
-				return os.Rename(normalizePath(oldPath), normalizePath(newPath))
+				return palnative.Rename(normalizePath(oldPath), normalizePath(newPath))
 			},
 			CreateFile: func(path string) error {
 				f, err := os.OpenFile(normalizePath(path), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
