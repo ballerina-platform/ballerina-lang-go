@@ -269,10 +269,7 @@ func initFileModule(rt *runtime.Runtime) {
 			if err == nil {
 				return nil, nil
 			}
-			if errors.Is(err, fs.ErrNotExist) {
-				return fileError("FileNotFoundError", "The target directory does not exist: "+err.Error()), nil
-			}
-			return fileError("FileSystemError", "An error occurred when copying the file/s: "+err.Error()), nil
+			return copyError(err), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "createTemp",
@@ -392,6 +389,26 @@ func initFileModule(rt *runtime.Runtime) {
 			// On most systems, EINVAL means "not a symlink".
 			return fileError("NotLinkError", "Path is not a symbolic link "+path), nil
 		})
+}
+
+// copyError follows jBallerina's copy messages, which wrap the java.nio
+// exception message: the bare path for the common failures.
+func copyError(err error) values.BalValue {
+	const ioErrPrefix = "An error occurred when copying the file/s: "
+	var pathErr *fs.PathError
+	if !errors.As(err, &pathErr) {
+		return fileError("FileSystemError", ioErrPrefix+err.Error())
+	}
+	switch {
+	case errors.Is(err, fs.ErrExist):
+		return fileError("InvalidOperationError", "The target file already exists: "+pathErr.Path)
+	case errors.Is(err, fs.ErrNotExist):
+		return fileError("FileNotFoundError", "The target directory does not exist: "+pathErr.Path)
+	case errors.Is(err, fs.ErrPermission):
+		return fileError("FileSystemError", ioErrPrefix+pathErr.Path)
+	default:
+		return fileError("FileSystemError", ioErrPrefix+pathErr.Path+": "+pathErr.Err.Error())
+	}
 }
 
 func init() {
