@@ -102,4 +102,6 @@ public function testMain() returns error? {
         attempts += 1;
     }
     io:println("deleted=", deletedSnapshot); // @output deleted=true
+
+    check file:remove(watchDir, file:RECURSIVE);
 }

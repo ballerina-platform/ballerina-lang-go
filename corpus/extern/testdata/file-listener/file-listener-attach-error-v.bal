@@ -31,4 +31,6 @@ public function testMain() returns error? {
     } else {
         io:println("unexpected success");
     }
+
+    check file:remove(watchDir, file:RECURSIVE);
 }

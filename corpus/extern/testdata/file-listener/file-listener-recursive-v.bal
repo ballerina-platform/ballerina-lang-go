@@ -41,6 +41,8 @@ public function testMain() returns error? {
     string nestedFile = check file:joinPath(subDir, "inner.txt");
     check file:create(nestedFile);
     io:println("nestedFileCreateCount=", waitForCreateCount(2)); // @output nestedFileCreateCount=2
+
+    check file:remove(watchDir, file:RECURSIVE);
 }
 
 function waitForCreateCount(int expected) returns int {

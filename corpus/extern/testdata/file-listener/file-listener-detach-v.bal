@@ -73,4 +73,6 @@ public function testMain() returns error? {
         countAfterDetach = createCount;
     }
     io:println("countAfterDetach=", countAfterDetach); // @output countAfterDetach=1
+
+    check file:remove(watchDir, file:RECURSIVE);
 }

@@ -57,6 +57,8 @@ public function testMain() returns error? {
 
     touchFile(watchedFile);
     io:println("modifiedByTouch=", waitFor(isModifyInvoked)); // @output modifiedByTouch=true
+
+    check file:remove(watchDir, file:RECURSIVE);
 }
 
 function waitFor(function () returns boolean condition) returns boolean {
