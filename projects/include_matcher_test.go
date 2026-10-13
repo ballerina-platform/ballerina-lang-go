@@ -183,13 +183,8 @@ func TestResolveIncludePaths_OverlappingPatternsProduceDuplicates(t *testing.T) 
 	}
 }
 
-// TestResolveIncludePaths_NegationAppliesInsideMatchedDirectory covers the
-// fix for a real data-exposure bug: a dir-only pattern used to add a single
-// bare directory entry, so a later "!" pattern negating one specific file
-// inside that directory never matched anything in the accumulated list, and
-// the file was archived anyway when the directory was later copied
-// recursively. The dir-only match must expand to individual files so the
-// negation can remove just one of them.
+// TestResolveIncludePaths_NegationAppliesInsideMatchedDirectory checks that a
+// dir-only match expands to files, so a later "!" pattern can drop one of them.
 func TestResolveIncludePaths_NegationAppliesInsideMatchedDirectory(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{

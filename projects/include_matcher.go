@@ -26,12 +26,9 @@ import (
 )
 
 // resolveIncludePaths resolves the `include` glob patterns declared in
-// Ballerina.toml against root (a directory within fsys, per the fs.FS
-// convention "." denotes fsys's own root), returning root-relative paths
-// (slash-separated) of every matching file — a pattern matching a directory
-// is expanded to that directory's individual files, never returned as a
-// single directory entry. A pattern prefixed with "!" removes previously
-// matched paths instead of adding to them.
+// Ballerina.toml against root, returning root-relative paths of every
+// matching file (a directory match is expanded to its individual files). A
+// "!"-prefixed pattern removes previously matched paths instead of adding.
 // Java source: io.ballerina.projects.util.ProjectUtils#getPathsMatchingIncludePatterns
 func resolveIncludePaths(fsys fs.FS, patterns []string, root string) ([]string, error) {
 	var matched []string
@@ -79,11 +76,8 @@ func matchIncludePattern(fsys fs.FS, pattern, root string) ([]string, error) {
 			}
 			return nil
 		}
-		// A symlink is never matched or descended into: WalkDir reports it
-		// as a non-directory entry without following it, but addIncludeFile
-		// reads matched paths with fs.ReadFile, which does follow symlinks
-		// — collecting one here would let an include pattern archive a
-		// file from outside the project root.
+		// Skip symlinks — fs.ReadFile follows them later, so collecting
+		// one here could archive a file from outside the project root.
 		if d.Type()&fs.ModeSymlink != 0 {
 			return nil
 		}
@@ -125,8 +119,7 @@ func expandDirToFiles(fsys fs.FS, root, dirRel string) ([]string, error) {
 			}
 			return nil
 		}
-		// See the matching check in matchIncludePattern: a symlink must
-		// never be archived, since fs.ReadFile follows it at read time.
+		// Same symlink check as matchIncludePattern — fs.ReadFile would follow it later.
 		if d.Type()&fs.ModeSymlink != 0 {
 			return nil
 		}
@@ -170,19 +163,18 @@ func isCorrectIncludeMatch(rel string, isDir bool, pattern string) bool {
 	return true
 }
 
-// globToRegexp translates an include pattern into an anchored regexp
-// equivalent to java.nio.file.FileSystem's "glob:**/<pattern>" matcher,
-// applied to a "/"-separated relative path: "**" matches any number of path
-// segments, "*" matches within a single segment, "?" matches one character,
-// "[abc]"/"[a-z]"/"[!abc]" match a character class (optionally negated), and
-// "{alt1,alt2}" matches any one of the comma-separated alternatives.
+// globToRegexp translates an include pattern (java.nio.file.FileSystem's
+// "glob:**/<pattern>" syntax) into an anchored regexp over a "/"-separated
+// relative path: "**" any number of segments, "*" within one segment, "?"
+// one character, "[abc]"/"[a-z]"/"[!abc]" a (optionally negated) character
+// class, "{alt1,alt2}" one of the comma-separated alternatives.
 func globToRegexp(pattern string) (*regexp.Regexp, error) {
 	trimmed := strings.TrimPrefix(strings.TrimRight(pattern, "/"), "/")
 
 	var sb strings.Builder
 	sb.WriteString("^(?:.*/)?")
 	if err := writeGlobBody(&sb, []rune(trimmed)); err != nil {
-		return nil, fmt.Errorf("%w in pattern %q", err, pattern)
+		return nil, err
 	}
 	sb.WriteString("$")
 	return regexp.Compile(sb.String())
@@ -196,11 +188,8 @@ func writeGlobBody(sb *strings.Builder, runes []rune) error {
 		case '*':
 			if i+1 < len(runes) && runes[i+1] == '*' {
 				if i+2 < len(runes) && runes[i+2] == '/' {
-					// "**/" matches zero or more complete path segments,
-					// each ending in "/" — a bare ".*" here would let "**"
-					// match a partial segment too, so "a/**/b" would
-					// wrongly match "a/notb" (".*" swallowing "not" with
-					// no "/" in between).
+					// Complete segments only — a bare ".*" would let "**"
+					// swallow a partial segment, matching "a/**/b" against "a/notb".
 					sb.WriteString("(?:.*/)?")
 					i += 2
 				} else {

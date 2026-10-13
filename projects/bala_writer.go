@@ -80,9 +80,8 @@ func writeBala(pkg *Package, resolution *PackageResolution, outputDir string) (s
 
 // populateBalaArchive writes every entry of the bala layout into zw. The
 // caller is responsible for closing zw. written tracks every zip path
-// written so far across all stages, so a later stage (in practice, only
-// addIncludes) can silently skip a path some earlier stage already wrote,
-// mirroring Java's BalaWriter behavior.
+// written so far across all stages, so writeZipEntry can silently skip a
+// path some earlier stage already wrote.
 func populateBalaArchive(zw *zip.Writer, pkg *Package, resolution *PackageResolution) error {
 	written := make(map[string]bool)
 	if err := writeBalaToml(zw, pkg, written); err != nil {
@@ -97,10 +96,10 @@ func populateBalaArchive(zw *zip.Writer, pkg *Package, resolution *PackageResolu
 	if err := writeModuleSources(zw, pkg, written); err != nil {
 		return err
 	}
-	if err := addIncludes(zw, pkg, written); err != nil {
+	if err := addBalaDocs(zw, pkg, written); err != nil {
 		return err
 	}
-	if err := addBalaDocs(zw, pkg, written); err != nil {
+	if err := addIncludes(zw, pkg, written); err != nil {
 		return err
 	}
 	return nil
@@ -251,11 +250,12 @@ func addIncludeFile(zw *zip.Writer, fsys fs.FS, fsPath, relPath string, written 
 	return writeZipEntry(zw, relPath, content, written)
 }
 
-// writeZipEntry writes content into zw at zipPath and records zipPath in
-// written. Callers other than addIncludeFile don't consult written
-// themselves — see populateBalaArchive's doc comment for why only
-// addIncludes needs to check it before writing.
+// writeZipEntry writes content into zw at zipPath and records it in written,
+// skipping the write if zipPath is already recorded by an earlier stage.
 func writeZipEntry(zw *zip.Writer, zipPath string, content []byte, written map[string]bool) error {
+	if written[zipPath] {
+		return nil
+	}
 	w, err := zw.Create(zipPath)
 	if err != nil {
 		return fmt.Errorf("writeBala: create entry %s: %w", zipPath, err)
@@ -267,11 +267,9 @@ func writeZipEntry(zw *zip.Writer, zipPath string, content []byte, written map[s
 	return nil
 }
 
-// addBalaDocs bundles the package readme, icon, and per-module readmes into
-// a docs/ directory inside the bala archive: docs/<readme>, docs/<icon>,
-// docs/modules/<module-name>/<readme>. Mirrors a quirk in Java's
-// implementation: if the package has no readme, nothing is bundled at all
-// — not even a lone icon.
+// addBalaDocs bundles the package readme, icon, and per-module readmes under
+// docs/ in the bala. If there's no readme, nothing is bundled — not even a
+// lone icon — matching Java.
 // Java source: io.ballerina.projects.BalaWriter#addPackageDoc
 func addBalaDocs(zw *zip.Writer, pkg *Package, written map[string]bool) error {
 	manifest := pkg.Manifest()
@@ -303,10 +301,8 @@ func addBalaDocs(zw *zip.Writer, pkg *Package, written map[string]bool) error {
 }
 
 // addBalaDoc reads the file at relPath (relative to root within fsys) and
-// writes it into zw at zipPath.
-//
-// fs.FS rejects paths escaping the project (absolute, or ".."), failing
-// the pack instead of reading them — intentional, not a bug.
+// writes it into zw at zipPath. fs.FS rejects paths escaping the project
+// (absolute, or ".."), failing the pack instead of reading them — intentional.
 func addBalaDoc(zw *zip.Writer, fsys fs.FS, root, relPath, zipPath string, written map[string]bool) error {
 	content, err := fs.ReadFile(fsys, joinRoot(root, relPath))
 	if err != nil {
@@ -315,12 +311,9 @@ func addBalaDoc(zw *zip.Writer, fsys fs.FS, root, relPath, zipPath string, writt
 	return writeZipEntry(zw, zipPath, content, written)
 }
 
-// balaDocError formats a doc-file read failure. For the common case (the
-// file doesn't exist), it matches the wording Java's ManifestBuilder uses
-// ("could not locate the readme file '<path>'", "could not locate icon
-// path '<path>'") without the raw OS error attached, same as Java's clean
-// diagnostic message. Anything else (e.g. a permission error) keeps the
-// underlying error, since that wording doesn't otherwise explain it.
+// balaDocError formats a doc-file read failure: a missing file gets Java's
+// clean wording with no raw OS error attached; anything else (e.g. a
+// permission error) keeps the underlying error to explain itself.
 func balaDocError(message string, err error) error {
 	if errors.Is(err, fs.ErrNotExist) {
 		return errors.New(message)
