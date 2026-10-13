@@ -30,7 +30,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ballerina-nutcracker/ballerina/runtime"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
 	"github.com/ballerina-nutcracker/ballerina/values"
 )
@@ -180,50 +179,41 @@ func addEntityHeaders(ctx *extern.Context, obj *values.Object, header textproto.
 	return nil
 }
 
-func registerMultipartExterns(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externSetBodyParts",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			parts, ok := args[1].(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be an Entity array")
-			}
-			setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
-			return nil, nil
-		})
+func setBodyPartsExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		parts, _ := args[1].(*values.List)
+		setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetBodyParts",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			obj, ok := args[0].(*values.Object)
-			if !ok {
-				return nil, fmt.Errorf("first argument must be an Entity object")
-			}
-			body := getEntityBody(obj)
-			if body != nil && body.kind == bodyParts {
-				return body.parts, nil
-			}
-			contentType, _ := entityHeaderValue(obj, "content-type")
-			baseType, boundary, isComposite := multipartBoundary(contentType)
-			if !isComposite {
-				return mimeError("ParserError", "Entity body is not a type of composite media type. "+
-					"Received content-type : "+baseType), nil
-			}
-			if strings.HasPrefix(strings.ToLower(baseType), "message/") {
-				return mimeError("ParserError", "message/* body part decoding is not yet supported. "+
-					"Received content-type : "+baseType), nil
-			}
-			if body == nil || body.kind != bodyBytes {
-				return mimeError("ParserError", "Entity body is not a type of composite media type. "+
-					"Received content-type : "+baseType), nil
-			}
-			parts, err := decodeMultipart(ctx, body.bytes, boundary)
-			if err != nil {
-				return mimeError("ParserError", "Error occurred while extracting body parts from entity: "+err.Error()), nil
-			}
-			setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
-			return parts, nil
-		})
+func getBodyPartsExtern() extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		obj, _ := args[0].(*values.Object)
+		body := getEntityBody(obj)
+		if body != nil && body.kind == bodyParts {
+			return body.parts, nil
+		}
+		contentType, _ := entityHeaderValue(obj, "content-type")
+		baseType, boundary, isComposite := multipartBoundary(contentType)
+		if !isComposite {
+			return mimeError("ParserError", "Entity body is not a type of composite media type. "+
+				"Received content-type : "+baseType), nil
+		}
+		if strings.HasPrefix(strings.ToLower(baseType), "message/") {
+			return mimeError("ParserError", "message/* body part decoding is not yet supported. "+
+				"Received content-type : "+baseType), nil
+		}
+		if body == nil || body.kind != bodyBytes {
+			return mimeError("ParserError", "Entity body is not a type of composite media type. "+
+				"Received content-type : "+baseType), nil
+		}
+		parts, err := decodeMultipart(ctx, body.bytes, boundary)
+		if err != nil {
+			return mimeError("ParserError", "Error occurred while extracting body parts from entity: "+err.Error()), nil
+		}
+		setEntityBody(obj, &entityBody{kind: bodyParts, parts: parts})
+		return parts, nil
+	}
 }
