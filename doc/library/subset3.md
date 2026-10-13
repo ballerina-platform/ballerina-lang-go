@@ -226,7 +226,7 @@ between string, byte array, and the `Uuid` record.
 
 | Function | Notes |
 |---|---|
-| `createType1AsString` / `createType1AsRecord` | Time-based UUID (type 1); the node identifier is a random 6-byte value (RFC 4122 §4.5) rather than the host MAC address |
+| `createType1AsString` / `createType1AsRecord` | Time-based UUID (type 1) in the RFC 4122 field layout (`time_low` first) with a random 6-byte node identifier (RFC 4122 §4.5) |
 | `createType3AsString` / `createType3AsRecord` | Namespace + name UUID (type 3, MD5) |
 | `createType4AsString` / `createType4AsRecord` | Random UUID (type 4) |
 | `createType5AsString` / `createType5AsRecord` | Namespace + name UUID (type 5, SHA-1) |

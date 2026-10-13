@@ -24,6 +24,7 @@ public function main() {
     io:println(v3a is string); // @output true
     io:println(v3b is string); // @output true
     if v3a is string && v3b is string {
+        io:println(v3a); // @output cea5c405-7d11-3fbb-bdfb-9b68497be28b
         io:println(v3a == v3b); // @output true
         io:println(uuid:validate(v3a)); // @output true
         uuid:Version|uuid:Error ver = uuid:getVersion(v3a);
@@ -37,6 +38,7 @@ public function main() {
     string|uuid:Error v5b = uuid:createType5AsString(uuid:NAME_SPACE_DNS, "ballerina.io");
     io:println(v5a is string); // @output true
     if v5a is string && v5b is string {
+        io:println(v5a); // @output 08aab8bc-c69e-5ea8-8a52-dbb645c67fb5
         io:println(v5a == v5b); // @output true
         io:println(uuid:validate(v5a)); // @output true
         uuid:Version|uuid:Error ver2 = uuid:getVersion(v5a);

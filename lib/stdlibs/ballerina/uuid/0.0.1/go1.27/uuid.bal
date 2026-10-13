@@ -376,42 +376,12 @@ public isolated function toRecord(string|byte[] uuid) returns Uuid|Error {
     string part3 = uuidStr.substring(19, 23);
     string part4 = uuidStr.substring(24, 36);
 
-    int|error timeLowIntFromHexString = externParseHexUint(part0);
-    if timeLowIntFromHexString is error {
-        return error Error("Failed to get int value of time-low hex string", timeLowIntFromHexString);
-    }
-    ints:Unsigned32 timeLowInt = <ints:Unsigned32>timeLowIntFromHexString;
-
-    int|error timeMidIntFromHexString = externParseHexUint(part1);
-    if timeMidIntFromHexString is error {
-        return error Error("Failed to get int value of time-mid hex string", timeMidIntFromHexString);
-    }
-    ints:Unsigned16 timeMidInt = <ints:Unsigned16>timeMidIntFromHexString;
-
-    int|error timeHiAndVersionIntFromHexString = externParseHexUint(part2);
-    if timeHiAndVersionIntFromHexString is error {
-        return error Error("Failed to get int value of time-hi-and-version hex string", timeHiAndVersionIntFromHexString);
-    }
-    ints:Unsigned16 timeHiAndVersionInt = <ints:Unsigned16>timeHiAndVersionIntFromHexString;
-
-    int|error clockSeqHiAndReservedIntFromHexString = externParseHexUint(part3.substring(0, 2));
-    if clockSeqHiAndReservedIntFromHexString is error {
-        return error Error("Failed to get int value of clock-seq-hi-and-reserved hex string",
-            clockSeqHiAndReservedIntFromHexString);
-    }
-    ints:Unsigned8 clockSeqHiAndReservedInt = <ints:Unsigned8>clockSeqHiAndReservedIntFromHexString;
-
-    int|error clockSeqLoIntFromHexString = externParseHexUint(part3.substring(2, 4));
-    if clockSeqLoIntFromHexString is error {
-        return error Error("Failed to get int value of clock-seq-lo hex string", clockSeqLoIntFromHexString);
-    }
-    ints:Unsigned8 clockSeqLoInt = <ints:Unsigned8>clockSeqLoIntFromHexString;
-
-    int|error nodeResult = externParseHexUint(part4);
-    if nodeResult is error {
-        return error Error("Failed to get int value of node string", nodeResult);
-    }
-    int nodeInt = nodeResult;
+    ints:Unsigned32 timeLowInt = <ints:Unsigned32>checkpanic ints:fromHexString(part0);
+    ints:Unsigned16 timeMidInt = <ints:Unsigned16>checkpanic ints:fromHexString(part1);
+    ints:Unsigned16 timeHiAndVersionInt = <ints:Unsigned16>checkpanic ints:fromHexString(part2);
+    ints:Unsigned8 clockSeqHiAndReservedInt = <ints:Unsigned8>checkpanic ints:fromHexString(part3.substring(0, 2));
+    ints:Unsigned8 clockSeqLoInt = <ints:Unsigned8>checkpanic ints:fromHexString(part3.substring(2, 4));
+    int nodeInt = checkpanic ints:fromHexString(part4);
 
     Uuid uuidRecord = {
         timeLow: timeLowInt,
@@ -428,7 +398,7 @@ isolated function getBytesFromUuid(string uuid) returns byte[]|Error {
     Uuid uuidRecord = check toRecord(uuid);
 
     int msb = check getMostSigBits(uuidRecord);
-    int lsb = check getLeastSigBits(uuid, uuidRecord);
+    int lsb = getLeastSigBits(uuid, uuidRecord);
     return bitsToBytes(msb, lsb);
 }
 
@@ -441,18 +411,11 @@ isolated function getMostSigBits(Uuid uuid) returns int|Error {
     return mostSigBits;
 }
 
-isolated function getLeastSigBits(string uuidString, Uuid uuidRecord) returns int|Error {
+isolated function getLeastSigBits(string uuidString, Uuid uuidRecord) returns int {
     // UUID format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
     // clock-seq field spans positions 19-22 (0-indexed, exclusive end)
     string clockSeq = uuidString.substring(19, 23);
-    int|error clockSeqInt = externParseHexUint(clockSeq);
-    int leastSigBits;
-    if clockSeqInt is int {
-        leastSigBits = clockSeqInt & 0xffff;
-    } else {
-        return error Error("Failed to get clock sequence value of the uuid");
-    }
-
+    int leastSigBits = (checkpanic ints:fromHexString(clockSeq)) & 0xffff;
     leastSigBits <<= 48;
     leastSigBits |= uuidRecord.node & 0xffffffffffff;
     return leastSigBits;
@@ -527,5 +490,3 @@ isolated function externCreateType1AsString() returns string = external;
 isolated function externCreateType4AsString() returns string = external;
 
 isolated function externValidate(string uuid) returns boolean = external;
-
-isolated function externParseHexUint(string hex) returns int|error = external;

@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"regexp"
-	"strconv"
 
 	"github.com/ballerina-nutcracker/ballerina/runtime"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
@@ -43,7 +42,6 @@ func initUUIDModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCreateType1AsString", createType1Extern(rt))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externCreateType4AsString", createType4Extern)
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externValidate", validateExtern)
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externParseHexUint", parseHexUintExtern)
 }
 
 func createType1Extern(rt *runtime.Runtime) extern.NativeFunc {
@@ -99,17 +97,6 @@ func createType4Extern(_ *extern.Context, _ []values.BalValue) (values.BalValue,
 // Ballerina type checker guarantees args[0] is always a string.
 func validateExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 	return uuidRegexp.MatchString(args[0].(string)), nil
-}
-
-// parseHexUintExtern's argument is declared `string` in uuid.bal, so the
-// Ballerina type checker guarantees args[0] is always a string.
-func parseHexUintExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-	s := args[0].(string)
-	n, err := strconv.ParseUint(s, 16, 64)
-	if err != nil {
-		panic("uuid: invalid hex string: " + s)
-	}
-	return int64(n), nil
 }
 
 func init() {
