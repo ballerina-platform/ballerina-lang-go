@@ -74,111 +74,122 @@ func newFileEventType(env semtypes.Env) semtypes.SemType {
 func initFileListenerModule(rt *runtime.Runtime) {
 	eventTy := newFileEventType(rt.GetTypeEnv())
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "initListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			cfg, _ := args[1].(*values.Map)
-			path := ""
-			recursive := false
-			if cfg != nil {
-				if v, ok := cfg.Get("path"); ok {
-					path, _ = v.(string)
-				}
-				if v, ok := cfg.Get("recursive"); ok {
-					recursive, _ = v.(bool)
-				}
-			}
-			if path == "" {
-				return fileError("FileSystemError", "'path' field is empty"), nil
-			}
-			info, err := rt.Platform().FS.Stat(path)
-			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return fileError("FileSystemError", "Folder does not exist: "+path), nil
-				}
-				return fileError("FileSystemError", err.Error()), nil
-			}
-			if !info.IsDir {
-				return fileError("FileSystemError", "Unable to find a directory: "+path), nil
-			}
-			self.Put("$state", &fileListenerState{path: path, recursive: recursive})
-			return nil, nil
-		})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "initListener", initListenerExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "registerListener", registerListenerExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "deregisterListener", deregisterListenerExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "startListener", startListenerExtern(rt, eventTy))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "stopListener", stopListenerExtern())
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "registerListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			svcObj := args[1].(*values.Object)
-			if !hasFileEventRemoteMethod(svcObj) {
-				return fileError("GenericError", "At least a single resource required from following: "+
-					"onCreate ,onDelete ,onModify. Parameter should be of type - file:FileEvent"), nil
+func initListenerExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		cfg, _ := args[1].(*values.Map)
+		path := ""
+		recursive := false
+		if cfg != nil {
+			if v, ok := cfg.Get("path"); ok {
+				path, _ = v.(string)
 			}
-			state := listenerState(self)
-			state.mu.Lock()
-			state.services = append(state.services, svcObj)
-			state.mu.Unlock()
-			return nil, nil
-		})
+			if v, ok := cfg.Get("recursive"); ok {
+				recursive, _ = v.(bool)
+			}
+		}
+		if path == "" {
+			return fileError("FileSystemError", "'path' field is empty"), nil
+		}
+		info, err := rt.Platform().FS.Stat(path)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fileError("FileSystemError", "Folder does not exist: "+path), nil
+			}
+			return fileError("FileSystemError", err.Error()), nil
+		}
+		if !info.IsDir {
+			return fileError("FileSystemError", "Unable to find a directory: "+path), nil
+		}
+		self.Put("$state", &fileListenerState{path: path, recursive: recursive})
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "deregisterListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			svcObj := args[1].(*values.Object)
-			state := listenerState(self)
-			state.mu.Lock()
-			defer state.mu.Unlock()
-			for i, s := range state.services {
-				if s == svcObj {
-					state.services = append(state.services[:i], state.services[i+1:]...)
-					break
-				}
-			}
-			return nil, nil
-		})
+func registerListenerExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		svcObj := args[1].(*values.Object)
+		if !hasFileEventRemoteMethod(svcObj) {
+			return fileError("GenericError", "At least a single resource required from following: "+
+				"onCreate ,onDelete ,onModify. Parameter should be of type - file:FileEvent"), nil
+		}
+		state := listenerState(self)
+		state.mu.Lock()
+		state.services = append(state.services, svcObj)
+		state.mu.Unlock()
+		return nil, nil
+	}
+}
 
-	// Listener.start creates the OS-level directory watch. It is invoked by
-	// the module's $start lifecycle hook after all services have been
-	// attached.
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "startListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			state := listenerState(self)
-			state.mu.Lock()
-			defer state.mu.Unlock()
-			if state.watch != nil {
-				return nil, nil
+func deregisterListenerExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		svcObj := args[1].(*values.Object)
+		state := listenerState(self)
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		for i, s := range state.services {
+			if s == svcObj {
+				state.services = append(state.services[:i], state.services[i+1:]...)
+				break
 			}
-			state.generation++
-			generation := state.generation
-			handle, err := rt.Platform().FS.Watch(state.path, state.recursive, func(ev pal.WatchEvent) {
-				dispatchFileEvent(rt, state, generation, eventTy, ev)
-			})
-			if err != nil {
-				return fileError("FileSystemError", "Unable to initialize server connector: "+err.Error()), nil
-			}
-			state.watch = handle
-			return nil, nil
-		})
+		}
+		return nil, nil
+	}
+}
 
-	// stopListener backs both gracefulStop and immediateStop. Unlike
-	// jBallerina — whose gracefulStop is a no-op that leaves the watch
-	// thread running until process exit — this closes the OS watch
-	// deterministically on either call, since a single long-lived process
-	// here may create and stop many listeners (e.g. across test cases).
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "stopListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			state := listenerState(self)
-			state.mu.Lock()
-			watch := state.watch
-			state.watch = nil
-			state.generation++
-			state.mu.Unlock()
-			if watch != nil {
-				_ = watch.Close()
-			}
+// startListenerExtern backs Listener.start, which creates the OS-level
+// directory watch. The module's $start lifecycle hook invokes it after all
+// services have been attached.
+func startListenerExtern(rt *runtime.Runtime, eventTy semtypes.SemType) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		state := listenerState(self)
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		if state.watch != nil {
 			return nil, nil
+		}
+		state.generation++
+		generation := state.generation
+		handle, err := rt.Platform().FS.Watch(state.path, state.recursive, func(ev pal.WatchEvent) {
+			dispatchFileEvent(rt, state, generation, eventTy, ev)
 		})
+		if err != nil {
+			return fileError("FileSystemError", "Unable to initialize server connector: "+err.Error()), nil
+		}
+		state.watch = handle
+		return nil, nil
+	}
+}
+
+// stopListenerExtern backs both gracefulStop and immediateStop. Unlike
+// jBallerina — whose gracefulStop is a no-op that leaves the watch
+// thread running until process exit — this closes the OS watch
+// deterministically on either call, since a single long-lived process
+// here may create and stop many listeners (e.g. across test cases).
+func stopListenerExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		state := listenerState(self)
+		state.mu.Lock()
+		watch := state.watch
+		state.watch = nil
+		state.generation++
+		state.mu.Unlock()
+		if watch != nil {
+			_ = watch.Close()
+		}
+		return nil, nil
+	}
 }
 
 // listenerState returns the state initListener stored on self. It is always

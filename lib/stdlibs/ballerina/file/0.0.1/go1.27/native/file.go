@@ -96,299 +96,204 @@ func (t *fileTypes) buildMetaData(ctx *extern.Context, info *pal.FileInfo) *valu
 func initFileModule(rt *runtime.Runtime) {
 	types := newFileTypes(rt.GetTypeEnv())
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "getCurrentDir",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
-			cwd, err := rt.Platform().FS.Getwd()
-			if err != nil {
-				return "", nil
-			}
-			return cwd, nil
-		})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "getCurrentDir", getCurrentDirExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "createDir", createDirExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "remove", removeExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "rename", renameExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "create", createExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "getRawMetaData", getRawMetaDataExtern(rt, &types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "readDirRaw", readDirRawExtern(rt, &types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "copy", copyExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "createTemp", createTempExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "createTempDir", createTempDirExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "test", testExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "charAt", charAtExtern())
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "getAbsolutePath", getAbsolutePathExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "resolve", resolveExtern(rt))
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "createDir",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			dir, _ := args[0].(string)
-			option, _ := args[1].(string)
-			var err error
-			if option == "RECURSIVE" {
-				err = rt.Platform().FS.MkdirAll(dir)
-			} else {
-				err = rt.Platform().FS.Mkdir(dir)
-			}
-			if err == nil {
-				return nil, nil
-			}
-			if errors.Is(err, fs.ErrExist) {
-				return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+dir), nil
-			}
-			if errors.Is(err, fs.ErrPermission) {
-				return fileError("PermissionError", "Permission denied. Failed to create the file: "+dir), nil
-			}
-			return fileError("FileSystemError", "IO error while creating the file "+dir), nil
-		})
+func getCurrentDirExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+		cwd, err := rt.Platform().FS.Getwd()
+		if err != nil {
+			return "", nil
+		}
+		return cwd, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "remove",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			option, _ := args[1].(string)
-			cwd, cwdErr := rt.Platform().FS.Getwd()
-			if cwdErr != nil {
-				return fileError("FileSystemError", "Error while deleting the file/directory: "+cwdErr.Error()), nil
-			}
-			info, statErr := rt.Platform().FS.Stat(path)
-			if statErr != nil {
-				if errors.Is(statErr, fs.ErrNotExist) {
-					absTarget, _ := rt.Platform().FS.Abs(path)
-					return fileError("FileNotFoundError", "File not found: "+absTarget), nil
-				}
-				return fileError("FileSystemError", "Error while deleting the file/directory: "+statErr.Error()), nil
-			}
-			if info.AbsPath == cwd {
-				return fileError("InvalidOperationError", "Cannot delete the current working directory "+cwd), nil
-			}
-			var err error
-			if option == "RECURSIVE" {
-				err = rt.Platform().FS.RemoveAll(path)
-			} else {
-				err = rt.Platform().FS.Remove(path)
-			}
-			if err == nil {
-				return nil, nil
-			}
-			if errors.Is(err, fs.ErrPermission) {
-				return fileError("PermissionError", "Error while deleting the file/directory: "+err.Error()), nil
-			}
-			return fileError("FileSystemError", "Error while deleting the file/directory: "+err.Error()), nil
-		})
+func createDirExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		dir, _ := args[0].(string)
+		option, _ := args[1].(string)
+		var err error
+		if option == "RECURSIVE" {
+			err = rt.Platform().FS.MkdirAll(dir)
+		} else {
+			err = rt.Platform().FS.Mkdir(dir)
+		}
+		if err == nil {
+			return nil, nil
+		}
+		if errors.Is(err, fs.ErrExist) {
+			return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+dir), nil
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fileError("PermissionError", "Permission denied. Failed to create the file: "+dir), nil
+		}
+		return fileError("FileSystemError", "IO error while creating the file "+dir), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "rename",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			oldPath, _ := args[0].(string)
-			newPath, _ := args[1].(string)
-			_, statErr := rt.Platform().FS.Stat(oldPath)
-			if statErr != nil {
-				if errors.Is(statErr, fs.ErrNotExist) {
-					absOld, _ := rt.Platform().FS.Abs(oldPath)
-					return fileError("FileNotFoundError", "File not found: "+absOld), nil
-				}
+func removeExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		option, _ := args[1].(string)
+		cwd, cwdErr := rt.Platform().FS.Getwd()
+		if cwdErr != nil {
+			return fileError("FileSystemError", "Error while deleting the file/directory: "+cwdErr.Error()), nil
+		}
+		info, statErr := rt.Platform().FS.Stat(path)
+		if statErr != nil {
+			if errors.Is(statErr, fs.ErrNotExist) {
+				absTarget, _ := rt.Platform().FS.Abs(path)
+				return fileError("FileNotFoundError", "File not found: "+absTarget), nil
 			}
-			err := rt.Platform().FS.Rename(oldPath, newPath)
-			if err == nil {
-				return nil, nil
+			return fileError("FileSystemError", "Error while deleting the file/directory: "+statErr.Error()), nil
+		}
+		if info.AbsPath == cwd {
+			return fileError("InvalidOperationError", "Cannot delete the current working directory "+cwd), nil
+		}
+		var err error
+		if option == "RECURSIVE" {
+			err = rt.Platform().FS.RemoveAll(path)
+		} else {
+			err = rt.Platform().FS.Remove(path)
+		}
+		if err == nil {
+			return nil, nil
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fileError("PermissionError", "Error while deleting the file/directory: "+err.Error()), nil
+		}
+		return fileError("FileSystemError", "Error while deleting the file/directory: "+err.Error()), nil
+	}
+}
+
+func renameExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		oldPath, _ := args[0].(string)
+		newPath, _ := args[1].(string)
+		_, statErr := rt.Platform().FS.Stat(oldPath)
+		if statErr != nil {
+			if errors.Is(statErr, fs.ErrNotExist) {
+				absOld, _ := rt.Platform().FS.Abs(oldPath)
+				return fileError("FileNotFoundError", "File not found: "+absOld), nil
 			}
-			if errors.Is(err, fs.ErrExist) {
-				return fileError("InvalidOperationError", "File already exists in the new path "+newPath), nil
+		}
+		err := rt.Platform().FS.Rename(oldPath, newPath)
+		if err == nil {
+			return nil, nil
+		}
+		if errors.Is(err, fs.ErrExist) {
+			return fileError("InvalidOperationError", "File already exists in the new path "+newPath), nil
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fileError("PermissionError", err.Error()), nil
+		}
+		return fileError("FileSystemError", err.Error()), nil
+	}
+}
+
+func createExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		err := rt.Platform().FS.CreateFile(path)
+		if err == nil {
+			return nil, nil
+		}
+		if errors.Is(err, fs.ErrExist) {
+			return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+path), nil
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fileError("PermissionError", "Permission denied. Failed to create the file: "+path), nil
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			return fileError("FileSystemError", "The file does not exist in path "+path), nil
+		}
+		return fileError("FileSystemError", "IO error occurred while creating the file "+path), nil
+	}
+}
+
+func getRawMetaDataExtern(rt *runtime.Runtime, types *fileTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		info, err := rt.Platform().FS.Stat(path)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fileError("FileNotFoundError", "File not found: "+path), nil
 			}
+			return fileError("FileSystemError", err.Error()), nil
+		}
+		return types.buildMetaData(ctx, info), nil
+	}
+}
+
+func readDirRawExtern(rt *runtime.Runtime, types *fileTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		info, err := rt.Platform().FS.Stat(path)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fileError("FileNotFoundError", "File not found: "+path), nil
+			}
+			return fileError("FileSystemError", err.Error()), nil
+		}
+		if !info.IsDir {
+			return fileError("InvalidOperationError", "File in path "+path+" is not a directory"), nil
+		}
+		entries, err := rt.Platform().FS.ReadDir(path)
+		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
 				return fileError("PermissionError", err.Error()), nil
 			}
 			return fileError("FileSystemError", err.Error()), nil
-		})
+		}
+		items := make([]values.BalValue, len(entries))
+		for i, entry := range entries {
+			e := entry
+			items[i] = types.buildMetaData(ctx, &e)
+		}
+		atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.metaArrTy)
+		return values.NewList(types.metaArrTy, atomic, true, nil, 0, items), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "create",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			err := rt.Platform().FS.CreateFile(path)
-			if err == nil {
-				return nil, nil
+func copyExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		src, _ := args[0].(string)
+		dst, _ := args[1].(string)
+		opts := pal.CopyOptions{}
+		for _, arg := range args[2:] {
+			switch arg {
+			case "REPLACE_EXISTING":
+				opts.ReplaceExisting = true
+			case "COPY_ATTRIBUTES":
+				opts.CopyAttributes = true
+			case "NO_FOLLOW_LINKS":
+				opts.NoFollowLinks = true
 			}
-			if errors.Is(err, fs.ErrExist) {
-				return fileError("InvalidOperationError", "File already exists. Failed to create the file: "+path), nil
-			}
-			if errors.Is(err, fs.ErrPermission) {
-				return fileError("PermissionError", "Permission denied. Failed to create the file: "+path), nil
-			}
-			if errors.Is(err, fs.ErrNotExist) {
-				return fileError("FileSystemError", "The file does not exist in path "+path), nil
-			}
-			return fileError("FileSystemError", "IO error occurred while creating the file "+path), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "getRawMetaData",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			info, err := rt.Platform().FS.Stat(path)
-			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return fileError("FileNotFoundError", "File not found: "+path), nil
-				}
-				return fileError("FileSystemError", err.Error()), nil
-			}
-			return types.buildMetaData(ctx, info), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "readDirRaw",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			info, err := rt.Platform().FS.Stat(path)
-			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return fileError("FileNotFoundError", "File not found: "+path), nil
-				}
-				return fileError("FileSystemError", err.Error()), nil
-			}
-			if !info.IsDir {
-				return fileError("InvalidOperationError", "File in path "+path+" is not a directory"), nil
-			}
-			entries, err := rt.Platform().FS.ReadDir(path)
-			if err != nil {
-				if errors.Is(err, fs.ErrPermission) {
-					return fileError("PermissionError", err.Error()), nil
-				}
-				return fileError("FileSystemError", err.Error()), nil
-			}
-			items := make([]values.BalValue, len(entries))
-			for i, entry := range entries {
-				e := entry
-				items[i] = types.buildMetaData(ctx, &e)
-			}
-			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.metaArrTy)
-			return values.NewList(types.metaArrTy, atomic, true, nil, 0, items), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "copy",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			src, _ := args[0].(string)
-			dst, _ := args[1].(string)
-			opts := pal.CopyOptions{}
-			for _, arg := range args[2:] {
-				switch arg {
-				case "REPLACE_EXISTING":
-					opts.ReplaceExisting = true
-				case "COPY_ATTRIBUTES":
-					opts.CopyAttributes = true
-				case "NO_FOLLOW_LINKS":
-					opts.NoFollowLinks = true
-				}
-			}
-			_, statErr := rt.Platform().FS.Stat(src)
-			if statErr != nil && errors.Is(statErr, fs.ErrNotExist) {
-				return fileError("FileNotFoundError", "File not found: "+src), nil
-			}
-			err := rt.Platform().FS.Copy(src, dst, opts)
-			if err == nil {
-				return nil, nil
-			}
-			return copyError(err), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "createTemp",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			suffix := ""
-			prefix := ""
-			dir := ""
-			if s, ok := args[0].(string); ok {
-				suffix = s
-			}
-			if p, ok := args[1].(string); ok {
-				prefix = p
-			}
-			if d, ok := args[2].(string); ok {
-				dir = d
-			}
-			path, err := rt.Platform().FS.CreateTemp(prefix, suffix, dir)
-			if err != nil {
-				return fileError("FileSystemError", "Error occurred while creating temporary file. "+err.Error()), nil
-			}
-			return path, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "createTempDir",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			suffix := ""
-			prefix := ""
-			dir := ""
-			if s, ok := args[0].(string); ok {
-				suffix = s
-			}
-			if p, ok := args[1].(string); ok {
-				prefix = p
-			}
-			if d, ok := args[2].(string); ok {
-				dir = d
-			}
-			path, err := rt.Platform().FS.CreateTempDir(prefix, suffix, dir)
-			if err != nil {
-				return fileError("FileSystemError", "Error occurred while creating temporary directory. "+err.Error()), nil
-			}
-			return path, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "test",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			option, _ := args[1].(string)
-			switch option {
-			case "EXISTS":
-				_, err := rt.Platform().FS.Stat(path)
-				return err == nil, nil
-			case "IS_DIR":
-				info, err := rt.Platform().FS.Stat(path)
-				if err != nil {
-					return false, nil
-				}
-				return info.IsDir, nil
-			case "IS_SYMLINK":
-				info, err := rt.Platform().FS.Lstat(path)
-				if err != nil {
-					return false, nil
-				}
-				return info.IsSymlink, nil
-			case "READABLE":
-				info, err := rt.Platform().FS.Stat(path)
-				if err != nil {
-					return false, nil
-				}
-				return info.IsReadable, nil
-			case "WRITABLE":
-				info, err := rt.Platform().FS.Stat(path)
-				if err != nil {
-					return false, nil
-				}
-				return info.IsWritable, nil
-			default:
-				panic("unreachable: unknown TestOption " + option)
-			}
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "charAt",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			input, _ := args[0].(string)
-			index, _ := args[1].(int64)
-			runes := []rune(input)
-			length := int64(len(runes))
-			if index < 0 || index >= length {
-				return fileError("GenericError", fmt.Sprintf("Character index %d is out of range for path string of length %d", index, length)), nil
-			}
-			return string(runes[index : index+1]), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "getAbsolutePath",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			abs, err := rt.Platform().FS.Abs(path)
-			if err != nil {
-				return fileError("InvalidPathError", "Invalid path "+path), nil
-			}
-			return abs, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "resolve",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			path, _ := args[0].(string)
-			target, err := rt.Platform().FS.Readlink(path)
-			if err == nil {
-				return target, nil
-			}
-			if errors.Is(err, fs.ErrNotExist) {
-				return fileError("FileNotFoundError", "File does not exist at "+path), nil
-			}
-			if errors.Is(err, fs.ErrPermission) {
-				return fileError("SecurityError", "Security error for "+path), nil
-			}
-			// On most systems, EINVAL means "not a symlink".
-			return fileError("NotLinkError", "Path is not a symbolic link "+path), nil
-		})
+		}
+		_, statErr := rt.Platform().FS.Stat(src)
+		if statErr != nil && errors.Is(statErr, fs.ErrNotExist) {
+			return fileError("FileNotFoundError", "File not found: "+src), nil
+		}
+		err := rt.Platform().FS.Copy(src, dst, opts)
+		if err == nil {
+			return nil, nil
+		}
+		return copyError(err), nil
+	}
 }
 
 // copyError follows jBallerina's copy messages, which wrap the java.nio
@@ -408,6 +313,130 @@ func copyError(err error) values.BalValue {
 		return fileError("FileSystemError", ioErrPrefix+pathErr.Path)
 	default:
 		return fileError("FileSystemError", ioErrPrefix+pathErr.Path+": "+pathErr.Err.Error())
+	}
+}
+
+func createTempExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		suffix := ""
+		prefix := ""
+		dir := ""
+		if s, ok := args[0].(string); ok {
+			suffix = s
+		}
+		if p, ok := args[1].(string); ok {
+			prefix = p
+		}
+		if d, ok := args[2].(string); ok {
+			dir = d
+		}
+		path, err := rt.Platform().FS.CreateTemp(prefix, suffix, dir)
+		if err != nil {
+			return fileError("FileSystemError", "Error occurred while creating temporary file. "+err.Error()), nil
+		}
+		return path, nil
+	}
+}
+
+func createTempDirExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		suffix := ""
+		prefix := ""
+		dir := ""
+		if s, ok := args[0].(string); ok {
+			suffix = s
+		}
+		if p, ok := args[1].(string); ok {
+			prefix = p
+		}
+		if d, ok := args[2].(string); ok {
+			dir = d
+		}
+		path, err := rt.Platform().FS.CreateTempDir(prefix, suffix, dir)
+		if err != nil {
+			return fileError("FileSystemError", "Error occurred while creating temporary directory. "+err.Error()), nil
+		}
+		return path, nil
+	}
+}
+
+func testExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		option, _ := args[1].(string)
+		switch option {
+		case "EXISTS":
+			_, err := rt.Platform().FS.Stat(path)
+			return err == nil, nil
+		case "IS_DIR":
+			info, err := rt.Platform().FS.Stat(path)
+			if err != nil {
+				return false, nil
+			}
+			return info.IsDir, nil
+		case "IS_SYMLINK":
+			info, err := rt.Platform().FS.Lstat(path)
+			if err != nil {
+				return false, nil
+			}
+			return info.IsSymlink, nil
+		case "READABLE":
+			info, err := rt.Platform().FS.Stat(path)
+			if err != nil {
+				return false, nil
+			}
+			return info.IsReadable, nil
+		case "WRITABLE":
+			info, err := rt.Platform().FS.Stat(path)
+			if err != nil {
+				return false, nil
+			}
+			return info.IsWritable, nil
+		default:
+			panic("unreachable: unknown TestOption " + option)
+		}
+	}
+}
+
+func charAtExtern() extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		input, _ := args[0].(string)
+		index, _ := args[1].(int64)
+		runes := []rune(input)
+		length := int64(len(runes))
+		if index < 0 || index >= length {
+			return fileError("GenericError", fmt.Sprintf("Character index %d is out of range for path string of length %d", index, length)), nil
+		}
+		return string(runes[index : index+1]), nil
+	}
+}
+
+func getAbsolutePathExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		abs, err := rt.Platform().FS.Abs(path)
+		if err != nil {
+			return fileError("InvalidPathError", "Invalid path "+path), nil
+		}
+		return abs, nil
+	}
+}
+
+func resolveExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		path, _ := args[0].(string)
+		target, err := rt.Platform().FS.Readlink(path)
+		if err == nil {
+			return target, nil
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			return fileError("FileNotFoundError", "File does not exist at "+path), nil
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fileError("SecurityError", "Security error for "+path), nil
+		}
+		// On most systems, EINVAL means "not a symlink".
+		return fileError("NotLinkError", "Path is not a symbolic link "+path), nil
 	}
 }
 
