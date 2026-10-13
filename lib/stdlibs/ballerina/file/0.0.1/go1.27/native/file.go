@@ -40,8 +40,8 @@ const (
 // env, so every value shares one interned atom instead of allocating a
 // fresh ephemeral atom on each call.
 type fileTypes struct {
-	metaArrTy  semtypes.SemType // MetaData[]
-	metaDataTy semtypes.SemType // MetaData record shape
+	metaArrTy  semtypes.SemType // MetaData[] & readonly
+	metaDataTy semtypes.SemType // MetaData & readonly
 	utcTupleTy semtypes.SemType // readonly [int, decimal]
 }
 
@@ -58,9 +58,10 @@ func newFileTypes(env semtypes.Env) fileTypes {
 		semtypes.FieldFrom("dir", semtypes.Boolean, false, false),
 		semtypes.FieldFrom("readable", semtypes.Boolean, false, false),
 		semtypes.FieldFrom("writable", semtypes.Boolean, false, false),
-	}, semtypes.Never)
+	}, semtypes.Never, semtypes.MappingMutability(semtypes.CellMutabilityNone))
 	return fileTypes{
-		metaArrTy:  metaArrLd.Define(env, nil, semtypes.ListRest(metaDataTy)),
+		metaArrTy: metaArrLd.Define(env, nil, semtypes.ListRest(metaDataTy),
+			semtypes.ListMutability(semtypes.CellMutabilityNone)),
 		metaDataTy: metaDataTy,
 		utcTupleTy: utcTupleTy,
 	}
@@ -82,7 +83,7 @@ func (t *fileTypes) goTimeToUtc(ctx *extern.Context, tm time.Time) *values.List 
 
 func (t *fileTypes) buildMetaData(ctx *extern.Context, info *pal.FileInfo) *values.Map {
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), t.metaDataTy)
-	return values.NewMap(t.metaDataTy, atomic, false, []values.MapEntry{
+	return values.NewMap(t.metaDataTy, atomic, true, []values.MapEntry{
 		{Key: "absPath", Value: info.AbsPath},
 		{Key: "size", Value: info.Size},
 		{Key: "modifiedTime", Value: t.goTimeToUtc(ctx, info.ModifiedAt)},
@@ -242,7 +243,7 @@ func initFileModule(rt *runtime.Runtime) {
 				items[i] = types.buildMetaData(ctx, &e)
 			}
 			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.metaArrTy)
-			return values.NewList(types.metaArrTy, atomic, false, nil, 0, items), nil
+			return values.NewList(types.metaArrTy, atomic, true, nil, 0, items), nil
 		})
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "copy",

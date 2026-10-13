@@ -1042,24 +1042,24 @@ public isolated function rename(string oldPath, string newPath) returns Error? =
 # + return - A `file:Error` if file creation failed
 public isolated function create(string path) returns Error? = external;
 
-isolated function getRawMetaData(string path) returns MetaData|Error = external;
+isolated function getRawMetaData(string path) returns (MetaData & readonly)|Error = external;
 
 # Returns the metadata information of the file specified in the file path.
 #
 # + path - String value of the file path.
 # + return - The `MetaData` instance with the file metadata or else a `file:Error`
-public isolated function getMetaData(string path) returns MetaData|Error {
+public isolated function getMetaData(string path) returns (MetaData & readonly)|Error {
     return getRawMetaData(path);
 }
 
-isolated function readDirRaw(string path) returns MetaData[]|Error = external;
+isolated function readDirRaw(string path) returns (MetaData[] & readonly)|Error = external;
 
 # Reads the directory and returns a list of metadata of files and directories
 # inside the specified directory.
 #
 # + path - String value of the directory path
 # + return - The `MetaData` array or else a `file:Error` if there is an error
-public isolated function readDir(string path) returns MetaData[]|Error {
+public isolated function readDir(string path) returns (MetaData[] & readonly)|Error {
     return readDirRaw(path);
 }
 
