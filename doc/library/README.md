@@ -20,9 +20,10 @@ Support % is computed as `round(Supported / Total * 100)`, where *Total* is the 
 | [protobuf](../../lib/stdlibs/ballerina/protobuf/0.0.1/go1.27/README.md)       | 11 | 2 | 0 | 85% |
 | [random](../../lib/stdlibs/ballerina/random/0.0.1/go1.27/README.md)           | 3 | 1 | 1 | 60% |
 | [time](../../lib/stdlibs/ballerina/time/0.0.1/go1.27/README.md)               | 29 | 3 | 0 | 91% |
+| [udp](../../lib/stdlibs/ballerina/udp/0.0.1/go1.27/README.md)                 | 15 | 2 | 2 | 79% |
 | [url](../../lib/stdlibs/ballerina/url/0.0.1/go1.27/README.md)                 | 3 | 0 | 1 | 75% |
 | [uuid](../../lib/stdlibs/ballerina/uuid/0.0.1/go1.27/README.md)               | 20 | 0 | 0 | 100% |
-| **Total**                                         | **213** | **24** | **64** | **71%** |
+| **Total**                                         | **228** | **26** | **66** | **71%** |
 
 ## Notable Behavioural Changes
 
@@ -112,5 +113,10 @@ Consolidated from each package's README. Only permanent, architectural Go-level 
 - **`toString` and `toBytes` reject a `Uuid` record whose `node` is not an unsigned 48-bit integer.** jBallerina's `toString` formats a negative or oversized node verbatim and returns a string that is not a valid UUID, and `toBytes` then fails with `Invalid UUID string provided`; the Go-native version returns a `uuid:Error` stating that the node must be an unsigned 48-bit integer (wrapped in `Failed to convert UUID record to a string` for `toBytes`).
 - **`toString` and `toBytes` zero-pad every field of a `Uuid` record to its full width.** jBallerina pads `timeLow` to 8 hex digits and `node` to 12, but `timeMid` and `timeHiAndVersion` to only 2 and the clock-sequence bytes not at all, so `toString({timeLow: 1, timeMid: 2, timeHiAndVersion: 3, clockSeqHiAndReserved: 4, clockSeqLo: 5, node: 6})` returns `00000001-02-03-45-000000000006`, which is not a valid UUID, and `toBytes` on the same record fails with `Invalid UUID string provided`. The Go-native version pads `timeMid` and `timeHiAndVersion` to 4 hex digits and each clock-sequence byte to 2, so `toString` returns `00000001-0002-0003-0405-000000000006` and `toBytes` succeeds.
 - **`createType5AsRecord` error message names type 5.** When `createType5AsString` fails, jBallerina wraps the cause in `Failed to create UUID of type 3` (a copy-paste error); the Go-native version uses `Failed to create UUID of type 5`.
+### udp
+
+- **`Client.init`/`ConnectClient.init`/`Listener.init` take a plain default-valued configuration record.** jBallerina declares these as `*ClientConfiguration`/`*ConnectClientConfiguration`/`*ListenerConfiguration` included-record parameters, which allow named-argument-style construction at the call site (e.g. `check new(8080, localHost = "x")`). This port uses a plain default-valued parameter instead (e.g. `ListenerConfiguration config = {}`); call sites pass a record literal (`check new(8080, {localHost: "x"})`).
+- **`Listener.detach()` validates the given service.** jBallerina's `detach()` clears whatever service is currently attached regardless of the argument passed to it. This port returns an `Error` unless the given service is the one currently attached.
+- **`Listener.immediateStop()` actually stops the listener.** jBallerina's `immediateStop()` is an unimplemented no-op stub, while `gracefulStop()` performs the real socket close. This port makes `immediateStop()` close the listener's socket immediately, same as `gracefulStop()`, since UDP has no per-connection state to drain.
 
 The remaining packages (`math.vector`, `url`) have **no** notable behavioural changes compared to the original jBallerina implementation for their currently supported features.
