@@ -64,7 +64,7 @@ Support Levels:
 | Updating an entry | Supported | Every field is sent as an attribute replace, matching jBallerina; there is no attribute add/delete modification mode. |
 | Renaming an entry | Supported | |
 | Comparing an attribute value | Supported | |
-| Retrieving a single entry | Supported | Attributes to fetch are inferred from the target record's field names when not given explicitly. |
+| Retrieving a single entry | Supported | Attributes to fetch are inferred from the target record's field names when not given explicitly. A required field with no matching attribute, or an attribute value that can't be converted to its field type, returns an `Error`. |
 | Searching a subtree | Supported | |
 | Searching with a caller-specified result type | Supported | |
 | Closing the connection and checking connection status | Supported | |

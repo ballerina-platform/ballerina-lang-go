@@ -3,5 +3,4 @@ true
 true
 true
 true
-clientSecureSocket.tlsVersions: unsupported TLS version 'TLSv9'
 -- stderr --

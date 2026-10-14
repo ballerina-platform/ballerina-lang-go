@@ -28,13 +28,7 @@ const (
 	moduleName = "ldap"
 )
 
-// ldapTypes holds the SemTypes shared by every native function in this
-// module. Following this codebase's established stdlib convention (see
-// crypto/file/mime), fixed-shape response records (LdapResponse, SearchResult,
-// SearchReference, Control, Entry) are tagged with a single generic open
-// mapping type rather than a hand-built per-field SemType: runtime value
-// construction here is not re-verified against the declared .bal type on
-// assignment, so the extra precision buys nothing at runtime.
+// ldapTypes holds the inherent types given to values built by this module's externs.
 type ldapTypes struct {
 	mapTy      semtypes.SemType // map<anydata>, used for LdapResponse/SearchResult/SearchReference/Control
 	entryTy    semtypes.SemType // map<AttributeType>, the inherent type of every ldap:Entry

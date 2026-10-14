@@ -30,7 +30,9 @@ package extern_test
 
 import (
 	"crypto/tls"
+	"maps"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 
@@ -391,7 +393,8 @@ func searchResultEntryOp(e *fakeLdapEntry, reqAttrs []string) *ber.Packet {
 	op := ber.Encode(ber.ClassApplication, ber.TypeConstructed, ber.Tag(goldap.ApplicationSearchResultEntry), nil, "SearchResultEntry")
 	op.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, e.dn, "objectName"))
 	attrsSeq := ber.NewSequence("PartialAttributeList")
-	for name, vals := range e.attrs {
+	for _, name := range slices.Sorted(maps.Keys(e.attrs)) {
+		vals := e.attrs[name]
 		if len(reqAttrs) > 0 && !containsFold(reqAttrs, name) {
 			continue
 		}

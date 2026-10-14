@@ -148,15 +148,9 @@ func emptyMapArrList(types ldapTypes, ctx *extern.Context) *values.List {
 func buildEntryRecord(types ldapTypes, ctx *extern.Context, entry *goldap.Entry) *values.Map {
 	entries := make([]values.MapEntry, 0, len(entry.Attributes))
 	for _, attr := range entry.Attributes {
-		vals := attributeStringValues(attr)
-		if len(vals) == 0 {
-			continue
+		if v := rawAttributeValue(types, ctx, attr); v != nil {
+			entries = append(entries, values.MapEntry{Key: attr.Name, Value: v})
 		}
-		var v values.BalValue = vals[0]
-		if len(vals) > 1 {
-			v = stringsToBalList(types, ctx, vals)
-		}
-		entries = append(entries, values.MapEntry{Key: attr.Name, Value: v})
 	}
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.entryTy)
 	return values.NewMap(types.entryTy, atomic, false, entries)
@@ -195,29 +189,29 @@ func attributesForRecordType(ctx *extern.Context, ty semtypes.SemType) []string 
 
 // coerceAttributeValue converts an LDAP attribute's raw values into the Go
 // representation matching the target field's declared type, mirroring
-// Ballerina's implicit string-to-scalar conversion rules.
+// Ballerina's implicit string-to-scalar conversion rules. A value that can't be
+// converted is left as a string so that CloneWithType reports the mismatch.
 func coerceAttributeValue(ctx *extern.Context, types ldapTypes, vals []string, fieldTy semtypes.SemType) values.BalValue {
-	if len(vals) == 0 {
-		return nil
-	}
-	if len(vals) > 1 && semtypes.IsSubtype(ctx.TypeCtx(), types.strArrTy, fieldTy) {
+	cx := ctx.TypeCtx()
+	acceptsList := semtypes.IsSubtype(cx, types.strArrTy, fieldTy)
+	if len(vals) > 1 || (acceptsList && !semtypes.IsSubtype(cx, semtypes.String, fieldTy)) {
 		return stringsToBalList(types, ctx, vals)
 	}
 	s := vals[0]
 	switch {
-	case semtypes.IsSubtype(ctx.TypeCtx(), semtypes.Boolean, fieldTy):
+	case semtypes.IsSubtype(cx, semtypes.Boolean, fieldTy):
 		if b, err := strconv.ParseBool(s); err == nil {
 			return b
 		}
-	case semtypes.IsSubtype(ctx.TypeCtx(), semtypes.Int, fieldTy):
+	case semtypes.IsSubtype(cx, semtypes.Int, fieldTy):
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 			return i
 		}
-	case semtypes.IsSubtype(ctx.TypeCtx(), semtypes.Float, fieldTy):
+	case semtypes.IsSubtype(cx, semtypes.Float, fieldTy):
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
 			return f
 		}
-	case semtypes.IsSubtype(ctx.TypeCtx(), semtypes.Decimal, fieldTy):
+	case semtypes.IsSubtype(cx, semtypes.Decimal, fieldTy):
 		if d, derr := decimal.FromString(s); derr == nil {
 			return d
 		}
@@ -225,25 +219,64 @@ func coerceAttributeValue(ctx *extern.Context, types ldapTypes, vals []string, f
 	return s
 }
 
-// coerceEntryToType builds a record value of targetTy from an LDAP entry,
-// walking the target's declared fields and coercing each matching attribute.
-// Falls back to a generic Entry-shaped map if targetTy isn't a closed record.
-func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry, targetTy semtypes.SemType) values.BalValue {
+// rawAttributeValue surfaces an attribute as string, or string[] when it is
+// multi-valued, matching jBallerina's untyped entry shape.
+func rawAttributeValue(types ldapTypes, ctx *extern.Context, attr *goldap.EntryAttribute) values.BalValue {
+	vals := attributeStringValues(attr)
+	if len(vals) == 0 {
+		return nil
+	}
+	if len(vals) == 1 {
+		return vals[0]
+	}
+	return stringsToBalList(types, ctx, vals)
+}
+
+// coerceEntryToType builds a value of targetTy from an LDAP entry. Declared
+// record fields are matched case-insensitively and coerced to their field type;
+// remaining attributes are kept as-is when the target admits rest fields.
+// CloneWithType then enforces required fields and field types.
+func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), targetTy)
 	if atomic == nil {
-		return buildEntryRecord(types, ctx, entry)
+		return buildEntryRecord(types, ctx, entry), nil
 	}
 	names := atomic.FieldNames()
-	entries := make([]values.MapEntry, 0, len(names))
+	entries := make([]values.MapEntry, 0, len(entry.Attributes))
+	matched := make(map[*goldap.EntryAttribute]bool, len(names))
 	for _, name := range names {
 		attr := findAttribute(entry, name)
 		if attr == nil {
 			continue
 		}
+		matched[attr] = true
 		vals := attributeStringValues(attr)
-		entries = append(entries, values.MapEntry{Key: name, Value: coerceAttributeValue(ctx, types, vals, atomic.FieldInnerVal(name))})
+		if len(vals) == 0 {
+			continue
+		}
+		fieldTy := atomic.FieldInnerVal(name)
+		v := coerceAttributeValue(ctx, types, vals, fieldTy)
+		if !semtypes.IsSubtype(ctx.TypeCtx(), values.SemTypeForValue(v), fieldTy) {
+			return nil, ldapError(fmt.Sprintf("field '%s' should be of type '%s', found '%s'",
+				name, semtypes.ToString(ctx.TypeCtx(), fieldTy), values.String(v, nil)))
+		}
+		entries = append(entries, values.MapEntry{Key: name, Value: v})
 	}
-	return values.NewMap(targetTy, atomic, false, entries)
+	for _, attr := range entry.Attributes {
+		if matched[attr] || semtypes.IsNever(atomic.FieldInnerVal(attr.Name)) {
+			continue
+		}
+		if v := rawAttributeValue(types, ctx, attr); v != nil {
+			entries = append(entries, values.MapEntry{Key: attr.Name, Value: v})
+		}
+	}
+	entryAtomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.entryTy)
+	untyped := values.NewMap(types.entryTy, entryAtomic, false, entries)
+	result, convErr := values.CloneWithType(ctx.TypeCtx(), untyped, targetTy)
+	if convErr != nil {
+		return nil, ldapError(convErr.Message)
+	}
+	return result, nil
 }
 
 func buildSearchReferences(types ldapTypes, ctx *extern.Context, referrals []string) *values.List {
@@ -292,102 +325,121 @@ func stringSliceArg(v values.BalValue) []string {
 }
 
 func registerSearchFunctions(rt *runtime.Runtime, types ldapTypes) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$getEntry",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			dn := args[1].(string)
-			targetTD := args[len(args)-1].(*values.TypeDesc)
-			var attrs []string
-			if len(args) == 4 {
-				attrs = stringSliceArg(args[2])
-			}
-			if len(attrs) == 0 {
-				attrs = attributesForRecordType(ctx, targetTD.Constraint())
-			}
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			req := goldap.NewSearchRequest(dn, goldap.ScopeBaseObject, goldap.NeverDerefAliases,
-				0, 0, false, "(objectClass=*)", attrs, nil)
-			result, err := conn.Search(req)
-			if err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			if len(result.Entries) == 0 {
-				return ldapError(fmt.Sprintf("entry not found: %s (NO_SUCH_OBJECT)", dn)), nil
-			}
-			return coerceEntryToType(ctx, types, result.Entries[0], targetTD.Constraint()), nil
-		})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$getEntry", getEntryExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$search", searchExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$searchWithType", searchWithTypeExtern(types))
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$search",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			baseDn := args[1].(string)
-			filter := args[2].(string)
-			scope := args[3].(string)
-			var attrs []string
-			if len(args) == 5 {
-				attrs = stringSliceArg(args[4])
-			}
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			req := goldap.NewSearchRequest(baseDn, scopeFromString(scope), goldap.NeverDerefAliases,
-				0, 0, false, filter, attrs, nil)
-			result, err := conn.Search(req)
-			if err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			if len(result.Entries) == 0 {
-				return ldapError(fmt.Sprintf("no entries found for baseDN %q, filter %q (OTHER)", baseDn, filter)), nil
-			}
-			return buildSearchResultRecord(types, ctx, result.Entries, result.Referrals), nil
-		})
+func entryNotFoundError(dn string) *values.Error {
+	return ldapError(fmt.Sprintf("Entry is not found for DN: '%s'", dn))
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$searchWithType",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			baseDn := args[1].(string)
-			filter := args[2].(string)
-			scope := args[3].(string)
-			targetTD := args[len(args)-1].(*values.TypeDesc)
-			var attrs []string
-			if len(args) == 6 {
-				attrs = stringSliceArg(args[4])
+func getEntryExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		dn := args[1].(string)
+		targetTD := args[len(args)-1].(*values.TypeDesc)
+		var attrs []string
+		if len(args) == 4 {
+			attrs = stringSliceArg(args[2])
+		}
+		if len(attrs) == 0 {
+			attrs = attributesForRecordType(ctx, targetTD.Constraint())
+		}
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		req := goldap.NewSearchRequest(dn, goldap.ScopeBaseObject, goldap.NeverDerefAliases,
+			0, 0, false, "(objectClass=*)", attrs, nil)
+		result, err := conn.Search(req)
+		if err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		if len(result.Entries) == 0 {
+			return entryNotFoundError(dn), nil
+		}
+		value, convErr := coerceEntryToType(ctx, types, result.Entries[0], targetTD.Constraint())
+		if convErr != nil {
+			return convErr, nil
+		}
+		return value, nil
+	}
+}
+
+func searchExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		baseDn := args[1].(string)
+		filter := args[2].(string)
+		scope := args[3].(string)
+		var attrs []string
+		if len(args) == 5 {
+			attrs = stringSliceArg(args[4])
+		}
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		req := goldap.NewSearchRequest(baseDn, scopeFromString(scope), goldap.NeverDerefAliases,
+			0, 0, false, filter, attrs, nil)
+		result, err := conn.Search(req)
+		if err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		if len(result.Entries) == 0 {
+			return entryNotFoundError(baseDn), nil
+		}
+		return buildSearchResultRecord(types, ctx, result.Entries, result.Referrals), nil
+	}
+}
+
+func searchWithTypeExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		baseDn := args[1].(string)
+		filter := args[2].(string)
+		scope := args[3].(string)
+		targetTD := args[len(args)-1].(*values.TypeDesc)
+		var attrs []string
+		if len(args) == 6 {
+			attrs = stringSliceArg(args[4])
+		}
+		// ToListAtomicType can't resolve the Bdd for a typedesc-sourced
+		// array-of-record SemType (unlike the analogous mapping case
+		// used by getEntry, which works fine) — use the member-type
+		// projection instead, which is the same primitive
+		// stream_member.go uses for index-based access.
+		elemTy := semtypes.ListMemberTypeInnerVal(ctx.TypeCtx(), targetTD.Constraint(), semtypes.IntConst(0))
+		if len(attrs) == 0 {
+			attrs = attributesForRecordType(ctx, elemTy)
+		}
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		req := goldap.NewSearchRequest(baseDn, scopeFromString(scope), goldap.NeverDerefAliases,
+			0, 0, false, filter, attrs, nil)
+		result, err := conn.Search(req)
+		if err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		if len(result.Entries) == 0 {
+			return entryNotFoundError(baseDn), nil
+		}
+		entryVals := make([]values.BalValue, len(result.Entries))
+		for i, e := range result.Entries {
+			value, convErr := coerceEntryToType(ctx, types, e, elemTy)
+			if convErr != nil {
+				return convErr, nil
 			}
-			// ToListAtomicType can't resolve the Bdd for a typedesc-sourced
-			// array-of-record SemType (unlike the analogous mapping case
-			// used by getEntry, which works fine) — use the member-type
-			// projection instead, which is the same primitive
-			// stream_member.go uses for index-based access.
-			elemTy := semtypes.ListMemberTypeInnerVal(ctx.TypeCtx(), targetTD.Constraint(), semtypes.IntConst(0))
-			if len(attrs) == 0 {
-				attrs = attributesForRecordType(ctx, elemTy)
-			}
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			req := goldap.NewSearchRequest(baseDn, scopeFromString(scope), goldap.NeverDerefAliases,
-				0, 0, false, filter, attrs, nil)
-			result, err := conn.Search(req)
-			if err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			if len(result.Entries) == 0 {
-				return ldapError(fmt.Sprintf("no entries found for baseDN %q, filter %q (OTHER)", baseDn, filter)), nil
-			}
-			entryVals := make([]values.BalValue, len(result.Entries))
-			for i, e := range result.Entries {
-				entryVals[i] = coerceEntryToType(ctx, types, e, elemTy)
-			}
-			// Tag the result with a freshly built elemTy[] rather than the
-			// original targetTD.Constraint(), for the same reason as above.
-			resultListBld := semtypes.NewListDefinition()
-			resultListTy := resultListBld.Define(ctx.TypeEnv(), nil, semtypes.ListRest(elemTy))
-			resultAtomic := semtypes.ToListAtomicType(ctx.TypeEnv(), resultListTy)
-			return values.NewList(resultListTy, resultAtomic, false, nil, len(entryVals), entryVals), nil
-		})
+			entryVals[i] = value
+		}
+		// Tag the result with a freshly built elemTy[] rather than the
+		// original targetTD.Constraint(), for the same reason as above.
+		resultListBld := semtypes.NewListDefinition()
+		resultListTy := resultListBld.Define(ctx.TypeEnv(), nil, semtypes.ListRest(elemTy))
+		resultAtomic := semtypes.ToListAtomicType(ctx.TypeEnv(), resultListTy)
+		return values.NewList(resultListTy, resultAtomic, false, nil, len(entryVals), entryVals), nil
+	}
 }
