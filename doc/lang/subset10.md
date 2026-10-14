@@ -211,6 +211,7 @@
     - `fromBytes`
   - `ballerina/lang.error`
     - `message`
+    - `cause`
   - `ballerina/lang.value`
     - `cloneWithType`
     - `fromJsonWithType`
@@ -296,7 +297,7 @@
   - `map:hasKey`
   - `map:get`
   - `map:remove`
-  - `error:message`
+  - `error:message` and `error:cause`
   - `string:length`
   - `string:indexOf`, `string:includes`, `string:substring` and `string:equalsIgnoreCaseAscii`
   - `string:toLowerAscii`, `string:toUpperAscii` and `string:trim`
