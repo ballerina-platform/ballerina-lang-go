@@ -168,3 +168,43 @@ public function main() returns error? {
 	}
 	runExtern(t, tc, newUdpPal(), nil)
 }
+
+// TestUdpClientNonPositiveTimeout checks that a non-positive read timeout
+// disables the read deadline (as in jBallerina) instead of timing out at once.
+func TestUdpClientNonPositiveTimeout(t *testing.T) {
+	skipIfNoLoopback(t)
+	port := goUDPEchoServer(t)
+
+	balContent := fmt.Sprintf(`
+import ballerina/io;
+import ballerina/udp;
+
+public function main() returns error? {
+    udp:Client c = check new ({timeout: 0});
+    check c->sendDatagram({remoteHost: "127.0.0.1", remotePort: %d, data: "hello".toBytes()});
+    readonly & udp:Datagram echoed = check c->receiveDatagram();
+    io:println('string:fromBytes(echoed.data)); // @output hello
+    check c->close();
+
+    udp:ConnectClient cc = check new ("127.0.0.1", %d, {timeout: -1d});
+    check cc->writeBytes("world".toBytes());
+    readonly & byte[] echoed2 = check cc->readBytes();
+    io:println('string:fromBytes(echoed2)); // @output world
+    check cc->close();
+    return;
+}
+`, port, port)
+
+	tmpDir := t.TempDir()
+	tmpBalFile := filepath.Join(tmpDir, "udp-client-nonpositive-timeout-v.bal")
+	if err := os.WriteFile(tmpBalFile, []byte(balContent), 0o644); err != nil {
+		t.Fatalf("writing bal file: %v", err)
+	}
+
+	tc := test_util.TestCase{
+		Name:         "udp-client-nonpositive-timeout-v",
+		InputPath:    tmpBalFile,
+		ExpectedPath: filepath.Join(expectedDir, "udp-client-nonpositive-timeout-v.txtar"),
+	}
+	runExtern(t, tc, newUdpPal(), nil)
+}

@@ -174,12 +174,13 @@ func readLoop(rt *runtime.Runtime, types udpTypes, state *listenerState, svcObj 
 		buf := make([]byte, readBufferSize)
 		n, addr, err := state.pc.ReadFrom(buf)
 		if err != nil {
-			if !errors.Is(err, net.ErrClosed) {
-				errCtx := rt.AcquirePooledContext()
-				invokeOnError(errCtx, svcObj, err.Error())
-				rt.ReleasePooledContext(errCtx)
+			if errors.Is(err, net.ErrClosed) || isStopped(state) {
+				return
 			}
-			return
+			errCtx := rt.AcquirePooledContext()
+			invokeOnError(errCtx, svcObj, err.Error())
+			rt.ReleasePooledContext(errCtx)
+			continue
 		}
 		host, portStr, splitErr := net.SplitHostPort(addr.String())
 		if splitErr != nil {
@@ -190,4 +191,10 @@ func readLoop(rt *runtime.Runtime, types udpTypes, state *listenerState, svcObj 
 		copy(data, buf[:n])
 		go dispatchDatagram(rt, types, svcObj, state.pc, host, port, data)
 	}
+}
+
+func isStopped(state *listenerState) bool {
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	return state.stopped
 }
