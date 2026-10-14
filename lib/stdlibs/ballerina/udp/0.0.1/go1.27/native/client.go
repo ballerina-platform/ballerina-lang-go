@@ -20,6 +20,7 @@ package native
 import (
 	"context"
 	"errors"
+	"math"
 	"net"
 	"strconv"
 	"time"
@@ -42,8 +43,23 @@ func decimalArg(m *values.Map, key string) (*decimal.Decimal, bool) {
 	return d, ok
 }
 
+// decimalToDuration returns 0 (no read deadline) for non-positive or out-of-range values,
+// mirroring jBallerina's IdleStateHandler, which disables the timeout for non-positive values.
 func decimalToDuration(d *decimal.Decimal) time.Duration {
-	return time.Duration(d.Float64() * float64(time.Second))
+	seconds := d.Float64()
+	if seconds <= 0 || seconds >= float64(math.MaxInt64)/float64(time.Second) {
+		return 0
+	}
+	return time.Duration(seconds * float64(time.Second))
+}
+
+func readDeadlineOf(self *values.Object) time.Time {
+	v, _ := self.Get("$timeout")
+	timeout, _ := v.(time.Duration)
+	if timeout <= 0 {
+		return time.Time{}
+	}
+	return time.Now().Add(timeout)
 }
 
 func readTimeoutOf(config *values.Map) time.Duration {
@@ -152,8 +168,9 @@ func registerClientFunctions(rt *runtime.Runtime, types udpTypes) {
 			if pc == nil {
 				return udpError("Socket connection already closed."), nil
 			}
-			timeout, _ := self.Get("$timeout")
-			_ = pc.SetReadDeadline(time.Now().Add(timeout.(time.Duration)))
+			if err := pc.SetReadDeadline(readDeadlineOf(self)); err != nil {
+				return classifyPacketErr(err, "Read timed out"), nil
+			}
 			buf := make([]byte, readBufferSize)
 			n, addr, err := pc.ReadFrom(buf)
 			if err != nil {
@@ -238,8 +255,9 @@ func registerConnectClientFunctions(rt *runtime.Runtime, types udpTypes) {
 			if conn == nil {
 				return udpError("Socket connection already closed."), nil
 			}
-			timeout, _ := self.Get("$timeout")
-			_ = conn.SetReadDeadline(time.Now().Add(timeout.(time.Duration)))
+			if err := conn.SetReadDeadline(readDeadlineOf(self)); err != nil {
+				return classifyPacketErr(err, "Read timed out"), nil
+			}
 			buf := make([]byte, readBufferSize)
 			n, err := conn.Read(buf)
 			if err != nil {
