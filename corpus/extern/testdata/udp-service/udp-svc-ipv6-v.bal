@@ -14,16 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Regression test: Listener.init binds dual-stack by default (matching
-// jBallerina's InetSocketAddress(port) wildcard bind), and every host:port
-// address built from a parsed sender/target host routes correctly for an
-// IPv6 literal. fmt.Sprintf("%s:%d", "::1", port) used to build the
-// unparseable "::1:port" (needs brackets: "[::1]:port"), so a listener that
-// accepted IPv6 traffic still silently failed to reply, and a ConnectClient
-// dialing an IPv6 literal remoteHost failed to connect at all. Both are
-// exercised here via a literal "::1" ConnectClient target — deterministic
-// regardless of how "localhost" happens to resolve on a given machine. See
-// resolveUDPAddr in native/udp.go.
+// A listener replies to a ConnectClient dialing the IPv6 literal "::1".
 import ballerina/io;
 import ballerina/udp;
 

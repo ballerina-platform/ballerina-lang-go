@@ -80,10 +80,10 @@ public isolated client class Client {
 // Fields:
 //   localHost - Local binding of the interface.
 //   timeout   - The socket-reading timeout value in seconds. Defaults to 300 seconds (5 minutes).
-public type ClientConfiguration record {|
+public type ClientConfiguration record {
     string localHost?;
     decimal timeout = 300;
-|};
+};
 
 
 # Represents the caller object passed to udp service remote methods.
@@ -175,10 +175,10 @@ public isolated client class ConnectClient {
 // Fields:
 //   localHost - Local binding of the interface.
 //   timeout   - The socket-reading timeout value in seconds. Defaults to 300 seconds (5 minutes).
-public type ConnectClientConfiguration record {|
+public type ConnectClientConfiguration record {
     string localHost?;
     decimal timeout = 300;
-|};
+};
 
 
 // Represents udp module related errors.
@@ -241,9 +241,9 @@ public isolated class Listener {
 //
 // Fields:
 //   localHost - The hostname or IP address to bind to; defaults to all interfaces.
-public type ListenerConfiguration record {|
+public type ListenerConfiguration record {
     string localHost?;
-|};
+};
 
 
 // Represents the UDP listener service type.

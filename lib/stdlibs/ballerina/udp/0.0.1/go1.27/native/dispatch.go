@@ -20,7 +20,6 @@ package native
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/ballerina-nutcracker/ballerina/bir"
 	"github.com/ballerina-nutcracker/ballerina/model"
@@ -30,11 +29,8 @@ import (
 	"github.com/ballerina-nutcracker/ballerina/values"
 )
 
-// newCallerObject builds a udp:Caller instance directly, bypassing the
-// compiled Ballerina init (see caller.bal — every Caller is constructed by
-// native code, never via `new udp:Caller(...)`). remoteHost/remotePort are
-// the sender address of the one datagram this Caller was dispatched for.
-func newCallerObject(pc net.PacketConn, remoteHost string, remotePort int64) *values.Object {
+// newCallerObject builds the udp:Caller passed to a handler for one received datagram.
+func newCallerObject(pc net.PacketConn, senderAddr net.Addr, remoteHost string, remotePort int64) *values.Object {
 	fields := map[string]values.BalValue{
 		"remoteHost": remoteHost,
 		"remotePort": remotePort,
@@ -45,6 +41,7 @@ func newCallerObject(pc net.PacketConn, remoteHost string, remotePort int64) *va
 	}
 	obj := values.NewObject(semtypes.Object, fields, methodKeys, nil, nil)
 	obj.Put("$pc", pc)
+	obj.Put("$addr", senderAddr)
 	return obj
 }
 
@@ -58,38 +55,35 @@ func registerCallerClassDef(rt *runtime.Runtime) {
 		},
 	}
 	runtime.RegisterExternClassDef(rt, callerClassDef)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Caller.$remote$sendBytes", callerSendBytes)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Caller.$remote$sendDatagram", callerSendDatagram(rt))
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Caller.$remote$sendBytes",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			data := listToBytes(args[1].(*values.List))
-			pc := callerPacketConnOf(self)
-			remoteHost, _ := self.Get("remoteHost")
-			remotePort, _ := self.Get("remotePort")
-			addr, err := resolveUDPAddr(remoteHost.(string), remotePort.(int64))
-			if err != nil {
-				return udpError("Failed to send data: " + err.Error()), nil
-			}
-			if werr := writeFragments(pc, addr, data); werr != nil {
-				return udpError("Failed to send data: " + werr.Error()), nil
-			}
-			return nil, nil
-		})
+func callerSendBytes(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	data := listToBytes(args[1].(*values.List))
+	pc := callerPacketConnOf(self)
+	v, _ := self.Get("$addr")
+	if werr := writeFragments(pc, v.(net.Addr), data); werr != nil {
+		return udpError("Failed to send data: " + werr.Error()), nil
+	}
+	return nil, nil
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Caller.$remote$sendDatagram",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			host, port, data := datagramFields(args[1].(*values.Map))
-			pc := callerPacketConnOf(self)
-			addr, err := resolveUDPAddr(host, port)
-			if err != nil {
-				return udpError("Failed to send data: " + err.Error()), nil
-			}
-			if werr := writeFragments(pc, addr, data); werr != nil {
-				return udpError("Failed to send data: " + werr.Error()), nil
-			}
-			return nil, nil
-		})
+func callerSendDatagram(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		host, port, data := datagramFields(args[1].(*values.Map))
+		pc := callerPacketConnOf(self)
+		addr, err := resolveUDPAddr(rt, host, port)
+		if err != nil {
+			return udpError("Failed to send data: " + err.Error()), nil
+		}
+		if werr := writeFragments(pc, addr, data); werr != nil {
+			return udpError("Failed to send data: " + werr.Error()), nil
+		}
+		return nil, nil
+	}
 }
 
 func callerPacketConnOf(self *values.Object) net.PacketConn {
@@ -98,51 +92,65 @@ func callerPacketConnOf(self *values.Object) net.PacketConn {
 	return pc
 }
 
-func invokeOnError(ctx *extern.Context, svcObj *values.Object, message string) {
+func logHandlerError(rt *runtime.Runtime, message string) {
+	_, _ = rt.Platform().IO.Stderr([]byte("error: " + message + "\n"))
+}
+
+func panicMessage(r any) string {
+	switch v := r.(type) {
+	case *values.Error:
+		return v.Message
+	case error:
+		return v.Error()
+	default:
+		return fmt.Sprintf("%v", r)
+	}
+}
+
+// invokeHandler logs a panicking handler instead of letting it crash the process, as jBallerina does.
+func invokeHandler(rt *runtime.Runtime, ctx *extern.Context, handle extern.MethodHandle, args []values.BalValue) (result values.BalValue, ok bool) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			logHandlerError(rt, panicMessage(rec))
+			result, ok = nil, false
+		}
+	}()
+	result, err := ctx.InvokeMethod(handle, args)
+	return result, err == nil
+}
+
+func invokeOnError(rt *runtime.Runtime, ctx *extern.Context, svcObj *values.Object, message string) {
 	handle, ok := ctx.LookupRemoteMethod(svcObj, "onError")
 	if !ok {
 		return
 	}
-	_, _ = ctx.InvokeMethod(handle, []values.BalValue{svcObj, udpError(message)})
+	invokeHandler(rt, ctx, handle, []values.BalValue{svcObj, udpError(message)})
 }
 
 // applyDispatchResult sends an auto-reply when a handler returns byte[] or a
-// Datagram, and logs (without closing anything — there is no per-datagram
-// connection to close) when it returns an error, mirroring jBallerina's
-// Dispatcher.handleResult.
-func applyDispatchResult(ctx *extern.Context, svcObj *values.Object, pc net.PacketConn, senderAddr net.Addr, result values.BalValue) {
+// Datagram, and logs a returned error, mirroring jBallerina's Dispatcher.handleResult.
+func applyDispatchResult(rt *runtime.Runtime, ctx *extern.Context, svcObj *values.Object, pc net.PacketConn, senderAddr net.Addr, result values.BalValue) {
 	switch v := result.(type) {
 	case *values.List:
 		if werr := writeFragments(pc, senderAddr, listToBytes(v)); werr != nil {
-			invokeOnError(ctx, svcObj, "Failed to send data.")
+			invokeOnError(rt, ctx, svcObj, "Failed to send data.")
 		}
 	case *values.Map:
 		host, port, data := datagramFields(v)
-		addr, err := resolveUDPAddr(host, port)
+		addr, err := resolveUDPAddr(rt, host, port)
 		if err != nil || writeFragments(pc, addr, data) != nil {
-			invokeOnError(ctx, svcObj, "Failed to send data.")
+			invokeOnError(rt, ctx, svcObj, "Failed to send data.")
 		}
 	case *values.Error:
-		fmt.Fprintln(os.Stderr, "udp: handler returned an error:", v.Message)
+		logHandlerError(rt, v.Message)
 	}
 }
 
-// remoteMethodArgs builds the argument list for a resolved onBytes/onDatagram
-// handle by inspecting each declared parameter's type — mirroring
-// jBallerina's own Dispatcher.getOnBytesSignature()/getOnDatagramSignature(),
-// which reflect over the service's MethodType.getParameters() and switch on
-// each parameter's type tag (an object-typed parameter gets the Caller;
-// anything else gets dataValue). This lets onBytes/onDatagram be declared
-// either as a bare single-parameter form (e.g. onBytes(readonly & byte[]
-// data)) or with a trailing Caller, in either parameter order, matching
-// jBallerina exactly.
+// remoteMethodArgs binds each declared parameter by type, as jBallerina's
+// Dispatcher does: an object-typed parameter gets the Caller, anything else
+// gets dataValue. This allows the bare and Caller forms in either order.
 func remoteMethodArgs(ctx *extern.Context, svcObj *values.Object, methodName string, dataValue values.BalValue, callerObj *values.Object) []values.BalValue {
 	methodTy := semtypes.ObjectMemberType(ctx.TypeCtx(), semtypes.StringConst(model.RemoteMethodName(methodName)), svcObj.Type)
-	if semtypes.IsZero(methodTy) || !semtypes.IsSubtype(ctx.TypeCtx(), methodTy, semtypes.Function) {
-		// Shouldn't happen — LookupRemoteMethod already confirmed the
-		// method exists — but fall back to the common two-param form.
-		return []values.BalValue{svcObj, dataValue, callerObj}
-	}
 	paramListTy := semtypes.FunctionParamListType(ctx.TypeCtx(), methodTy)
 	args := []values.BalValue{svcObj}
 	for i := 0; ; i++ {
@@ -160,32 +168,29 @@ func remoteMethodArgs(ctx *extern.Context, svcObj *values.Object, methodName str
 }
 
 // dispatchDatagram invokes whichever of onBytes/onDatagram the attached
-// service declares for a single received datagram — jBallerina dispatches to
-// both if both are present. Each may be declared with or without a trailing
-// Caller parameter, in either order; see remoteMethodArgs.
-func dispatchDatagram(rt *runtime.Runtime, types udpTypes, svcObj *values.Object, pc net.PacketConn, remoteHost string, remotePort int64, data []byte) {
-	ctx := rt.AcquirePooledContext()
-	defer rt.ReleasePooledContext(ctx)
-	senderAddr, err := resolveUDPAddr(remoteHost, remotePort)
+// service declares for a single received datagram; jBallerina dispatches to
+// both if both are present.
+func dispatchDatagram(rt *runtime.Runtime, types udpTypes, svcObj *values.Object, pc net.PacketConn, senderAddr net.Addr, data []byte) {
+	remoteHost, remotePort, err := hostPortOf(senderAddr)
 	if err != nil {
 		return
 	}
+	ctx := rt.AcquirePooledContext()
+	defer rt.ReleasePooledContext(ctx)
 
 	if handle, ok := ctx.LookupRemoteMethod(svcObj, "onBytes"); ok {
-		callerObj := newCallerObject(pc, remoteHost, remotePort)
+		callerObj := newCallerObject(pc, senderAddr, remoteHost, remotePort)
 		dataList := bytesToList(types, ctx, data, true)
-		result, invokeErr := ctx.InvokeMethod(handle, remoteMethodArgs(ctx, svcObj, "onBytes", dataList, callerObj))
-		if invokeErr == nil {
-			applyDispatchResult(ctx, svcObj, pc, senderAddr, result)
+		if result, ok := invokeHandler(rt, ctx, handle, remoteMethodArgs(ctx, svcObj, "onBytes", dataList, callerObj)); ok {
+			applyDispatchResult(rt, ctx, svcObj, pc, senderAddr, result)
 		}
 	}
 
 	if handle, ok := ctx.LookupRemoteMethod(svcObj, "onDatagram"); ok {
-		callerObj := newCallerObject(pc, remoteHost, remotePort)
+		callerObj := newCallerObject(pc, senderAddr, remoteHost, remotePort)
 		datagram := newDatagram(types, ctx, remoteHost, remotePort, data, true)
-		result, invokeErr := ctx.InvokeMethod(handle, remoteMethodArgs(ctx, svcObj, "onDatagram", datagram, callerObj))
-		if invokeErr == nil {
-			applyDispatchResult(ctx, svcObj, pc, senderAddr, result)
+		if result, ok := invokeHandler(rt, ctx, handle, remoteMethodArgs(ctx, svcObj, "onDatagram", datagram, callerObj)); ok {
+			applyDispatchResult(rt, ctx, svcObj, pc, senderAddr, result)
 		}
 	}
 }

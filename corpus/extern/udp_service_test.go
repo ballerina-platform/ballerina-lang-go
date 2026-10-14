@@ -16,58 +16,84 @@
 
 package extern_test
 
-import "testing"
+import (
+	"net"
+	"testing"
 
-// TestUdpServiceOnBytesAutoReply starts a udp:Listener + attached service on
-// a real port and drives it from testMain via a real udp:ConnectClient,
-// exercising the listener -> onBytes -> auto-reply path.
+	"github.com/ballerina-nutcracker/ballerina/platform/pal"
+	"github.com/ballerina-nutcracker/ballerina/platform/palnative"
+	"github.com/ballerina-nutcracker/ballerina/test_util/testharness"
+)
+
+// udpPal wraps the in-memory TestPal with the real UDP Net implementations.
+type udpPal struct {
+	testharness.TestPal
+}
+
+func newUdpPal() *udpPal {
+	return &udpPal{TestPal: testharness.NewTestPal()}
+}
+
+func (p *udpPal) Platform() pal.Platform {
+	base := p.TestPal.Platform()
+	base.Net = pal.Net{
+		DialPacket:        palnative.DialPacket,
+		ListenPacket:      palnative.ListenPacket,
+		ResolvePacketAddr: palnative.ResolvePacketAddr,
+	}
+	return base
+}
+
+// skipIfNoIPv6Loopback skips tests that need "::1"; some CI environments disable IPv6.
+func skipIfNoIPv6Loopback(t *testing.T) {
+	t.Helper()
+	pc, err := net.ListenPacket("udp6", "[::1]:0")
+	if err != nil {
+		t.Skip("skipping IPv6-loopback-dependent test: ::1 unavailable")
+	}
+	_ = pc.Close()
+}
+
+func runUdpService(t *testing.T, name string) {
+	t.Helper()
+	t.Parallel()
+	skipIfNoLoopback(t)
+	runExtern(t, fileCase("udp-service/"+name), newUdpPal(), nil)
+}
+
 func TestUdpServiceOnBytesAutoReply(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-echo-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-echo-v")
 }
 
-// TestUdpServiceOnDatagramCallerReply exercises the onDatagram dispatch path
-// with an explicit Caller.sendDatagram reply, driven via a connectionless
-// udp:Client.
 func TestUdpServiceOnDatagramCallerReply(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-datagram-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-datagram-v")
 }
 
-// TestUdpServiceLifecycle exercises Listener.detach and Listener.immediateStop.
 func TestUdpServiceLifecycle(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-lifecycle-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-lifecycle-v")
 }
 
-// TestUdpServiceInline exercises the anonymous
-// `service on new udp:Listener(...) { ... }` declaration style.
 func TestUdpServiceInline(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-inline-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-inline-v")
 }
 
-// TestUdpServiceOnBytesBareForm exercises the bare onBytes(readonly & byte[])
-// signature (no Caller parameter) — see remoteMethodArgs in native/dispatch.go.
 func TestUdpServiceOnBytesBareForm(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-onbytes-bare-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-onbytes-bare-v")
 }
 
-// TestUdpServiceOnDatagramBareForm exercises the bare
-// onDatagram(readonly & udp:Datagram) signature (no Caller parameter) — the
-// exact shape used by this module's own official examples. See
-// remoteMethodArgs in native/dispatch.go.
 func TestUdpServiceOnDatagramBareForm(t *testing.T) {
-	skipIfNoLoopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-ondatagram-bare-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-ondatagram-bare-v")
 }
 
-// TestUdpServiceIPv6 exercises a dual-stack-bound listener replying to a
-// ConnectClient dialing an IPv6 literal ("::1") — see resolveUDPAddr in
-// native/udp.go.
+func TestUdpServiceClient(t *testing.T) {
+	runUdpService(t, "udp-svc-client-v")
+}
+
+func TestUdpServiceHandlerError(t *testing.T) {
+	runUdpService(t, "udp-svc-handler-error-v")
+}
+
 func TestUdpServiceIPv6(t *testing.T) {
-	skipIfNoLoopback(t)
 	skipIfNoIPv6Loopback(t)
-	runExtern(t, fileCase("udp-service/udp-svc-ipv6-v"), newUdpPal(), nil)
+	runUdpService(t, "udp-svc-ipv6-v")
 }

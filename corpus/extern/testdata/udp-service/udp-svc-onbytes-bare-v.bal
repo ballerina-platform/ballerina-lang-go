@@ -14,11 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Regression test: onBytes may be declared with the bare
-// onBytes(readonly & byte[] data) form (no Caller parameter), matching
-// jBallerina's reflection-driven parameter binding. See remoteMethodArgs in
-// native/dispatch.go — invoking this form with a hardcoded 3-argument call
-// used to crash the interpreter's argument binding on the first datagram.
+// onBytes declared without a Caller parameter.
 import ballerina/io;
 import ballerina/udp;
 

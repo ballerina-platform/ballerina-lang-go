@@ -45,4 +45,8 @@ public function testMain() returns error? {
     udp:Error? startResult = second.'start();
     io:println(startResult is ()); // @output true
     check second.gracefulStop();
+
+    udp:Listener noService = check new (19492);
+    io:println(noService.'start() is ()); // @output true
+    check noService.gracefulStop();
 }

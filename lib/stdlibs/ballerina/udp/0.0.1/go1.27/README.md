@@ -64,7 +64,7 @@ Support Levels:
 | Starting a listener | Supported | |
 | Stopping a listener gracefully | Supported | |
 | Stopping a listener immediately | Supported | |
-| Dispatching a received datagram to a service | Partially Supported | Only the fixed two-parameter forms `onBytes(readonly & byte[], Caller)` and `onDatagram(readonly & Datagram, Caller)` are supported. jBallerina additionally accepts other parameter orders/subsets via reflection-driven binding; this port always invokes the two-parameter form. |
+| Dispatching a received datagram to a service | Supported | Parameters are bound by type, so the bare and `Caller` forms work in either order, as in jBallerina. |
 | Automatically replying with bytes or a datagram returned from a handler | Supported | |
 | Dispatching listener-level errors to the service | Supported | |
 | Caller send operations | Supported | |

@@ -1,4 +1,5 @@
 -- stdout --
-hello
+true
+true
 true
 -- stderr --
