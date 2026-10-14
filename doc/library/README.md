@@ -20,11 +20,12 @@ Support % is computed as `round(Supported / Total * 100)`, where *Total* is the 
 | [os](../../lib/stdlibs/ballerina/os/0.0.1/go1.27/README.md)                   | 11 | 1 | 0 | 92% |
 | [protobuf](../../lib/stdlibs/ballerina/protobuf/0.0.1/go1.27/README.md)       | 11 | 2 | 0 | 85% |
 | [random](../../lib/stdlibs/ballerina/random/0.0.1/go1.27/README.md)           | 3 | 1 | 1 | 60% |
+| [tcp](../../lib/stdlibs/ballerina/tcp/0.0.1/go1.27/README.md)                 | 18 | 1 | 1 | 82% |
 | [time](../../lib/stdlibs/ballerina/time/0.0.1/go1.27/README.md)               | 29 | 3 | 0 | 91% |
 | [udp](../../lib/stdlibs/ballerina/udp/0.0.1/go1.27/README.md)                 | 16 | 2 | 2 | 80% |
 | [url](../../lib/stdlibs/ballerina/url/0.0.1/go1.27/README.md)                 | 3 | 0 | 1 | 75% |
 | [uuid](../../lib/stdlibs/ballerina/uuid/0.0.1/go1.27/README.md)               | 20 | 0 | 0 | 100% |
-| **Total**                                         | **244** | **28** | **68** | **72%** |
+| **Total**                                         | **262** | **29** | **69** | **72%** |
 
 ## Notable Behavioural Changes
 
@@ -108,6 +109,16 @@ Consolidated from each package's README. Only permanent, architectural Go-level 
 
 - **`createDecimal()` — improved entropy precision.** jBallerina delegates to `java.security.SecureRandom.nextFloat()`, which returns a Java 32-bit `float` (24 bits of mantissa) widened to a 64-bit Ballerina `float`. The Go-native version reads 53 bits from `crypto/rand`, producing a full-precision IEEE 754 `float64`. The range [0.0, 1.0) is preserved; values have higher randomness quality.
 - **`createIntInRange()` — corrected range distribution.** The jBallerina formula `startRange + int(rand × (endRange−1−startRange))` never produces `endRange−1` due to an off-by-one in the original implementation. The Go-native version uses `math/rand/v2.Int64N(endRange−startRange) + startRange`, which correctly produces uniform values across the full `[startRange, endRange)` range per the documented specification.
+
+### tcp
+
+- **A connection is closed if `onConnect` returns an error.** jBallerina leaves the connection open with reads permanently paused in this case — a bug in the reference implementation. This port closes the connection instead.
+- **`onClose` is invoked exactly once.** jBallerina can invoke `onClose` twice for a locally-initiated `Caller.close()` (once synchronously from `close()`, once again from the resulting disconnect event) — a bug in the reference implementation. This port guards with per-connection state so `onClose` fires exactly once regardless of who triggers the close.
+- **`Caller`'s fields are computed once, at accept time.** jBallerina constructs a fresh `Caller` object (recomputing `remoteHost`/`remotePort`/`localHost`/`localPort`/`id`, including a potential reverse-DNS lookup) on every single `onConnect`/`onBytes` dispatch. This port computes these fields once when the connection is accepted and reuses them for its lifetime.
+- **`Listener.immediateStop()` actually stops the listener.** jBallerina's `immediateStop()` is an unimplemented no-op stub (per its own documentation). This port force-closes the listener and every active connection immediately.
+- **`Listener.detach()` validates the given service.** jBallerina's `detach()` clears whatever service is currently attached regardless of the argument passed to it. This port returns an `Error` unless the given service is the one currently attached.
+- **A second `Listener.attach()` returns an `Error`.** jBallerina returns `()` when a service is attached to a listener that already has one. This port returns an `Error` instead, since a `tcp:Listener` dispatches to a single service.
+- **`Caller.remoteHost` is the peer's IP address.** jBallerina performs a reverse-DNS lookup, so a client connecting from `127.0.0.1` is reported as `localhost`. This port reports the address as seen on the socket (e.g. `127.0.0.1`) without resolving a host name.
 
 ### time
 
