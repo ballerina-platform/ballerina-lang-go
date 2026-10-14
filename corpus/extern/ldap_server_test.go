@@ -281,8 +281,8 @@ func (s *fakeLdapServer) handleCompare(conn net.Conn, messageID int64, op *ber.P
 	assertion := packetString(op.Children[1].Children[1])
 
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	entry := s.findEntry(dn)
-	s.mu.Unlock()
 	if entry == nil {
 		sendMessage(conn, messageID, ldapResultOp(ber.Tag(goldap.ApplicationCompareResponse), goldap.LDAPResultNoSuchObject, "", "no such object"))
 		return
@@ -351,19 +351,19 @@ func (s *fakeLdapServer) handleSearch(conn net.Conn, messageID int64, op *ber.Pa
 	}
 
 	s.mu.Lock()
-	var matches []*fakeLdapEntry
+	var results []*ber.Packet
 	for _, e := range s.entries {
 		if !dnInScope(e.dn, baseDN, int(scope)) {
 			continue
 		}
 		if evalFilter(filterPkt, e.attrs) {
-			matches = append(matches, e)
+			results = append(results, searchResultEntryOp(e, reqAttrs))
 		}
 	}
 	s.mu.Unlock()
 
-	for _, e := range matches {
-		sendMessage(conn, messageID, searchResultEntryOp(e, reqAttrs))
+	for _, r := range results {
+		sendMessage(conn, messageID, r)
 	}
 	sendMessage(conn, messageID, ldapResultOp(ber.Tag(goldap.ApplicationSearchResultDone), goldap.LDAPResultSuccess, "", ""))
 }

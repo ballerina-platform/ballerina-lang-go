@@ -94,6 +94,10 @@ public function main() returns error? {
     io:println(entry.sn); // @output Doe
     io:println(entry.cn); // @output John Doe
 
+    ldap:Entry genericEntry = check ldapClient->getEntry(userDN);
+    genericEntry["mail"] = ["john@example.com", "doe@example.com"];
+    io:println(genericEntry["mail"]); // @output ["john@example.com","doe@example.com"]
+
     ldap:LdapResponse modifyResult = check ldapClient->modify(userDN, {"telephoneNumber": "5551234"});
     io:println(modifyResult.resultCode); // @output SUCCESS
 
@@ -209,6 +213,94 @@ public function main() returns error? {
 		Name:         "ldap-client-tls-v",
 		InputPath:    tmpBalFile,
 		ExpectedPath: filepath.Join(expectedDir, "ldap-client-tls-v.txtar"),
+	}
+	runExtern(t, tc, newLdapPal(), nil)
+}
+
+func TestLdapClientTLSConfig(t *testing.T) {
+	caCertPEM, serverCertPEM, serverKeyPEM, _, _ := generateTestCerts(t)
+	untrustedCACertPEM, _, _, _, _ := generateTestCerts(t)
+
+	serverTLSCert, err := tls.X509KeyPair(serverCertPEM, serverKeyPEM)
+	if err != nil {
+		t.Fatalf("creating server TLS cert: %v", err)
+	}
+
+	server := newFakeLdapServer(t, fakeLdapBindDN, fakeLdapBindPW, &tls.Config{
+		Certificates: []tls.Certificate{serverTLSCert},
+	})
+	defer server.close()
+
+	_, port, err := net.SplitHostPort(server.addr())
+	if err != nil {
+		t.Fatalf("splitting server addr: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	caCertFile := filepath.Join(tmpDir, "ca.pem")
+	if err := os.WriteFile(caCertFile, caCertPEM, 0o600); err != nil {
+		t.Fatalf("writing ca cert: %v", err)
+	}
+	untrustedCACertFile := filepath.Join(tmpDir, "untrusted-ca.pem")
+	if err := os.WriteFile(untrustedCACertFile, untrustedCACertPEM, 0o600); err != nil {
+		t.Fatalf("writing untrusted ca cert: %v", err)
+	}
+
+	balContent := fmt.Sprintf(`
+import ballerina/io;
+import ballerina/ldap;
+
+const PORT = %s;
+const BIND_DN = %q;
+const BIND_PW = %q;
+const CA_CERT = %q;
+const UNTRUSTED_CA_CERT = %q;
+
+function connect(string hostName, ldap:ClientSecureSocket secureSocket) returns ldap:Client|ldap:Error {
+    return new ({
+        hostName,
+        port: PORT,
+        domainName: BIND_DN,
+        password: BIND_PW,
+        clientSecureSocket: secureSocket
+    });
+}
+
+public function main() returns error? {
+    // The server certificate is issued for 127.0.0.1 only.
+    ldap:Client|ldap:Error hostMismatch = connect("localhost", {cert: CA_CERT});
+    io:println(hostMismatch is ldap:Error); // @output true
+
+    ldap:Client hostCheckSkipped = check connect("localhost", {cert: CA_CERT, verifyHostName: false});
+    boolean hostCheckSkippedConnected = check hostCheckSkipped->isConnected();
+    io:println(hostCheckSkippedConnected); // @output true
+    hostCheckSkipped->close();
+
+    ldap:Client|ldap:Error untrustedChain = connect("127.0.0.1", {cert: UNTRUSTED_CA_CERT, verifyHostName: false});
+    io:println(untrustedChain is ldap:Error); // @output true
+
+    ldap:Client enableFalse = check connect("127.0.0.1", {enable: false, cert: CA_CERT});
+    boolean enableFalseConnected = check enableFalse->isConnected();
+    io:println(enableFalseConnected); // @output true
+    enableFalse->close();
+
+    ldap:Client|ldap:Error badVersion = connect("127.0.0.1", {cert: CA_CERT, tlsVersions: ["TLSv1.2", "TLSv9"]});
+    if badVersion is ldap:Error {
+        io:println(badVersion.message()); // @output clientSecureSocket.tlsVersions: unsupported TLS version 'TLSv9'
+    }
+    return;
+}
+`, port, fakeLdapBindDN, fakeLdapBindPW, filepath.ToSlash(caCertFile), filepath.ToSlash(untrustedCACertFile))
+
+	tmpBalFile := filepath.Join(tmpDir, "ldap-client-tls-config-v.bal")
+	if err := os.WriteFile(tmpBalFile, []byte(balContent), 0o644); err != nil {
+		t.Fatalf("writing bal file: %v", err)
+	}
+
+	tc := test_util.TestCase{
+		Name:         "ldap-client-tls-config-v",
+		InputPath:    tmpBalFile,
+		ExpectedPath: filepath.Join(expectedDir, "ldap-client-tls-config-v.txtar"),
 	}
 	runExtern(t, tc, newLdapPal(), nil)
 }
