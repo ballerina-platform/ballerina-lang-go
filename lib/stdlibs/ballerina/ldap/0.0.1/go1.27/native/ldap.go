@@ -36,21 +36,29 @@ const (
 // construction here is not re-verified against the declared .bal type on
 // assignment, so the extra precision buys nothing at runtime.
 type ldapTypes struct {
-	mapTy    semtypes.SemType // generic open map, used for LdapResponse/SearchResult/SearchReference/Control/Entry
-	strArrTy semtypes.SemType // string[]
-	mapArrTy semtypes.SemType // mapTy[], used for entries[]/searchReferences[]/controls[]
+	mapTy      semtypes.SemType // map<anydata>, used for LdapResponse/SearchResult/SearchReference/Control
+	entryTy    semtypes.SemType // map<AttributeType>, the inherent type of every ldap:Entry
+	strArrTy   semtypes.SemType // string[]
+	mapArrTy   semtypes.SemType // mapTy[], used for searchReferences[]/controls[]
+	entryArrTy semtypes.SemType // entryTy[], used for entries[]
 }
 
 func initLdapModule(rt *runtime.Runtime) {
 	env := rt.GetTypeEnv()
 	mapBld := semtypes.NewMappingDefinition()
+	entryBld := semtypes.NewMappingDefinition()
 	strArrBld := semtypes.NewListDefinition()
 	mapArrBld := semtypes.NewListDefinition()
-	mapTy := mapBld.Define(env, nil, semtypes.String)
+	entryArrBld := semtypes.NewListDefinition()
+	mapTy := mapBld.Define(env, nil, semtypes.CreateAnydata(semtypes.ContextFrom(env)))
+	strArrTy := strArrBld.Define(env, nil, semtypes.ListRest(semtypes.String))
+	entryTy := entryBld.Define(env, nil, attributeType(strArrTy))
 	types := ldapTypes{
-		mapTy:    mapTy,
-		strArrTy: strArrBld.Define(env, nil, semtypes.ListRest(semtypes.String)),
-		mapArrTy: mapArrBld.Define(env, nil, semtypes.ListRest(mapTy)),
+		mapTy:      mapTy,
+		entryTy:    entryTy,
+		strArrTy:   strArrTy,
+		mapArrTy:   mapArrBld.Define(env, nil, semtypes.ListRest(mapTy)),
+		entryArrTy: entryArrBld.Define(env, nil, semtypes.ListRest(entryTy)),
 	}
 
 	clientClassDef := &bir.BIRClassDef{
@@ -80,4 +88,13 @@ func initLdapModule(rt *runtime.Runtime) {
 
 func init() {
 	runtime.RegisterModuleInitializer(initLdapModule)
+}
+
+// attributeType mirrors ldap:AttributeType (boolean|int|float|decimal|string|string[]).
+func attributeType(strArrTy semtypes.SemType) semtypes.SemType {
+	ty := semtypes.Union(semtypes.Boolean, semtypes.Int)
+	ty = semtypes.Union(ty, semtypes.Float)
+	ty = semtypes.Union(ty, semtypes.Decimal)
+	ty = semtypes.Union(ty, semtypes.String)
+	return semtypes.Union(ty, strArrTy)
 }

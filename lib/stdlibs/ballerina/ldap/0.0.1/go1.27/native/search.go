@@ -158,8 +158,8 @@ func buildEntryRecord(types ldapTypes, ctx *extern.Context, entry *goldap.Entry)
 		}
 		entries = append(entries, values.MapEntry{Key: attr.Name, Value: v})
 	}
-	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.mapTy)
-	return values.NewMap(types.mapTy, atomic, false, entries)
+	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.entryTy)
+	return values.NewMap(types.entryTy, atomic, false, entries)
 }
 
 func findAttribute(entry *goldap.Entry, name string) *goldap.EntryAttribute {
@@ -270,9 +270,9 @@ func buildSearchResultRecord(types ldapTypes, ctx *extern.Context, entries []*go
 		for i, e := range entries {
 			entryVals[i] = buildEntryRecord(types, ctx, e)
 		}
-		atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.mapArrTy)
+		atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), types.entryArrTy)
 		mapEntries = append(mapEntries, values.MapEntry{
-			Key: "entries", Value: values.NewList(types.mapArrTy, atomic, true, nil, len(entryVals), entryVals),
+			Key: "entries", Value: values.NewList(types.entryArrTy, atomic, true, nil, len(entryVals), entryVals),
 		})
 	}
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.mapTy)

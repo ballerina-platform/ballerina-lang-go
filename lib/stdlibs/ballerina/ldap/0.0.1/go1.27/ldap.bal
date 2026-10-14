@@ -186,7 +186,8 @@ public type ConnectionConfig record {|
 // fully supported instead; supplying a crypto:TrustStore value returns an Error.
 //
 // Fields:
-//   enable         - Enable SSL validation.
+//   enable         - Retained for compatibility; it has no effect. TLS is always used when
+//                    `clientSecureSocket` is set.
 //   cert           - A PEM certificate file path that the client trusts (crypto:TrustStore not supported).
 //   verifyHostName - Enable/disable host name verification.
 //   tlsVersions    - The TLS versions to be used.

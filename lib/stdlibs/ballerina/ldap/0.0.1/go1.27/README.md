@@ -56,9 +56,9 @@ Support Levels:
 | Feature/API | Support Status | Comments / Limitations |
 |---|---|---|
 | Client initialization with a plaintext simple bind | Supported | |
-| Secure connection using a certificate file path | Supported | |
+| Secure connection using a certificate file path | Supported | As in jBallerina, a present `clientSecureSocket` always selects TLS; its `enable` field has no effect. |
 | Secure connection using a trust store | Cannot Support | Extracting every certificate from a PKCS12 trust store isn't implemented for this module; supplying a trust store value for `clientSecureSocket.cert` returns an `Error` at runtime. Use a PEM certificate file path instead. |
-| TLS host-name verification and TLS version selection | Supported | |
+| TLS host-name verification and TLS version selection | Supported | `verifyHostName: false` skips only the host-name check; the certificate chain is still verified. An unrecognised `tlsVersions` entry returns an `Error`. |
 | Adding an entry | Supported | |
 | Deleting an entry | Supported | |
 | Updating an entry | Supported | Every field is sent as an attribute replace, matching jBallerina; there is no attribute add/delete modification mode. |

@@ -3,6 +3,7 @@ true
 SUCCESS
 Doe
 John Doe
+["john@example.com","doe@example.com"]
 SUCCESS
 true
 false

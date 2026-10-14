@@ -19,7 +19,9 @@ package native
 
 import (
 	"context"
-	"fmt"
+	"net"
+	"strconv"
+	"time"
 
 	goldap "github.com/go-ldap/ldap/v3"
 
@@ -47,23 +49,23 @@ func connOf(self *values.Object) *goldap.Conn {
 	return conn
 }
 
+// requestTimeout bounds every LDAP request, matching the UnboundID SDK's
+// default response timeout that jBallerina inherits.
+const requestTimeout = 300 * time.Second
+
 // buildSecureSocketTLSConfig translates ldap:ClientSecureSocket into a
-// pal.TLSConfig. Returns (nil, nil) when secureSocket is absent/disabled
-// (plaintext connection).
+// pal.TLSConfig. Returns (nil, nil) when secureSocket is absent (plaintext
+// connection). Like jBallerina, `enable` does not select the transport: a
+// present secureSocket always means TLS.
 func buildSecureSocketTLSConfig(rt *runtime.Runtime, secureSocket *values.Map) (*pal.TLSConfig, *values.Error) {
 	if secureSocket == nil {
 		return nil, nil
-	}
-	if v, ok := secureSocket.Get("enable"); ok {
-		if enable, ok := v.(bool); ok && !enable {
-			return nil, nil
-		}
 	}
 
 	var tlsCfg pal.TLSConfig
 	if v, ok := secureSocket.Get("verifyHostName"); ok {
 		if verify, ok := v.(bool); ok && !verify {
-			tlsCfg.InsecureSkipVerify = true
+			tlsCfg.SkipHostnameVerification = true
 		}
 	}
 	if v, ok := secureSocket.Get("cert"); ok && v != nil {
@@ -90,7 +92,7 @@ func buildSecureSocketTLSConfig(rt *runtime.Runtime, secureSocket *values.Map) (
 				}
 				ver, found := tlsVersionByName[name]
 				if !found {
-					continue
+					return nil, ldapError("clientSecureSocket.tlsVersions: unsupported TLS version '" + name + "'")
 				}
 				if tlsCfg.MinVersion == 0 || ver < tlsCfg.MinVersion {
 					tlsCfg.MinVersion = ver
@@ -108,12 +110,13 @@ func buildSecureSocketTLSConfig(rt *runtime.Runtime, secureSocket *values.Map) (
 // *goldap.Conn, and performs the simple bind. domainName is used verbatim as
 // the bind DN (see ConnectionConfig doc comment).
 func dialAndBind(rt *runtime.Runtime, hostName string, port int64, domainName, password string, tlsCfg *pal.TLSConfig) (*goldap.Conn, *values.Error) {
-	address := fmt.Sprintf("%s:%d", hostName, port)
+	address := net.JoinHostPort(hostName, strconv.FormatInt(port, 10))
 	netConn, err := rt.Platform().Net.Dial(context.Background(), "tcp", address, "", tlsCfg)
 	if err != nil {
 		return nil, ldapError("failed to connect to " + address + ": " + err.Error())
 	}
 	conn := goldap.NewConn(netConn, tlsCfg != nil)
+	conn.SetTimeout(requestTimeout)
 	conn.Start()
 
 	if _, err := conn.SimpleBind(goldap.NewSimpleBindRequest(domainName, password, nil)); err != nil {
