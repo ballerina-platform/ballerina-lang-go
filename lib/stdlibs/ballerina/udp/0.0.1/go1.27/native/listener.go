@@ -66,131 +66,121 @@ func registerListenerFunctions(rt *runtime.Runtime, types udpTypes) {
 	runtime.RegisterExternClassDef(rt, listenerClassDef)
 	registerCallerClassDef(rt)
 
-	// Default lambda for the optional `name` parameter of attach (defaults to ()).
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Listener.attach$default$1",
-		func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) { return nil, nil })
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Listener.attach$default$1", listenerAttachDefaultName)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.initListener", listenerInit)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.attach", listenerAttach)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.detach", listenerDetach)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.start", listenerStart(rt, types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.gracefulStop", listenerGracefulStop)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.immediateStop", listenerImmediateStop)
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.initListener",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			port := int(args[1].(int64))
-			config := args[2].(*values.Map)
+func listenerAttachDefaultName(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+	return nil, nil
+}
 
-			state := &listenerState{host: "", port: port}
-			if host := localHostOf(config); host != "" {
-				state.host = host
-			}
-			self.Put("$state", state)
+func listenerInit(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	port := int(args[1].(int64))
+	config := args[2].(*values.Map)
+	self.Put("$state", &listenerState{host: localHostOf(config), port: port})
+	return nil, nil
+}
+
+func listenerAttach(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	svcObj := args[1].(*values.Object)
+	state := listenerStateOf(args[0].(*values.Object))
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.svcObj != nil {
+		return udpError("Listener.attach: a service is already attached to this listener"), nil
+	}
+	state.svcObj = svcObj
+	return nil, nil
+}
+
+func listenerDetach(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	svcObj := args[1].(*values.Object)
+	state := listenerStateOf(args[0].(*values.Object))
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.svcObj != svcObj {
+		return udpError("Listener.detach: the given service is not attached to this listener"), nil
+	}
+	state.svcObj = nil
+	return nil, nil
+}
+
+func listenerStart(rt *runtime.Runtime, types udpTypes) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		state := listenerStateOf(args[0].(*values.Object))
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		if state.pc != nil {
 			return nil, nil
-		})
+		}
+		pc, err := rt.Platform().Net.ListenPacket("udp", net.JoinHostPort(state.host, strconv.Itoa(state.port)))
+		if err != nil {
+			return udpError("Unable to initialize UDP Listener: " + err.Error()), nil
+		}
+		state.pc = pc
+		go readLoop(rt, types, state, pc)
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.attach",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			svcObj, ok := args[1].(*values.Object)
-			if !ok {
-				return udpError("Listener.attach: expected a service object"), nil
-			}
-			state := listenerStateOf(args[0].(*values.Object))
-			state.mu.Lock()
-			defer state.mu.Unlock()
-			if state.svcObj != nil {
-				return udpError("Listener.attach: a service is already attached to this listener"), nil
-			}
-			state.svcObj = svcObj
-			return nil, nil
-		})
+func listenerGracefulStop(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return stopListener(listenerStateOf(args[0].(*values.Object)), "Failed to gracefully shutdown the Listener."), nil
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.detach",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			svcObj := args[1].(*values.Object)
-			state := listenerStateOf(args[0].(*values.Object))
-			state.mu.Lock()
-			defer state.mu.Unlock()
-			if state.svcObj != svcObj {
-				return udpError("Listener.detach: the given service is not attached to this listener"), nil
-			}
-			state.svcObj = nil
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.start",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			state := listenerStateOf(args[0].(*values.Object))
-			state.mu.Lock()
-			if state.pc != nil {
-				state.mu.Unlock()
-				return nil, nil
-			}
-			if state.svcObj == nil {
-				state.mu.Unlock()
-				return udpError("Error initializing the server: no service attached"), nil
-			}
-			svcObj := state.svcObj
-			address := net.JoinHostPort(state.host, strconv.Itoa(state.port))
-			state.mu.Unlock()
-
-			pc, err := rt.Platform().Net.ListenPacket("udp", address)
-			if err != nil {
-				return udpError("Unable to initialize UDP Listener: " + err.Error()), nil
-			}
-			state.mu.Lock()
-			state.pc = pc
-			state.mu.Unlock()
-			go readLoop(rt, types, state, svcObj)
-			return nil, nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.gracefulStop",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return stopListener(listenerStateOf(args[0].(*values.Object)), "Failed to gracefully shutdown the Listener."), nil
-		})
-
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.immediateStop",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			return stopListener(listenerStateOf(args[0].(*values.Object)), "Failed to shutdown the Listener."), nil
-		})
+func listenerImmediateStop(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return stopListener(listenerStateOf(args[0].(*values.Object)), "Failed to shutdown the Listener."), nil
 }
 
 func stopListener(state *listenerState, failureMsg string) values.BalValue {
 	state.mu.Lock()
 	pc := state.pc
-	alreadyStopped := state.stopped
-	state.stopped = true
-	state.mu.Unlock()
-	if alreadyStopped {
+	if pc == nil || state.stopped {
+		state.mu.Unlock()
 		return nil
 	}
-	if pc == nil {
-		return udpError("Unable to initialize the udp listener.")
-	}
+	state.stopped = true
+	state.mu.Unlock()
 	if err := pc.Close(); err != nil {
 		return udpError(failureMsg)
 	}
 	return nil
 }
 
-func readLoop(rt *runtime.Runtime, types udpTypes, state *listenerState, svcObj *values.Object) {
+func readLoop(rt *runtime.Runtime, types udpTypes, state *listenerState, pc net.PacketConn) {
 	for {
 		buf := make([]byte, readBufferSize)
-		n, addr, err := state.pc.ReadFrom(buf)
+		n, addr, err := pc.ReadFrom(buf)
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) || isStopped(state) {
 				return
 			}
-			errCtx := rt.AcquirePooledContext()
-			invokeOnError(errCtx, svcObj, err.Error())
-			rt.ReleasePooledContext(errCtx)
+			if svcObj := attachedService(state); svcObj != nil {
+				errCtx := rt.AcquirePooledContext()
+				invokeOnError(rt, errCtx, svcObj, err.Error())
+				rt.ReleasePooledContext(errCtx)
+			}
 			continue
 		}
-		host, portStr, splitErr := net.SplitHostPort(addr.String())
-		if splitErr != nil {
+		svcObj := attachedService(state)
+		if svcObj == nil {
 			continue
 		}
-		port, _ := strconv.ParseInt(portStr, 10, 64)
 		data := make([]byte, n)
 		copy(data, buf[:n])
-		go dispatchDatagram(rt, types, svcObj, state.pc, host, port, data)
+		go dispatchDatagram(rt, types, svcObj, pc, addr, data)
 	}
+}
+
+func attachedService(state *listenerState) *values.Object {
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	return state.svcObj
 }
 
 func isStopped(state *listenerState) bool {

@@ -20,6 +20,7 @@ package native
 import (
 	"context"
 	"errors"
+	"io"
 	"math"
 	"net"
 	"strconv"
@@ -53,13 +54,13 @@ func decimalToDuration(d *decimal.Decimal) time.Duration {
 	return time.Duration(seconds * float64(time.Second))
 }
 
-func readDeadlineOf(self *values.Object) time.Time {
+func readDeadlineOf(rt *runtime.Runtime, self *values.Object) time.Time {
 	v, _ := self.Get("$timeout")
 	timeout, _ := v.(time.Duration)
 	if timeout <= 0 {
 		return time.Time{}
 	}
-	return time.Now().Add(timeout)
+	return rt.Platform().Time.Now().Add(timeout)
 }
 
 func readTimeoutOf(config *values.Map) time.Duration {
@@ -127,72 +128,69 @@ func registerClientFunctions(rt *runtime.Runtime, types udpTypes) {
 		},
 	}
 	runtime.RegisterExternClassDef(rt, clientClassDef)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initClient", clientInit(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$sendDatagram", clientSendDatagram(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$receiveDatagram", clientReceiveDatagram(rt, types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$close", clientClose)
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initClient",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			config := args[1].(*values.Map)
+func clientInit(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		config := args[1].(*values.Map)
 
-			address := net.JoinHostPort(localHostOf(config), "0")
-			pc, err := rt.Platform().Net.ListenPacket("udp", address)
-			if err != nil {
-				return udpError("Error initializing UDP Client: " + err.Error()), nil
-			}
-			self.Put("$pc", pc)
-			self.Put("$timeout", readTimeoutOf(config))
-			return nil, nil
-		})
+		address := net.JoinHostPort(localHostOf(config), "0")
+		pc, err := rt.Platform().Net.ListenPacket("udp", address)
+		if err != nil {
+			return udpError("Error initializing UDP Client: " + err.Error()), nil
+		}
+		self.Put("$pc", pc)
+		self.Put("$timeout", readTimeoutOf(config))
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$sendDatagram",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			host, port, data := datagramFields(args[1].(*values.Map))
-			pc := packetConnOf(self)
-			if pc == nil {
-				return udpError("Socket connection already closed."), nil
-			}
-			addr, err := resolveUDPAddr(host, port)
-			if err != nil {
-				return udpError("Failed to send data: " + err.Error()), nil
-			}
-			if werr := writeFragments(pc, addr, data); werr != nil {
-				return udpError("Failed to send data: " + werr.Error()), nil
-			}
-			return nil, nil
-		})
+func clientSendDatagram(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		host, port, data := datagramFields(args[1].(*values.Map))
+		pc := packetConnOf(self)
+		if pc == nil {
+			return udpError("Socket connection already closed."), nil
+		}
+		addr, err := resolveUDPAddr(rt, host, port)
+		if err != nil {
+			return udpError("Failed to send data: " + err.Error()), nil
+		}
+		if werr := writeFragments(pc, addr, data); werr != nil {
+			return udpError("Failed to send data: " + werr.Error()), nil
+		}
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$receiveDatagram",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			pc := packetConnOf(self)
-			if pc == nil {
-				return udpError("Socket connection already closed."), nil
-			}
-			if err := pc.SetReadDeadline(readDeadlineOf(self)); err != nil {
-				return classifyPacketErr(err, "Read timed out"), nil
-			}
-			buf := make([]byte, readBufferSize)
-			n, addr, err := pc.ReadFrom(buf)
-			if err != nil {
-				return classifyPacketErr(err, "Read timed out"), nil
-			}
-			host, portStr, _ := net.SplitHostPort(addr.String())
-			port, _ := strconv.ParseInt(portStr, 10, 64)
-			return newDatagram(types, ctx, host, port, buf[:n], true), nil
-		})
+func clientReceiveDatagram(rt *runtime.Runtime, types udpTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		pc := packetConnOf(self)
+		if pc == nil {
+			return udpError("Socket connection already closed."), nil
+		}
+		if err := pc.SetReadDeadline(readDeadlineOf(rt, self)); err != nil {
+			return classifyPacketErr(err, "Read timed out"), nil
+		}
+		buf := make([]byte, readBufferSize)
+		n, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			return classifyPacketErr(err, "Read timed out"), nil
+		}
+		host, port, _ := hostPortOf(addr)
+		return newDatagram(types, ctx, host, port, buf[:n], true), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$close",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			pc := packetConnOf(self)
-			if pc == nil {
-				return nil, nil
-			}
-			if err := pc.Close(); err != nil {
-				return udpError("Unable to close the UDP client: " + err.Error()), nil
-			}
-			return nil, nil
-		})
+func clientClose(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return closeSocket(packetConnOf(args[0].(*values.Object))), nil
 }
 
 func registerConnectClientFunctions(rt *runtime.Runtime, types udpTypes) {
@@ -208,76 +206,83 @@ func registerConnectClientFunctions(rt *runtime.Runtime, types udpTypes) {
 		},
 	}
 	runtime.RegisterExternClassDef(rt, connectClientClassDef)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.initConnectClient", connectClientInit(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$writeBytes", connectClientWriteBytes)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$readBytes", connectClientReadBytes(rt, types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$close", connectClientClose)
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.initConnectClient",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			remoteHost := args[1].(string)
-			remotePort := args[2].(int64)
-			config := args[3].(*values.Map)
+func connectClientInit(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		remoteHost := args[1].(string)
+		remotePort := args[2].(int64)
+		config := args[3].(*values.Map)
 
-			localAddr := ""
-			if localHost := localHostOf(config); localHost != "" {
-				localAddr = net.JoinHostPort(localHost, "0")
-			}
-			address := net.JoinHostPort(remoteHost, strconv.FormatInt(remotePort, 10))
-			dialCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			conn, err := rt.Platform().Net.DialPacket(dialCtx, "udp", address, localAddr)
-			if err != nil {
-				return udpError("Can't connect to remote host: " + err.Error()), nil
-			}
-			self.Put("$conn", conn)
-			self.Put("$timeout", readTimeoutOf(config))
-			return nil, nil
-		})
+		localAddr := ""
+		if localHost := localHostOf(config); localHost != "" {
+			localAddr = net.JoinHostPort(localHost, "0")
+		}
+		address := net.JoinHostPort(remoteHost, strconv.FormatInt(remotePort, 10))
+		dialCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		conn, err := rt.Platform().Net.DialPacket(dialCtx, "udp", address, localAddr)
+		if err != nil {
+			return udpError("Can't connect to remote host: " + err.Error()), nil
+		}
+		self.Put("$conn", conn)
+		self.Put("$timeout", readTimeoutOf(config))
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$writeBytes",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			data := listToBytes(args[1].(*values.List))
-			conn := connOf(self)
-			if conn == nil {
-				return udpError("Socket connection already closed."), nil
-			}
-			for _, fragment := range fragmentBytes(data) {
-				if _, err := conn.Write(fragment); err != nil {
-					return udpError("Failed to send data: " + err.Error()), nil
-				}
-			}
-			return nil, nil
-		})
+func connectClientWriteBytes(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	data := listToBytes(args[1].(*values.List))
+	conn := connOf(self)
+	if conn == nil {
+		return udpError("Socket connection already closed."), nil
+	}
+	for _, fragment := range fragmentBytes(data) {
+		if _, err := conn.Write(fragment); err != nil {
+			return udpError("Failed to send data: " + err.Error()), nil
+		}
+	}
+	return nil, nil
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$readBytes",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			conn := connOf(self)
-			if conn == nil {
-				return udpError("Socket connection already closed."), nil
-			}
-			if err := conn.SetReadDeadline(readDeadlineOf(self)); err != nil {
-				return classifyPacketErr(err, "Read timed out"), nil
-			}
-			buf := make([]byte, readBufferSize)
-			n, err := conn.Read(buf)
-			if err != nil {
-				return classifyPacketErr(err, "Read timed out"), nil
-			}
-			return bytesToList(types, ctx, buf[:n], true), nil
-		})
+func connectClientReadBytes(rt *runtime.Runtime, types udpTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		conn := connOf(self)
+		if conn == nil {
+			return udpError("Socket connection already closed."), nil
+		}
+		if err := conn.SetReadDeadline(readDeadlineOf(rt, self)); err != nil {
+			return classifyPacketErr(err, "Read timed out"), nil
+		}
+		buf := make([]byte, readBufferSize)
+		n, err := conn.Read(buf)
+		if err != nil {
+			return classifyPacketErr(err, "Read timed out"), nil
+		}
+		return bytesToList(types, ctx, buf[:n], true), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "ConnectClient.$remote$close",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			conn := connOf(self)
-			if conn == nil {
-				return nil, nil
-			}
-			if err := conn.Close(); err != nil {
-				return udpError("Unable to close the UDP client: " + err.Error()), nil
-			}
-			return nil, nil
-		})
+func connectClientClose(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return closeSocket(connOf(args[0].(*values.Object))), nil
+}
+
+// closeSocket treats an already-closed socket as success, as jBallerina's close does.
+func closeSocket(c io.Closer) values.BalValue {
+	if c == nil {
+		return nil
+	}
+	if err := c.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		return udpError("Unable to close the UDP client: " + err.Error())
+	}
+	return nil
 }
 
 func packetConnOf(self *values.Object) net.PacketConn {

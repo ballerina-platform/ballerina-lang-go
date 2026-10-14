@@ -32,18 +32,11 @@ const (
 	moduleName = "udp"
 )
 
-// maxDatagramSize bounds a single outbound UDP fragment (matches jBallerina's
-// DATAGRAM_DATA_SIZE) and the buffer used for a single inbound read (the
-// practical max UDP payload over IPv4, well above any realistic datagram).
+// maxDatagramSize bounds a single outbound UDP fragment (jBallerina's DATAGRAM_DATA_SIZE).
 const maxDatagramSize = 8192
 
 const readBufferSize = 65507
 
-// udpTypes holds the SemTypes shared by every native function in this
-// module. Unlike the generic-open-map convention used by ldap/crypto/file
-// (all their record fields share one type), Datagram mixes string/int/byte[]
-// fields, so it needs a hand-built closed record shape instead of a generic
-// open map — see FieldFrom below.
 type udpTypes struct {
 	byteArrTy  semtypes.SemType
 	datagramTy semtypes.SemType
@@ -53,14 +46,18 @@ func udpError(msg string) *values.Error {
 	return values.NewErrorWithMessage(msg)
 }
 
-// resolveUDPAddr builds a "host:port" address for net.ResolveUDPAddr via
-// net.JoinHostPort, which brackets IPv6 literals (e.g. "::1") correctly —
-// fmt.Sprintf("%s:%d", host, port) does not, and silently produces an
-// unparseable address for any IPv6 sender/target (a dual-stack listener
-// receives IPv6 datagrams routinely, e.g. from a peer that resolved
-// "localhost" to "::1").
-func resolveUDPAddr(host string, port int64) (*net.UDPAddr, error) {
-	return net.ResolveUDPAddr("udp", net.JoinHostPort(host, strconv.FormatInt(port, 10)))
+// resolveUDPAddr uses JoinHostPort so IPv6 literals are bracketed.
+func resolveUDPAddr(rt *runtime.Runtime, host string, port int64) (net.Addr, error) {
+	return rt.Platform().Net.ResolvePacketAddr("udp", net.JoinHostPort(host, strconv.FormatInt(port, 10)))
+}
+
+func hostPortOf(addr net.Addr) (string, int64, error) {
+	host, portStr, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return "", 0, err
+	}
+	port, err := strconv.ParseInt(portStr, 10, 64)
+	return host, port, err
 }
 
 func listToBytes(list *values.List) []byte {

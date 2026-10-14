@@ -14,12 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Regression test: onDatagram may be declared with the bare
-// onDatagram(readonly & udp:Datagram datagram) form (no Caller parameter) —
-// this is the exact shape used by this module's own official examples. See
-// remoteMethodArgs in native/dispatch.go — invoking this form with a
-// hardcoded 3-argument call used to crash the interpreter's argument
-// binding on the first datagram, taking down the whole listener process.
+// onDatagram declared without a Caller parameter.
 import ballerina/io;
 import ballerina/udp;
 
