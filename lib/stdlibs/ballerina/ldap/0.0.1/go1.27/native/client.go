@@ -127,46 +127,53 @@ func dialAndBind(rt *runtime.Runtime, hostName string, port int64, domainName, p
 }
 
 func registerClientFunctions(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initLdapConnection",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			config := args[1].(*values.Map)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.initLdapConnection", initLdapConnectionExtern(rt))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$close", closeExtern)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$isConnected", isConnectedExtern)
+}
 
-			hostName, _ := config.Get("hostName")
-			port, _ := config.Get("port")
-			domainName, _ := config.Get("domainName")
-			password, _ := config.Get("password")
+func initLdapConnectionExtern(rt *runtime.Runtime) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		config := args[1].(*values.Map)
 
-			var secureSocket *values.Map
-			if v, ok := config.Get("clientSecureSocket"); ok {
-				secureSocket, _ = v.(*values.Map)
-			}
-			tlsCfg, tlsErr := buildSecureSocketTLSConfig(rt, secureSocket)
-			if tlsErr != nil {
-				return tlsErr, nil
-			}
+		hostName, _ := config.Get("hostName")
+		port, _ := config.Get("port")
+		domainName, _ := config.Get("domainName")
+		password, _ := config.Get("password")
 
-			conn, connErr := dialAndBind(rt, hostName.(string), port.(int64), domainName.(string), password.(string), tlsCfg)
-			if connErr != nil {
-				return connErr, nil
-			}
-			self.Put("$conn", conn)
-			return nil, nil
-		})
+		var secureSocket *values.Map
+		if v, ok := config.Get("clientSecureSocket"); ok {
+			secureSocket, _ = v.(*values.Map)
+		}
+		tlsCfg, tlsErr := buildSecureSocketTLSConfig(rt, secureSocket)
+		if tlsErr != nil {
+			return tlsErr, nil
+		}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$close",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			if conn := connOf(self); conn != nil {
-				_ = conn.Close()
-			}
-			return nil, nil
-		})
+		conn, connErr := dialAndBind(rt, hostName.(string), port.(int64), domainName.(string), password.(string), tlsCfg)
+		if connErr != nil {
+			return connErr, nil
+		}
+		self.Put("$conn", conn)
+		return nil, nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$isConnected",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			conn := connOf(self)
-			return conn != nil && !conn.IsClosing(), nil
-		})
+// closeExtern sends an UnbindRequest before closing, as jBallerina's
+// LDAPConnection.close() does (RFC 4511 4.3).
+func closeExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	if conn := connOf(self); conn != nil {
+		if err := conn.Unbind(); err != nil {
+			_ = conn.Close()
+		}
+	}
+	return nil, nil
+}
+
+func isConnectedExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	conn := connOf(self)
+	return conn != nil && !conn.IsClosing(), nil
 }

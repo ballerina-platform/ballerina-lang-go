@@ -1,6 +1,6 @@
 # Supported ballerina library features
 
-Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion.
+Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -240,3 +240,25 @@ Predefined `NamespaceUUID` constants (`NAME_SPACE_DNS`, `NAME_SPACE_URL`,
 `NAME_SPACE_OID`, `NAME_SPACE_X500`, `NAME_SPACE_NIL`) are available for type
 3/5 generation. The `Uuid` record is `readonly` with `int:Unsigned32` /
 `int:Unsigned16` / `int:Unsigned8` fields, matching jBallerina's contract.
+
+## [ldap](https://github.com/ballerina-platform/module-ballerina-ldap/blob/master/docs/spec/spec.md)
+
+Types: `ldap:Client` (client class), `ldap:Error`.
+
+| Method | Notes |
+|---|---|
+| `new ldap:Client(config)` | Connects and performs a simple bind with `domainName` as the bind DN; returns `ldap:Error` on a connection, TLS or bind failure. `config` is a plain record parameter, so pass a record literal rather than named arguments |
+| `Client->add(dN, entry)` | Adds an entry; returns `ldap:LdapResponse\|ldap:Error` |
+| `Client->delete(dN)` | Deletes an entry |
+| `Client->modify(dN, entry)` | Replaces each given attribute |
+| `Client->modifyDn(currentDn, newRdn, deleteOldRdn?)` | Renames an entry |
+| `Client->compare(dN, attributeName, assertionValue)` | Returns `boolean\|ldap:Error` |
+| `Client->getEntry(dN, attributes?, targetType?)` | Returns the entry bound to the type inferred from the call site. Attributes to fetch are inferred from a closed target record's fields when not given. A declared field is converted from the attribute's string value; a required field with no matching attribute or a value that can't be converted returns `ldap:Error` |
+| `Client->search(baseDn, filter, scope, attributes?)` | Returns `ldap:SearchResult\|ldap:Error`; no matching entry returns `ldap:Error` |
+| `Client->searchWithType(baseDn, filter, scope, attributes?, targetType?)` | As `search`, binding each entry to the element type of `targetType` as `getEntry` does |
+| `Client->close()` | Sends an unbind request and closes the connection |
+| `Client->isConnected()` | Returns whether the connection is open |
+
+TLS is selected by supplying `clientSecureSocket`. The server certificate is trusted through a PEM certificate file path in `cert`; a `crypto:TrustStore` returns `ldap:Error`. `verifyHostName` and `tlsVersions` are supported.
+
+Not covered in this subset: the `ldap:Error` detail record (`error:detail()` is not implemented yet, so the result code is only visible in the message), and `distinct` error types.

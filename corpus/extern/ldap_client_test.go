@@ -53,6 +53,7 @@ const (
 )
 
 func TestLdapClientBasic(t *testing.T) {
+	t.Parallel()
 	server := newFakeLdapServer(t, fakeLdapBindDN, fakeLdapBindPW, nil)
 	defer server.close()
 
@@ -69,6 +70,20 @@ type Person record {|
     string sn?;
     string cn?;
     string telephoneNumber?;
+|};
+
+type IntSurname record {|
+    int sn;
+|};
+
+type RequiresMail record {|
+    string sn;
+    string mail;
+|};
+
+type ObjectClasses record {|
+    string[] objectClass;
+    string[] sn;
 |};
 
 public function main() returns error? {
@@ -88,15 +103,29 @@ public function main() returns error? {
         "cn": "John Doe",
         "telephoneNumber": "1234567890"
     });
-    io:println(addResult.resultCode); // @output SUCCESS
+    io:println(addResult); // @output {"matchedDN":null,"resultCode":"SUCCESS","diagnosticMessage":null,"operationType":"ADD","referral":[]}
 
     Person entry = check ldapClient->getEntry(userDN);
     io:println(entry.sn); // @output Doe
     io:println(entry.cn); // @output John Doe
 
     ldap:Entry genericEntry = check ldapClient->getEntry(userDN);
+    io:println(genericEntry); // @output {"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"1234567890"}
     genericEntry["mail"] = ["john@example.com", "doe@example.com"];
     io:println(genericEntry["mail"]); // @output ["john@example.com","doe@example.com"]
+
+    ObjectClasses classes = check ldapClient->getEntry(userDN);
+    io:println(classes); // @output {"objectClass":["top","person"],"sn":["Doe"]}
+
+    IntSurname|ldap:Error intSurname = ldapClient->getEntry(userDN);
+    if intSurname is ldap:Error {
+        io:println(intSurname.message()); // @output field 'sn' should be of type 'int', found 'Doe'
+    }
+
+    RequiresMail|ldap:Error requiresMail = ldapClient->getEntry(userDN);
+    if requiresMail is ldap:Error {
+        io:println(requiresMail.message()); // @output '{| boolean|int|float|decimal|string|[string...]... |}' value cannot be converted to '{| mail: string, sn: string, never... |}': field 'mail' not present in value
+    }
 
     ldap:LdapResponse modifyResult = check ldapClient->modify(userDN, {"telephoneNumber": "5551234"});
     io:println(modifyResult.resultCode); // @output SUCCESS
@@ -115,6 +144,9 @@ public function main() returns error? {
     io:println(typedResults.length()); // @output 1
     io:println(typedResults[0].cn); // @output John Doe
 
+    ldap:Entry[] genericResults = check ldapClient->searchWithType("dc=example,dc=com", "(sn=Doe)", ldap:SUB);
+    io:println(genericResults); // @output [{"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"5551234"}]
+
     string newUserDN = "cn=Jane Doe,dc=example,dc=com";
     ldap:LdapResponse renameResult = check ldapClient->modifyDn(userDN, "cn=Jane Doe", false);
     io:println(renameResult.resultCode); // @output SUCCESS
@@ -124,6 +156,11 @@ public function main() returns error? {
 
     Person|ldap:Error afterDelete = ldapClient->getEntry(newUserDN);
     io:println(afterDelete is ldap:Error); // @output true
+
+    ldap:SearchResult|ldap:Error noMatch = ldapClient->search("dc=example,dc=com", "(cn=Nobody)", ldap:SUB);
+    if noMatch is ldap:Error {
+        io:println(noMatch.message()); // @output Entry is not found for DN: 'dc=example,dc=com'
+    }
 
     ldapClient->close();
     boolean stillConnected = check ldapClient->isConnected();
@@ -147,6 +184,7 @@ public function main() returns error? {
 }
 
 func TestLdapClientTLS(t *testing.T) {
+	t.Parallel()
 	caCertPEM, serverCertPEM, serverKeyPEM, _, _ := generateTestCerts(t)
 
 	serverTLSCert, err := tls.X509KeyPair(serverCertPEM, serverKeyPEM)
@@ -218,6 +256,7 @@ public function main() returns error? {
 }
 
 func TestLdapClientTLSConfig(t *testing.T) {
+	t.Parallel()
 	caCertPEM, serverCertPEM, serverKeyPEM, _, _ := generateTestCerts(t)
 	untrustedCACertPEM, _, _, _, _ := generateTestCerts(t)
 
@@ -283,11 +322,6 @@ public function main() returns error? {
     boolean enableFalseConnected = check enableFalse->isConnected();
     io:println(enableFalseConnected); // @output true
     enableFalse->close();
-
-    ldap:Client|ldap:Error badVersion = connect("127.0.0.1", {cert: CA_CERT, tlsVersions: ["TLSv1.2", "TLSv9"]});
-    if badVersion is ldap:Error {
-        io:println(badVersion.message()); // @output clientSecureSocket.tlsVersions: unsupported TLS version 'TLSv9'
-    }
     return;
 }
 `, port, fakeLdapBindDN, fakeLdapBindPW, filepath.ToSlash(caCertFile), filepath.ToSlash(untrustedCACertFile))

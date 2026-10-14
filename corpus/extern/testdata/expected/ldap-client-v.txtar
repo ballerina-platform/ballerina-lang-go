@@ -1,9 +1,13 @@
 -- stdout --
 true
-SUCCESS
+{"matchedDN":null,"resultCode":"SUCCESS","diagnosticMessage":null,"operationType":"ADD","referral":[]}
 Doe
 John Doe
+{"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"1234567890"}
 ["john@example.com","doe@example.com"]
+{"objectClass":["top","person"],"sn":["Doe"]}
+field 'sn' should be of type 'int', found 'Doe'
+'{| boolean|int|float|decimal|string|[string...]... |}' value cannot be converted to '{| mail: string, sn: string, never... |}': field 'mail' not present in value
 SUCCESS
 true
 false
@@ -11,8 +15,10 @@ SUCCESS
 true
 1
 John Doe
+[{"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"5551234"}]
 SUCCESS
 SUCCESS
 true
+Entry is not found for DN: 'dc=example,dc=com'
 false
 -- stderr --

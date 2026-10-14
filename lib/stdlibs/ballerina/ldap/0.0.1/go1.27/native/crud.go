@@ -54,8 +54,7 @@ func attributeValueStrings(v values.BalValue) []string {
 
 // buildLdapResponse constructs a successful ldap:LdapResponse. go-ldap's
 // Add/Del/Modify/ModifyDN calls do not expose the server's raw LDAPResult on
-// success (only on failure, via *goldap.Error), so matchedDN/diagnosticMessage/
-// referral are left absent — see README "Notable Behavioural Changes".
+// success, so matchedDN and diagnosticMessage are nil and referral is empty.
 func buildLdapResponse(types ldapTypes, ctx *extern.Context, operationType string) *values.Map {
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.mapTy)
 	return values.NewMap(types.mapTy, atomic, false, []values.MapEntry{
@@ -63,101 +62,110 @@ func buildLdapResponse(types ldapTypes, ctx *extern.Context, operationType strin
 		{Key: "resultCode", Value: "SUCCESS"},
 		{Key: "diagnosticMessage", Value: nil},
 		{Key: "operationType", Value: operationType},
-		{Key: "referral", Value: nil},
+		{Key: "referral", Value: stringsToBalList(types, ctx, nil)},
 	})
 }
 
 func registerCrudFunctions(rt *runtime.Runtime, types ldapTypes) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$add",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			dn := args[1].(string)
-			entry := args[2].(*values.Map)
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			addReq := goldap.NewAddRequest(dn, nil)
-			for _, key := range entry.Keys() {
-				v, _ := entry.Get(key)
-				addReq.Attribute(key, attributeValueStrings(v))
-			}
-			if err := conn.Add(addReq); err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			return buildLdapResponse(types, ctx, "ADD"), nil
-		})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$add", addExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$delete", deleteExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$modify", modifyExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$modifyDn", modifyDnExtern(types))
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$compare", compareExtern)
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$delete",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			dn := args[1].(string)
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			if err := conn.Del(goldap.NewDelRequest(dn, nil)); err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			return buildLdapResponse(types, ctx, "DELETE"), nil
-		})
+func addExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		dn := args[1].(string)
+		entry := args[2].(*values.Map)
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		addReq := goldap.NewAddRequest(dn, nil)
+		for _, key := range entry.Keys() {
+			v, _ := entry.Get(key)
+			addReq.Attribute(key, attributeValueStrings(v))
+		}
+		if err := conn.Add(addReq); err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		return buildLdapResponse(types, ctx, "ADD"), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$modify",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			dn := args[1].(string)
-			entry := args[2].(*values.Map)
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			modReq := goldap.NewModifyRequest(dn, nil)
-			for _, key := range entry.Keys() {
-				v, _ := entry.Get(key)
-				modReq.Replace(key, attributeValueStrings(v))
-			}
-			if err := conn.Modify(modReq); err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			return buildLdapResponse(types, ctx, "MODIFY"), nil
-		})
+func deleteExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		dn := args[1].(string)
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		if err := conn.Del(goldap.NewDelRequest(dn, nil)); err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		return buildLdapResponse(types, ctx, "DELETE"), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$modifyDn",
-		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			currentDn := args[1].(string)
-			newRdn := args[2].(string)
-			deleteOldRdn := false
-			if len(args) > 3 {
-				if b, ok := args[3].(bool); ok {
-					deleteOldRdn = b
-				}
-			}
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
-			}
-			modDnReq := goldap.NewModifyDNRequest(currentDn, newRdn, deleteOldRdn, "")
-			if err := conn.ModifyDN(modDnReq); err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			return buildLdapResponse(types, ctx, "MODIFY_DN"), nil
-		})
+func modifyExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		dn := args[1].(string)
+		entry := args[2].(*values.Map)
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		modReq := goldap.NewModifyRequest(dn, nil)
+		for _, key := range entry.Keys() {
+			v, _ := entry.Get(key)
+			modReq.Replace(key, attributeValueStrings(v))
+		}
+		if err := conn.Modify(modReq); err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		return buildLdapResponse(types, ctx, "MODIFY"), nil
+	}
+}
 
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Client.$remote$compare",
-		func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-			self := args[0].(*values.Object)
-			dn := args[1].(string)
-			attrName := args[2].(string)
-			assertionValue := args[3].(string)
-			conn, connErr := requireConn(self)
-			if connErr != nil {
-				return connErr, nil
+func modifyDnExtern(types ldapTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		self := args[0].(*values.Object)
+		currentDn := args[1].(string)
+		newRdn := args[2].(string)
+		deleteOldRdn := false
+		if len(args) > 3 {
+			if b, ok := args[3].(bool); ok {
+				deleteOldRdn = b
 			}
-			matched, err := conn.Compare(dn, attrName, assertionValue)
-			if err != nil {
-				return ldapErrorFromErr(err), nil
-			}
-			return matched, nil
-		})
+		}
+		conn, connErr := requireConn(self)
+		if connErr != nil {
+			return connErr, nil
+		}
+		modDnReq := goldap.NewModifyDNRequest(currentDn, newRdn, deleteOldRdn, "")
+		if err := conn.ModifyDN(modDnReq); err != nil {
+			return ldapErrorFromErr(err), nil
+		}
+		return buildLdapResponse(types, ctx, "MODIFY_DN"), nil
+	}
+}
+
+func compareExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	self := args[0].(*values.Object)
+	dn := args[1].(string)
+	attrName := args[2].(string)
+	assertionValue := args[3].(string)
+	conn, connErr := requireConn(self)
+	if connErr != nil {
+		return connErr, nil
+	}
+	matched, err := conn.Compare(dn, attrName, assertionValue)
+	if err != nil {
+		return ldapErrorFromErr(err), nil
+	}
+	return matched, nil
 }
