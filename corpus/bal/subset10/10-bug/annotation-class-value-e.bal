@@ -43,6 +43,9 @@ class Counter {
 
 @classFlag {value: 1 == "a"} // @error
 class Other {
+    @methodFlag // @error
+    function reset() {
+    }
 }
 
 @serviceInfo {value: "str"} // @error

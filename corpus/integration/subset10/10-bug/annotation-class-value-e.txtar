@@ -13,9 +13,9 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got "str"
    |                                                ^^^^^
 
 error[SEMANTIC_ERROR]: incompatible type: expected int, got "str"
-  --> annotation-class-value-e.bal:48:22
+  --> annotation-class-value-e.bal:51:22
    |
-48 | @serviceInfo {value: "str"} // @error
+51 | @serviceInfo {value: "str"} // @error
    |                      ^^^^^
 
 error[SEMANTIC_ERROR]: incompatible type: expected int, got true
@@ -37,7 +37,13 @@ error[SEMANTIC_ERROR]: incompatible types for ==
    |                    ^^^^^^^^
 
 error[SEMANTIC_ERROR]: incompatible types for ==
-  --> annotation-class-value-e.bal:52:22
+  --> annotation-class-value-e.bal:55:22
    |
-52 | @serviceFlag {value: 1 == "a"} // @error
+55 | @serviceFlag {value: 1 == "a"} // @error
    |                      ^^^^^^^^
+
+error[SEMANTIC_ERROR]: missing non-defaultable required record field 'value'
+  --> annotation-class-value-e.bal:46:5
+   |
+46 |     @methodFlag // @error
+   |     ^^^^^^^^^^^
