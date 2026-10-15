@@ -559,7 +559,7 @@ func isIsolatedExpressionInner(a analyzer, expr ast.BLangExpression, checkInvoca
 		}
 		return true
 	case *ast.BLangTypeConversionExpr:
-		return isIsolatedExpressionInner(a, e.Expression, checkInvocableOperands)
+		return isIsolatedActionOrExpressionInner(a, e.Expression, checkInvocableOperands)
 	case *ast.BLangCheckedExpr:
 		return isIsolatedExpressionInner(a, e.Expr.(ast.BLangExpression), checkInvocableOperands)
 	case *ast.BLangCheckPanickedExpr:
