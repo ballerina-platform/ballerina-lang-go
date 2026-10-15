@@ -67,18 +67,18 @@ func (n *nodeBuilder) unimplemented(message string, node st.Node) {
 	n.cx.Unimplemented(message, n.position(node))
 }
 
-func newNodeBuilder(cx *context.CompilerContext) *nodeBuilder {
-	return newNodeBuilderWithMode(cx, nodeBuilderModeStrict)
+func newNodeBuilder(cx *context.CompilerContext, pkgID *model.PackageID) *nodeBuilder {
+	return newNodeBuilderWithMode(cx, pkgID, nodeBuilderModeStrict)
 }
 
-func newRecoveringNodeBuilder(cx *context.CompilerContext) *nodeBuilder {
-	return newNodeBuilderWithMode(cx, nodeBuilderModeRecover)
+func newRecoveringNodeBuilder(cx *context.CompilerContext, pkgID *model.PackageID) *nodeBuilder {
+	return newNodeBuilderWithMode(cx, pkgID, nodeBuilderModeRecover)
 }
 
-func newNodeBuilderWithMode(cx *context.CompilerContext, mode nodeBuilderMode) *nodeBuilder {
+func newNodeBuilderWithMode(cx *context.CompilerContext, pkgID *model.PackageID, mode nodeBuilderMode) *nodeBuilder {
 	nodeBuilder := &nodeBuilder{
 		cx:        cx,
-		PackageID: cx.GetDefaultPackage(),
+		PackageID: pkgID,
 		mode:      mode,
 	}
 	return nodeBuilder

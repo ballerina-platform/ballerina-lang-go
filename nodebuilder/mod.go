@@ -21,19 +21,20 @@ import (
 
 	"github.com/ballerina-nutcracker/ballerina/ast"
 	"github.com/ballerina-nutcracker/ballerina/context"
+	"github.com/ballerina-nutcracker/ballerina/model"
 	"github.com/ballerina-nutcracker/ballerina/st"
 	"github.com/ballerina-nutcracker/ballerina/tools/diagnostics"
 )
 
-func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *st.SyntaxTree) *ast.BLangCompilationUnit {
-	builder := newNodeBuilder(cx)
+func GetCompilationUnit(cx *context.CompilerContext, pkgID *model.PackageID, syntaxTree *st.SyntaxTree) *ast.BLangCompilationUnit {
+	builder := newNodeBuilder(cx, pkgID)
 	compilationUnit := builder.transformModulePart(syntaxTree.RootNode.(*st.ModulePart))
 	return compilationUnit.(*ast.BLangCompilationUnit)
 }
 
 // GetRecoveredCompilationUnit builds an AST while preserving malformed syntax as bad nodes.
-func GetRecoveredCompilationUnit(cx *context.CompilerContext, syntaxTree *st.SyntaxTree) *ast.BLangCompilationUnit {
-	builder := newRecoveringNodeBuilder(cx)
+func GetRecoveredCompilationUnit(cx *context.CompilerContext, pkgID *model.PackageID, syntaxTree *st.SyntaxTree) *ast.BLangCompilationUnit {
+	builder := newRecoveringNodeBuilder(cx, pkgID)
 	compilationUnit := builder.transformModulePart(syntaxTree.RootNode.(*st.ModulePart))
 	return compilationUnit.(*ast.BLangCompilationUnit)
 }

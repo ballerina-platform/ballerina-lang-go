@@ -247,6 +247,13 @@ func parseModule(moduleCtx *moduleContext) {
 
 	compilerCtx := moduleCtx.compilerCtx
 
+	// Computed up front (depends only on the module descriptor, not on anything
+	// parsed) so AST-building below can give every node its own module's package
+	// ID instead of the shared default — modules build concurrently, and the
+	// default is one shared instance, so anonymous-name counters keyed by it
+	// would interleave nondeterministically across modules.
+	pkgID := createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
+
 	// Parse all source and test documents in parallel.
 	syntaxTrees := parseDocumentsParallel(
 		compilerCtx,
@@ -263,13 +270,12 @@ func parseModule(moduleCtx *moduleContext) {
 	// Build compilation units from syntax trees.
 	compilerCtx.StartStage(context.StageASTBuild)
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
-	compilationUnits := buildCompilationUnits(compilerCtx, syntaxTrees, compilationOptions)
+	compilationUnits := buildCompilationUnits(compilerCtx, pkgID, syntaxTrees, compilationOptions)
 
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
-	pkgID := createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
 	for _, cu := range compilationUnits {
 		cu.SetPackageID(pkgID)
 	}
@@ -465,7 +471,7 @@ func parseDocumentsParallel(
 	return syntaxTrees
 }
 
-func buildCompilationUnits(cx *context.CompilerContext, syntaxTrees []*st.SyntaxTree, compilationOptions CompilationOptions) []*ast.BLangCompilationUnit {
+func buildCompilationUnits(cx *context.CompilerContext, pkgID *model.PackageID, syntaxTrees []*st.SyntaxTree, compilationOptions CompilationOptions) []*ast.BLangCompilationUnit {
 	dumpRecoveredAST := compilationOptions.DumpRecoveredAST()
 	dumpAST := compilationOptions.DumpAST() || dumpRecoveredAST
 	var prettyPrinter ast.PrettyPrinter
@@ -480,9 +486,9 @@ func buildCompilationUnits(cx *context.CompilerContext, syntaxTrees []*st.Syntax
 	for _, st := range syntaxTrees {
 		var cu *ast.BLangCompilationUnit
 		if dumpRecoveredAST {
-			cu = nodebuilder.GetRecoveredCompilationUnit(cx, st)
+			cu = nodebuilder.GetRecoveredCompilationUnit(cx, pkgID, st)
 		} else {
-			cu = nodebuilder.GetCompilationUnit(cx, st)
+			cu = nodebuilder.GetCompilationUnit(cx, pkgID, st)
 		}
 		if dumpAST {
 			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
