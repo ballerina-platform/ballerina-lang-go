@@ -81,6 +81,12 @@ type RequiresMail record {|
     string mail;
 |};
 
+type StringUnions record {|
+    string|boolean flag;
+    anydata a;
+    int|string code;
+|};
+
 type ObjectClasses record {|
     string[] objectClass;
     string[] sn;
@@ -124,8 +130,14 @@ public function main() returns error? {
 
     RequiresMail|ldap:Error requiresMail = ldapClient->getEntry(userDN);
     if requiresMail is ldap:Error {
-        io:println(requiresMail.message()); // @output '{| boolean|int|float|decimal|string|[string...]... |}' value cannot be converted to '{| mail: string, sn: string, never... |}': field 'mail' not present in value
+        io:println(requiresMail.message()); // @output missing required field 'mail' of type 'string'
     }
+
+    string unionsDN = "cn=Unions,dc=example,dc=com";
+    _ = check ldapClient->add(unionsDN, {"objectClass": "top", "cn": "Unions", "flag": "1", "a": "t", "code": "007"});
+    StringUnions unions = check ldapClient->getEntry(unionsDN);
+    io:println(unions); // @output {"a":"t","code":"007","flag":"1"}
+    _ = check ldapClient->delete(unionsDN);
 
     ldap:LdapResponse modifyResult = check ldapClient->modify(userDN, {"telephoneNumber": "5551234"});
     io:println(modifyResult.resultCode); // @output SUCCESS

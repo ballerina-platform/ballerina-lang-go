@@ -53,6 +53,10 @@ func connOf(self *values.Object) *goldap.Conn {
 // default response timeout that jBallerina inherits.
 const requestTimeout = 300 * time.Second
 
+// connectTimeout bounds the TCP connect and TLS handshake, matching the
+// UnboundID SDK's default connect timeout.
+const connectTimeout = 60 * time.Second
+
 // buildSecureSocketTLSConfig translates ldap:ClientSecureSocket into a
 // pal.TLSConfig. Returns (nil, nil) when secureSocket is absent (plaintext
 // connection). Like jBallerina, `enable` does not select the transport: a
@@ -111,7 +115,9 @@ func buildSecureSocketTLSConfig(rt *runtime.Runtime, secureSocket *values.Map) (
 // the bind DN (see ConnectionConfig doc comment).
 func dialAndBind(rt *runtime.Runtime, hostName string, port int64, domainName, password string, tlsCfg *pal.TLSConfig) (*goldap.Conn, *values.Error) {
 	address := net.JoinHostPort(hostName, strconv.FormatInt(port, 10))
-	netConn, err := rt.Platform().Net.Dial(context.Background(), "tcp", address, "", tlsCfg)
+	dialCtx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	defer cancel()
+	netConn, err := rt.Platform().Net.Dial(dialCtx, "tcp", address, "", tlsCfg)
 	if err != nil {
 		return nil, ldapError("failed to connect to " + address + ": " + err.Error())
 	}
