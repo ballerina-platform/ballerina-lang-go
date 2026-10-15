@@ -695,8 +695,8 @@ func buildResourceMethodLocals(parent analyzer, method *ast.BLangResourceMethod)
 	return scope
 }
 
-// walkMethodBody descends through a method's annotations, parameters, return type annotations and body using the provided
-// functionAnalyzer. We avoid walking the BLangFunction node itself because
+// walkMethodBody descends through a method's annotations, parameters, return
+// type annotations and body using the provided functionAnalyzer. We avoid walking the BLangFunction node itself because
 // functionAnalyzer.Visit on that node would re-initialize a fresh analyzer
 // (losing context like enclosingClass).
 func walkMethodBody(fa *functionAnalyzer, method invokableSignatureNode) {
@@ -1919,8 +1919,9 @@ func walkAnnotationAttachments(a ast.Visitor, attachments []ast.BLangAnnotationA
 }
 
 // walkTypeDefinitionFieldAnnotations walks the field annotations of a type definition's own record or
-// object type. The type resolver resolves only these, so field annotations of nested or inline types are skipped.
+// object type, not those of nested or inline types.
 func walkTypeDefinitionFieldAnnotations(a ast.Visitor, defn *ast.BLangTypeDefinition) {
+	// Only these field annotations are resolved by the type resolver.
 	switch typeDesc := defn.GetTypeData().TypeDescriptor.(type) {
 	case *ast.BLangRecordType:
 		for _, field := range typeDesc.FieldPtrs() {
