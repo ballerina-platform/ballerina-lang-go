@@ -72,15 +72,13 @@ type (
 		// is set. Close flushes and releases the handle.
 		OpenWritable func(path string, appendMode bool) (io.WriteCloser, error)
 		Getwd        func() (string, error)
-		// Abs makes path absolute against the working directory without
-		// resolving "." or ".." segments, like Java's Path.toAbsolutePath.
+		// Abs does not clean "." or ".." segments, matching Java's Path.toAbsolutePath.
 		Abs       func(path string) (string, error)
 		Mkdir     func(path string) error
 		MkdirAll  func(path string) error
 		Remove    func(path string) error
 		RemoveAll func(path string) error
-		// Rename moves oldPath to newPath, failing with fs.ErrExist if newPath
-		// already exists.
+		// Rename fails with fs.ErrExist if newPath already exists.
 		Rename        func(oldPath, newPath string) error
 		CreateFile    func(path string) error
 		Stat          func(path string) (*FileInfo, error)
@@ -90,11 +88,7 @@ type (
 		CreateTemp    func(prefix, suffix, dir string) (string, error)
 		CreateTempDir func(prefix, suffix, dir string) (string, error)
 		Readlink      func(path string) (string, error)
-		// Watch starts monitoring path for filesystem changes, optionally
-		// descending into subdirectories, delivering each change to handler on
-		// a platform-owned goroutine. The returned handle's Close stops
-		// watching and releases OS resources (e.g. inotify/kqueue handles).
-		Watch func(path string, recursive bool, handler WatchHandler) (WatchHandle, error)
+		Watch         func(path string, recursive bool, handler WatchHandler) (WatchHandle, error)
 	}
 	OS struct {
 		GetEnv      func(name string) string
