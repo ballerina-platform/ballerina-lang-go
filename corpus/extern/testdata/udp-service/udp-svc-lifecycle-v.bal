@@ -25,6 +25,14 @@ service class NoopService {
     *udp:Service;
 }
 
+service class EchoService {
+    *udp:Service;
+
+    remote function onBytes(readonly & byte[] data) returns byte[] {
+        return data;
+    }
+}
+
 listener udp:Listener lifecycleListener = new (19492);
 
 function init() returns error? {
@@ -49,4 +57,16 @@ public function testMain() returns error? {
     udp:Listener noService = check new (19492);
     io:println(noService.'start() is ()); // @output true
     check noService.gracefulStop();
+
+    udp:Listener restarted = check new (19492);
+    check restarted.attach(new EchoService());
+    check restarted.'start();
+    check restarted.gracefulStop();
+    check restarted.'start();
+    udp:ConnectClient c = check new ("127.0.0.1", 19492, {timeout: 5});
+    check c->writeBytes("hi".toBytes());
+    readonly & byte[] echoed = check c->readBytes();
+    io:println(check string:fromBytes(echoed)); // @output hi
+    check c->close();
+    check restarted.gracefulStop();
 }
