@@ -397,12 +397,12 @@ public isolated function toRecord(string|byte[] uuid) returns Uuid|Error {
 isolated function getBytesFromUuid(string uuid) returns byte[]|Error {
     Uuid uuidRecord = check toRecord(uuid);
 
-    int msb = check getMostSigBits(uuidRecord);
+    int msb = getMostSigBits(uuidRecord);
     int lsb = getLeastSigBits(uuid, uuidRecord);
     return bitsToBytes(msb, lsb);
 }
 
-isolated function getMostSigBits(Uuid uuid) returns int|Error {
+isolated function getMostSigBits(Uuid uuid) returns int {
     int mostSigBits = uuid.timeLow & 0xffffffff;
     mostSigBits <<= 16;
     mostSigBits |= uuid.timeMid & 0xffff;
