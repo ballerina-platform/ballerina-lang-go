@@ -189,8 +189,9 @@ func attributesForRecordType(ctx *extern.Context, ty semtypes.SemType) []string 
 
 // coerceAttributeValue converts an LDAP attribute's raw values into the Go
 // representation matching the target field's declared type, mirroring
-// Ballerina's implicit string-to-scalar conversion rules. A value that can't be
-// converted is left as a string so that CloneWithType reports the mismatch.
+// Ballerina's implicit string-to-scalar conversion rules. A field that accepts
+// string keeps the raw string; a value that can't be converted is also left as
+// a string so the caller reports the mismatch.
 func coerceAttributeValue(ctx *extern.Context, types ldapTypes, vals []string, fieldTy semtypes.SemType) values.BalValue {
 	cx := ctx.TypeCtx()
 	acceptsList := semtypes.IsSubtype(cx, types.strArrTy, fieldTy)
@@ -198,6 +199,9 @@ func coerceAttributeValue(ctx *extern.Context, types ldapTypes, vals []string, f
 		return stringsToBalList(types, ctx, vals)
 	}
 	s := vals[0]
+	if semtypes.IsSubtype(cx, semtypes.String, fieldTy) {
+		return s
+	}
 	switch {
 	case semtypes.IsSubtype(cx, semtypes.Boolean, fieldTy):
 		if b, err := strconv.ParseBool(s); err == nil {
@@ -245,16 +249,20 @@ func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry
 	entries := make([]values.MapEntry, 0, len(entry.Attributes))
 	matched := make(map[*goldap.EntryAttribute]bool, len(names))
 	for _, name := range names {
-		attr := findAttribute(entry, name)
-		if attr == nil {
-			continue
-		}
-		matched[attr] = true
-		vals := attributeStringValues(attr)
-		if len(vals) == 0 {
-			continue
-		}
 		fieldTy := atomic.FieldInnerVal(name)
+		attr := findAttribute(entry, name)
+		var vals []string
+		if attr != nil {
+			matched[attr] = true
+			vals = attributeStringValues(attr)
+		}
+		if len(vals) == 0 {
+			if !atomic.IsOptional(ctx.TypeCtx(), name) {
+				return nil, ldapError(fmt.Sprintf("missing required field '%s' of type '%s'",
+					name, semtypes.ToString(ctx.TypeCtx(), fieldTy)))
+			}
+			continue
+		}
 		v := coerceAttributeValue(ctx, types, vals, fieldTy)
 		if !semtypes.IsSubtype(ctx.TypeCtx(), values.SemTypeForValue(v), fieldTy) {
 			return nil, ldapError(fmt.Sprintf("field '%s' should be of type '%s', found '%s'",

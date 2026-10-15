@@ -7,7 +7,8 @@ John Doe
 ["john@example.com","doe@example.com"]
 {"objectClass":["top","person"],"sn":["Doe"]}
 field 'sn' should be of type 'int', found 'Doe'
-'{| boolean|int|float|decimal|string|[string...]... |}' value cannot be converted to '{| mail: string, sn: string, never... |}': field 'mail' not present in value
+missing required field 'mail' of type 'string'
+{"a":"t","code":"007","flag":"1"}
 SUCCESS
 true
 false
