@@ -35,7 +35,8 @@ const (
 // maxDatagramSize bounds a single outbound UDP fragment (jBallerina's DATAGRAM_DATA_SIZE).
 const maxDatagramSize = 8192
 
-const readBufferSize = 65507
+// readBufferSize fits the largest UDP payload over IPv6 (65527 bytes) so reads never truncate.
+const readBufferSize = 65535
 
 type udpTypes struct {
 	byteArrTy  semtypes.SemType
