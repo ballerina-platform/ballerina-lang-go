@@ -24,7 +24,7 @@ public type Error distinct error;
 
 # Represents the task service that provides functionality to manage and execute scheduled tasks.
 public type Service distinct service object {
-    isolated function execute() returns error?;
+    public isolated function execute() returns error?;
 };
 
 # Represents the configuration required to connect to a database related to task coordination.

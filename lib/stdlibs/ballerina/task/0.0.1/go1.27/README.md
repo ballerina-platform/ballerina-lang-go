@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ballerina/task` library schedules Ballerina jobs to run once at a given time or repeatedly at a fixed interval, manages scheduled jobs (pause, resume, unschedule, list), runs task services on a `task:Listener`, and coordinates warm-backup task nodes through a database. The Go Native Interpreter supports job scheduling and management, the worker-pool configuration, and the listener lifecycle; attaching services to a listener and database task coordination are not yet supported.
+The `ballerina/task` library schedules Ballerina jobs to run once at a given time or repeatedly at a fixed interval, manages scheduled jobs (pause, resume, unschedule, list), runs task services on a `task:Listener`, and coordinates warm-backup task nodes through a database. The Go Native Interpreter supports job scheduling and management, the worker-pool configuration, and task services on a `task:Listener` with retries; database task coordination is not yet supported.
 
 ## Key Functionalities
 
@@ -13,7 +13,7 @@ The `ballerina/task` library schedules Ballerina jobs to run once at a given tim
 - List the running jobs (`getRunningJobs`)
 - Configure the worker pool and the misfire waiting time (`configureWorkerPool`)
 - Convert a `time:Civil` to epoch milliseconds (`getTimeInMillies`)
-- Create, start and stop a `task:Listener`
+- Run `task:Service` services on a `task:Listener`, with retries for failed executions (`RetryConfiguration`)
 
 ## Examples
 
@@ -76,12 +76,13 @@ Support Levels:
 | Civil time to milliseconds | Supported | `getTimeInMillies`; the `Couldn't convert given time to milli seconds` message ends with the error text of `ballerina/time`'s `utcFromCivil`, which differs from jBallerina |
 | Global scheduler configuration variables | Partially Supported | `globalSchedulerWorkerCount` and `globalSchedulerWaitingTime` are plain public module variables because `configurable` variables are not yet supported by the interpreter; jBallerina's natives never read them either |
 | Listener lifecycle | Supported | `task:Listener` `init`, `start`, `gracefulStop`, `immediateStop` |
-| Attaching services to a listener | Not Yet Supported | `task:Service`, `Listener.attach`, `Listener.detach` are implemented natively, but user code cannot yet create a `task:Service` value: the interpreter rejects `service ... on taskListener` bodies because `execute` is a non-public member of another module, and `service object {}` constructors are not implemented |
-| Retry configuration | Not Yet Supported | `task:RetryConfiguration` is implemented natively for listener services and blocked on attaching services |
+| Attaching services to a listener | Supported | `task:Service`, `Listener.attach`, `Listener.detach`; `execute` must be declared `public` (see Notable Behavioural Changes); `service object {}` constructors are not yet supported by the interpreter, so use a `service` declaration or a `service class` |
+| Retry configuration | Supported | `task:RetryConfiguration` with `FIXED` and `EXPONENTIAL` backoff |
 | Task coordination | Not Yet Supported | `task:WarmBackupConfig`, `task:MysqlConfig`, `task:PostgresqlConfig` are declared; starting a listener with a `warmBackupConfig` and attached services returns a `task:Error` because database coordination needs SQL drivers that are not available |
 
 ### Notable Behavioural Changes
 
+- **`task:Service` declares `execute` as `public` (breaking change).** jBallerina declares `execute` without `public` and accepts a service in another module implementing it, which contradicts the language specification (a method's visibility region is part of its shape); the Go-native version declares `public isolated function execute() returns error?`, so a task service must declare its `execute` method `public` — services written for jBallerina need that one-word change.
 - **Errors print without the native error form.** jBallerina creates scheduler errors in Java, so `io:println(err)` shows `error("Invalid job id: 5")`; the Go-native version creates them in Ballerina, so the same error prints as `error Error ("Invalid job id: 5")` — the message, the `task:Error` type and `is` checks are identical.
 - **Pausing or resuming all jobs before any job was scheduled returns an error.** jBallerina panics with a `NullPointerException` because no scheduler exists yet; the Go-native version returns a `task:Error` with the message `The Scheduler has been shutdown.`.
 - **An out-of-range job id returns an error.** jBallerina panics with an integer-overflow `ArithmeticException` when a `JobId` outside the 32-bit range is paused, resumed or unscheduled; the Go-native version returns `Invalid job id: <id>`.

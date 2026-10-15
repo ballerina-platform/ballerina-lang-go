@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// These tests cover the listener-service, retry and logging paths. They are not
-// reachable from a corpus .bal test: user code cannot create a task:Service value
-// yet (cross-module service bodies are rejected and object constructors are
-// unimplemented), and the error/misfire logs carry wall-clock timestamps.
+// These tests cover output a corpus -v test cannot assert: the error and misfire
+// logs carry wall-clock timestamps, and a panicking service writes to stderr.
 package native
 
 import (
@@ -173,108 +171,6 @@ func TestGetRunningJobsReportsShutdownScheduler(t *testing.T) {
 	}
 }
 
-func TestListenerRegistryAndServiceUnscheduling(t *testing.T) {
-	m, _, _ := newTestManager()
-	st := &listenerState{services: map[string]*values.Object{}}
-	a := values.NewObject(semtypes.Object, nil, nil, nil, nil)
-	b := values.NewObject(semtypes.Object, nil, nil, nil, nil)
-	st.register("a", a)
-	st.register("b", b)
-	st.register("a", b)
-	if names, _ := st.snapshot(); len(names) != 2 || names[0] != "a" {
-		t.Fatalf("re-registering a name should keep its position, got %v", names)
-	}
-
-	err := m.scheduleServices([]string{"a", "b"}, func(name string) (*triggerSpec, error) {
-		return serviceSpec(name, policyLogAndContinue, nil), nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	name, ok := st.unregister(b)
-	if !ok || name != "a" {
-		t.Fatalf("expected the first name bound to b, got %q %v", name, ok)
-	}
-	if err := m.unscheduleService(name); err != nil {
-		t.Fatal(err)
-	}
-	if m.sched.shutdown {
-		t.Fatal("the scheduler must stay up while a service is still scheduled")
-	}
-	if err := m.stopListener(st); err != nil {
-		t.Fatal(err)
-	}
-	if !m.sched.shutdown {
-		t.Fatal("unscheduling the last service should shut the scheduler down")
-	}
-	if _, ok := st.unregister(a); ok {
-		t.Fatal("stopListener should clear the registry")
-	}
-	if err := m.unscheduleService("missing"); err != nil {
-		t.Fatal(err)
-	}
-
-	m.services["b"] = serviceSpec("b", policyLogAndContinue, nil)
-	if err := m.unscheduleService("b"); !errors.Is(err, errSchedulerShutdown) {
-		t.Fatalf("expected the shutdown error, got %v", err)
-	}
-	if err := m.stopListener(&listenerState{names: []string{"b"}, services: map[string]*values.Object{}}); err == nil {
-		t.Fatal("stopListener should report an unschedule failure")
-	}
-	failing := errors.New("spec failed")
-	if err := m.scheduleServices([]string{"x"}, func(string) (*triggerSpec, error) { return nil, failing }); err != failing {
-		t.Fatalf("expected the spec error, got %v", err)
-	}
-}
-
-func TestExecuteServiceRetriesUntilSuccess(t *testing.T) {
-	m, stdout, _ := newTestManager()
-	ctx, calls := newScriptedContext(values.NewErrorWithMessage("first"), nil)
-	spec := serviceSpec("svc", policyLogAndContinue, &retryConfig{maxAttempts: 3, retryInterval: 0})
-
-	m.executeService(ctx, newScheduler(m, defaultThresholdMs), spec)
-
-	if *calls != 2 || stdout.String() != "" {
-		t.Fatalf("expected one retry and no failure log, got %d calls, log %q", *calls, stdout.String())
-	}
-}
-
-func TestExecuteServiceExhaustsRetries(t *testing.T) {
-	m, stdout, _ := newTestManager()
-	ctx, calls := newScriptedContext(values.NewErrorWithMessage("still failing"))
-	retry := &retryConfig{maxAttempts: 2, retryInterval: 0, backoff: exponentialStrategy, maxInterval: 0, hasMaxInterval: true}
-	spec := serviceSpec("svc", policyLogAndContinue, retry)
-
-	m.executeService(ctx, newScheduler(m, defaultThresholdMs), spec)
-
-	if *calls != 3 || !strings.HasSuffix(stdout.String(), "Unable to execute the job[svc]. still failing\n") {
-		t.Fatalf("expected 3 calls and a failure log, got %d calls, log %q", *calls, stdout.String())
-	}
-}
-
-func TestExecuteServiceRetryLimits(t *testing.T) {
-	cases := []struct {
-		name  string
-		retry *retryConfig
-		calls int
-	}{
-		{"interval cap stops retrying", &retryConfig{maxAttempts: 3, retryInterval: 0, maxInterval: -1, hasMaxInterval: true}, 1},
-		{"retry interval longer than trigger", &retryConfig{maxAttempts: 3, retryInterval: 5}, 1},
-		{"no attempts", &retryConfig{maxAttempts: 0, retryInterval: 0}, 1},
-		{"no retry config", nil, 1},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m, _, _ := newTestManager()
-			ctx, calls := newScriptedContext(values.NewErrorWithMessage("fail"))
-			m.executeService(ctx, newScheduler(m, defaultThresholdMs), serviceSpec("svc", policyTerminate, tc.retry))
-			if *calls != tc.calls {
-				t.Fatalf("expected %d calls, got %d", tc.calls, *calls)
-			}
-		})
-	}
-}
-
 func TestExecuteServicePanicIsReported(t *testing.T) {
 	m, stdout, stderr := newTestManager()
 	ctx, _ := newScriptedContext(errors.New("service panic"))
@@ -289,15 +185,6 @@ func TestExecuteServicePanicIsReported(t *testing.T) {
 		serviceSpec("svc", policyLogAndContinue, &retryConfig{maxAttempts: 3, retryInterval: 0}))
 	if *calls != 2 || stderr.String() != "error: retry panic\n" {
 		t.Fatalf("a panic during a retry should stop retrying, got %d calls, stderr %q", *calls, stderr.String())
-	}
-}
-
-func TestNextInterval(t *testing.T) {
-	fixed := &retryConfig{retryInterval: 2}
-	exponential := &retryConfig{retryInterval: 2, backoff: exponentialStrategy}
-	capped := &retryConfig{retryInterval: 2, backoff: exponentialStrategy, maxInterval: 5, hasMaxInterval: true}
-	if fixed.nextInterval(8) != 2 || exponential.nextInterval(4) != 8 || capped.nextInterval(4) != 5 {
-		t.Fatal("unexpected backoff interval")
 	}
 }
 

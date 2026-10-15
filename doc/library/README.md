@@ -20,12 +20,12 @@ Support % is computed as `round(Supported / Total * 100)`, where *Total* is the 
 | [os](../../lib/stdlibs/ballerina/os/0.0.1/go1.27/README.md)                   | 11 | 1 | 0 | 92% |
 | [protobuf](../../lib/stdlibs/ballerina/protobuf/0.0.1/go1.27/README.md)       | 11 | 2 | 0 | 85% |
 | [random](../../lib/stdlibs/ballerina/random/0.0.1/go1.27/README.md)           | 3 | 1 | 1 | 60% |
-| [task](../../lib/stdlibs/ballerina/task/0.0.1/go1.27/README.md)               | 13 | 1 | 3 | 76% |
+| [task](../../lib/stdlibs/ballerina/task/0.0.1/go1.27/README.md)               | 15 | 1 | 1 | 88% |
 | [time](../../lib/stdlibs/ballerina/time/0.0.1/go1.27/README.md)               | 29 | 3 | 0 | 91% |
 | [udp](../../lib/stdlibs/ballerina/udp/0.0.1/go1.27/README.md)                 | 16 | 2 | 2 | 80% |
 | [url](../../lib/stdlibs/ballerina/url/0.0.1/go1.27/README.md)                 | 3 | 0 | 1 | 75% |
 | [uuid](../../lib/stdlibs/ballerina/uuid/0.0.1/go1.27/README.md)               | 20 | 0 | 0 | 100% |
-| **Total**                                         | **257** | **29** | **71** | **72%** |
+| **Total**                                         | **259** | **29** | **69** | **72%** |
 
 ## Notable Behavioural Changes
 
@@ -112,6 +112,7 @@ Consolidated from each package's README. Only permanent, architectural Go-level 
 
 ### task
 
+- **`task:Service` declares `execute` as `public` (breaking change).** jBallerina declares `execute` without `public` and accepts a service in another module implementing it, which contradicts the language specification (a method's visibility region is part of its shape); the Go-native version declares `public isolated function execute() returns error?`, so a task service must declare its `execute` method `public` — services written for jBallerina need that one-word change.
 - **Errors print without the native error form.** jBallerina creates scheduler errors in Java, so `io:println(err)` shows `error("Invalid job id: 5")`; the Go-native version creates them in Ballerina, so the same error prints as `error Error ("Invalid job id: 5")` — the message, the `task:Error` type and `is` checks are identical.
 - **Pausing or resuming all jobs before any job was scheduled returns an error.** jBallerina panics with a `NullPointerException` because no scheduler exists yet; the Go-native version returns a `task:Error` with the message `The Scheduler has been shutdown.`.
 - **An out-of-range job id returns an error.** jBallerina panics with an integer-overflow `ArithmeticException` when a `JobId` outside the 32-bit range is paused, resumed or unscheduled; the Go-native version returns `Invalid job id: <id>`.
