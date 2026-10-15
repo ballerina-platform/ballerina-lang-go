@@ -116,7 +116,7 @@ func listenerStart(rt *runtime.Runtime, types udpTypes) extern.NativeFunc {
 		state := listenerStateOf(args[0].(*values.Object))
 		state.mu.Lock()
 		defer state.mu.Unlock()
-		if state.pc != nil {
+		if state.pc != nil && !state.stopped {
 			return nil, nil
 		}
 		pc, err := rt.Platform().Net.ListenPacket("udp", net.JoinHostPort(state.host, strconv.Itoa(state.port)))
@@ -124,6 +124,7 @@ func listenerStart(rt *runtime.Runtime, types udpTypes) extern.NativeFunc {
 			return udpError("Unable to initialize UDP Listener: " + err.Error()), nil
 		}
 		state.pc = pc
+		state.stopped = false
 		go readLoop(rt, types, state, pc)
 		return nil, nil
 	}
