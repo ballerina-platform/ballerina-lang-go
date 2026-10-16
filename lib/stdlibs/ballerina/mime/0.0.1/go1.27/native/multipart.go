@@ -195,9 +195,13 @@ func getBodyPartsExtern() extern.NativeFunc {
 		if body != nil && body.kind == bodyParts {
 			return body.parts, nil
 		}
-		contentType, _ := entityHeaderValue(obj, "content-type")
+		contentType, found := entityHeaderValue(obj, "content-type")
 		baseType, boundary, isComposite := multipartBoundary(contentType)
 		if !isComposite {
+			if !found {
+				// jBallerina concatenates the absent Java header value as "null".
+				baseType = "null"
+			}
 			return mimeError("ParserError", "Entity body is not a type of composite media type. "+
 				"Received content-type : "+baseType), nil
 		}
@@ -205,9 +209,12 @@ func getBodyPartsExtern() extern.NativeFunc {
 			return mimeError("ParserError", "message/* body part decoding is not yet supported. "+
 				"Received content-type : "+baseType), nil
 		}
+		body, err := materializeBody(ctx, obj)
+		if err != nil {
+			return mimeError("ParserError", "Error occurred while extracting body parts from entity: "+err.Error()), nil
+		}
 		if body == nil || body.kind != bodyBytes {
-			return mimeError("ParserError", "Entity body is not a type of composite media type. "+
-				"Received content-type : "+baseType), nil
+			return newBodyParts(ctx, 0)
 		}
 		parts, err := decodeMultipart(ctx, body.bytes, boundary)
 		if err != nil {
