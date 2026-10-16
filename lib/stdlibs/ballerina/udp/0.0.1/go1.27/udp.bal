@@ -212,7 +212,8 @@ public isolated class Listener {
     #
     # + s - The service to attach
     # + name - Ignored; `udp:Listener` has no path-based routing
-    # + return - `()` or else a `udp:Error` if a service is already attached
+    # + return - `()` or else a `udp:Error` if a service is already attached or the service's
+    #            remote methods don't match the signatures `udp:Service` accepts
     public isolated function attach(Service s, string[]|string? name = ()) returns error? = external;
 
     # Starts the registered service.
@@ -247,9 +248,9 @@ public type ListenerConfiguration record {
 
 
 // Represents the UDP listener service type.
-// A udp:Service may declare the following optional remote methods:
+// A udp:Service declares exactly one of onBytes/onDatagram and optionally onError:
 //   remote function onBytes(readonly & byte[] data, Caller caller) returns byte[]|Datagram|Error?;
 //   remote function onDatagram(readonly & Datagram datagram, Caller caller) returns byte[]|Datagram|Error?;
-//   remote function onError(readonly & Error err);
+//   remote function onError(Error err) returns Error?;
 public type Service service object {
 };
