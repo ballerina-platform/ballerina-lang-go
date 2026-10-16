@@ -57,17 +57,13 @@ func createType1Extern(rt *runtime.Runtime) extern.NativeFunc {
 
 		// 2-byte random clock sequence.
 		var clockBytes [2]byte
-		if _, err := rand.Read(clockBytes[:]); err != nil {
-			return nil, fmt.Errorf("uuid v1: failed to generate clock sequence: %w", err)
-		}
+		rand.Read(clockBytes[:])
 		clockSeq := (uint16(clockBytes[0])<<8 | uint16(clockBytes[1])) & 0x3fff
 		clockSeq |= 0x8000 // variant bits (10xxxxxx)
 
 		// 6-byte random node ID (no MAC address access for portability).
 		var node [6]byte
-		if _, err := rand.Read(node[:]); err != nil {
-			return nil, fmt.Errorf("uuid v1: failed to generate node: %w", err)
-		}
+		rand.Read(node[:])
 		node[0] |= 0x01 // multicast bit marks a random node (RFC 4122 §4.5)
 		nodeInt := uint64(node[0])<<40 | uint64(node[1])<<32 | uint64(node[2])<<24 |
 			uint64(node[3])<<16 | uint64(node[4])<<8 | uint64(node[5])
@@ -79,9 +75,7 @@ func createType1Extern(rt *runtime.Runtime) extern.NativeFunc {
 
 func createType4Extern(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
 	var uuid [16]byte
-	if _, err := rand.Read(uuid[:]); err != nil {
-		return nil, fmt.Errorf("uuid v4: failed to generate random bytes: %w", err)
-	}
+	rand.Read(uuid[:])
 	uuid[6] = (uuid[6] & 0x0f) | 0x40 // version 4
 	uuid[8] = (uuid[8] & 0x3f) | 0x80 // variant bits (10xxxxxx)
 
