@@ -1,0 +1,7 @@
+-- stdout --
+8ffc8eb7-a6f3-33ba-a8f6-8d7e9bced7db
+39ae198f-502e-5ad8-9630-0839c55bd63c
+655b2306-9bed-5f3d-9142-b4a76ad5514f
+e1b734f8-51d8-3a5d-bc92-db87f8085e15
+Failed to create UUID of type 5
+-- stderr --
