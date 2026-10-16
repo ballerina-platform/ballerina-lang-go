@@ -32,6 +32,7 @@ import (
 )
 
 var tlsVersionByName = map[string]uint16{
+	"TLSv1":   0x0301,
 	"TLSv1.0": 0x0301,
 	"TLSv1.1": 0x0302,
 	"TLSv1.2": 0x0303,

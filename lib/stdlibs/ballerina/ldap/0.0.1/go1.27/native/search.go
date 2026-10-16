@@ -46,9 +46,9 @@ func scopeFromString(scope string) int {
 	}
 }
 
-// needsBase64Encoding implements the RFC 2849 "safe string" check that
-// decides whether an LDAP attribute value must be base64-encoded when
-// surfaced as text (mirrors UnboundID's Attribute.needsBase64Encoding()).
+// needsBase64Encoding decides whether an LDAP attribute value must be
+// base64-encoded when surfaced as text. Like UnboundID, it treats every ASCII
+// control byte as unsafe, not only RFC 2849's NUL/LF/CR.
 func needsBase64Encoding(raw []byte) bool {
 	if len(raw) == 0 {
 		return false
@@ -60,7 +60,7 @@ func needsBase64Encoding(raw []byte) bool {
 		return true
 	}
 	for _, b := range raw {
-		if b == 0 || b == '\n' || b == '\r' || b >= 0x80 {
+		if b < 0x20 || b >= 0x7f {
 			return true
 		}
 	}
@@ -93,6 +93,9 @@ func objectSidToString(b []byte) (string, error) {
 		authority = (authority << 8) | uint64(b[i])
 	}
 	sid := fmt.Sprintf("S-1-%d", authority)
+	if authority >= 1<<32 {
+		sid = fmt.Sprintf("S-1-0x%X", authority)
+	}
 	for i := 0; i < subAuthCount; i++ {
 		off := 8 + i*4
 		subAuth := uint32(b[off]) | uint32(b[off+1])<<8 | uint32(b[off+2])<<16 | uint32(b[off+3])<<24
@@ -243,7 +246,7 @@ func rawAttributeValue(types ldapTypes, ctx *extern.Context, attr *goldap.EntryA
 func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), targetTy)
 	if atomic == nil {
-		return buildEntryRecord(types, ctx, entry), nil
+		return cloneEntryWithType(ctx, buildEntryRecord(types, ctx, entry), targetTy)
 	}
 	names := atomic.FieldNames()
 	entries := make([]values.MapEntry, 0, len(entry.Attributes))
@@ -279,8 +282,11 @@ func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry
 		}
 	}
 	entryAtomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.entryTy)
-	untyped := values.NewMap(types.entryTy, entryAtomic, false, entries)
-	result, convErr := values.CloneWithType(ctx.TypeCtx(), untyped, targetTy)
+	return cloneEntryWithType(ctx, values.NewMap(types.entryTy, entryAtomic, false, entries), targetTy)
+}
+
+func cloneEntryWithType(ctx *extern.Context, entry *values.Map, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
+	result, convErr := values.CloneWithType(ctx.TypeCtx(), entry, targetTy)
 	if convErr != nil {
 		return nil, ldapError(convErr.Message)
 	}

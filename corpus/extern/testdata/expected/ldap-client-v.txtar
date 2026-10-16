@@ -21,5 +21,9 @@ SUCCESS
 SUCCESS
 true
 Entry is not found for DN: 'dc=example,dc=com'
+{"description":"dGFiCWhlcmU=","objectsid":"S-1-0x10000000005-7","telephonenumber":"ZGVsf2NoYXI="}
+true
+true
+true
 false
 -- stderr --
