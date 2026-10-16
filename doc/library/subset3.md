@@ -1,6 +1,6 @@
 # Supported ballerina library features
 
-Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server.
+Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, and the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -262,3 +262,21 @@ Types: `ldap:Client` (client class), `ldap:Error`.
 TLS is selected by supplying `clientSecureSocket`. The server certificate is trusted through a PEM certificate file path in `cert`; a `crypto:TrustStore` returns `ldap:Error`. `verifyHostName` and `tlsVersions` are supported.
 
 Not covered in this subset: the `ldap:Error` detail record (`error:detail()` is not implemented yet, so the result code is only visible in the message), and `distinct` error types.
+
+## [udp](https://github.com/ballerina-platform/module-ballerina-udp/blob/master/docs/spec/spec.md)
+
+Types: `udp:Client`, `udp:ConnectClient`, `udp:Listener`, `udp:Caller` (classes), `udp:Service`, `udp:Datagram`, `udp:ClientConfiguration`, `udp:ConnectClientConfiguration`, `udp:ListenerConfiguration`, `udp:Error`.
+
+| Feature | Notes |
+|---|---|
+| `new udp:Client(config)` | Connectionless client bound to `localHost` (all interfaces when omitted) with a read `timeout` |
+| `Client->sendDatagram(datagram)` / `Client->receiveDatagram()` / `Client->close()` | Payloads larger than 8192 bytes are sent as multiple datagrams, as in jBallerina. `receiveDatagram()` returns a `readonly & udp:Datagram` whose `remoteHost`/`remotePort` are the sender's |
+| `new udp:ConnectClient(remoteHost, remotePort, config)` | Connection-oriented client that only exchanges datagrams with the given peer |
+| `ConnectClient->writeBytes(data)` / `ConnectClient->readBytes()` / `ConnectClient->close()` | `readBytes()` returns `readonly & byte[]` |
+| `new udp:Listener(localPort, config)` | Binds on `start()`; `attach`, `detach`, `start`, `gracefulStop` and `immediateStop` are supported, and a stopped listener can be started again |
+| `udp:Service` | Declares exactly one of `onBytes(readonly & byte[] data, udp:Caller caller)` or `onDatagram(readonly & udp:Datagram datagram, udp:Caller caller)`, plus an optional `onError(udp:Error err)`. The `Caller` parameter is optional and parameters may appear in either order. A returned `byte[]` or `udp:Datagram` is sent as a reply; the service is validated when it is attached |
+| `Caller->sendBytes(data)` / `Caller->sendDatagram(datagram)` | Reply to the sender or send to any destination |
+
+`config` is a plain record parameter, so pass a record literal (`{localHost: "x"}`) rather than named arguments. `remoteHost` is reported as an IP address without a reverse-DNS lookup. Service methods are checked by `Listener.attach()` instead of at compile time. `udp:Service` is a plain (non-`distinct`) service object type and `udp:Error` is an alias of `error`.
+
+Not covered in this subset: a listener restricted to one remote peer (`ListenerConfiguration.remoteHost`/`remotePort`) and `distinct` error types.
