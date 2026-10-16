@@ -58,7 +58,7 @@ Support Levels:
 | Client initialization with a plaintext simple bind | Supported | |
 | Secure connection using a certificate file path | Supported | As in jBallerina, a present `clientSecureSocket` always selects TLS; its `enable` field has no effect. |
 | Secure connection using a trust store | Cannot Support | Extracting every certificate from a PKCS12 trust store isn't implemented for this module; supplying a trust store value for `clientSecureSocket.cert` returns an `Error` at runtime. Use a PEM certificate file path instead. |
-| TLS host-name verification and TLS version selection | Supported | `verifyHostName: false` skips only the host-name check; the certificate chain is still verified. An unrecognised `tlsVersions` entry returns an `Error`. |
+| TLS host-name verification and TLS version selection | Supported | `verifyHostName: false` skips only the host-name check; the certificate chain is still verified. `tlsVersions` accepts `TLSv1` (or `TLSv1.0`), `TLSv1.1`, `TLSv1.2` and `TLSv1.3`; an unrecognised entry returns an `Error`. |
 | Adding an entry | Supported | |
 | Deleting an entry | Supported | |
 | Updating an entry | Supported | Every field is sent as an attribute replace, matching jBallerina; there is no attribute add/delete modification mode. |
@@ -70,7 +70,7 @@ Support Levels:
 | Closing the connection and checking connection status | Supported | |
 | Search scope | Supported | |
 | Operation status codes | Supported | |
-| Binary attribute decoding | Supported | `objectGUID`/`objectSid` are decoded to their canonical string forms; other binary or non-ASCII values are base64-encoded. |
+| Binary attribute decoding | Supported | `objectGUID`/`objectSid` are decoded to their canonical string forms; other values containing ASCII control characters or non-ASCII bytes are base64-encoded. |
 | Search result references and controls | Partially Supported | The underlying Go LDAP client library merges every search-result-reference's referral URIs into one flat list without preserving per-reference message IDs or controls; this module synthesizes one `SearchReference` per referral URI with `messageId` set to `0` and `controls` empty. |
 | Error type | Partially Supported | `distinct` error types are not yet supported, so `Error` is currently an alias for `error`. `error:detail()` is not yet implemented in this interpreter's `lang.error`, so `ErrorDetails.resultCode` is not retrievable structurally — the LDAP result code is still visible in `error:message()` text. |
 
@@ -81,4 +81,6 @@ Support Levels:
 - **TLS version constraints are connection-scoped.** jBallerina configures `tlsVersions` as a JVM-wide static setting shared by every LDAP connection in the process; the Go-native version scopes it to the individual connection, which is more correct but means concurrent connections with different `tlsVersions` no longer interfere with each other.
 - **A control with no value renders as an empty string instead of failing.** jBallerina's control-to-record conversion unconditionally dereferences the control's value and throws if one is absent; the Go-native version treats a valueless control as an empty string.
 - **`Client.init` takes a plain configuration record.** jBallerina declares this as `*ConnectionConfig config`, an included-record parameter that additionally allows named-argument-style construction at the call site (e.g. `check new (hostName = "x", port = 389, ...)`). This port uses a plain parameter instead (`ConnectionConfig config`, no included-record spread); call sites pass a record literal (`check new ({hostName: "x", port: 389, ...})`), matching `ballerina/tcp` and `ballerina/udp`'s existing workaround for the same underlying gap.
+- **Server error messages include the LDAP result code.** jBallerina's error message is only the server's diagnostic text (e.g. `entry already exists`). The Go-native version reports the full LDAP result, e.g. `LDAP Result Code 68 "Entry Already Exists": entry already exists (ENTRY ALREADY EXISTS)`, because `error:detail()` isn't implemented yet and the message is the only place the result code is visible.
+- **Typed binding converts attribute strings to scalar field types.** jBallerina never parses attribute values, so a target record with an `int`, `boolean`, `float` or `decimal` field panics with a `ConversionError`. The Go-native version parses the string into the field's type (e.g. `"7"` into `int`), and returns an `Error` when the value can't be parsed.
 
