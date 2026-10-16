@@ -23,6 +23,10 @@ import ballerina/udp;
 
 service class NoopService {
     *udp:Service;
+
+    remote function onBytes(readonly & byte[] data) {
+        _ = data;
+    }
 }
 
 service class EchoService {

@@ -19,6 +19,10 @@ import ballerina/udp;
 
 service class S {
     *udp:Service;
+
+    remote function onBytes(readonly & byte[] data) {
+        _ = data;
+    }
 }
 
 public function main() returns error? {
