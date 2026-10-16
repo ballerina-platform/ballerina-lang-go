@@ -86,14 +86,13 @@ func multipartBoundary(contentType string) (baseType, boundary string, isComposi
 	}
 }
 
-// decodeMultipart splits a raw multipart body into per-part Entity values, defaulting
-// an absent per-part Content-Type to "text/plain" (matching jBallerina's underlying
-// MIME library default), copying every part header verbatim and transfer-decoding
-// each part body.
+// decodeMultipart splits a raw multipart body into per-part Entity values, copying
+// every part header verbatim and transfer-decoding each part body. A part without a
+// Content-Type header is left without one, as in jBallerina.
 //
-// A missing boundary is a ParserError here; jBallerina instead silently returns an
-// empty Entity[] in this case (it never attempts to decode a manually-set byte array
-// as multipart at all — only an inbound request/response body is eligible there).
+// A missing boundary is a ParserError. jBallerina decodes only a byte-channel body
+// (an inbound HTTP body or setFileAsEntityBody) and returns an empty Entity[] for a
+// setByteArray body.
 func decodeMultipart(ctx *extern.Context, data []byte, boundary string) (*values.List, error) {
 	if boundary == "" {
 		return nil, fmt.Errorf("no boundary parameter found in Content-Type")
@@ -107,9 +106,6 @@ func decodeMultipart(ctx *extern.Context, data []byte, boundary string) (*values
 		}
 		if err != nil {
 			return nil, err
-		}
-		if part.Header.Get("Content-Type") == "" {
-			part.Header.Set("Content-Type", "text/plain")
 		}
 		body, err := io.ReadAll(transferDecoder(part, part.Header.Get("Content-Transfer-Encoding")))
 		if err != nil {
@@ -126,7 +122,7 @@ func decodeMultipart(ctx *extern.Context, data []byte, boundary string) (*values
 		if err := addEntityHeaders(ctx, partObj, d.header); err != nil {
 			return nil, err
 		}
-		setEntityBody(partObj, &entityBody{kind: bodyBytes, bytes: d.body})
+		setEntityBody(partObj, &entityBody{kind: bodyBytes, bytes: d.body, fromChannel: true})
 	}
 	return parts, nil
 }
