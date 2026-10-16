@@ -22,9 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
+	"golang.org/x/text/encoding/unicode"
 
 	"github.com/ballerina-nutcracker/ballerina/runtime"
 	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
@@ -185,7 +187,8 @@ func materializeBody(ctx *extern.Context, obj *values.Object) (*entityBody, erro
 
 // bytesForBody returns the byte representation of an Entity's body regardless of which
 // setter populated it, matching jBallerina's model where every accessor lazily converts
-// from the entity's underlying data source. An absent or multipart body reads as empty.
+// from the entity's underlying data source. An absent or multipart body reads as empty,
+// and a text, JSON or XML body is encoded in the Content-Type charset.
 func bytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
 	body, err := materializeBody(ctx, obj)
 	if err != nil {
@@ -198,17 +201,61 @@ func bytesForBody(ctx *extern.Context, obj *values.Object) ([]byte, error) {
 	case bodyBytes:
 		return body.bytes, nil
 	case bodyText:
-		return []byte(body.text), nil
+		return encodeCharset(body.text, contentTypeCharset(obj))
 	case bodyJSON:
 		if body.json == nil {
 			return []byte{}, nil
 		}
-		return []byte(formatJSON(body.json, ",")), nil
+		return encodeCharset(formatJSON(body.json, ","), contentTypeCharset(obj))
 	case bodyXML:
-		return []byte(body.xml.XMLString()), nil
+		return encodeCharset(body.xml.XMLString(), contentTypeCharset(obj))
 	default:
 		return []byte{}, nil
 	}
+}
+
+func contentTypeCharset(obj *values.Object) string {
+	contentType, _ := entityHeaderValue(obj, "content-type")
+	mt, err := parseMediaType(contentType)
+	if err != nil {
+		return ""
+	}
+	return mt.param("charset")
+}
+
+// encodeCharset encodes s as Java's String.getBytes(charset) does: UTF-8 when no charset
+// is given, and '?' for a character the charset cannot represent.
+func encodeCharset(s, charset string) ([]byte, error) {
+	if charset == "" {
+		return []byte(s), nil
+	}
+	enc, err := ianaindex.IANA.Encoding(charset)
+	if err != nil || enc == nil {
+		// Java's UnsupportedEncodingException message is the charset name alone.
+		return nil, errors.New(charset)
+	}
+	if out, err := enc.NewEncoder().Bytes([]byte(s)); err == nil {
+		return out, nil
+	}
+	encoder := enc.NewEncoder()
+	var out []byte
+	for _, r := range s {
+		b, err := encoder.Bytes([]byte(string(r)))
+		if err != nil {
+			b = []byte{'?'}
+		}
+		out = append(out, b...)
+	}
+	return out, nil
+}
+
+// decodeUTF8 replaces each malformed sequence with U+FFFD, as Java's UTF-8 decoder does.
+func decodeUTF8(data []byte) string {
+	if utf8.Valid(data) {
+		return string(data)
+	}
+	decoded, _ := unicode.UTF8.NewDecoder().Bytes(data)
+	return string(decoded)
 }
 
 // stringForBody returns the string representation of an Entity's body regardless of
@@ -226,7 +273,7 @@ func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 	case bodyText:
 		return body.text, nil
 	case bodyBytes:
-		return string(body.bytes), nil
+		return decodeUTF8(body.bytes), nil
 	case bodyJSON:
 		if body.json == nil {
 			//nolint:staticcheck // cause text mirrors jBallerina's verbatim
@@ -303,6 +350,10 @@ func jsonQuote(s string) string {
 			sb.WriteString(`\n`)
 		case '\r':
 			sb.WriteString(`\r`)
+		case '\b':
+			sb.WriteString(`\b`)
+		case '\f':
+			sb.WriteString(`\f`)
 		default:
 			if r < 0x20 {
 				fmt.Fprintf(&sb, `\u%04x`, r)
@@ -517,7 +568,7 @@ func getByteArrayExtern(t *mimeTypes) extern.NativeFunc {
 		obj, _ := args[0].(*values.Object)
 		data, err := bytesForBody(ctx, obj)
 		if err != nil {
-			return mimeError("ParserError", err.Error()), nil
+			return mimeError("ParserError", "Error occurred while extracting blob data from entity: "+err.Error()), nil
 		}
 		return t.byteList(data), nil
 	}

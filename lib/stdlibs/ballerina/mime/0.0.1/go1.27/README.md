@@ -64,13 +64,13 @@ Support Levels:
 | Content disposition parsing | Supported | `getContentDispositionObject(contentDisposition)` |
 | Entity header management | Supported | `setHeader`, `getHeader`, `getHeaders`, `getHeaderNames`, `addHeader`, `removeHeader`, `removeAllHeaders`, `hasHeader` |
 | Entity content metadata | Supported | `setContentType`, `getContentType`, `setContentId`, `getContentId`, `setContentLength`, `getContentLength`, `setContentDisposition`, `getContentDisposition` |
-| Entity text body | Supported | `setText`, `getText` — `getText()` also converts from a JSON or byte[] body, matching jBallerina's data-source model |
+| Entity text body | Supported | `setText`, `getText` — `getText()` also converts from a JSON or byte[] body, matching jBallerina's data-source model; body bytes are always decoded as UTF-8 (the `charset` param is ignored, as in jBallerina), with each malformed sequence replaced by U+FFFD |
 | Entity JSON body | Supported | `setJson`, `getJson` — `getJson()` also parses a text or byte[] body as JSON |
 | Entity XML body | Supported | `setXml`, `getXml` — `getXml()` also parses a text or byte[] body as XML, matching jBallerina's data-source model |
-| Entity byte array body | Supported | `setByteArray`, `getByteArray` — `getByteArray()` also encodes a text or JSON body to bytes |
+| Entity byte array body | Supported | `setByteArray`, `getByteArray` — `getByteArray()` also encodes a text, JSON or XML body to bytes in the Content-Type `charset` (UTF-8 if absent), writing `?` for a character the charset cannot represent and returning a `ParserError` for an unknown charset, matching jBallerina |
 | Entity body from a file | Supported | `setFileAsEntityBody(filePath, contentType)` — sets the file as a lazy data source, read on demand by whichever accessor materializes the body first, matching jBallerina. A failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
 | Entity generic body dispatch | Partially Supported | `setBody(string\|xml\|json\|byte[]\|Entity[])`; the `stream<byte[], io:Error?>` arm is not yet supported |
-| Entity multipart body | Supported | `setBodyParts`, `getBodyParts` — `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
+| Entity multipart body | Supported | `setBodyParts`, `getBodyParts` — a byte[] or file-backed body is decoded; an entity with no body, or with a text, JSON or XML body, returns an empty array, matching jBallerina. `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
 | Entity byte stream body | Not Yet Supported | `getByteStream`, `setByteStream` — no stream-backed entity body yet |
 | Multipart body parts as a stream | Not Yet Supported | `getBodyPartsAsStream` |
 | Base64 encoding and decoding | Supported | `base64Encode`, `base64Decode`, `base64EncodeBlob`, `base64DecodeBlob` — `base64Encode`/`base64Decode` also accept an `io:ReadableByteChannel`, reading it fully and returning a freshly-constructed channel wrapping the result (charset is not applied to the channel form, matching jBallerina) |
