@@ -168,8 +168,7 @@ func remoteMethodArgs(ctx *extern.Context, svcObj *values.Object, methodName str
 }
 
 // dispatchDatagram invokes whichever of onBytes/onDatagram the attached
-// service declares for a single received datagram; jBallerina dispatches to
-// both if both are present.
+// service declares for a single received datagram.
 func dispatchDatagram(rt *runtime.Runtime, types udpTypes, svcObj *values.Object, pc net.PacketConn, senderAddr net.Addr, data []byte) {
 	remoteHost, remotePort, err := hostPortOf(senderAddr)
 	if err != nil {

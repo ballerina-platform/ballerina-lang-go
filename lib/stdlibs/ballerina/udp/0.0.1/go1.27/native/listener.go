@@ -68,7 +68,7 @@ func registerListenerFunctions(rt *runtime.Runtime, types udpTypes) {
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "$Listener.attach$default$1", listenerAttachDefaultName)
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.initListener", listenerInit)
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.attach", listenerAttach)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.attach", listenerAttach(types))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.detach", listenerDetach)
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.start", listenerStart(rt, types))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "Listener.gracefulStop", listenerGracefulStop)
@@ -87,16 +87,21 @@ func listenerInit(_ *extern.Context, args []values.BalValue) (values.BalValue, e
 	return nil, nil
 }
 
-func listenerAttach(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-	svcObj := args[1].(*values.Object)
-	state := listenerStateOf(args[0].(*values.Object))
-	state.mu.Lock()
-	defer state.mu.Unlock()
-	if state.svcObj != nil {
-		return udpError("Listener.attach: a service is already attached to this listener"), nil
+func listenerAttach(types udpTypes) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+		svcObj := args[1].(*values.Object)
+		if err := validateService(ctx, types, svcObj); err != nil {
+			return err, nil
+		}
+		state := listenerStateOf(args[0].(*values.Object))
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		if state.svcObj != nil {
+			return udpError("Listener.attach: a service is already attached to this listener"), nil
+		}
+		state.svcObj = svcObj
+		return nil, nil
 	}
-	state.svcObj = svcObj
-	return nil, nil
 }
 
 func listenerDetach(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
