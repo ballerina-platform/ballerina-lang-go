@@ -18,19 +18,20 @@
 import ballerina/crypto;
 import ballerina/lang.'int as ints;
 
-// Represents UUID module related errors.
+# Represents UUID module related errors.
 public type Error distinct error;
 
 // String representing the nil UUID.
 const string NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
-// Represents a UUID.
-// + timeLow - The low field of the timestamp
-// + timeMid - The middle field of the timestamp
-// + timeHiAndVersion - The high field of the timestamp multiplexed with the version number
-// + clockSeqHiAndReserved - The high field of the clock sequence multiplexed with the variant
-// + clockSeqLo - The low field of the clock sequence
-// + node - The spatially unique node identifier
+# Represents a UUID.
+#
+# + timeLow - The low field of the timestamp
+# + timeMid - The middle field of the timestamp
+# + timeHiAndVersion - The high field of the timestamp multiplexed with the version number
+# + clockSeqHiAndReserved - The high field of the clock sequence multiplexed with the variant
+# + clockSeqLo - The low field of the clock sequence
+# + node - The spatially unique node identifier
 public type Uuid readonly & record {
     ints:Unsigned32 timeLow;
     ints:Unsigned16 timeMid;
@@ -40,11 +41,12 @@ public type Uuid readonly & record {
     int node; // Should be Unsigned48, but not available in lang.int at the moment
 };
 
-// Represents the UUID versions.
-// V1 - UUID generated using the time of generation and a random node identifier
-// V3 - UUID generated using MD5 hashing and application-provided text string
-// V4 - UUID generated using a pseudo-random number generator
-// V5 - UUID generated using SHA-1 hashing and application-provided text string
+# Represents the UUID versions.
+#
+# + V1 - UUID generated using the time of generation and a random node identifier
+# + V3 - UUID generated using MD5 hashing and application-provided text string
+# + V4 - UUID generated using a pseudo-random number generator
+# + V5 - UUID generated using SHA-1 hashing and application-provided text string
 public enum Version {
     V1,
     V3,
@@ -52,12 +54,13 @@ public enum Version {
     V5
 }
 
-// Represents UUIDs strings of well known namespace IDs.
-// NAME_SPACE_DNS - Namespace is a fully-qualified domain name
-// NAME_SPACE_URL - Namespace is a URL
-// NAME_SPACE_OID - Namespace is an ISO OID
-// NAME_SPACE_X500 - Namespace is an X.500 DN (in DER or a text output format)
-// NAME_SPACE_NIL - Empty UUID
+# Represents UUIDs strings of well known namespace IDs.
+#
+# + NAME_SPACE_DNS - Namespace is a fully-qualified domain name
+# + NAME_SPACE_URL - Namespace is a URL
+# + NAME_SPACE_OID - Namespace is an ISO OID
+# + NAME_SPACE_X500 - Namespace is an X.500 DN (in DER or a text output format)
+# + NAME_SPACE_NIL - Empty UUID
 public enum NamespaceUUID {
     NAME_SPACE_DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
     NAME_SPACE_URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
