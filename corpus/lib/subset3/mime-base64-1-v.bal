@@ -91,7 +91,7 @@ public function main() returns error? {
 // @output 3
 // @output true
 // @output 100
-// @output true
+// @output false
 // @output true
 // @output café
 // @output SGVsbG8=

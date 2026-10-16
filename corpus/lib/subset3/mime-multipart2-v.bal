@@ -35,7 +35,7 @@ public function main() returns error? {
     mime:Entity[] decodedParts = check decoded.getBodyParts();
     any firstPart = decodedParts[0];
     io:println(firstPart is mime:Entity); // @output true
-    io:println(decodedParts[0].getHeaderNames()); // @output ["Content-Disposition","Content-Type","X-A","X-Z"]
+    io:println(decodedParts[0].getHeaderNames()); // @output ["Content-Disposition","X-A","X-Z"]
     io:println(check decodedParts[0].getHeaders("x-a")); // @output ["2","3"]
     io:println(check decodedParts[0].getText()); // @output value
     io:println(decodedParts[0].getContentDisposition().name); // @output a

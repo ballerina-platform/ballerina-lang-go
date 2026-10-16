@@ -25,6 +25,7 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/htmlindex"
 	"golang.org/x/text/encoding/ianaindex"
 	"golang.org/x/text/encoding/unicode"
 
@@ -51,14 +52,17 @@ const (
 )
 
 // entityBody holds the body payload attached to a Ballerina Entity object.
+// fromChannel marks bytes read from a byte channel (a file body or a decoded part),
+// which jBallerina decodes in the Content-Type charset rather than as UTF-8.
 type entityBody struct {
-	kind    bodyKind
-	text    string
-	json    values.BalValue
-	bytes   []byte
-	parts   *values.List
-	xml     values.XMLValue
-	channel *values.Object
+	kind        bodyKind
+	text        string
+	json        values.BalValue
+	bytes       []byte
+	parts       *values.List
+	xml         values.XMLValue
+	channel     *values.Object
+	fromChannel bool
 }
 
 const entityBodyField = "$mimeBody"
@@ -180,7 +184,7 @@ func materializeBody(ctx *extern.Context, obj *values.Object) (*entityBody, erro
 	if closeErr != nil {
 		return nil, closeErr
 	}
-	cached := &entityBody{kind: bodyBytes, bytes: data}
+	cached := &entityBody{kind: bodyBytes, bytes: data, fromChannel: true}
 	setEntityBody(obj, cached)
 	return cached, nil
 }
@@ -229,8 +233,8 @@ func encodeCharset(s, charset string) ([]byte, error) {
 	if charset == "" {
 		return []byte(s), nil
 	}
-	enc, err := ianaindex.IANA.Encoding(charset)
-	if err != nil || enc == nil {
+	enc, err := lookupCharset(charset)
+	if err != nil {
 		// Java's UnsupportedEncodingException message is the charset name alone.
 		return nil, errors.New(charset)
 	}
@@ -258,6 +262,23 @@ func decodeUTF8(data []byte) string {
 	return string(decoded)
 }
 
+// decodeCharset decodes data as Java's new String(bytes, charset) does: UTF-8 when no
+// charset is given, and U+FFFD for each malformed sequence.
+func decodeCharset(data []byte, charset string) (string, error) {
+	if charset == "" {
+		return decodeUTF8(data), nil
+	}
+	enc, err := lookupCharset(charset)
+	if err != nil {
+		return "", errors.New(charset)
+	}
+	decoded, err := enc.NewDecoder().Bytes(data)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
 // stringForBody returns the string representation of an Entity's body regardless of
 // which setter populated it, mirroring bytesForBody for the text accessor.
 func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
@@ -273,6 +294,9 @@ func stringForBody(ctx *extern.Context, obj *values.Object) (string, error) {
 	case bodyText:
 		return body.text, nil
 	case bodyBytes:
+		if body.fromChannel {
+			return decodeCharset(body.bytes, contentTypeCharset(obj))
+		}
 		return decodeUTF8(body.bytes), nil
 	case bodyJSON:
 		if body.json == nil {
@@ -427,24 +451,28 @@ func mimeEncode(data []byte) string {
 	return sb.String()
 }
 
-// lookupCharset resolves an IANA charset name (e.g. "utf-8", "iso-8859-1") to its
-// x/text encoding, for transcoding a base64 payload's string form to/from raw bytes.
+// lookupCharset resolves a charset name (e.g. "utf-8", "iso-8859-1") to its x/text
+// encoding. Names missing from the IANA index fall back to the WHATWG index, which
+// covers aliases Java also accepts, such as "utf8".
 func lookupCharset(charset string) (encoding.Encoding, error) {
 	enc, err := ianaindex.IANA.Encoding(charset)
+	if err != nil || enc == nil {
+		enc, err = htmlindex.Get(charset)
+	}
 	if err != nil || enc == nil {
 		return nil, fmt.Errorf("unsupported charset: %s", charset)
 	}
 	return enc, nil
 }
 
-// mimeDecode strips MIME whitespace (\r, \n, space, tab) and accepts missing `=`
-// padding before decoding, matching Java's Base64.getMimeDecoder() leniency.
+// mimeDecode drops every character outside the base64 alphabet and accepts missing `=`
+// padding before decoding, as RFC 2045 and Java's Base64.getMimeDecoder() do.
 func mimeDecode(s string) ([]byte, error) {
 	cleaned := strings.Map(func(r rune) rune {
-		if r == '\r' || r == '\n' || r == ' ' || r == '\t' {
-			return -1
+		if r == '=' || r == '+' || r == '/' || ('0' <= r && r <= '9') || ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') {
+			return r
 		}
-		return r
+		return -1
 	}, s)
 	return base64.RawStdEncoding.DecodeString(strings.TrimRight(cleaned, "="))
 }
@@ -641,15 +669,11 @@ func base64EncodeExtern(t *mimeTypes) extern.NativeFunc {
 			return t.byteList([]byte(mimeEncode(listToBytes(v)))), nil
 		}
 		v, _ := args[0].(string)
-		enc, err := lookupCharset(charset)
+		data, err := encodeCharset(v, charset)
 		if err != nil {
-			return mimeError("EncodeError", err.Error()), nil
+			return mimeError("EncodeError", "unsupported charset: "+charset), nil
 		}
-		data, err := enc.NewEncoder().String(v)
-		if err != nil {
-			return mimeError("EncodeError", "base64 encoding failed: "+err.Error()), nil
-		}
-		return mimeEncode([]byte(data)), nil
+		return mimeEncode(data), nil
 	}
 }
 

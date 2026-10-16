@@ -54,12 +54,13 @@ public function main() returns error? {
     io:println(decodedParts[1].getContentType());                     // @output application/json
     io:println(check decodedParts[1].getJson());                      // @output {"k":"v"}
 
-    // ---- part with no Content-Type header defaults to text/plain ----
+    // ---- part with no Content-Type header is left without one ----
     string rawNoContentType = "--B1\r\nContent-Disposition: form-data; name=\"noct\"\r\n\r\nplain value\r\n--B1--\r\n";
     mime:Entity noCtEntity = new;
     noCtEntity.setByteArray(rawNoContentType.toBytes(), "multipart/form-data; boundary=B1");
     mime:Entity[] noCtParts = check noCtEntity.getBodyParts();
-    io:println(noCtParts[0].getContentType()); // @output text/plain
+    io:println(noCtParts[0].getContentType()); // @output
+    io:println(noCtParts[0].hasHeader("content-type")); // @output false
     io:println(check noCtParts[0].getText());  // @output plain value
 
     // ---- setBody's Entity[] arm delegates to setBodyParts ----
