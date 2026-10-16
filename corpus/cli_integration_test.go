@@ -77,6 +77,9 @@ func TestBalCLI(t *testing.T) {
 		{"BalRunWorkspaceCorpus", testBalRunWorkspaceCorpus},
 		{"BalRunTargetDir", testBalRunTargetDir},
 		{"BalPackCorpus", testBalPackCorpus},
+		{"BalPackCorpus_IncludeField", testBalPackCorpus_IncludeField},
+		{"BalPackCorpus_InvalidIncludePattern", testBalPackCorpus_InvalidIncludePattern},
+		{"BalPackCorpus_IncludeFieldFromWorkspaceMember", testBalPackCorpus_IncludeFieldFromWorkspaceMember},
 		{"BalPackTargetDir", testBalPackTargetDir},
 		{"BalBuildCorpus", testBalBuildCorpus},
 		{"BalBuildTargetDir", testBalBuildTargetDir},
@@ -464,18 +467,14 @@ func testBalPackTargetDir(t *testing.T, cli *balCLI) {
 	}
 }
 
-// TestBalPackCorpus_IncludeField exercises the package manifest's `include`
+// testBalPackCorpus_IncludeField exercises the package manifest's `include`
 // glob patterns end-to-end through the real `bal pack` binary: it packs
 // corpus/cli/testdata/pack/includes/project (include = ["docs/**",
 // "assets/*.txt", "!assets/secret.txt"]) and asserts the produced .bala
 // contains the matched files and excludes the negated one.
 // Java equivalent: TestBalaWriter#testBuildProjectWithIncludes.
-func TestBalPackCorpus_IncludeField(t *testing.T) {
-	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
-		t.Skip("skipping CLI integration test on WASM (js/wasm)")
-	}
-	t.Parallel()
-	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
+func testBalPackCorpus_IncludeField(t *testing.T, cli *balCLI) {
+	balBin, repoRoot, coverDir := cli.relBin, cli.repoRoot, cli.coverDir
 
 	workDir := t.TempDir()
 	copyDir(t, filepath.Join(repoRoot, "corpus", "cli", "testdata", "pack", "includes", "project"), workDir)
@@ -507,14 +506,10 @@ func TestBalPackCorpus_IncludeField(t *testing.T) {
 	}
 }
 
-// TestBalPackCorpus_InvalidIncludePattern checks that a malformed include
+// testBalPackCorpus_InvalidIncludePattern checks that a malformed include
 // glob fails bal pack with a user-facing error.
-func TestBalPackCorpus_InvalidIncludePattern(t *testing.T) {
-	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
-		t.Skip("skipping CLI integration test on WASM (js/wasm)")
-	}
-	t.Parallel()
-	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
+func testBalPackCorpus_InvalidIncludePattern(t *testing.T, cli *balCLI) {
+	balBin, repoRoot, coverDir := cli.relBin, cli.repoRoot, cli.coverDir
 
 	workDir := t.TempDir()
 	copyDir(t, filepath.Join(repoRoot, "corpus", "cli", "testdata", "pack", "invalid-include", "project"), workDir)
@@ -528,17 +523,13 @@ func TestBalPackCorpus_InvalidIncludePattern(t *testing.T) {
 	}
 }
 
-// TestBalPackCorpus_IncludeFieldFromWorkspaceMember checks include-pattern
+// testBalPackCorpus_IncludeFieldFromWorkspaceMember checks include-pattern
 // matching end-to-end for a workspace member, whose SourceRoot() is its own
 // subdirectory (e.g. "pkga") rather than fsys's own root: zip paths must
 // come out root-relative ("assets/data.txt"), not prefixed with the
 // member's own directory name.
-func TestBalPackCorpus_IncludeFieldFromWorkspaceMember(t *testing.T) {
-	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
-		t.Skip("skipping CLI integration test on WASM (js/wasm)")
-	}
-	t.Parallel()
-	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
+func testBalPackCorpus_IncludeFieldFromWorkspaceMember(t *testing.T, cli *balCLI) {
+	balBin, repoRoot, coverDir := cli.relBin, cli.repoRoot, cli.coverDir
 
 	workDir := t.TempDir()
 	copyDir(t, filepath.Join(repoRoot, "corpus", "cli", "testdata", "pack", "workspace-member-includes", "project"), workDir)
