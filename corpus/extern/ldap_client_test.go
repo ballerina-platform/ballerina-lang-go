@@ -92,6 +92,15 @@ type ObjectClasses record {|
     string[] sn;
 |};
 
+type NameOnly record {|
+    string cn;
+    string sn;
+|};
+
+type DomainOnly record {|
+    string dc;
+|};
+
 public function main() returns error? {
     ldap:Client ldapClient = check new ({
         hostName: %q,
@@ -173,6 +182,26 @@ public function main() returns error? {
     if noMatch is ldap:Error {
         io:println(noMatch.message()); // @output Entry is not found for DN: 'dc=example,dc=com'
     }
+
+    string encodedDN = "cn=Encoded,dc=example,dc=com";
+    _ = check ldapClient->add(encodedDN, {
+        "objectClass": "top",
+        "cn": "Encoded",
+        "sn": "S",
+        "description": "tab\there",
+        "telephoneNumber": "del\u{7F}char",
+        "objectSid": "\u{01}\u{01}\u{01}\u{00}\u{00}\u{00}\u{00}\u{05}\u{07}\u{00}\u{00}\u{00}"
+    });
+    ldap:Entry encoded = check ldapClient->getEntry(encodedDN, ["description", "telephoneNumber", "objectSid"]);
+    io:println(encoded); // @output {"description":"dGFiCWhlcmU=","objectsid":"S-1-0x10000000005-7","telephonenumber":"ZGVsf2NoYXI="}
+
+    NameOnly|DomainOnly|ldap:Error unionTarget = ldapClient->getEntry(encodedDN, ["cn", "sn"]);
+    io:println(unionTarget is NameOnly); // @output true
+    readonly & NameOnly|ldap:Error readonlyTarget = ldapClient->getEntry(encodedDN, ["cn", "sn"]);
+    io:println(readonlyTarget is readonly & NameOnly); // @output true
+    string|ldap:Error stringTarget = ldapClient->getEntry(encodedDN);
+    io:println(stringTarget is ldap:Error); // @output true
+    _ = check ldapClient->delete(encodedDN);
 
     ldapClient->close();
     boolean stillConnected = check ldapClient->isConnected();
@@ -334,6 +363,11 @@ public function main() returns error? {
     boolean enableFalseConnected = check enableFalse->isConnected();
     io:println(enableFalseConnected); // @output true
     enableFalse->close();
+
+    ldap:Client tlsV1Name = check connect("127.0.0.1", {cert: CA_CERT, tlsVersions: ["TLSv1", "TLSv1.2"]});
+    boolean tlsV1NameConnected = check tlsV1Name->isConnected();
+    io:println(tlsV1NameConnected); // @output true
+    tlsV1Name->close();
     return;
 }
 `, port, fakeLdapBindDN, fakeLdapBindPW, filepath.ToSlash(caCertFile), filepath.ToSlash(untrustedCACertFile))
