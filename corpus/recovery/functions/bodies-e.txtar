@@ -17,7 +17,7 @@
 
 function blockBody() returns int {
     int broken = ; // @error
-    { int '_ = 1; int inner = 2; } // @error
+    { int ' = 1; int inner = 2; } // @error
     int later = 3;
     return later;
 }

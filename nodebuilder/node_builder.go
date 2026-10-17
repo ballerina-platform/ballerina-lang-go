@@ -35,6 +35,8 @@ import (
 
 type nodeBuilderMode uint8
 
+const wildcardIdentifierErrorMessage = "'_' is a keyword, and may not be used as an identifier"
+
 const (
 	nodeBuilderModeStrict nodeBuilderMode = iota
 	nodeBuilderModeRecover
@@ -963,13 +965,30 @@ func setIdentifierValue(identifier ast.IdentifierNode, value string) {
 }
 
 func (n *nodeBuilder) createIdentifierNodeFromToken(pos diagnostics.Location, token st.Token) ast.IdentifierNode {
+	if isQuotedWildcardToken(token) {
+		identifier := quotedWildcardIdentifier(pos, token)
+		return &identifier
+	}
 	identifierName := token.Text()
 	identifier := createIdentifier(pos, &identifierName, &identifierName)
 	return &identifier
 }
 
 func isUnsupportedIdentifierText(text string) bool {
-	return text == "'" || text == "_" || text == "'_"
+	return text == "'" || text == "_"
+}
+
+func isQuotedWildcardToken(token st.Token) bool {
+	return token.Text() == "'_"
+}
+
+// quotedWildcardIdentifier keeps the quote in the value so that `'_` names an ordinary
+// variable distinct from the wildcard `_`. Unlike other quoted identifiers, `'_` can't be
+// normalized by stripping the quote because the resulting `_` is model.IGNORE, which later
+// stages treat as the wildcard (e.g. unused-variable tracking, shadowing and wildcard
+// binding checks compare the normalized value against it).
+func quotedWildcardIdentifier(pos diagnostics.Location, token st.Token) ast.BLangIdentifier {
+	return ast.NewBLangIdentifier(pos, token.Text(), token.Text())
 }
 
 func (n *nodeBuilder) createIdentifierNodeFromModulePrefixToken(pos diagnostics.Location, token st.Token) ast.IdentifierNode {
@@ -4410,11 +4429,15 @@ func (n *nodeBuilder) transformImplicitAnonymousFunctionExpression(node *st.Impl
 		ident := createIdentifier(paramPos, nil, nil)
 		if paramName != nil && !paramName.IsMissing() {
 			paramValue := paramName.Text()
-			if paramValue == "_" || paramValue == "'_" {
-				n.cx.SyntaxError("'_' cannot be used as an identifier", paramPos)
+			if paramValue == "_" {
+				n.cx.SyntaxError(wildcardIdentifierErrorMessage, paramPos)
 				return n.badExprOrAction(node)
 			}
-			ident = createIdentifier(paramPos, &paramValue, &paramValue)
+			if isQuotedWildcardToken(paramName) {
+				ident = quotedWildcardIdentifier(paramPos, paramName)
+			} else {
+				ident = createIdentifier(paramPos, &paramValue, &paramValue)
+			}
 		}
 		fn.RequiredParams[i].Name = &ident
 		fn.RequiredParams[i].SetPosition(n.getPosition(param))
@@ -6120,18 +6143,6 @@ func (n *nodeBuilder) badTypeNode(node st.Node) *ast.BLangBadTypeNode {
 	return bad
 }
 
-func isUnderscoreIdentifier(token st.Token) bool {
-	return token.Text() == "_" || token.Text() == "'_"
-}
-
-func isQuotedUnderscoreModulePrefix(token st.Token) bool {
-	if token.Text() != "'_" {
-		return false
-	}
-	parent := token.Parent()
-	return parent != nil && parent.Kind() == st.QUALIFIED_NAME_REFERENCE && parent.ChildInBucket(0) == token
-}
-
 // TODO(#1139): remove this classifier in favor of syntax-tree recovery information.
 func (n *nodeBuilder) malformedSyntax(node st.Node, skip func(st.Node) bool) bool {
 	if node == nil || (skip != nil && skip(node)) {
@@ -6151,8 +6162,8 @@ func (n *nodeBuilder) malformedSyntax(node st.Node, skip func(st.Node) bool) boo
 			n.cx.SyntaxError("invalid identifier", n.getPosition(token))
 			return true
 		}
-		if token.Kind() == st.IDENTIFIER_TOKEN && isUnderscoreIdentifier(token) && !isQuotedUnderscoreModulePrefix(token) {
-			n.cx.SyntaxError("'_' is a keyword, and may not be used as an identifier", n.getPosition(token))
+		if token.Kind() == st.IDENTIFIER_TOKEN && token.Text() == "_" {
+			n.cx.SyntaxError(wildcardIdentifierErrorMessage, n.getPosition(token))
 			return true
 		}
 		return false

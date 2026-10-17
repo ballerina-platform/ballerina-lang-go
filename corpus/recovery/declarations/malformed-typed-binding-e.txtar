@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-int[] '_ = [0]; // @error malformed module variable name
+int[] ' = [0]; // @error malformed module variable name
 
 function surviving() returns int {
-    int[] '_ = [0]; // @error malformed local variable name
+    int[] ' = [0]; // @error malformed local variable name
     return 7;
 }
 

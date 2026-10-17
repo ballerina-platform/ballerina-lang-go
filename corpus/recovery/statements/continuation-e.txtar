@@ -17,7 +17,7 @@
 
 function brokenBody() returns int {
     int bad = ; // @error
-    int '_ = 1; // @error bad statement
+    int ' = 1; // @error bad statement
     int| malformedType = 1; // @error
     int unknown = absent + 1; // @error
     int invocation = probe(absentArgument); // @error
