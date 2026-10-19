@@ -449,8 +449,8 @@ func searchWithTypeExtern(types ldapTypes) extern.NativeFunc {
 			}
 			entryVals[i] = value
 		}
-		// Tag the result with a freshly built elemTy[] rather than the
-		// original targetTD.Constraint(), for the same reason as above.
+		// Build an open elemTy[] first, since targetTD.Constraint() has no list atomic
+		// type (see above); CloneWithType then gives it the requested shape.
 		resultListBld := semtypes.NewListDefinition()
 		resultListTy := resultListBld.Define(ctx.TypeEnv(), nil, semtypes.ListRest(elemTy))
 		resultAtomic := semtypes.ToListAtomicType(ctx.TypeEnv(), resultListTy)
