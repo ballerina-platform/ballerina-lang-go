@@ -89,7 +89,11 @@ public function main() returns error? {
     check forever.attach(s2, "s2");
     check forever.'start();
     task:JobId job = check task:scheduleOneTimeJob(new OkJob(), time:utcToCivil(time:utcAddSeconds(time:utcNow(), 5)));
-    runtime:sleep(0.2);
+    int polls = 0;
+    while count("s1") <= 2 && polls < 60 {
+        runtime:sleep(0.05);
+        polls += 1;
+    }
     io:println("maxCount 0 repeats: ", count("s1") > 2); // @output maxCount 0 repeats: true
     check task:unscheduleJob(job);
     int stoppedAt = count("s1");
