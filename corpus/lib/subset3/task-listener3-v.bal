@@ -96,6 +96,7 @@ public function main() returns error? {
     }
     io:println("maxCount 0 repeats: ", count("s1") > 2); // @output maxCount 0 repeats: true
     check task:unscheduleJob(job);
+    runtime:sleep(0.1);
     int stoppedAt = count("s1");
     runtime:sleep(0.2);
     io:println("services stop with the scheduler: ", count("s1") == stoppedAt); // @output services stop with the scheduler: true

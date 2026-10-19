@@ -91,6 +91,7 @@ public function main() returns error? {
             taskPolicy = {waitingPolicy: task:LOG_AND_IGNORE});
     check task:unscheduleJob(logged);
     check task:pauseAllJobs();
+    runtime:sleep(0.1);
     int pausedAt = count("before");
     task:JobId after = check task:scheduleJobRecurByFrequency(new CountJob("after"), 0.05);
     task:JobId otherGroup = check task:scheduleJobRecurByFrequency(new CountJob("otherGroup"), 0.05,
@@ -104,11 +105,11 @@ public function main() returns error? {
     check task:unscheduleJob(after);
     check task:unscheduleJob(otherGroup);
 
-    task:JobId restarted = check task:scheduleJobRecurByFrequency(new CountJob("restarted"), 0.1, maxCount = 5);
-    runtime:sleep(0.25);
+    task:JobId restarted = check task:scheduleJobRecurByFrequency(new CountJob("restarted"), 0.2, maxCount = 5);
+    runtime:sleep(0.5);
     io:println("before reconfigure: ", count("restarted")); // @output before reconfigure: 3
     check task:configureWorkerPool(5, 5);
-    runtime:sleep(0.6);
+    runtime:sleep(0.8);
     io:println("after reconfigure: ", count("restarted"), " ", isRunning(restarted)); // @output after reconfigure: 8 false
     io:println(task:getRunningJobs().length()); // @output 0
 }

@@ -68,6 +68,7 @@ public function main() returns error? {
     io:println(isRunning(limited), " ", isRunning(windowed), " ", isRunning(forever)); // @output false false true
 
     check task:unscheduleJob(forever);
+    runtime:sleep(0.1);
     int stopped = count("forever");
     runtime:sleep(0.2);
     io:println("stopped: ", count("forever") == stopped); // @output stopped: true
