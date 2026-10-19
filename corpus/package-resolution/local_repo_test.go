@@ -47,14 +47,13 @@ func TestPackageResolutionScenarios(t *testing.T) {
 		t.Skip("skipping CLI integration test on WASM (js/wasm)")
 	}
 
-	balBin, repoRoot := buildBalBinary(t)
-
-	// Resolve the directory that contains this test file.
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
+	// go test runs with the package directory as its working directory.
+	scenariosDir, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatalf("resolving scenarios directory: %v", err)
 	}
-	scenariosDir := filepath.Dir(thisFile)
+	repoRoot := filepath.Dir(filepath.Dir(scenariosDir))
+	balBin := buildBalBinary(t, repoRoot)
 
 	entries, err := os.ReadDir(scenariosDir)
 	if err != nil {
@@ -219,27 +218,20 @@ func setEnvVar(env []string, key, value string) []string {
 	return result
 }
 
-// buildBalBinary builds the bal CLI into t.TempDir() and returns the binary
-// path and the repo root it was built from.
-func buildBalBinary(t *testing.T) (balBin, repoRoot string) {
+// buildBalBinary builds the bal CLI from repoRoot into t.TempDir() and returns
+// the binary path.
+func buildBalBinary(t *testing.T, repoRoot string) string {
 	t.Helper()
-	// Resolve repo root: this file is at <repo>/corpus/package-resolution/local_repo_test.go
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	repoRoot = filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
-
 	binName := "bal"
 	if runtime.GOOS == "windows" {
 		binName = "bal.exe"
 	}
-	balBin = filepath.Join(t.TempDir(), binName)
+	balBin := filepath.Join(t.TempDir(), binName)
 
 	buildCmd := exec.Command("go", "build", "-o", balBin, "./cli/cmd")
 	buildCmd.Dir = repoRoot
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("build bal binary: %v\n%s", err, out)
 	}
-	return balBin, repoRoot
+	return balBin
 }
