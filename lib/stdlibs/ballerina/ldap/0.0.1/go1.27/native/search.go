@@ -246,7 +246,7 @@ func rawAttributeValue(types ldapTypes, ctx *extern.Context, attr *goldap.EntryA
 func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
 	atomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), targetTy)
 	if atomic == nil {
-		return cloneEntryWithType(ctx, buildEntryRecord(types, ctx, entry), targetTy)
+		return cloneWithLdapType(ctx, buildEntryRecord(types, ctx, entry), targetTy)
 	}
 	names := atomic.FieldNames()
 	entries := make([]values.MapEntry, 0, len(entry.Attributes))
@@ -282,11 +282,11 @@ func coerceEntryToType(ctx *extern.Context, types ldapTypes, entry *goldap.Entry
 		}
 	}
 	entryAtomic := semtypes.ToMappingAtomicType(ctx.TypeCtx(), types.entryTy)
-	return cloneEntryWithType(ctx, values.NewMap(types.entryTy, entryAtomic, false, entries), targetTy)
+	return cloneWithLdapType(ctx, values.NewMap(types.entryTy, entryAtomic, false, entries), targetTy)
 }
 
-func cloneEntryWithType(ctx *extern.Context, entry *values.Map, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
-	result, convErr := values.CloneWithType(ctx.TypeCtx(), entry, targetTy)
+func cloneWithLdapType(ctx *extern.Context, value values.BalValue, targetTy semtypes.SemType) (values.BalValue, *values.Error) {
+	result, convErr := values.CloneWithType(ctx.TypeCtx(), value, targetTy)
 	if convErr != nil {
 		return nil, ldapError(convErr.Message)
 	}
@@ -454,6 +454,11 @@ func searchWithTypeExtern(types ldapTypes) extern.NativeFunc {
 		resultListBld := semtypes.NewListDefinition()
 		resultListTy := resultListBld.Define(ctx.TypeEnv(), nil, semtypes.ListRest(elemTy))
 		resultAtomic := semtypes.ToListAtomicType(ctx.TypeEnv(), resultListTy)
-		return values.NewList(resultListTy, resultAtomic, false, nil, len(entryVals), entryVals), nil
+		resultList := values.NewList(resultListTy, resultAtomic, false, nil, len(entryVals), entryVals)
+		converted, convErr := cloneWithLdapType(ctx, resultList, targetTD.Constraint())
+		if convErr != nil {
+			return convErr, nil
+		}
+		return converted, nil
 	}
 }

@@ -168,6 +168,15 @@ public function main() returns error? {
     ldap:Entry[] genericResults = check ldapClient->searchWithType("dc=example,dc=com", "(sn=Doe)", ldap:SUB);
     io:println(genericResults); // @output [{"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"5551234"}]
 
+    Person[1] fixedResults = check ldapClient->searchWithType("dc=example,dc=com", "(sn=Doe)", ldap:SUB);
+    any fixedValue = fixedResults;
+    io:println(fixedValue is Person[1]); // @output true
+    [Person] tupleResults = check ldapClient->searchWithType("dc=example,dc=com", "(sn=Doe)", ldap:SUB);
+    any tupleValue = tupleResults;
+    io:println(tupleValue is [Person]); // @output true
+    [Person, Person]|ldap:Error tooFew = ldapClient->searchWithType("dc=example,dc=com", "(sn=Doe)", ldap:SUB);
+    io:println(tooFew is ldap:Error); // @output true
+
     string newUserDN = "cn=Jane Doe,dc=example,dc=com";
     ldap:LdapResponse renameResult = check ldapClient->modifyDn(userDN, "cn=Jane Doe", false);
     io:println(renameResult.resultCode); // @output SUCCESS
