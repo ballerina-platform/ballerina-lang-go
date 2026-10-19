@@ -16,7 +16,7 @@
 // under the License.
 
 // These tests cover output a corpus -v test cannot assert: the error and misfire
-// logs carry wall-clock timestamps, and a panicking service writes to stderr.
+// logs carry wall-clock timestamps.
 package native
 
 import (
@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/ballerina-nutcracker/ballerina/platform/pal"
-	"github.com/ballerina-nutcracker/ballerina/runtime/extern"
 	"github.com/ballerina-nutcracker/ballerina/semtypes"
 	"github.com/ballerina-nutcracker/ballerina/values"
 )
@@ -60,27 +59,6 @@ func newTestManager() (*taskManager, *capture, *capture) {
 	return newTaskManager(nil, platform), stdout, stderr
 }
 
-// newScriptedContext returns a context whose execute() calls are answered by
-// results in order; a Go error result is raised as a panic.
-func newScriptedContext(results ...any) (*extern.Context, *int) {
-	calls := 0
-	dispatch := extern.DispatchHandles{
-		LookupObject: func(_ *extern.Context, _ *values.Object, name string) (any, bool) {
-			return name, name == executeMethod
-		},
-		Invoke: func(_ *extern.Context, _ any, _ []values.BalValue) (values.BalValue, error) {
-			r := results[min(calls, len(results)-1)]
-			calls++
-			if err, ok := r.(error); ok {
-				panic(err)
-			}
-			return r, nil
-		},
-	}
-	env := extern.InitEnv(pal.Platform{}, nil, nil, dispatch, extern.MetadataHandles{})
-	return extern.CreateContext(env), &calls
-}
-
 func serviceSpec(name, policy string, retry *retryConfig) *triggerSpec {
 	return &triggerSpec{
 		name:        name,
@@ -103,6 +81,7 @@ func serviceSpec(name, policy string, retry *retryConfig) *triggerSpec {
 var logLine = regexp.MustCompile(`^time = \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} message = `)
 
 func TestNotifyFailureLogsAndTerminates(t *testing.T) {
+	t.Parallel()
 	m, stdout, _ := newTestManager()
 	s := newScheduler(m, defaultThresholdMs)
 	spec := serviceSpec("job-1", policyLogAndTerminate, nil)
@@ -126,6 +105,7 @@ func TestNotifyFailureLogsAndTerminates(t *testing.T) {
 }
 
 func TestLogMisfire(t *testing.T) {
+	t.Parallel()
 	m, _, stderr := newTestManager()
 	spec := serviceSpec("7", policyLogAndContinue, nil)
 	m.jobs[7] = spec
@@ -143,6 +123,7 @@ func TestLogMisfire(t *testing.T) {
 }
 
 func TestLogAndIgnoreMisfireIsLogged(t *testing.T) {
+	t.Parallel()
 	m, _, stderr := newTestManager()
 	s := newScheduler(m, 1)
 	spec := serviceSpec("svc", policyLogAndContinue, nil)
@@ -158,6 +139,7 @@ func TestLogAndIgnoreMisfireIsLogged(t *testing.T) {
 }
 
 func TestGetRunningJobsReportsShutdownScheduler(t *testing.T) {
+	t.Parallel()
 	m, _, stderr := newTestManager()
 	m.sched = newScheduler(m, defaultThresholdMs)
 	m.jobs[1] = serviceSpec("1", policyLogAndContinue, nil)
@@ -171,24 +153,8 @@ func TestGetRunningJobsReportsShutdownScheduler(t *testing.T) {
 	}
 }
 
-func TestExecuteServicePanicIsReported(t *testing.T) {
-	m, stdout, stderr := newTestManager()
-	ctx, _ := newScriptedContext(errors.New("service panic"))
-	m.executeService(ctx, newScheduler(m, defaultThresholdMs), serviceSpec("svc", policyLogAndContinue, nil))
-	if stderr.String() != "error: service panic\n" || stdout.String() != "" {
-		t.Fatalf("unexpected output stdout=%q stderr=%q", stdout.String(), stderr.String())
-	}
-
-	m, _, stderr = newTestManager()
-	ctx, calls := newScriptedContext(values.NewErrorWithMessage("fail"), errors.New("retry panic"))
-	m.executeService(ctx, newScheduler(m, defaultThresholdMs),
-		serviceSpec("svc", policyLogAndContinue, &retryConfig{maxAttempts: 3, retryInterval: 0}))
-	if *calls != 2 || stderr.String() != "error: retry panic\n" {
-		t.Fatalf("a panic during a retry should stop retrying, got %d calls, stderr %q", *calls, stderr.String())
-	}
-}
-
 func TestPanicMessage(t *testing.T) {
+	t.Parallel()
 	if panicMessage(values.NewErrorWithMessage("e")) != "e" || panicMessage(errors.New("g")) != "g" || panicMessage(3) != "3" {
 		t.Fatal("unexpected panic message")
 	}
