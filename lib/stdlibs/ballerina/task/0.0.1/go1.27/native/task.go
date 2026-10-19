@@ -35,8 +35,6 @@ const (
 
 func initTaskModule(rt *runtime.Runtime) {
 	m := newTaskManager(rt, rt.Platform())
-	ld := semtypes.NewListDefinition()
-	intArrayTy := ld.Define(rt.GetTypeEnv(), nil, semtypes.ListRest(semtypes.Int))
 
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "configureThread", configureThreadExtern(m))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "scheduleJob", scheduleJobExtern(m))
@@ -46,16 +44,7 @@ func initTaskModule(rt *runtime.Runtime) {
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externResumeJob", jobIDExtern(m.resumeJob))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externPauseAllJobs", noArgExtern(m.pauseAll))
 	runtime.RegisterExternFunction(rt, orgName, moduleName, "externResumeAllJobs", noArgExtern(m.resumeAll))
-	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetRunningJobs",
-		func(ctx *extern.Context, _ []values.BalValue) (values.BalValue, error) {
-			ids := m.getRunningJobs()
-			items := make([]values.BalValue, len(ids))
-			for i, id := range ids {
-				items[i] = id
-			}
-			atomic := semtypes.ToListAtomicType(ctx.TypeEnv(), intArrayTy)
-			return values.NewList(intArrayTy, atomic, false, nil, 0, items), nil
-		})
+	runtime.RegisterExternFunction(rt, orgName, moduleName, "externGetRunningJobs", getRunningJobsExtern(rt, m))
 	registerListenerExterns(m)
 }
 
@@ -103,6 +92,21 @@ func scheduleIntervalJobExtern(m *taskManager) extern.NativeFunc {
 			waitingPolicy: stringField(policy, "waitingPolicy"),
 		}
 		return idResult(m.scheduleInterval(job, sched)), nil
+	}
+}
+
+func getRunningJobsExtern(rt *runtime.Runtime, m *taskManager) extern.NativeFunc {
+	env := rt.GetTypeEnv()
+	ld := semtypes.NewListDefinition()
+	intArrayTy := ld.Define(env, nil, semtypes.ListRest(semtypes.Int))
+	atomic := semtypes.ToListAtomicType(env, intArrayTy)
+	return func(_ *extern.Context, _ []values.BalValue) (values.BalValue, error) {
+		ids := m.getRunningJobs()
+		items := make([]values.BalValue, len(ids))
+		for i, id := range ids {
+			items[i] = id
+		}
+		return values.NewList(intArrayTy, atomic, false, nil, 0, items), nil
 	}
 }
 

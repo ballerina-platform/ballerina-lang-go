@@ -56,34 +56,50 @@ func registerListenerExterns(m *taskManager) {
 	register := func(name string, fn extern.NativeFunc) {
 		runtime.RegisterExternFunction(m.rt, orgName, moduleName, "Listener."+name, fn)
 	}
-	register("initListener", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		config := args[1].(*values.Map)
-		trigger, _ := config.Get("trigger")
-		warmBackup, _ := config.Get("warmBackupConfig")
-		args[0].(*values.Object).Put(stateField, &listenerState{
-			trigger:    trigger.(*values.Map),
-			warmBackup: warmBackup != nil,
-			services:   map[string]*values.Object{},
-		})
-		return nil, nil
+	register("initListener", initListenerExtern)
+	register("attachService", attachServiceExtern)
+	register("detachService", detachServiceExtern(m))
+	register("startListener", startListenerExtern(m))
+	register("stopListener", stopListenerExtern(m))
+}
+
+func initListenerExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	config := args[1].(*values.Map)
+	trigger, _ := config.Get("trigger")
+	warmBackup, _ := config.Get("warmBackupConfig")
+	args[0].(*values.Object).Put(stateField, &listenerState{
+		trigger:    trigger.(*values.Map),
+		warmBackup: warmBackup != nil,
+		services:   map[string]*values.Object{},
 	})
-	register("attachService", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
-		stateOf(args[0]).register(args[2].(string), args[1].(*values.Object))
-		return nil, nil
-	})
-	register("detachService", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	return nil, nil
+}
+
+func attachServiceExtern(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	stateOf(args[0]).register(args[2].(string), args[1].(*values.Object))
+	return nil, nil
+}
+
+func detachServiceExtern(m *taskManager) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		name, ok := stateOf(args[0]).unregister(args[1].(*values.Object))
 		if !ok {
 			return "Service is not found in the listener", nil
 		}
 		return errorResult(m.unscheduleService(name)), nil
-	})
-	register("startListener", func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	}
+}
+
+func startListenerExtern(m *taskManager) extern.NativeFunc {
+	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		return errorResult(m.startListener(ctx, stateOf(args[0]))), nil
-	})
-	register("stopListener", func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
+	}
+}
+
+func stopListenerExtern(m *taskManager) extern.NativeFunc {
+	return func(_ *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		return errorResult(m.stopListener(stateOf(args[0]))), nil
-	})
+	}
 }
 
 func stateOf(self values.BalValue) *listenerState {
