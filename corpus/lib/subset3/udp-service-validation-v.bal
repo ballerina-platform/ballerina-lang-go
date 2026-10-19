@@ -28,6 +28,15 @@ service class ExtraParam {
     }
 }
 
+service class RestParam {
+    *udp:Service;
+
+    remote function onBytes(readonly & byte[] data, int... extra) {
+        _ = data;
+        _ = extra;
+    }
+}
+
 service class IntData {
     *udp:Service;
 
@@ -160,6 +169,7 @@ function attachMessage(udp:Listener l, udp:Service s) returns string {
 public function main() returns error? {
     udp:Listener l = check new (41513, {localHost: "127.0.0.1"});
     io:println(attachMessage(l, new ExtraParam())); // @output Provided 3 parameters, `onBytes` can have only 2 parameters
+    io:println(attachMessage(l, new RestParam())); // @output Invalid parameter `extra` provided for `onBytes`, function expects `readonly & byte[]`.
     io:println(attachMessage(l, new IntData())); // @output Invalid parameter `data` provided for `onBytes`, function expects `readonly & byte[]`.
     io:println(attachMessage(l, new MutableBytes())); // @output Invalid parameter `data` provided for `onBytes`, function expects `readonly & byte[]`.
     io:println(attachMessage(l, new BytesForDatagram())); // @output Invalid parameter `data` provided for `onDatagram`, function expects `readonly & udp:Datagram`.

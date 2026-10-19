@@ -1,5 +1,6 @@
 -- stdout --
 Provided 3 parameters, `onBytes` can have only 2 parameters
+Invalid parameter `extra` provided for `onBytes`, function expects `readonly & byte[]`.
 Invalid parameter `data` provided for `onBytes`, function expects `readonly & byte[]`.
 Invalid parameter `data` provided for `onBytes`, function expects `readonly & byte[]`.
 Invalid parameter `data` provided for `onDatagram`, function expects `readonly & udp:Datagram`.
