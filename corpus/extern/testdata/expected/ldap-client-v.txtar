@@ -17,6 +17,9 @@ true
 1
 John Doe
 [{"cn":"John Doe","objectclass":["top","person"],"sn":"Doe","telephonenumber":"5551234"}]
+true
+true
+true
 SUCCESS
 SUCCESS
 true
