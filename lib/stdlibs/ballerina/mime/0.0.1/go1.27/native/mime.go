@@ -235,8 +235,7 @@ func encodeCharset(s, charset string) ([]byte, error) {
 	}
 	enc, err := lookupCharset(charset)
 	if err != nil {
-		// Java's UnsupportedEncodingException message is the charset name alone.
-		return nil, errors.New(charset)
+		return nil, unsupportedCharsetError(charset)
 	}
 	if out, err := enc.NewEncoder().Bytes([]byte(s)); err == nil {
 		return out, nil
@@ -270,7 +269,7 @@ func decodeCharset(data []byte, charset string) (string, error) {
 	}
 	enc, err := lookupCharset(charset)
 	if err != nil {
-		return "", errors.New(charset)
+		return "", unsupportedCharsetError(charset)
 	}
 	decoded, err := enc.NewDecoder().Bytes(data)
 	if err != nil {
@@ -451,10 +450,37 @@ func mimeEncode(data []byte) string {
 	return sb.String()
 }
 
+// unsupportedCharsetError mirrors Java's UnsupportedEncodingException, whose message
+// is the charset name alone.
+type unsupportedCharsetError string
+
+func (e unsupportedCharsetError) Error() string {
+	return string(e)
+}
+
+// javaCharsetAliases maps Java's US-ASCII and ISO-8859-1 aliases that the IANA index
+// lacks; the WHATWG index would resolve some of them to windows-1252.
+var javaCharsetAliases = map[string]string{
+	"ascii":            "US-ASCII",
+	"ascii7":           "US-ASCII",
+	"646":              "US-ASCII",
+	"default":          "US-ASCII",
+	"iso_646.irv:1983": "US-ASCII",
+	"iso8859-1":        "ISO-8859-1",
+	"iso8859_1":        "ISO-8859-1",
+	"iso_8859_1":       "ISO-8859-1",
+	"8859_1":           "ISO-8859-1",
+	"819":              "ISO-8859-1",
+	"ibm-819":          "ISO-8859-1",
+}
+
 // lookupCharset resolves a charset name (e.g. "utf-8", "iso-8859-1") to its x/text
 // encoding. Names missing from the IANA index fall back to the WHATWG index, which
 // covers aliases Java also accepts, such as "utf8".
 func lookupCharset(charset string) (encoding.Encoding, error) {
+	if alias, ok := javaCharsetAliases[strings.ToLower(charset)]; ok {
+		charset = alias
+	}
 	enc, err := ianaindex.IANA.Encoding(charset)
 	if err != nil || enc == nil {
 		enc, err = htmlindex.Get(charset)
@@ -575,6 +601,10 @@ func getTextExtern() extern.NativeFunc {
 	return func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 		obj, _ := args[0].(*values.Object)
 		text, err := stringForBody(ctx, obj)
+		var charsetErr unsupportedCharsetError
+		if errors.As(err, &charsetErr) {
+			return mimeError("ParserError", "Error occurred while extracting text data from entity: "+charsetErr.Error()), nil
+		}
 		if err != nil {
 			return mimeErrorWithCause("ParserError", "Error occurred while extracting text data from entity", err), nil
 		}

@@ -1,0 +1,7 @@
+-- stdout --
+[104,63,63]
+[104,233,63]
+[104,233,63]
+error ParserError ("Error occurred while extracting text data from entity: nope")
+Error occurred while extracting text data from entity: nope
+-- stderr --
