@@ -113,6 +113,9 @@ func validateHandler(ctx *extern.Context, handle extern.MethodHandle, spec handl
 			return udpError(fmt.Sprintf("Invalid parameter `%s` provided for `%s`, function expects `%s`.", p.Name, spec.name, spec.dataTyName))
 		}
 	}
+	if sig.RestParam != nil {
+		return udpError(fmt.Sprintf("Invalid parameter `%s` provided for `%s`, function expects `%s`.", sig.RestParam.Name, spec.name, spec.dataTyName))
+	}
 	if !semtypes.IsSubtype(tc, sig.ReturnType, spec.returnTy) {
 		return udpError(fmt.Sprintf("Invalid return type provided for function `%s`, return type should be a subtype of `%s`", spec.name, spec.returnName))
 	}
