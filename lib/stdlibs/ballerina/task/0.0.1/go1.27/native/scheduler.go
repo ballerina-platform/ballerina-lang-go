@@ -18,7 +18,6 @@
 package native
 
 import (
-	"errors"
 	"math"
 	"sort"
 	"time"
@@ -34,7 +33,12 @@ const (
 	logTriggerGroup = "log"
 )
 
-var errSchedulerShutdown = errors.New("The Scheduler has been shutdown.")
+// balError carries a message verbatim from jBallerina, including its capitalization and punctuation.
+type balError string
+
+func (e balError) Error() string { return string(e) }
+
+var errSchedulerShutdown = balError("The Scheduler has been shutdown.")
 
 type triggerState int
 
@@ -173,10 +177,10 @@ func (s *scheduler) scheduleJob(spec *triggerSpec) error {
 		return err
 	}
 	if spec.repeatCount != 0 && spec.intervalMs < 1 {
-		return errors.New("Repeat Interval cannot be zero.")
+		return balError("Repeat Interval cannot be zero.")
 	}
 	if _, exists := s.triggers[spec.name]; exists {
-		return errors.New("Unable to store Job : 'DEFAULT." + spec.name +
+		return balError("Unable to store Job : 'DEFAULT." + spec.name +
 			"', because one already exists with this identification.")
 	}
 	t := newTrigger(spec)

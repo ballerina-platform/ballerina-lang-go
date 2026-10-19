@@ -18,7 +18,6 @@
 package native
 
 import (
-	"errors"
 	"maps"
 	"slices"
 	"sync"
@@ -145,7 +144,7 @@ func (m *taskManager) startListener(ctx *extern.Context, st *listenerState) erro
 	names, services := st.snapshot()
 	return m.scheduleServices(names, func(name string) (*triggerSpec, error) {
 		if st.warmBackup {
-			return nil, errors.New("Task coordination through warmBackupConfig is not supported")
+			return nil, balError("Task coordination through warmBackupConfig is not supported")
 		}
 		job := &jobDetail{
 			obj:         services[name],
@@ -182,14 +181,14 @@ func civilToMillis(ctx *extern.Context, trigger *values.Map, key string) (int64,
 	}
 	h, found := ctx.LookupFunction(orgName, moduleName, "getTimeInMillies")
 	if !found {
-		return 0, errors.New("Error converting civil to milliseconds: getTimeInMillies not found")
+		return 0, balError("Error converting civil to milliseconds: getTimeInMillies not found")
 	}
 	result, err := ctx.InvokeFunction(h, []values.BalValue{civil})
 	if err != nil {
-		return 0, errors.New("Error converting civil to milliseconds: " + err.Error())
+		return 0, balError("Error converting civil to milliseconds: " + err.Error())
 	}
 	if e, isErr := result.(*values.Error); isErr {
-		return 0, errors.New("Error converting civil to milliseconds: " + e.Message)
+		return 0, balError("Error converting civil to milliseconds: " + e.Message)
 	}
 	return result.(int64), nil
 }

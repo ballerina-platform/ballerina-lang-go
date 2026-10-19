@@ -18,7 +18,6 @@
 package native
 
 import (
-	"errors"
 	"math/rand/v2"
 	"sort"
 	"strconv"
@@ -85,10 +84,10 @@ func (m *taskManager) nowMs() int64 {
 
 func (m *taskManager) createScheduler(props schedulerProps) (*scheduler, error) {
 	if props.thresholdMs < 1 {
-		return nil, errors.New("Cannot create the Scheduler.JobStore class 'org.quartz.simpl.RAMJobStore' props could not be configured.")
+		return nil, balError("Cannot create the Scheduler.JobStore class 'org.quartz.simpl.RAMJobStore' props could not be configured.")
 	}
 	if props.threadCount <= 0 {
-		return nil, errors.New("Cannot create the Scheduler.Thread count must be > 0")
+		return nil, balError("Cannot create the Scheduler.Thread count must be > 0")
 	}
 	return newScheduler(m, props.thresholdMs), nil
 }
@@ -221,7 +220,7 @@ type intervalSchedule struct {
 
 func (m *taskManager) buildIntervalSpec(name string, job *jobDetail, sched intervalSchedule) (*triggerSpec, error) {
 	if sched.intervalMs < 0 {
-		return nil, errors.New("Repeat interval must be >= 0")
+		return nil, balError("Repeat interval must be >= 0")
 	}
 	repeatCount := int64(repeatIndefinitely)
 	if sched.maxCount > 0 {
@@ -232,7 +231,7 @@ func (m *taskManager) buildIntervalSpec(name string, job *jobDetail, sched inter
 		startMs = m.nowMs()
 	}
 	if sched.endMs != noFireTime && startMs > sched.endMs {
-		return nil, errors.New("End time cannot be before start time")
+		return nil, balError("End time cannot be before start time")
 	}
 	group := triggerGroup
 	if sched.waitingPolicy == policyLogAndIgnore {
@@ -272,7 +271,7 @@ func (m *taskManager) scheduleInterval(job *jobDetail, sched intervalSchedule) (
 func (m *taskManager) jobSpec(id int64) (*triggerSpec, error) {
 	spec, ok := m.jobs[id]
 	if !ok {
-		return nil, errors.New("Invalid job id: " + strconv.FormatInt(id, 10))
+		return nil, balError("Invalid job id: " + strconv.FormatInt(id, 10))
 	}
 	return spec, nil
 }
