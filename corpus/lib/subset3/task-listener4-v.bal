@@ -15,7 +15,6 @@
 // under the License.
 
 import ballerina/io;
-import ballerina/io;
 import ballerina/lang.runtime;
 import ballerina/task;
 
