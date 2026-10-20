@@ -19,45 +19,65 @@ main() -> nil{
     %12 = println(%10) -> bb3;
   }
   bb3 {
-    %13 = ConstantLoad text
-    %14 = newXMLText(%13)
-    textSubtype = %14;
-    %16 = ConstantLoad x
-    charSubtype = %16;
-    %18 = ConstantLoad ghi
-    wordSubtype = %18;
-    %20 = + textSubtype charSubtype;
-    appendedText = %20;
-    %22 = + charSubtype textSubtype;
-    prependedText = %22;
-    %24 = + textSubtype wordSubtype;
-    textSequence = %24;
-    %26 = + wordSubtype textSubtype;
-    prependedSequence = %26;
-    %28 = println(appendedText) -> bb4;
+    %13 = ConstantLoad &amp;
+    ampersand = %13;
+    %15 = ConstantLoad &lt;
+    lessThan = %15;
+    %17 = + text ampersand;
+    %18 = println(%17) -> bb4;
   }
   bb4 {
-    %29 = println(prependedText) -> bb5;
+    %19 = + ampersand text;
+    %20 = println(%19) -> bb5;
   }
   bb5 {
-    %30 = println(textSequence) -> bb6;
+    %21 = + text lessThan;
+    %22 = println(%21) -> bb6;
   }
   bb6 {
-    %31 = println(prependedSequence) -> bb7;
+    %23 = + lessThan text;
+    %24 = println(%23) -> bb7;
   }
   bb7 {
-    %32 = newXMLElement("item", ())
-    element = %32;
-    %34 = + element suffix;
-    elementWithText = %34;
-    %36 = + suffix element;
-    textWithElement = %36;
-    %38 = println(elementWithText) -> bb8;
+    %25 = ConstantLoad text
+    %26 = newXMLText(%25)
+    textSubtype = %26;
+    %28 = ConstantLoad x
+    charSubtype = %28;
+    %30 = ConstantLoad ghi
+    wordSubtype = %30;
+    %32 = + textSubtype charSubtype;
+    appendedText = %32;
+    %34 = + charSubtype textSubtype;
+    prependedText = %34;
+    %36 = + textSubtype wordSubtype;
+    textSequence = %36;
+    %38 = + wordSubtype textSubtype;
+    prependedSequence = %38;
+    %40 = println(appendedText) -> bb8;
   }
   bb8 {
-    %39 = println(textWithElement) -> bb9;
+    %41 = println(prependedText) -> bb9;
   }
   bb9 {
+    %42 = println(textSequence) -> bb10;
+  }
+  bb10 {
+    %43 = println(prependedSequence) -> bb11;
+  }
+  bb11 {
+    %44 = newXMLElement("item", ())
+    element = %44;
+    %46 = + element suffix;
+    elementWithText = %46;
+    %48 = + suffix element;
+    textWithElement = %48;
+    %50 = println(elementWithText) -> bb12;
+  }
+  bb12 {
+    %51 = println(textWithElement) -> bb13;
+  }
+  bb13 {
     return;
   }
 }

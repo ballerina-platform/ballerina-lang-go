@@ -25,6 +25,12 @@ public function main() {
     io:println(text + suffix); // @output abcdef
     io:println(suffix + text); // @output defabc
     io:println(text + "<item/>"); // @output abc&lt;item/&gt;
+    string ampersand = "&amp;";
+    string lessThan = "&lt;";
+    io:println(text + ampersand); // @output abc&amp;amp;
+    io:println(ampersand + text); // @output &amp;amp;abc
+    io:println(text + lessThan); // @output abc&amp;lt;
+    io:println(lessThan + text); // @output &amp;lt;abc
 
     xml:Text textSubtype = xml `text`;
     string:Char charSubtype = "x";
