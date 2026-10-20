@@ -33,6 +33,34 @@
             (simple-var-ref text)
             (literal <item/>)))))
       (var-def
+        (variable ampersand (type
+          (value-type string)) (expr
+          (literal &amp;))))
+      (var-def
+        (variable lessThan (type
+          (value-type string)) (expr
+          (literal &lt;))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (simple-var-ref text)
+            (simple-var-ref ampersand)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (simple-var-ref ampersand)
+            (simple-var-ref text)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (simple-var-ref text)
+            (simple-var-ref lessThan)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (simple-var-ref lessThan)
+            (simple-var-ref text)))))
+      (var-def
         (variable textSubtype (type
           (user-defined-type xml Text)) (expr
           (xml-text-literal text))))

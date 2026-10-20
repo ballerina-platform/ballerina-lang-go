@@ -2,6 +2,10 @@
 abcdef
 defabc
 abc&lt;item/&gt;
+abc&amp;amp;
+&amp;amp;abc
+abc&amp;lt;
+&amp;lt;abc
 textx
 xtext
 textghi
