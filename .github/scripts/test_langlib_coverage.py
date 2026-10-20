@@ -75,9 +75,24 @@ class DeriveRowTest(unittest.TestCase):
         previous = {"f": ("Cannot Support", "Needs the JVM")}
         self.assertEqual(derive_row("f", {"f": ""}, previous), ("Supported", ""))
 
+    def test_generated_comment_is_not_carried_over(self):
+        previous = {"f": ("Supported", COMPILER_HANDLED)}
+        self.assertEqual(derive_row("f", {"f": ""}, previous), ("Supported", ""))
+
     def test_hand_written_comment_is_kept_while_status_is_unchanged(self):
         previous = {"f": ("Not Yet Supported", "Needs the stream type")}
         self.assertEqual(derive_row("f", {}, previous), ("Not Yet Supported", "Needs the stream type"))
+
+
+class ExistingRowsTest(unittest.TestCase):
+    def test_escaped_pipe_stays_in_comment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "README.md"
+            path.write_text("| f | Partially Supported | Rejects int\\|string unions |\n", encoding="utf-8")
+            self.assertEqual(
+                langlib_coverage.existing_rows(path),
+                {"f": ("Partially Supported", "Rejects int\\|string unions")},
+            )
 
 
 class OpaqueFunctionsTest(unittest.TestCase):
