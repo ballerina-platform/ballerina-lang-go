@@ -464,7 +464,6 @@ var javaCharsetAliases = map[string]string{
 	"ascii":            "US-ASCII",
 	"ascii7":           "US-ASCII",
 	"646":              "US-ASCII",
-	"default":          "US-ASCII",
 	"iso_646.irv:1983": "US-ASCII",
 	"iso8859-1":        "ISO-8859-1",
 	"iso8859_1":        "ISO-8859-1",

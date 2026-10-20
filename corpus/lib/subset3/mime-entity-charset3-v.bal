@@ -30,6 +30,10 @@ public function main() returns error? {
     javaAlias.setText("hé€", "text/plain; charset=8859_1");
     io:println(check javaAlias.getByteArray()); // @output [104,233,63]
 
+    mime:Entity defaultAlias = new;
+    defaultAlias.setText("hé", "text/plain; charset=default");
+    io:println(defaultAlias.getByteArray()); // @output error ParserError ("Error occurred while extracting blob data from entity: default")
+
     string path = check file:createTemp();
     check io:fileWriteString(path, "hi");
     mime:Entity fileText = new;
