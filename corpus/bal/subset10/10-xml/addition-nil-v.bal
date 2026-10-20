@@ -14,8 +14,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 public function main() {
     xml? value = ();
     string text = "text";
-    xml? _ = value + text; // @error
+    xml? result = value + text;
+    io:println(result is ()); // @output true
+
+    value = xml `<a/>`;
+    io:println(value + text); // @output <a/>text
+
+    string? prefix = ();
+    result = prefix + xml `x`;
+    io:println(result is ()); // @output true
+
+    prefix = "p";
+    io:println(prefix + xml `x`); // @output px
 }

@@ -6248,14 +6248,10 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 	return resultTy, effect, true
 }
 
-func operatorOperandTypeName(t typeResolver, ty semtypes.SemType) string {
-	if semtypes.ContainsBasicType(ty, semtypes.Nil) {
-		underlyingTy := semtypes.Diff(ty, semtypes.Nil)
-		if !semtypes.IsEmpty(t.typeContext(), underlyingTy) {
-			return semtypes.ToString(t.typeContext(), underlyingTy) + "?"
-		}
-	}
-	return semtypes.ToString(t.typeContext(), ty)
+func isXMLStringPair(ctx semtypes.Context, lhsTy, rhsTy semtypes.SemType) bool {
+	return !semtypes.IsEmpty(ctx, lhsTy) && !semtypes.IsEmpty(ctx, rhsTy) &&
+		((semtypes.IsSubtype(ctx, lhsTy, semtypes.XML) && semtypes.IsSubtype(ctx, rhsTy, semtypes.String)) ||
+			(semtypes.IsSubtype(ctx, lhsTy, semtypes.String) && semtypes.IsSubtype(ctx, rhsTy, semtypes.XML)))
 }
 
 func additiveOperandExpectedType(supportedTypes semtypes.SemType, op model.OperatorKind, expectedType semtypes.SemType) semtypes.SemType {
@@ -6290,31 +6286,15 @@ func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.Sem
 		return singletonTy, defaultExpressionEffect(chain), true
 	}
 
-	originalLhsTy, originalRhsTy := lhsTy, rhsTy
 	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
 
-	if nilLifted && op == model.OperatorKind_ADD &&
-		!semtypes.IsEmpty(t.typeContext(), lhsTy) && !semtypes.IsEmpty(t.typeContext(), rhsTy) &&
-		((semtypes.IsSubtype(t.typeContext(), lhsTy, semtypes.XML) && semtypes.IsSubtype(t.typeContext(), rhsTy, semtypes.String)) ||
-			(semtypes.IsSubtype(t.typeContext(), lhsTy, semtypes.String) && semtypes.IsSubtype(t.typeContext(), rhsTy, semtypes.XML))) {
-		t.semanticError(fmt.Sprintf("operator '%s' not defined for '%s' and '%s'", op,
-			operatorOperandTypeName(t, originalLhsTy), operatorOperandTypeName(t, originalRhsTy)), pos)
-		return semtypes.SemType{}, expressionEffect{}, false
-	}
-
-	if op == model.OperatorKind_ADD && !nilLifted {
-		var resultTy semtypes.SemType
-		switch {
-		case !semtypes.IsEmpty(t.typeContext(), lhsTy) && !semtypes.IsEmpty(t.typeContext(), rhsTy) &&
-			semtypes.IsSubtype(t.typeContext(), lhsTy, semtypes.XML) && semtypes.IsSubtype(t.typeContext(), rhsTy, semtypes.String):
-			resultTy = semtypes.XMLSequence(semtypes.Union(lhsTy, semtypes.XMLText))
-		case !semtypes.IsEmpty(t.typeContext(), lhsTy) && !semtypes.IsEmpty(t.typeContext(), rhsTy) &&
-			semtypes.IsSubtype(t.typeContext(), lhsTy, semtypes.String) && semtypes.IsSubtype(t.typeContext(), rhsTy, semtypes.XML):
-			resultTy = semtypes.XMLSequence(semtypes.Union(semtypes.XMLText, rhsTy))
+	if op == model.OperatorKind_ADD && isXMLStringPair(t.typeContext(), lhsTy, rhsTy) {
+		xmlTy := semtypes.Intersect(semtypes.Union(lhsTy, rhsTy), semtypes.XML)
+		resultTy := semtypes.XMLSequence(semtypes.Union(xmlTy, semtypes.XMLText))
+		if nilLifted {
+			resultTy = semtypes.Union(semtypes.Nil, resultTy)
 		}
-		if !semtypes.IsZero(resultTy) {
-			return resultTy, defaultExpressionEffect(chain), true
-		}
+		return resultTy, defaultExpressionEffect(chain), true
 	}
 
 	numLhsBits := semtypes.NBasicTypes(lhsTy)
