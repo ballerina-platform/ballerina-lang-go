@@ -1667,15 +1667,33 @@ func errorConstructorExpression(ctx context, curBB *bir.BIRBasicBlock, expr *ast
 	}
 
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	typeName := ""
-	if expr.ErrorTypeRef != nil {
-		typeName = expr.ErrorTypeRef.TypeName.Value
-	}
-	newError := bir.NewErrorConstructor(expr.GetDeterminedType(), typeName, resultOperand, msgEffect.result, causeOp, detailOp, ctx.function().loc(expr.GetPosition()))
+	newError := bir.NewErrorConstructor(expr.GetDeterminedType(), errorConstructorTypeName(ctx, expr), resultOperand, msgEffect.result, causeOp, detailOp, ctx.function().loc(expr.GetPosition()))
 	curBB.Instructions = append(curBB.Instructions, newError)
 	return expressionEffect{result: resultOperand,
 		block: curBB,
 	}, true
+}
+
+// errorConstructorTypeName returns the type name an error constructor records
+// for its value. Only distinct types induce type-ids (spec 5.6.1, 5.7.1), so a
+// reference to an error type without type-ids, such as `type E error;`, records
+// no name and the value prints the same as one built with a plain `error(...)`.
+func errorConstructorTypeName(ctx context, expr *ast.BLangErrorConstructorExpr) string {
+	if expr.ErrorTypeRef == nil || !hasTypeIDs(ctx, ctx.symbolType(expr.ErrorTypeRef.Symbol())) {
+		return ""
+	}
+	return expr.ErrorTypeRef.TypeName.Value
+}
+
+// hasTypeIDs reports whether errorTy is narrowed by distinct type-ids, i.e. it is
+// a proper subtype of the error type with the same detail type.
+func hasTypeIDs(ctx context, errorTy semtypes.SemType) bool {
+	tyCtx := ctx.function().pkgCtx.typeContext()
+	detailTy, ok := semtypes.ErrorDetailType(tyCtx, errorTy)
+	if !ok {
+		return false
+	}
+	return !semtypes.IsSubtype(tyCtx, semtypes.ErrorWithDetail(detailTy), errorTy)
 }
 
 func typeConversionExpression(ctx context, curBB *bir.BIRBasicBlock, expr *ast.BLangTypeConversionExpr) (expressionEffect, bool) {
