@@ -61,6 +61,15 @@ type moduleContext struct {
 	compilerCtx     *context.CompilerContext
 	importedSymbols map[string]model.ExportedSymbolSpace
 	birPkg          *bir.BIRPackage
+	// birGenAttempted distinguishes "never ran" from "ran and failed" (birPkg
+	// is nil either way), so generateCodeInternal doesn't retry and duplicate
+	// diagnostics.
+	birGenAttempted bool
+
+	// compilationUnits and pkgID bridge parseModule (Phase 1a) to
+	// resolveSymbolsAndTypes (Phase 1b).
+	compilationUnits []*ast.BLangCompilationUnit
+	pkgID            *model.PackageID
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
@@ -231,12 +240,15 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 	return slices.Clone(m.moduleDescDependencies)
 }
 
-// resolveTypesAndSymbols performs parsing, AST building, symbol resolution, and type resolution.
-// This phase must run sequentially respecting module dependencies.
-func resolveTypesAndSymbols(moduleCtx *moduleContext) {
+// parseModule performs parsing and AST building. Unlike resolveSymbolsAndTypes,
+// it has no dependency on other modules, so it can run concurrently package-wide.
+func parseModule(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 
 	compilerCtx := moduleCtx.compilerCtx
+
+	// Per-module package ID so anonymous-name counters don't interleave across concurrently built modules.
+	pkgID := createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
 
 	// Parse all source and test documents in parallel.
 	syntaxTrees := parseDocumentsParallel(
@@ -254,17 +266,31 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	// Build compilation units from syntax trees.
 	compilerCtx.StartStage(context.StageASTBuild)
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
-	compilationUnits := buildCompilationUnits(compilerCtx, syntaxTrees, compilationOptions)
+	compilationUnits := buildCompilationUnits(compilerCtx, pkgID, syntaxTrees, compilationOptions)
 
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
-	pkgID := createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
 	for _, cu := range compilationUnits {
 		cu.SetPackageID(pkgID)
 	}
 	compilerCtx.EndStage()
+
+	moduleCtx.compilationUnits = compilationUnits
+	moduleCtx.pkgID = pkgID
+}
+
+// resolveSymbolsAndTypes performs import, symbol, and top-level type resolution.
+// Runs sequentially in topological order, after every dependency has published
+// its symbols.
+func resolveSymbolsAndTypes(moduleCtx *moduleContext) {
+	compilerCtx := moduleCtx.compilerCtx
+	if moduleCtx.compilationUnits == nil || compilerCtx.HasDiagnostics() {
+		return
+	}
+	compilationUnits := moduleCtx.compilationUnits
+	pkgID := moduleCtx.pkgID
 
 	// Resolve symbols and imports before type resolution.
 	publicSymbols := moduleCtx.getProject().Environment().publicSymbols
@@ -316,7 +342,8 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
-// This phase can run in parallel across modules after all modules complete Phase 1.
+// Runs in parallel across modules after Phase 1b; callers typically follow it with
+// generateCodeInternal in the same goroutine, pipelining BIR generation with no barrier.
 func analyzeAndDesugar(moduleCtx *moduleContext) {
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
 		return
@@ -440,7 +467,7 @@ func parseDocumentsParallel(
 	return syntaxTrees
 }
 
-func buildCompilationUnits(cx *context.CompilerContext, syntaxTrees []*st.SyntaxTree, compilationOptions CompilationOptions) []*ast.BLangCompilationUnit {
+func buildCompilationUnits(cx *context.CompilerContext, pkgID *model.PackageID, syntaxTrees []*st.SyntaxTree, compilationOptions CompilationOptions) []*ast.BLangCompilationUnit {
 	dumpRecoveredAST := compilationOptions.DumpRecoveredAST()
 	dumpAST := compilationOptions.DumpAST() || dumpRecoveredAST
 	var prettyPrinter ast.PrettyPrinter
@@ -455,9 +482,9 @@ func buildCompilationUnits(cx *context.CompilerContext, syntaxTrees []*st.Syntax
 	for _, st := range syntaxTrees {
 		var cu *ast.BLangCompilationUnit
 		if dumpRecoveredAST {
-			cu = nodebuilder.GetRecoveredCompilationUnit(cx, st)
+			cu = nodebuilder.GetRecoveredCompilationUnit(cx, pkgID, st)
 		} else {
-			cu = nodebuilder.GetCompilationUnit(cx, st)
+			cu = nodebuilder.GetCompilationUnit(cx, pkgID, st)
 		}
 		if dumpAST {
 			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
@@ -497,10 +524,17 @@ func createModelPackageID(compilerCtx *context.CompilerContext, desc ModuleDescr
 
 // generateCodeInternal generates BIR for this module from the compiled BLangPackage.
 // -> CompilerPhaseRunner.performBirGenPhases(bLangPackage)
+// Idempotent: returns the prior outcome if already attempted, so performCodeGen can
+// safely call this as a backfill without retrying (and duplicating diagnostics for)
+// a failed attempt.
 func generateCodeInternal(moduleCtx *moduleContext) bool {
+	if moduleCtx.birGenAttempted {
+		return moduleCtx.birPkg != nil
+	}
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
 		return false
 	}
+	moduleCtx.birGenAttempted = true
 	moduleCtx.compilerCtx.StartStage(context.StageBIRGeneration)
 	moduleCtx.birPkg = birgen.GenBir(moduleCtx.compilerCtx, moduleCtx.bLangPkg)
 	moduleCtx.compilerCtx.EndStage()
