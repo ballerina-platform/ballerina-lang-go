@@ -8,6 +8,8 @@ Service is not found in the listener
 true
 unnamed: 1
 true
+empty name: 1
+true
 maxCount 0 repeats: true
 services stop with the scheduler: true
 The Scheduler has been shutdown.

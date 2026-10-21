@@ -374,7 +374,7 @@ public isolated class Listener {
     # + name - The service name
     # + return - An error if the service cannot be attached
     public isolated function attach(Service s, string[]|string? name = ()) returns Error? {
-        string serviceId = name is string ? name : (name is string[] ? name[0] : uuid:createRandomUuid());
+        string serviceId = name is string ? name : (name is string[] && name.length() > 0 ? name[0] : uuid:createRandomUuid());
         self.attachService(s, serviceId);
     }
 

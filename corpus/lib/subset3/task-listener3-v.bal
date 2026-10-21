@@ -82,6 +82,13 @@ public function main() returns error? {
     io:println("unnamed: ", count("unnamed")); // @output unnamed: 1
     io:println(unnamed.immediateStop() is ()); // @output true
 
+    task:Listener rootPath = check new (trigger = {interval: 0.05, maxCount: 1});
+    check rootPath.attach(new Counter("root"), []);
+    check rootPath.'start();
+    runtime:sleep(0.2);
+    io:println("empty name: ", count("root")); // @output empty name: 1
+    io:println(rootPath.immediateStop() is ()); // @output true
+
     task:Listener forever = check new (trigger = {interval: 0.05, maxCount: 0});
     Counter s1 = new ("s1");
     Counter s2 = new ("s2");
