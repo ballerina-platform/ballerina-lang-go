@@ -334,7 +334,11 @@ func NewValidatedXMLProcessingInstruction(target, data string, isReadonly bool) 
 }
 
 func NewXMLText(body string) *XMLText {
-	return &XMLText{Body: body, semType: semtypes.XMLText}
+	semType := semtypes.XMLText
+	if body == "" {
+		semType = semtypes.XMLSequence(semtypes.Never)
+	}
+	return &XMLText{Body: body, semType: semType}
 }
 
 func NewXMLComment(body string, isReadonly bool) *XMLComment {
