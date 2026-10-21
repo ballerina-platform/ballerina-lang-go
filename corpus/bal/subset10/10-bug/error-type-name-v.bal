@@ -34,7 +34,7 @@ type AliasOfDistinctError DistinctError;
 
 type BothDistinctError DistinctError & OtherDistinctError;
 
-type ReadonlyDistinctError readonly & DistinctError;
+type ReadonlyError readonly & MyError;
 
 public function main() {
     E e1 = error("x");
@@ -44,13 +44,14 @@ public function main() {
 
     io:println(error MyError("m", code = 5)); // @output error("m",code=5)
     io:println(error AliasError("a", code = 1)); // @output error("a",code=1)
+    io:println(error ReadonlyError("r", code = 2)); // @output error("r",code=2)
 
     (any|error)[] list = [e2, error MyError("m", code = 5)];
     io:println(list.toBalString()); // @output [error("x"),error("m",code=5)]
 
-    // Types with type-ids still render with the referenced type name.
+    // Types with type-ids render with the referenced type name. Spec 5.9.5
+    // renders the type-ids instead, which is not implemented yet.
     io:println(error DistinctError("d")); // @output error DistinctError ("d")
     io:println(error AliasOfDistinctError("ad")); // @output error AliasOfDistinctError ("ad")
     io:println(error BothDistinctError("b")); // @output error BothDistinctError ("b")
-    io:println(error ReadonlyDistinctError("r")); // @output error ReadonlyDistinctError ("r")
 }
