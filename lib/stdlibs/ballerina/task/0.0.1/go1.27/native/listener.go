@@ -174,12 +174,18 @@ func (m *taskManager) startListener(ctx *extern.Context, st *listenerState) erro
 	})
 }
 
+// stopListener unschedules every service even after a failure; as in
+// jBallerina, the services stay registered when any unschedule fails.
 func (m *taskManager) stopListener(st *listenerState) error {
 	names, _ := st.snapshot()
+	var firstErr error
 	for _, name := range names {
-		if err := m.unscheduleService(name); err != nil {
-			return err
+		if err := m.unscheduleService(name); err != nil && firstErr == nil {
+			firstErr = err
 		}
+	}
+	if firstErr != nil {
+		return firstErr
 	}
 	st.mu.Lock()
 	st.names = nil
