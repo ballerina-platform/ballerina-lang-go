@@ -22,10 +22,10 @@
     (intersection-type
       (user-defined-type DistinctError)
       (user-defined-type OtherDistinctError)))
-  (type-definition ReadonlyDistinctError
+  (type-definition ReadonlyError
     (intersection-type
       (value-type readonly)
-      (user-defined-type DistinctError)))
+      (user-defined-type MyError)))
   (function main () (
     (value-type null))
     (block-function-body
@@ -60,6 +60,13 @@
             (literal a)) (
             (named-arg code
               (literal 1)))))))
+      (expression-stmt
+        (invocation io println (
+          (error-constructor-expr
+            (user-defined-type ReadonlyError) (
+            (literal r)) (
+            (named-arg code
+              (literal 2)))))))
       (var-def
         (variable list (type
           (array-type
@@ -91,9 +98,4 @@
         (invocation io println (
           (error-constructor-expr
             (user-defined-type BothDistinctError) (
-            (literal b))))))
-      (expression-stmt
-        (invocation io println (
-          (error-constructor-expr
-            (user-defined-type ReadonlyDistinctError) (
-            (literal r)))))))))
+            (literal b)))))))))

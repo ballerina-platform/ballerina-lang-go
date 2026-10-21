@@ -31,6 +31,13 @@
           (literal a)) (
           (named-arg code
             (literal 1)))))))
+    (expression-stmt
+      (invocation io println (
+        (error-constructor-expr
+          (user-defined-type ReadonlyError) (
+          (literal r)) (
+          (named-arg code
+            (literal 2)))))))
     (var-def
       (variable list (type
         (array-type
@@ -63,10 +70,5 @@
         (error-constructor-expr
           (user-defined-type BothDistinctError) (
           (literal b))))))
-    (expression-stmt
-      (invocation io println (
-        (error-constructor-expr
-          (user-defined-type ReadonlyDistinctError) (
-          (literal r))))))
   )
 )

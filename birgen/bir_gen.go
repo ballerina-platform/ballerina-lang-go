@@ -1674,26 +1674,25 @@ func errorConstructorExpression(ctx context, curBB *bir.BIRBasicBlock, expr *ast
 	}, true
 }
 
-// errorConstructorTypeName returns the type name an error constructor records
-// for its value. Only distinct types induce type-ids (spec 5.6.1, 5.7.1), so a
-// reference to an error type without type-ids, such as `type E error;`, records
-// no name and the value prints the same as one built with a plain `error(...)`.
+// errorConstructorTypeName returns the name of the referenced error type when
+// that type has type-ids, and "" otherwise.
 func errorConstructorTypeName(ctx context, expr *ast.BLangErrorConstructorExpr) string {
-	if expr.ErrorTypeRef == nil || !hasTypeIDs(ctx, ctx.symbolType(expr.ErrorTypeRef.Symbol())) {
+	if expr.ErrorTypeRef == nil {
+		return ""
+	}
+	// Only distinct types induce type-ids (spec 5.6.1, 5.7.1). A type without
+	// type-ids equals the plain error type with its detail type.
+	tyCtx := ctx.function().pkgCtx.typeContext()
+	errorTy := ctx.symbolType(expr.ErrorTypeRef.Symbol())
+	detailTy, ok := semtypes.ErrorDetailType(tyCtx, errorTy)
+	if !ok {
+		ctx.internalError("error type reference is not an error type", expr.ErrorTypeRef.GetPosition())
+		return ""
+	}
+	if semtypes.IsSubtype(tyCtx, semtypes.ErrorWithDetail(detailTy), errorTy) {
 		return ""
 	}
 	return expr.ErrorTypeRef.TypeName.Value
-}
-
-// hasTypeIDs reports whether errorTy is narrowed by distinct type-ids, i.e. it is
-// a proper subtype of the error type with the same detail type.
-func hasTypeIDs(ctx context, errorTy semtypes.SemType) bool {
-	tyCtx := ctx.function().pkgCtx.typeContext()
-	detailTy, ok := semtypes.ErrorDetailType(tyCtx, errorTy)
-	if !ok {
-		return false
-	}
-	return !semtypes.IsSubtype(tyCtx, semtypes.ErrorWithDetail(detailTy), errorTy)
 }
 
 func typeConversionExpression(ctx context, curBB *bir.BIRBasicBlock, expr *ast.BLangTypeConversionExpr) (expressionEffect, bool) {
