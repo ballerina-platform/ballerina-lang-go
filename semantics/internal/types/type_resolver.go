@@ -7469,6 +7469,9 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, args
 		if !ok {
 			return callArgsResult{}, false
 		}
+		if !validateCallArgs(t, paramTypes, semtypes.Never, argTys, lowered, inv) {
+			return callArgsResult{}, false
+		}
 		monoRef, monoSig, monoTy, ok := monomorphizeDependentCall(t, inv, sym, fnSymbol, argTys)
 		if !ok {
 			return callArgsResult{}, false
@@ -8004,7 +8007,10 @@ func resolveCallReturnType(t typeResolver, chain *binding, inv invocable, args [
 	}
 	var retTy semtypes.SemType
 	if call.sig != nil {
-		retTy, ok = resolveSimpleFunctionCall(t, call.sig, call.argTys, call.lowered, inv)
+		if !validateCallArgs(t, call.sig.ParamTypes, call.sig.RestParamType, call.argTys, call.lowered, inv) {
+			return callArgsResult{}, semtypes.SemType{}, false
+		}
+		retTy = call.sig.ReturnType
 	} else {
 		retTy, ok = functionTypeCallReturnType(t, call.calleeTy, call.argTys, inv)
 	}
@@ -8014,15 +8020,14 @@ func resolveCallReturnType(t typeResolver, chain *binding, inv invocable, args [
 	return call, retTy, true
 }
 
-func resolveSimpleFunctionCall(t typeResolver, sig *model.TypedFunctionSignature, argTys []semtypes.SemType, args []ast.BLangExpression, inv invocable) (semtypes.SemType, bool) {
+func validateCallArgs(t typeResolver, paramTypes []semtypes.SemType, restTy semtypes.SemType, argTys []semtypes.SemType, args []ast.BLangExpression, inv invocable) bool {
 	cx := t.typeContext()
-	nParams := len(sig.ParamTypes)
+	nParams := len(paramTypes)
 	if len(argTys) < nParams {
 		t.internalError("argument count does not match signature after lowering", inv.GetPosition())
-		return semtypes.SemType{}, false
+		return false
 	}
 	// RestParamType is zero for functions declared in object type descriptors without a rest param
-	restTy := sig.RestParamType
 	if semtypes.IsZero(restTy) {
 		restTy = semtypes.Never
 	}
@@ -8030,7 +8035,7 @@ func resolveSimpleFunctionCall(t typeResolver, sig *model.TypedFunctionSignature
 	for i, argTy := range argTys {
 		paramTy := restTy
 		if i < nParams {
-			paramTy = sig.ParamTypes[i]
+			paramTy = paramTypes[i]
 		}
 		if !semtypes.IsSubtype(cx, argTy, paramTy) {
 			t.semanticError(fmt.Sprintf("incompatible type for argument: expected '%s', got '%s'",
@@ -8038,10 +8043,7 @@ func resolveSimpleFunctionCall(t typeResolver, sig *model.TypedFunctionSignature
 			valid = false
 		}
 	}
-	if !valid {
-		return semtypes.SemType{}, false
-	}
-	return sig.ReturnType, true
+	return valid
 }
 
 func functionTypeCallReturnType(t typeResolver, fnTy semtypes.SemType, argTys []semtypes.SemType, inv invocable) (semtypes.SemType, bool) {
