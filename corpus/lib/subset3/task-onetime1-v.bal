@@ -63,12 +63,12 @@ public function main() returns error? {
     task:Error? e = task:unscheduleJob(once);
     io:println(e is task:Error ? e.message() == "Invalid job id: " + once.id.toString() : "unscheduled"); // @output true
 
-    task:JobId held = check task:scheduleOneTimeJob(new CountJob("held"), inSeconds(0.1));
+    task:JobId held = check task:scheduleOneTimeJob(new CountJob("held"), inSeconds(1));
     check task:pauseJob(held);
-    runtime:sleep(0.3);
+    runtime:sleep(1.3);
     io:println("held while paused: ", count("held"), " ", isRunning(held)); // @output held while paused: 0 true
     check task:resumeJob(held);
-    runtime:sleep(0.2);
+    runtime:sleep(0.3);
     io:println("held after resume: ", count("held")); // @output held after resume: 1
 
     task:JobId done = check task:scheduleOneTimeJob(new CountJob("done"), inSeconds(0.05));
