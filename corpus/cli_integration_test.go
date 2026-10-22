@@ -5361,9 +5361,11 @@ func mergeCLICoverageDir(t *testing.T, fromDir, toDir string) {
 		} else if !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("failed to stat CLI coverage file %q: %v", dst, err)
 		}
-		if err := os.Rename(src, dst); err != nil {
-			t.Fatalf("failed to move CLI coverage file %q to %q: %v", src, dst, err)
+		info, err := entry.Info()
+		if err != nil {
+			t.Fatalf("failed to stat CLI coverage file %q: %v", src, err)
 		}
+		copyFile(t, src, dst, info.Mode())
 	}
 }
 
