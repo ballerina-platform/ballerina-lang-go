@@ -2394,6 +2394,10 @@ func buildReturnTypeOp(t typeResolver, chain *binding, params map[string]param, 
 		if !ok {
 			return nil, chain, false
 		}
+		if n.InferredLength {
+			t.semanticError(inferredArrayLengthMessage, n.GetPosition())
+			return nil, chain, false
+		}
 		for i := len(n.Sizes); i > 0; i-- {
 			lengthExpr := n.Sizes[i-1]
 			if lengthExpr == nil {
@@ -8066,6 +8070,8 @@ func typeFromFunctionSignature(t typeResolver, sig model.TypedFunctionSignature)
 	return opaque.FunctionSemType(t.typeEnv(), sig)
 }
 
+const inferredArrayLengthMessage = "inferred array length requires a variable declaration with a list constructor initializer without spread members"
+
 func resolveFixedArraySize(t typeResolver, lenExp ast.BLangExpression) (int, bool) {
 	actionOrExpr, ok := lenExp.(ast.BLangActionOrExpression)
 	if !ok {
@@ -8230,6 +8236,10 @@ func resolveBTypeInner(t typeResolver, chain *binding, btype ast.BType, depth in
 			var ok bool
 			elemTy, chain, ok = resolveTypeDataPair(t, chain, &ty.Elemtype, depth+1)
 			if !ok {
+				return semtypes.SemType{}, chain, false
+			}
+			if ty.InferredLength {
+				t.semanticError(inferredArrayLengthMessage, ty.GetPosition())
 				return semtypes.SemType{}, chain, false
 			}
 			for i := len(ty.Sizes); i > 0; i-- {

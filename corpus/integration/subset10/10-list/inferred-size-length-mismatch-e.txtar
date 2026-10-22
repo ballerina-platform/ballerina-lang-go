@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected [int, int, int, never...], got [int, int, never...]
+  --> inferred-size-length-mismatch-e.bal:19:16
+   |
+19 |     int[3] y = x; // @error
+   |                ^

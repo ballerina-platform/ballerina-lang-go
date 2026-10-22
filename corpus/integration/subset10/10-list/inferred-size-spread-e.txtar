@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: inferred array length requires a variable declaration with a list constructor initializer without spread members
+  --> inferred-size-spread-e.bal:19:5
+   |
+19 |     int[*] c = [...a]; // @error
+   |     ^^^^^^

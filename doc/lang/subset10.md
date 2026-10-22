@@ -67,6 +67,8 @@
     - [XML step expressions](https://ballerina.io/spec/lang/master/#xml-step-expr) are not supported during candidate selection.
     - Inline type descriptors that declare symbols are not supported during candidate selection: object types with method declarations, function types with named parameters (including rest parameters), and record types with field defaults. References to named types do not have this restriction.
 - [List constructor](https://ballerina.io/spec/lang/master/#list-constructor-expr)
+- [Inferred array length](https://ballerina.io/spec/lang/master/#section_6.4.2) (`T[*]`)
+  - Only in the outermost dimension of a local or module variable declaration whose initializer is a list constructor without spread members
 - [Mapping constructor](https://ballerina.io/spec/lang/master/#mapping-constructor-expr)
   - Currently [spread-field](https://ballerina.io/spec/lang/master/#spread-field) not supported
 - [XML template expression](https://ballerina.io/spec/lang/master/#xml-template-expr)

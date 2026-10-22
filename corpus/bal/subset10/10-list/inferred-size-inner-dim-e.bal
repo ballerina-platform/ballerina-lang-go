@@ -14,9 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
 public function main() {
-    int[*] x = [1, 2]; // @error
-    io:println(x);
+    int[2][*] d = [[1], [2]]; // @error
+    _ = d;
 }

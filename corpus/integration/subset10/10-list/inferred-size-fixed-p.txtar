@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: inherent type violation
+        at main(inferred-size-fixed-p.bal:20)

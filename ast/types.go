@@ -67,6 +67,8 @@ type (
 		Sizes      []BLangExpression
 		Dimensions int
 		Definition semtypes.Definition
+		// InferredLength is set while the outermost dimension is declared as `*` and has no length.
+		InferredLength bool
 	}
 	BLangBuiltInRefTypeNode struct {
 		bLangTypeBase

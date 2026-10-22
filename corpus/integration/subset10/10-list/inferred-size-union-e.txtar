@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: inferred array length requires a variable declaration with a list constructor initializer without spread members
+  --> inferred-size-union-e.bal:18:5
+   |
+18 |     int[*]? x = [1, 2]; // @error
+   |     ^^^^^^

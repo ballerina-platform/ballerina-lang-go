@@ -2166,6 +2166,7 @@ func (n *nodeBuilder) transformModuleVariableDeclaration(moduleVariableDeclarati
 	if !n.expectToken(moduleVariableDeclarationNode.SemicolonToken()) {
 		return nil, false
 	}
+	inferArrayLength(typeNode, expr)
 	simpleVar := ast.NewBLangVariable(pos, nameNode.Name, typeNode, expr, isDeclaredWithVar, flags)
 	simpleVar.SetPosition(pos)
 
@@ -2842,6 +2843,7 @@ func (n *nodeBuilder) createBLangVarDef(location diagnostics.Location, typedBind
 	if finalKeyword != nil {
 		flags |= model.FlagFinal
 	}
+	inferArrayLength(typeNode, expr)
 	variable = ast.NewBLangVariable(location, variable.Name, typeNode, expr, declaredWithVar, flags)
 	variable.SetPosition(location)
 	bLVarDef := &ast.BLangVariableDef{Var: variable}
@@ -6778,12 +6780,20 @@ func (n *nodeBuilder) transformArrayTypeDescriptor(arrayTypeDescriptorNode *st.A
 	}
 	elemType := n.transformType(arrayTypeDescriptorNode.MemberTypeDesc())
 	var sizes []ast.BLangExpression
+	inferredLength := false
 	dimensionNodes := arrayTypeDescriptorNode.Dimensions()
 	for dimensionNode := range dimensionNodes.Iterator() {
 		if !n.expectNode(dimensionNode) || !n.expectToken(dimensionNode.OpenBracket()) {
 			return nil, false
 		}
 		if arrayLength := dimensionNode.ArrayLength(); arrayLength == nil {
+			sizes = append(sizes, nil)
+		} else if arrayLength.Kind() == st.ASTERISK_LITERAL {
+			if len(sizes) > 0 {
+				n.cx.SyntaxError("inferred array length is only allowed in the outermost dimension", n.getPosition(arrayLength))
+				return nil, false
+			}
+			inferredLength = true
 			sizes = append(sizes, nil)
 		} else {
 			sizes = append(sizes, n.transformExpr(arrayLength))
@@ -6798,7 +6808,22 @@ func (n *nodeBuilder) transformArrayTypeDescriptor(arrayTypeDescriptorNode *st.A
 	arrayTypeNode.Elemtype = ast.TypeData{TypeDescriptor: elemType}
 	arrayTypeNode.Dimensions = len(sizes)
 	arrayTypeNode.Sizes = sizes
+	arrayTypeNode.InferredLength = inferredLength
 	return arrayTypeNode, true
+}
+
+// inferArrayLength sets an inferred outermost array length to the member count of a list constructor initializer.
+func inferArrayLength(typeNode ast.BType, initializer ast.BLangActionOrExpression) {
+	arrayType, ok := typeNode.(*ast.BLangArrayType)
+	if !ok || !arrayType.InferredLength {
+		return
+	}
+	list, ok := initializer.(*ast.BLangListConstructorExpr)
+	if !ok || list.HasSpreadMembers() {
+		return
+	}
+	arrayType.Sizes[0] = ast.NewBLangLiteral(arrayType.GetPosition(), ast.LiteralKindInt, int64(len(list.Exprs)), strconv.Itoa(len(list.Exprs)), false)
+	arrayType.InferredLength = false
 }
 
 func (n *nodeBuilder) transformTypeReferenceTypeDesc(typeReferenceTypeDescNode *st.TypeReferenceTypeDescNode) (ast.BType, bool) {

@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SYNTAX_ERROR]: inferred array length is only allowed in the outermost dimension
+  --> inferred-size-inner-dim-e.bal:18:12
+   |
+18 |     int[2][*] d = [[1], [2]]; // @error
+   |            ^

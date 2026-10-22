@@ -1,0 +1,77 @@
+module $anon.. v 0.0.0;
+moduleInts  [int, int, int, never...];
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 2
+    %4 = newArray [int, int, never...][%3]{%1, %2}
+    x = %4;
+    %6 = println(x) -> bb1;
+  }
+  bb1 {
+    %7 = length(x) -> bb2;
+  }
+  bb2 {
+    %8 = %7;
+    %9 = println(%8) -> bb3;
+  }
+  bb3 {
+    %10 = length(moduleInts) -> bb4;
+  }
+  bb4 {
+    %11 = %10;
+    %12 = println(%11) -> bb5;
+  }
+  bb5 {
+    %13 = ConstantLoad false
+    %14 = ConstantLoad true
+    %15 = ConstantLoad 2
+    %16 = newArray [boolean, boolean, never...][%15]{%13, %14}
+    flags = %16;
+    %18 = println(flags) -> bb6;
+  }
+  bb6 {
+    %19 = ConstantLoad 1
+    %20 = ConstantLoad 2
+    %21 = ConstantLoad 2
+    %22 = newArray [int, int, never...][%21]{%19, %20}
+    %23 = ConstantLoad 3
+    %24 = ConstantLoad 4
+    %25 = ConstantLoad 2
+    %26 = newArray [int, int, never...][%25]{%23, %24}
+    %27 = ConstantLoad 5
+    %28 = ConstantLoad 6
+    %29 = ConstantLoad 2
+    %30 = newArray [int, int, never...][%29]{%27, %28}
+    %31 = ConstantLoad 3
+    %32 = newArray [[int, int, never...], [int, int, never...], [int, int, never...], never...][%31]{%22, %26, %30}
+    grid = %32;
+    %34 = length(grid) -> bb7;
+  }
+  bb7 {
+    %35 = %34;
+    %36 = println(%35) -> bb8;
+  }
+  bb8 {
+    %38 = ConstantLoad 1
+    %40 = ConstantLoad 2
+    %39 = grid[%40];
+    %37 = %39[%38];
+    %41 = %37;
+    %42 = println(%41) -> bb9;
+  }
+  bb9 {
+    %43 = ConstantLoad 0
+    %44 = newArray [never...][%43]{}
+    empty = %44;
+    %46 = length(empty) -> bb10;
+  }
+  bb10 {
+    %47 = %46;
+    %48 = println(%47) -> bb11;
+  }
+  bb11 {
+    return;
+  }
+}
