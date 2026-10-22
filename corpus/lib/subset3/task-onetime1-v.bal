@@ -42,6 +42,16 @@ isolated function count(string name) returns int {
     }
 }
 
+isolated function awaitCount(string name, int expected) returns int {
+    foreach int _ in 0 ..< 250 {
+        if count(name) >= expected {
+            break;
+        }
+        runtime:sleep(0.02);
+    }
+    return count(name);
+}
+
 isolated function isRunning(task:JobId jobId) returns boolean {
     foreach task:JobId id in task:getRunningJobs() {
         if id == jobId {
@@ -58,8 +68,7 @@ isolated function inSeconds(decimal seconds) returns time:Civil {
 public function main() returns error? {
     task:JobId once = check task:scheduleOneTimeJob(new CountJob("once"), inSeconds(0.5));
     io:println(isRunning(once)); // @output true
-    runtime:sleep(0.8);
-    io:println("once: ", count("once"), " ", isRunning(once)); // @output once: 1 false
+    io:println("once: ", awaitCount("once", 1), " ", isRunning(once)); // @output once: 1 false
     task:Error? e = task:unscheduleJob(once);
     io:println(e is task:Error ? e.message() == "Invalid job id: " + once.id.toString() : "unscheduled"); // @output true
 
@@ -68,8 +77,7 @@ public function main() returns error? {
     runtime:sleep(1.3);
     io:println("held while paused: ", count("held"), " ", isRunning(held)); // @output held while paused: 0 true
     check task:resumeJob(held);
-    runtime:sleep(0.3);
-    io:println("held after resume: ", count("held")); // @output held after resume: 1
+    io:println("held after resume: ", awaitCount("held", 1)); // @output held after resume: 1
 
     task:JobId done = check task:scheduleOneTimeJob(new CountJob("done"), inSeconds(0.05));
     runtime:sleep(0.2);
