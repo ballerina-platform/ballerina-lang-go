@@ -106,6 +106,7 @@ type httpTypes struct {
 	jsonListTy  semtypes.SemType
 	jsonMapTy   semtypes.SemType
 	mapStringTy semtypes.SemType
+	anydataTy   semtypes.SemType
 }
 
 // 8 KB matches Netty's HttpObjectDecoder.maxChunkSize used by jBallerina's transport.
@@ -121,6 +122,7 @@ type requestBodyHolder struct {
 	buf           []byte
 	readErr       error
 	contentLength int64 // -1 if unknown; >=0 is the known byte count
+	streamBody
 }
 
 func (h *requestBodyHolder) materialize() []byte {
@@ -162,6 +164,7 @@ type responseBodyHolder struct {
 	stream  io.ReadCloser
 	buf     []byte
 	readErr error // set if the stream returned an error during materialization
+	streamBody
 }
 
 func (h *responseBodyHolder) materialize() ([]byte, error) {
@@ -361,6 +364,7 @@ func goCtxOrBackground(_ *extern.Context) context.Context {
 // avoids re-allocating it on every request.
 var requestMethodKeyCache = makeMethodKeys("ballerina/http:Request.", []string{
 	"setTextPayload", "setJsonPayload", "setXmlPayload", "setBinaryPayload", "setBodyParts", "getBodyParts",
+	"getByteStream", "setByteStream",
 	"setHeader", "addHeader", "removeHeader", "removeAllHeaders", "getHeaderNames",
 	"setContentType", "getContentType", "getTextPayload", "getJsonPayload", "getXmlPayload",
 	"getBinaryPayload",
@@ -404,10 +408,11 @@ func initHttpModule(rt *runtime.Runtime) {
 		jsonMapTy:   jsonMapMd.Define(env, nil, jsonTy),
 		jsonListTy:  jsonListLd.Define(env, nil, semtypes.ListRest(jsonTy)),
 		mapStringTy: strMapMd.Define(env, nil, semtypes.String),
+		anydataTy:   semtypes.CreateAnydata(semtypes.ContextFrom(env)),
 	}
 
-	// msgToBody converts a Ballerina RequestMessage value to (io.Reader, contentLength, contentType).
-	msgToBody := func(ctx *extern.Context, msg values.BalValue) (io.Reader, int64, string) {
+	// msgToBody converts a Ballerina RequestMessage value to its body and content type.
+	msgToBody := func(ctx *extern.Context, msg values.BalValue) (outboundBody, string) {
 		// An http:Request carries its own body and content-type; every other
 		// RequestMessage is serialised the same way a resource return value is. jBallerina
 		// uses the Request object as-is (http_commons.bal:97-99), so an absent Content-Type
@@ -420,19 +425,25 @@ func initHttpModule(rt *runtime.Runtime) {
 			bodyVal, _ := req.Get("$body")
 			holder, ok := bodyVal.(*requestBodyHolder)
 			if !ok {
-				return bytes.NewReader([]byte{}), 0, ct
+				return outboundBody{reader: bytes.NewReader([]byte{})}, ct
+			}
+			if holder.source != nil {
+				return outboundBody{source: holder.source}, ct
 			}
 			buf := holder.materialize()
 			if holder.readErr != nil {
-				return nil, 0, "json_error"
+				return outboundBody{}, "json_error"
 			}
-			return bytes.NewReader(buf), int64(len(buf)), ct
+			return outboundBody{reader: bytes.NewReader(buf), length: int64(len(buf))}, ct
+		}
+		if source, ok := msg.(*values.Stream); ok {
+			return outboundBody{source: source}, "application/octet-stream"
 		}
 		b, ct, err := outboundPayload(ctx, &types, msg)
 		if err != nil {
-			return nil, 0, "json_error"
+			return outboundBody{}, "json_error"
 		}
-		return bytes.NewReader(b), int64(len(b)), ct
+		return outboundBody{reader: bytes.NewReader(b), length: int64(len(b))}, ct
 	}
 
 	// execBody serves post, put, patch and delete, whose parameter lists are identical:
@@ -440,13 +451,12 @@ func initHttpModule(rt *runtime.Runtime) {
 	execBody := func(ctx *extern.Context, verb string, args []values.BalValue) (values.BalValue, error) {
 		self := args[0].(*values.Object)
 		path := args[1].(string)
-		var bodyReader io.Reader
-		var contentLength int64
+		var body outboundBody
 		contentType := ""
 		if len(args) > 2 && args[2] != nil {
 			var ct string
-			bodyReader, contentLength, ct = msgToBody(ctx, args[2])
-			if bodyReader == nil && ct == "json_error" {
+			body, ct = msgToBody(ctx, args[2])
+			if ct == "json_error" {
 				return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 			}
 			contentType = ct
@@ -469,8 +479,8 @@ func initHttpModule(rt *runtime.Runtime) {
 		reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 		urlVal, _ := self.Get("url")
 		clientHandle, _ := self.Get("$httpClient")
-		statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
-			goCtxOrBackground(ctx), verb, urlVal.(string)+path, bodyReader, contentLength, contentType, reqHeaders)
+		statusCode, respHeaders, respBodyStream, err := sendRequest(ctx, clientHandle.(pal.HTTPClient),
+			verb, urlVal.(string)+path, body, contentType, reqHeaders)
 		if err != nil {
 			return values.NewErrorWithMessage(err.Error()), nil
 		}
@@ -865,13 +875,12 @@ func initHttpModule(rt *runtime.Runtime) {
 			verb := args[1].(string)
 			path := args[2].(string)
 
-			var bodyReader io.Reader
-			var contentLength int64
+			var body outboundBody
 			contentType := ""
 			if len(args) > 3 && args[3] != nil {
 				var ct string
-				bodyReader, contentLength, ct = msgToBody(ctx, args[3])
-				if bodyReader == nil && ct == "json_error" {
+				body, ct = msgToBody(ctx, args[3])
+				if ct == "json_error" {
 					return values.NewErrorWithMessage("failed to serialize body to JSON"), nil
 				}
 				contentType = ct
@@ -894,8 +903,8 @@ func initHttpModule(rt *runtime.Runtime) {
 			reqHeaders = applyCompressionHeaders(compressionModeOf(self), reqHeaders)
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
-				goCtxOrBackground(ctx), verb, urlVal.(string)+path, bodyReader, contentLength, contentType, reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := sendRequest(ctx, clientHandle.(pal.HTTPClient),
+				verb, urlVal.(string)+path, body, contentType, reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
@@ -926,20 +935,26 @@ func initHttpModule(rt *runtime.Runtime) {
 
 			// Obtain the request body as an io.Reader for streaming passthrough.
 			bodyVal, _ := reqObj.Get("$body")
-			var bodyReader io.Reader
-			var forwardContentLength int64
+			var body outboundBody
 			if holder, ok := bodyVal.(*requestBodyHolder); ok {
-				if stream := holder.takeStream(); stream != nil {
-					bodyReader = stream
-					forwardContentLength = holder.contentLength
-				} else {
-					buf := holder.materialize()
-					if holder.readErr != nil {
-						return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
-					}
-					if len(buf) > 0 {
-						bodyReader = bytes.NewReader(buf)
-						forwardContentLength = int64(len(buf))
+				switch {
+				case holder.source != nil:
+					body.source = holder.source
+				case holder.reader != nil:
+					// getByteStream has taken the body; forward whatever it has not read.
+					body = outboundBody{reader: holder.reader, length: -1}
+					holder.reader = nil
+				default:
+					if stream := holder.takeStream(); stream != nil {
+						body = outboundBody{reader: stream, length: holder.contentLength}
+					} else {
+						buf := holder.materialize()
+						if holder.readErr != nil {
+							return values.NewErrorWithMessage("failed to read request body: " + holder.readErr.Error()), nil
+						}
+						if len(buf) > 0 {
+							body = outboundBody{reader: bytes.NewReader(buf), length: int64(len(buf))}
+						}
 					}
 				}
 			}
@@ -951,8 +966,8 @@ func initHttpModule(rt *runtime.Runtime) {
 
 			urlVal, _ := self.Get("url")
 			clientHandle, _ := self.Get("$httpClient")
-			statusCode, respHeaders, respBodyStream, err := clientHandle.(pal.HTTPClient).Execute(
-				goCtxOrBackground(ctx), method, urlVal.(string)+path, bodyReader, forwardContentLength, contentType, reqHeaders)
+			statusCode, respHeaders, respBodyStream, err := sendRequest(ctx, clientHandle.(pal.HTTPClient),
+				method, urlVal.(string)+path, body, contentType, reqHeaders)
 			if err != nil {
 				return values.NewErrorWithMessage(err.Error()), nil
 			}
@@ -1077,7 +1092,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage("setBodyParts: " + err.Error()), nil
 			}
-			self.Put("body", &responseBodyHolder{buf: data})
+			holder := &responseBodyHolder{buf: data}
+			holder.parts = true
+			self.Put("body", holder)
 			responseHeaders(self).Put(ctx.TypeCtx(), "content-type", newListValue([]values.BalValue{finalContentType}))
 			return nil, nil
 		})
@@ -1170,6 +1187,9 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
+			if err := streamedBodyNoContent(bodyVal, "text"); err != nil {
+				return err, nil
+			}
 			if holder, ok := bodyVal.(*responseBodyHolder); ok {
 				buf, err := holder.materialize()
 				if err != nil {
@@ -1188,6 +1208,9 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
+			if err := streamedBodyNoContent(bodyVal, "json"); err != nil {
+				return err, nil
+			}
 			var body []byte
 			if holder, ok := bodyVal.(*responseBodyHolder); ok {
 				var err error
@@ -1211,6 +1234,9 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("body")
+			if err := streamedBodyNoContent(bodyVal, "text"); err != nil {
+				return err, nil
+			}
 			holder := bodyVal.(*responseBodyHolder)
 			body, err := holder.materialize()
 			if err != nil {
@@ -1399,7 +1425,9 @@ func initHttpModule(rt *runtime.Runtime) {
 			if err != nil {
 				return values.NewErrorWithMessage("setBodyParts: " + err.Error()), nil
 			}
-			self.Put("$body", &requestBodyHolder{buf: data})
+			holder := &requestBodyHolder{buf: data}
+			holder.parts = true
+			self.Put("$body", holder)
 			setRequestHeader(self, "content-type", finalContentType, ctx.TypeCtx())
 			return nil, nil
 		})
@@ -1510,6 +1538,9 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("$body")
+			if err := streamedBodyNoContent(bodyVal, "text"); err != nil {
+				return err, nil
+			}
 			holder, _ := bodyVal.(*requestBodyHolder)
 			if holder == nil {
 				return "", nil
@@ -1526,6 +1557,9 @@ func initHttpModule(rt *runtime.Runtime) {
 
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("$body")
+			if err := streamedBodyNoContent(bodyVal, "json"); err != nil {
+				return err, nil
+			}
 			holder, _ := bodyVal.(*requestBodyHolder)
 			var body []byte
 			if holder != nil {
@@ -1547,6 +1581,9 @@ func initHttpModule(rt *runtime.Runtime) {
 		func(ctx *extern.Context, args []values.BalValue) (values.BalValue, error) {
 			self := args[0].(*values.Object)
 			bodyVal, _ := self.Get("$body")
+			if err := streamedBodyNoContent(bodyVal, "text"); err != nil {
+				return err, nil
+			}
 			holder, _ := bodyVal.(*requestBodyHolder)
 			var body []byte
 			if holder != nil {
@@ -1681,6 +1718,7 @@ func initHttpModule(rt *runtime.Runtime) {
 
 	// Server-side: register the http:Listener class and its native methods.
 	registerListenerExterns(rt, &types)
+	registerStreamExterns(rt, &types)
 }
 
 // splitOutsideQuotes splits s on every occurrence of sep that is not inside a
@@ -1883,6 +1921,7 @@ func extractHeaders(arg values.BalValue) map[string][]string {
 // a constant map built once and shared read-only across all Response objects.
 var responseMethodKeyCache = makeMethodKeys("ballerina/http:Response.", []string{
 	"setTextPayload", "setJsonPayload", "setXmlPayload", "setBinaryPayload", "setBodyParts", "getBodyParts",
+	"getByteStream", "setByteStream", "getSseEventStream", "setSseEventStream",
 	"setHeader", "addHeader", "removeHeader", "removeAllHeaders",
 	"setContentType", "getContentType", "getTextPayload", "getJsonPayload", "getXmlPayload",
 	"getBinaryPayload",
@@ -1906,6 +1945,7 @@ func buildResponse(tc semtypes.Context, statusCode int, respHeaders map[string][
 		headersMap.Put(tc, strings.ToLower(k), newListValue(items))
 	}
 	holder := eagerBufferResponse(respHeaders, bodyStream)
+	holder.fromWire = true
 	return values.NewObject(
 		semtypes.Object,
 		map[string]values.BalValue{
