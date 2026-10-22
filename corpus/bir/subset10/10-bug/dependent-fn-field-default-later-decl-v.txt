@@ -1,0 +1,106 @@
+module $anon.. v 0.0.0;
+class C {
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  m({| x: string, never... |}) -> boolean{
+    bb0 {
+      %3 = p is {| x: string, never... |}
+      %0 = %3;
+      return;
+    }
+  }
+}
+f({| x: string, never... |},[string...]) -> boolean{
+  bb0 {
+    %4 = p is {| x: string, never... |}
+    %3 = %4;
+    %4 ? bb1 : bb2;
+  }
+  bb1 {
+    %6 = length(l) -> bb3;
+  }
+  bb2 {
+    %0 = %3;
+    return;
+  }
+  bb3 {
+    %7 = %6;
+    %8 = ConstantLoad 0
+    %9 = %8;
+    %5 = >= %7 %9;
+    %3 = %5;
+    GOTO bb2;
+  }
+}
+conv(){
+}
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:f
+    %2 = %1;
+    %3 = ConstantLoad typedesc
+    %4 = %3;
+    %5 = ConstantLoad declared
+    %6 = println(%5) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+$default$0() -> {| x: string, never... |}{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad r
+    %3 = ConstantLoad typedesc
+    %4 = conv(%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = newMap {| x: string, never... |}{%1=%4}
+    %0 = %5;
+    return;
+  }
+}
+$default$1() -> {| x: string, never... |}{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad s
+    %3 = ConstantLoad typedesc
+    %4 = conv(%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = newMap {| x: string, never... |}{%1=%4}
+    %0 = %5;
+    return;
+  }
+}
+$default$2({| x: string, never... |}) -> [string...]{
+  bb0 {
+    %2 = ConstantLoad t
+    %3 = ConstantLoad typedesc
+    %4 = conv(%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = ConstantLoad 1
+    %6 = newArray [string...][%5]{%4}
+    %0 = %6;
+    return;
+  }
+}
+$default$3() -> {| x: string, never... |}{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad c
+    %3 = ConstantLoad typedesc
+    %4 = conv(%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = newMap {| x: string, never... |}{%1=%4}
+    %0 = %5;
+    return;
+  }
+}

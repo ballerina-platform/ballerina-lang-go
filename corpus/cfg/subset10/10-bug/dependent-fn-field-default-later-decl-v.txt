@@ -1,0 +1,37 @@
+(C
+  (m
+    (bb0 () ()
+      (type-test-expr is
+        (simple-var-ref p)
+        (user-defined-type B))
+    )
+  )
+)
+(conv
+)
+(f
+  (bb0 () ()
+    (return
+      (binary-expr &&
+        (type-test-expr is
+          (simple-var-ref p)
+          (user-defined-type B))
+        (binary-expr >=
+          (invocation lang.array length (
+            (simple-var-ref l)))
+          (literal 0))))
+  )
+)
+(main
+  (bb0 () ()
+    (assignment
+      (wildcard-binding-pattern)
+      (simple-var-ref f))
+    (assignment
+      (wildcard-binding-pattern)
+      (simple-var-ref C))
+    (expression-stmt
+      (invocation io println (
+        (literal declared))))
+  )
+)

@@ -558,7 +558,13 @@ func (f *functionTypeResolver) hasImplicitImport(name string) bool {
 
 func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
 	if f.isEphemeral() {
-		resolved := !semtypes.IsZero(f.symbolType(ref))
+		var resolved bool
+		if sym, ok := f.getSymbol(ref).(model.DependentlyTypedFunctionSymbol); ok {
+			// A dependently typed function has no symbol type.
+			resolved = len(sym.ParamTypes()) != 0
+		} else {
+			resolved = !semtypes.IsZero(f.symbolType(ref))
+		}
 		if !resolved {
 			f.internalError("unresolved symbol reached ephemeral resolution", diagnostics.Location{})
 		}
@@ -687,6 +693,28 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 }
 
 func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
+	if sym, ok := t.getSymbol(ref).(model.DependentlyTypedFunctionSymbol); ok {
+		// A dependently typed function has no symbol type; it is resolved once its parameter types are set.
+		if len(sym.ParamTypes()) != 0 {
+			return true
+		}
+		fn, ok := t.functionNodes[ref]
+		if !ok {
+			return true
+		}
+		if t.lazyResolutionStatus[ref] == resolutionInProgress {
+			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), fn.GetPosition())
+			return false
+		}
+		t.lazyResolutionStatus[ref] = resolutionInProgress
+		_, _, ok = resolveFunctionSignature(t, nil, fn, depth)
+		if ok {
+			t.lazyResolutionStatus[ref] = resolutionDone
+		} else {
+			t.lazyResolutionStatus[ref] = resolutionFailed
+		}
+		return ok
+	}
 	if !semtypes.IsZero(t.symbolType(ref)) {
 		return true
 	}
@@ -7433,6 +7461,9 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, args
 	baseSymbol := t.getSymbol(fnSymbol)
 	switch sym := baseSymbol.(type) {
 	case model.DependentlyTypedFunctionSymbol:
+		if !t.ensureResolved(fnSymbol, 0) {
+			return callArgsResult{}, false
+		}
 		lowered, fail := lowerInvocationArgs(t, args, fnSymbol, expectedType, inv.GetPosition())
 		if fail != nil {
 			fail(t)

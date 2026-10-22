@@ -1,0 +1,77 @@
+(compilation-unit
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition B
+    (record-type
+      (field x
+        (value-type string))))
+  (type-definition R
+    (record-type
+      (field b
+        (user-defined-type B)
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal r))))))))
+  (function f (
+    (variable p (type
+      (user-defined-type B)) (expr
+      (mapping-constructor-expr
+        (key-value
+          (literal x)
+          (invocation conv (
+            (literal s)))))))
+    (variable l (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))) (expr
+      (list-constructor-expr
+        (invocation conv (
+          (literal t))))))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr &&
+          (type-test-expr is
+            (simple-var-ref p)
+            (user-defined-type B))
+          (binary-expr >=
+            (invocation length expr:
+              (simple-var-ref l) ())
+            (literal 0))))))
+  (class-definition C
+    (function m (
+      (variable p (type
+        (user-defined-type B)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal c)))))))) (
+      (value-type boolean))
+      (expr-function-body
+        (type-test-expr is
+          (simple-var-ref p)
+          (user-defined-type B)))))
+  (function conv (
+    (variable v (type
+      (value-type string)))
+    (variable t (type
+      (constrained-type
+        (value-type typedesc)
+        (value-type string))) (expr
+      (inferred-typedesc-default)))) (
+    (user-defined-type t))
+    (extern-function-body))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref f))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref C))
+      (expression-stmt
+        (invocation io println (
+          (literal declared)))))))

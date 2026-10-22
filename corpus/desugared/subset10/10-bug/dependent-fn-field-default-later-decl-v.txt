@@ -1,0 +1,119 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition B
+    (record-type
+      (field x
+        (value-type string))))
+  (type-definition R
+    (record-type
+      (field b
+        (user-defined-type B)
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal r)
+              (typedesc-expr))))))))
+  (class-definition C
+    (function init () ()
+      (block-function-body))
+    (function m (
+      (variable p (type
+        (user-defined-type B)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal c)
+              (typedesc-expr)))))))) (
+      (value-type boolean))
+      (expr-function-body
+        (type-test-expr is
+          (simple-var-ref p)
+          (user-defined-type B)))))
+  (function f (
+    (variable p (type
+      (user-defined-type B)) (expr
+      (mapping-constructor-expr
+        (key-value
+          (literal x)
+          (invocation conv (
+            (literal s)
+            (typedesc-expr)))))))
+    (variable l (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))) (expr
+      (list-constructor-expr
+        (invocation conv (
+          (literal t)
+          (typedesc-expr))))))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr &&
+          (type-test-expr is
+            (simple-var-ref p)
+            (user-defined-type B))
+          (binary-expr >=
+            (invocation lang.array length (
+              (simple-var-ref l)))
+            (literal 0))))))
+  (function conv (
+    (variable v (type
+      (value-type string)))
+    (variable t (type
+      (constrained-type
+        (value-type typedesc)
+        (value-type string))) (expr
+      (inferred-typedesc-default)))) (
+    (user-defined-type t))
+    (extern-function-body))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref f))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref C))
+      (expression-stmt
+        (invocation io println (
+          (literal declared))))))
+  (function $default$0 () ()
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal r)
+              (typedesc-expr))))))))
+  (function $default$1 () ()
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal s)
+              (typedesc-expr))))))))
+  (function $default$2 (
+    (variable p (type
+      (value-type )))) ()
+    (block-function-body
+      (return
+        (list-constructor-expr
+          (invocation conv (
+            (literal t)
+            (typedesc-expr)))))))
+  (function $default$3 () ()
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (literal x)
+            (invocation conv (
+              (literal c)
+              (typedesc-expr)))))))))

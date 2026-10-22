@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: invalid cycle detected for conv
+  --> dependent-fn-default-cycle-e.bal:21:1
+   |
+21 | function conv(string v, typedesc<string> t = <>, string q = conv("a")) returns t = external; // @error default cycle
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
