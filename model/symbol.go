@@ -490,6 +490,8 @@ type (
 		// but this will have negative effect on allocations (and GC)
 		Default                []*DefaultableParam
 		IncludedRecordMetadata []*IncludedRecordMetadata
+		ParamNamedTypes        [][]SymbolRef
+		ReturnNamedTypes       []SymbolRef
 		HasRest                bool
 	}
 
@@ -579,6 +581,13 @@ func NewUntypedFunctionSignature(params []Param, hasRest bool) UntypedFunctionSi
 		Default:                defaults,
 		IncludedRecordMetadata: inclRecord,
 	}
+}
+
+func (sig UntypedFunctionSignature) ParamNamedTypesAt(index int) []SymbolRef {
+	if index < 0 || index >= len(sig.ParamNamedTypes) {
+		return nil
+	}
+	return sig.ParamNamedTypes[index]
 }
 
 func (sig *UntypedFunctionSignature) SetIncludedRecordMetadata(index int, metadata IncludedRecordMetadata) {
