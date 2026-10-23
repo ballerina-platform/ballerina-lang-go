@@ -111,10 +111,6 @@ type Coded record {|
     int code;
 |};
 
-type Located record {|
-    Address|Coded loc = {};
-|};
-
 public function main() returns error? {
     json value = {name: "John"};
     Person person = check value.cloneWithType(Person);
@@ -181,7 +177,7 @@ public function main() returns error? {
     io:println(captured is error); // @output true
 
     json locatedData = {loc: {city: "Galle"}};
-    Located located = check locatedData.cloneWithType(Located);
+    record {|Address|Coded loc = {};|} located = check locatedData.cloneWithType();
     io:println(located); // @output {"loc":{"city":"Galle","country":"Sri Lanka"}}
 
     json missingName = {age: 3};

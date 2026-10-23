@@ -370,11 +370,16 @@
                 (literal Galle))))))))
     (var-def
       (variable located (type
-        (user-defined-type Located)) (expr
+        (record-type
+          (field loc
+            (union-type
+              (user-defined-type Address)
+              (user-defined-type Coded))
+            (mapping-constructor-expr)))) (expr
         (checked-expr
           (invocation lang.value cloneWithType (
             (simple-var-ref locatedData)
-            (simple-var-ref Located)))))))
+            (typedesc-expr)))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref located))))

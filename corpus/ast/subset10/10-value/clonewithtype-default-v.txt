@@ -158,13 +158,6 @@
     (record-type
       (field code
         (value-type int))))
-  (type-definition Located
-    (record-type
-      (field loc
-        (union-type
-          (user-defined-type Address)
-          (user-defined-type Coded))
-        (mapping-constructor-expr))))
   (function main () (
     (union-type
       (error-type)
@@ -510,11 +503,15 @@
                   (literal Galle))))))))
       (var-def
         (variable located (type
-          (user-defined-type Located)) (expr
+          (record-type
+            (field loc
+              (union-type
+                (user-defined-type Address)
+                (user-defined-type Coded))
+              (mapping-constructor-expr)))) (expr
           (checked-expr
             (invocation cloneWithType expr:
-              (simple-var-ref locatedData) (
-              (simple-var-ref Located)))))))
+              (simple-var-ref locatedData) ())))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref located))))
