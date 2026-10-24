@@ -1,6 +1,6 @@
 # Supported ballerina library features
 
-Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener, and the new `ballerina/mime` module for MIME media types, entities, and multipart bodies.
+Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener; the new `ballerina/mime` module for MIME media types, entities, and multipart bodies; and the new `ballerina/data.yaml` package, which parses YAML into, and writes YAML from, values typed from the call site.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -296,3 +296,18 @@ Types: `mime:MediaType`, `mime:ContentDisposition`, `mime:Entity` (class); `mime
 | `setFileAsEntityBody(filePath, contentType?)` | Sets the file as a lazy byte-channel data source, read on demand by whichever accessor materializes the body first, matching jBallerina; a failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
 | Multipart bodies | `setBodyParts`/`getBodyParts` — `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
 | `base64Encode`/`base64Decode`/`base64EncodeBlob`/`base64DecodeBlob` | Accept `string`, `byte[]`, or an `io:ReadableByteChannel` (read fully, result handed back as a freshly-constructed channel; charset does not apply to the channel form, matching jBallerina) |
+
+## [data.yaml](https://github.com/ballerina-platform/module-ballerina-data.yaml)
+
+Types: `yaml:Options`, `yaml:WriteConfig`, `yaml:YAMLSchema`, `yaml:NameConfig`, the `yaml:Name` annotation, and `yaml:Error`.
+
+| Function | Notes |
+|---|---|
+| `yaml:parseString(s, options?, t?)` | Parse YAML text into `t`, a subtype of `anydata` inferred from the call site; returns `t\|yaml:Error` |
+| `yaml:parseBytes(s, options?, t?)` | As `parseString`, decoding the bytes as UTF-8 |
+| `yaml:parseStream(s, options?, t?)` | As `parseBytes`, reading a `stream<byte[], error?>` to its end |
+| `yaml:toYamlString(yamlValue, config?)` | Write a value as YAML lines joined with `\n`; returns `string\|yaml:Error` |
+
+Parsing reads block and flow collections, every scalar style, comments, anchors and aliases, the core tags and directives, and several documents, which bind to list, tuple, `json` and `anydata` targets. Every `Options` field is supported: the schema, `allowAnchorRedefinition`, `allowMapEntryRedefinition` and `allowDataProjection` with `nilAsOptionalField`, `absentAsNilableType` and `enableYamlStreamReorder`; `enableConstraintValidation` is accepted and ignored. Every `WriteConfig` field is supported; as in jBallerina, `blockLevel` and `schema` have no effect. Scalars fold and chomp as YAML 1.2 specifies, and `toYamlString` quotes strings that would not read back unchanged. Record fields with default values are reported as missing when no key provides them, declared record fields follow the key order, and `@yaml:Name` applies only to the record type a typedesc names.
+
+Not covered in this subset: constraint validation, `@yaml:Name` on inferred typedescs and nested records, and the compiler plugin diagnostics.
