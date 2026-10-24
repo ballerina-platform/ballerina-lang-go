@@ -1631,6 +1631,10 @@ func isShadowed(resolver *blockSymbolResolver, name string) bool {
 	}
 	current := resolver
 	for current != nil {
+		switch current.node.(type) {
+		case *ast.BLangClassDefinition, *ast.BLangService:
+			return name == "self"
+		}
 		// Issue here is mapping constructor treats some of it's keys as simple variable ref; which is wrong but since they are variable they have symbols
 		// and we have to resolve them. But they are not real variables
 		if _, isMappingScope := current.node.(*ast.BLangMappingConstructorExpr); !isMappingScope {
