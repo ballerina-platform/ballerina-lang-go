@@ -1,0 +1,9 @@
+-- stdout --
+intruder dropped: true
+resilient connected: true
+intruder disconnect: Client is disconnected
+empty subscribe: The Server Disconnected the client.
+connected: false
+reconnect: ok
+reconnected: true
+-- stderr --
