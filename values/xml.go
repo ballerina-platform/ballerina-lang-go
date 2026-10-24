@@ -75,6 +75,8 @@ var (
 	_ XMLValue = &XMLProcessingInstruction{}
 	_ XMLValue = &XMLText{}
 	_ XMLValue = &XMLComment{}
+
+	xmlNeverType = semtypes.XMLSequence(semtypes.Never)
 )
 
 func (e *XMLElement) Type() semtypes.SemType { return e.semType }
@@ -334,7 +336,11 @@ func NewValidatedXMLProcessingInstruction(target, data string, isReadonly bool) 
 }
 
 func NewXMLText(body string) *XMLText {
-	return &XMLText{Body: body, semType: semtypes.XMLText}
+	semType := semtypes.XMLText
+	if body == "" {
+		semType = xmlNeverType
+	}
+	return &XMLText{Body: body, semType: semType}
 }
 
 func NewXMLComment(body string, isReadonly bool) *XMLComment {
