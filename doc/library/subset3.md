@@ -1,6 +1,6 @@
 # Supported ballerina library features
 
-Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener, and the new `ballerina/mime` module for MIME media types, entities, and multipart bodies.
+Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server; the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener; the new `ballerina/mime` module for MIME media types, entities, and multipart bodies; and the new `ballerina/constraint` package, providing constraint annotations and `constraint:validate` for run-time validation.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -296,3 +296,18 @@ Types: `mime:MediaType`, `mime:ContentDisposition`, `mime:Entity` (class); `mime
 | `setFileAsEntityBody(filePath, contentType?)` | Sets the file as a lazy byte-channel data source, read on demand by whichever accessor materializes the body first, matching jBallerina; a failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
 | Multipart bodies | `setBodyParts`/`getBodyParts` — `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
 | `base64Encode`/`base64Decode`/`base64EncodeBlob`/`base64DecodeBlob` | Accept `string`, `byte[]`, or an `io:ReadableByteChannel` (read fully, result handed back as a freshly-constructed channel; charset does not apply to the channel form, matching jBallerina) |
+
+## [constraint](https://github.com/ballerina-platform/module-ballerina-constraint/blob/master/docs/spec/spec.md)
+
+Types: `constraint:Error`, `constraint:ValidationError`, `constraint:TypeConversionError`, `constraint:DateOption`, and the constraint record types for each annotation.
+
+| API | Notes |
+|---|---|
+| `@constraint:Int`, `@constraint:Float`, `@constraint:Number` | `minValue`, `maxValue`, `minValueExclusive`, `maxValueExclusive`, and the digit-count constraints (`maxDigits` for `Int`, `maxIntegerDigits` and `maxFractionDigits` for `Float` and `Number`) |
+| `@constraint:String` | `length`, `minLength` and `maxLength`, counted in UTF-16 code units as in jBallerina. The `pattern` constraint is not available until regular expressions are supported |
+| `@constraint:Array` | `length`, `minLength` and `maxLength` |
+| `@constraint:Date` | Gregorian calendar validation of `year`/`month`/`day` records and the `PAST`, `PAST_OR_PRESENT`, `FUTURE` and `FUTURE_OR_PRESENT` options |
+| Custom messages | Any constraint can be written as `{value, message}`; `Date` also accepts a `message` for invalid dates |
+| `constraint:validate(value, td)` | Converts the value to the target type and validates the annotations on the target type and on the fields of a target record. The target type must be named explicitly: an inferred target type (`T r = check constraint:validate(v)`) carries no annotations and validates nothing |
+
+Not covered in this subset: validation through annotations on nested types (named field types, array members, union members and nested records), the `pattern` constraint, and the compile-time annotation diagnostics.
