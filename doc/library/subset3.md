@@ -1,6 +1,6 @@
 # Supported ballerina library features
 
-Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener, and the new `ballerina/mime` module for MIME media types, entities, and multipart bodies.
+Subset 3 extends the released [subset 2](subset2.md) with the `avro` module — Avro binary serialization and deserialization driven by an Avro schema string — plus stream-based file read/write additions and byte channels in the `io` module, building on the language's new `stream` type; client-side response data binding, XML payloads, and `anydata` resource returns for the `http` module; the new `ballerina/protobuf` package, providing the protobuf well-known types (`Any`, `Struct`, `Timestamp`, `Duration`, `Empty`, and the scalar wrapper types) used by generated gRPC client/service code; the new `file` module; and the new `ballerina/uuid` package, providing RFC 4122 UUID generation, validation, and conversion. It also adds the new `ballerina/ldap` package, a client for reading and modifying entries on an LDAP directory server, the new `ballerina/udp` package, providing connectionless and connection-oriented UDP clients and a UDP listener, the new `ballerina/mime` module for MIME media types, entities, and multipart bodies, and the new `ballerina/data.xmldata` package, which converts XML values, text, bytes and byte-block streams to record types and validates XML against a record type.
 
 ## [avro](https://github.com/ballerina-platform/module-ballerina-avro/blob/master/docs/spec/spec.md)
 
@@ -296,3 +296,15 @@ Types: `mime:MediaType`, `mime:ContentDisposition`, `mime:Entity` (class); `mime
 | `setFileAsEntityBody(filePath, contentType?)` | Sets the file as a lazy byte-channel data source, read on demand by whichever accessor materializes the body first, matching jBallerina; a failed file open panics, matching jBallerina's own `checkpanic io:openReadableFile` |
 | Multipart bodies | `setBodyParts`/`getBodyParts` — `message/*` bodies return a `ParserError`; jBallerina silently returns an empty array for these instead |
 | `base64Encode`/`base64Decode`/`base64EncodeBlob`/`base64DecodeBlob` | Accept `string`, `byte[]`, or an `io:ReadableByteChannel` (read fully, result handed back as a freshly-constructed channel; charset does not apply to the channel form, matching jBallerina) |
+
+## [data.xmldata](https://github.com/ballerina-platform/module-ballerina-data.xmldata)
+
+Conversion from XML to record types. The parse functions take an inferred `typedesc<record {}>` target and return `t|xmldata:Error`; the text parsers convert while they read, and a target with a union of records is parsed into an XML value and traversed instead, as in jBallerina.
+
+| Function | Notes |
+|---|---|
+| `parseAsType` | Convert an `xml` value to the target record type |
+| `parseString` / `parseBytes` / `parseStream` | Parse XML text, UTF-8 bytes or a `stream<byte[], error?>` into the target record type |
+| `validate` | Check an `xml` value against a record type; an XSD file path is not supported and returns an `Error` |
+
+Elements, attributes and text content map to record fields, nested records, arrays, maps, `json`, `anydata` and `xml` fields, and open-record rest fields. Types: `xmldata:Options` and `xmldata:SourceOptions` (`attributePrefix`, `textFieldName`, `allowDataProjection`, `useSemanticEquality`; `enableConstraintValidation` is accepted and ignored), `xmldata:NameConfig`, `xmldata:NamespaceConfig`, the `@xmldata:Name`, `@xmldata:Namespace` and `@xmldata:Attribute` annotations (applied when the target record type is passed explicitly), `xmldata:Error`. `toXml`, `fromJson`, `transform` (XPath), the XSD annotations and `@xmldata:Any` are not included.
