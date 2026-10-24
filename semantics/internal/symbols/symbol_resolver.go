@@ -47,7 +47,6 @@ const (
 type varStatusTracker interface {
 	markInit(sym model.SymbolRef, pos diagnostics.Location)
 	markUsed(sym model.SymbolRef)
-	getUnused() []varDeclInfo
 }
 
 type varDeclInfo struct {
@@ -125,13 +124,13 @@ type (
 		defaultCounter int
 		serviceCounter int
 		moduleNodes    moduleAstNodeHolder
+		varTracker     varTracker
 	}
 
 	compilationUnitSymbolResolver struct {
 		moduleResolver *moduleSymbolResolver
 		scope          *model.ModuleScope
 		usedPrefixes   map[string]bool
-		varTracker     varTracker
 	}
 
 	blockSymbolResolver struct {
@@ -160,17 +159,14 @@ func markInit(resolver symbolResolver, name string, symbol model.SymbolRef, pos 
 }
 
 func (r *compilationUnitSymbolResolver) markInit(sym model.SymbolRef, pos diagnostics.Location) {
-	r.varTracker.markInit(sym, pos)
+	r.moduleResolver.varTracker.markInit(sym, pos)
 }
 
 func (r *compilationUnitSymbolResolver) markUsed(sym model.SymbolRef) {
-	if r.varTracker.isTracked(sym) {
-		r.varTracker.markUsed(sym)
+	tracker := &r.moduleResolver.varTracker
+	if tracker.isTracked(sym) {
+		tracker.markUsed(sym)
 	}
-}
-
-func (r *compilationUnitSymbolResolver) getUnused() []varDeclInfo {
-	return r.varTracker.getUnused()
 }
 
 func (r *blockSymbolResolver) markInit(sym model.SymbolRef, pos diagnostics.Location) {
@@ -246,6 +242,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		packageSymbols: make(map[string]model.SymbolRef),
 		prevPos:        make(map[string]prevPos),
 		prevAnnotPos:   make(map[string]prevPos),
+		varTracker:     varTracker{varIndex: make(map[model.SymbolRef]int)},
 		moduleNodes: moduleAstNodeHolder{
 			typeDefns:  make(map[string]moduleAstNode[*ast.BLangTypeDefinition]),
 			classDefns: make(map[string]moduleAstNode[*ast.BLangClassDefinition]),
@@ -700,9 +697,9 @@ func Resolve(
 		processCompilationUnitXMLNS(resolver, cu)
 		resolveCompilationUnit(resolver, cu)
 		reportUnusedImports(resolver, compilationUnitImports(cu))
-		reportUnusedVariables(cx, resolver.getUnused())
 		maps.Copy(importedSymbols, cuImports.imports)
 	}
+	reportUnusedVariables(cx, moduleResolver.varTracker.getUnused())
 
 	mainSpaces := make([]*model.SymbolSpace, 0, len(cuResolvers)+1)
 	annotationSpaces := make([]*model.SymbolSpace, 0, len(cuResolvers)+1)
