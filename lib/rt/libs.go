@@ -32,6 +32,7 @@ import (
 
 	// standard libraries
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/avro/0.0.1/go1.27/native"
+	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/cache/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/crypto/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/file/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/http/0.0.1/go1.27/native"
@@ -42,6 +43,7 @@ import (
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/os/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/protobuf/0.0.1/go1.27/modules/types.any/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/random/0.0.1/go1.27/native"
+	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/task/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/time/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/udp/0.0.1/go1.27/native"
 	_ "github.com/ballerina-nutcracker/ballerina/lib/stdlibs/ballerina/url/0.0.1/go1.27/native"
