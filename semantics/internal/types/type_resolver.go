@@ -130,8 +130,9 @@ type deferredEmptinessCheck struct {
 }
 
 // resolutionStatus tracks lazy resolution progress for cycle detection.
-// resolutionFailed marks a constant whose resolution already reported a
-// diagnostic, so a constant that refers to it fails without reporting another.
+// resolutionFailed marks a constant or a global variable whose resolution
+// already reported a diagnostic, so a reference to it fails without reporting
+// another.
 type resolutionStatus int
 
 const (
@@ -681,6 +682,10 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 	if !semtypes.IsZero(t.symbolType(ref)) {
 		return true
 	}
+	if t.isEphemeral() {
+		t.internalError("unresolved symbol reached ephemeral resolution", diagnostics.Location{})
+		return false
+	}
 	if defn, ok := t.typeDefnNodes[ref]; ok {
 		return t.resolveTypeOnce(ref, func() bool { return resolveTypeDefinition(t, defn, depth) })
 	}
@@ -708,6 +713,8 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 		switch t.lazyResolutionStatus[ref] {
 		case resolutionDone:
 			return true
+		case resolutionFailed:
+			return false
 		case resolutionInProgress:
 			var pos diagnostics.Location
 			if gv.Name != nil {
@@ -723,7 +730,11 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 			} else {
 				_, ok = resolveSimpleVariable(t, nil, gv)
 			}
-			t.lazyResolutionStatus[ref] = resolutionDone
+			if ok {
+				t.lazyResolutionStatus[ref] = resolutionDone
+			} else {
+				t.lazyResolutionStatus[ref] = resolutionFailed
+			}
 			return ok
 		}
 	}
@@ -4542,10 +4553,6 @@ func resolveMappingConstructorExpr(t typeResolver, chain *binding, e *ast.BLangM
 	if len(candidates) == 1 {
 		return finishMappingConstructor(t, chain, e, candidates[0])
 	}
-	if _, moduleLevel := t.(*packageTypeResolver); moduleLevel {
-		t.unimplemented("mapping constructors with more than one applicable type are not supported at module level", e.GetPosition())
-		return expressionResult{}, false
-	}
 	// A constructor inside a trial is part of an outer trial root, whose dependencies are already resolved.
 	if !t.isEphemeral() && !resolveTrialDependencies(t, []ast.BLangExpression{e}) {
 		return expressionResult{}, false
@@ -5452,10 +5459,6 @@ func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangL
 	spread := listSpreadMembers(chain, expr)
 	if len(candidates) == 1 {
 		return finishListConstructor(t, chain, expr, spread, candidates[0])
-	}
-	if _, moduleLevel := t.(*packageTypeResolver); moduleLevel {
-		t.unimplemented("list constructors with more than one applicable type are not supported at module level", expr.GetPosition())
-		return expressionResult{}, false
 	}
 	// A constructor inside a trial is part of an outer trial root, whose dependencies are already resolved.
 	if !t.isEphemeral() && !resolveTrialDependencies(t, []ast.BLangExpression{expr}) {
@@ -7944,6 +7947,19 @@ func typeDescriptorDeclaresSymbols(btype ast.BType) bool {
 	return false
 }
 
+// isDefinitionSet reports whether resolving btype reuses an existing atom. When it returns false, resolving btype
+// defines a new atom and registers metadata for it, mapping defaults for a record type or a method table for an
+// object type, outside the ephemeral-gated state.
+func isDefinitionSet(btype ast.BType) bool {
+	switch ty := btype.(type) {
+	case *ast.BLangRecordType:
+		return ty.Definition != nil
+	case *ast.BLangObjectType:
+		return ty.Definition != nil
+	}
+	return true
+}
+
 func resolveBTypeInner(t typeResolver, chain *binding, btype ast.BType, depth int) (_ semtypes.SemType, _ *binding, ok bool) {
 	// closeDefinition closes the definition a descriptor created if the descriptor fails.
 	var closeDefinition func()
@@ -7954,6 +7970,10 @@ func resolveBTypeInner(t typeResolver, chain *binding, btype ast.BType, depth in
 	}()
 	if t.isEphemeral() && typeDescriptorDeclaresSymbols(btype) {
 		t.unimplemented("type descriptors that declare symbols are not supported while selecting among candidate types", btype.(ast.BLangNode).GetPosition())
+		return semtypes.SemType{}, chain, false
+	}
+	if t.isEphemeral() && !isDefinitionSet(btype) {
+		t.unimplemented("inline record and object type descriptors are not supported while selecting among candidate types", btype.(ast.BLangNode).GetPosition())
 		return semtypes.SemType{}, chain, false
 	}
 	switch ty := btype.(type) {
